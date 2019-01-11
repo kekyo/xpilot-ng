@@ -1,48 +1,43 @@
-Microsoft Visual Studio Solution File, Format Version 8.00
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPilot", "src\client\NT\xpilot.vcproj", "{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPilotFiles", "src\common\NT\XPilotFiles.vcproj", "{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
 EndProject
-Project("{059D6162-CD51-11D0-AE1F-00A0C90FFFC3}") = "XPilotServer", "src\server\NT\xpilots.dsp", "{4AD24770-DE90-40AA-921C-D52204D7FD78}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPilotServer", "src\server\NT\xpilots.vcproj", "{4AD24770-DE90-40AA-921C-D52204D7FD78}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPreplay", "src\replay\NT\XPreplay.vcproj", "{04556968-1D52-4B5C-9BA8-7B13F18983D1}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
 EndProject
 Global
-	GlobalSection(SolutionConfiguration) = preSolution
-		Debug = Debug
-		Release = Release
-		ReleasePentium = ReleasePentium
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+		ReleasePentium|Win32 = ReleasePentium|Win32
 	EndGlobalSection
-	GlobalSection(ProjectConfiguration) = postSolution
-		{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}.Debug.ActiveCfg = Debug|Win32
-		{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}.Debug.Build.0 = Debug|Win32
-		{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}.Release.ActiveCfg = Release|Win32
-		{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}.Release.Build.0 = Release|Win32
-		{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}.ReleasePentium.ActiveCfg = ReleasePentium|Win32
-		{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}.ReleasePentium.Build.0 = ReleasePentium|Win32
-		{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}.Debug.ActiveCfg = Debug|Win32
-		{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}.Debug.Build.0 = Debug|Win32
-		{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}.Release.ActiveCfg = Release|Win32
-		{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}.Release.Build.0 = Release|Win32
-		{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}.ReleasePentium.ActiveCfg = Release|Win32
-		{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}.ReleasePentium.Build.0 = Release|Win32
-		{04556968-1D52-4B5C-9BA8-7B13F18983D1}.Debug.ActiveCfg = Debug|Win32
-		{04556968-1D52-4B5C-9BA8-7B13F18983D1}.Debug.Build.0 = Debug|Win32
-		{04556968-1D52-4B5C-9BA8-7B13F18983D1}.Release.ActiveCfg = Release|Win32
-		{04556968-1D52-4B5C-9BA8-7B13F18983D1}.Release.Build.0 = Release|Win32
-		{04556968-1D52-4B5C-9BA8-7B13F18983D1}.ReleasePentium.ActiveCfg = Release|Win32
-		{04556968-1D52-4B5C-9BA8-7B13F18983D1}.ReleasePentium.Build.0 = Release|Win32
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}.Debug|Win32.Build.0 = Debug|Win32
+		{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}.Release|Win32.ActiveCfg = Release|Win32
+		{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}.Release|Win32.Build.0 = Release|Win32
+		{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}.ReleasePentium|Win32.ActiveCfg = ReleasePentium|Win32
+		{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}.ReleasePentium|Win32.Build.0 = ReleasePentium|Win32
+		{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}.Debug|Win32.Build.0 = Debug|Win32
+		{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}.Release|Win32.ActiveCfg = Release|Win32
+		{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}.Release|Win32.Build.0 = Release|Win32
+		{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}.ReleasePentium|Win32.ActiveCfg = Release|Win32
+		{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}.ReleasePentium|Win32.Build.0 = Release|Win32
+		{4AD24770-DE90-40AA-921C-D52204D7FD78}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4AD24770-DE90-40AA-921C-D52204D7FD78}.Release|Win32.ActiveCfg = Release|Win32
+		{4AD24770-DE90-40AA-921C-D52204D7FD78}.ReleasePentium|Win32.ActiveCfg = Release|Win32
+		{04556968-1D52-4B5C-9BA8-7B13F18983D1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{04556968-1D52-4B5C-9BA8-7B13F18983D1}.Debug|Win32.Build.0 = Debug|Win32
+		{04556968-1D52-4B5C-9BA8-7B13F18983D1}.Release|Win32.ActiveCfg = Release|Win32
+		{04556968-1D52-4B5C-9BA8-7B13F18983D1}.Release|Win32.Build.0 = Release|Win32
+		{04556968-1D52-4B5C-9BA8-7B13F18983D1}.ReleasePentium|Win32.ActiveCfg = Release|Win32
+		{04556968-1D52-4B5C-9BA8-7B13F18983D1}.ReleasePentium|Win32.Build.0 = Release|Win32
 	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-	EndGlobalSection
-	GlobalSection(ExtensibilityAddIns) = postSolution
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal

@@ -1,93 +1,148 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="7.10"
+	Version="8.00"
 	Name="XPilot"
-	SccProjectName=""
-	SccLocalPath=""
-	Keyword="MFCProj">
+	ProjectGUID="{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}"
+	Keyword="MFCProj"
+	>
 	<Platforms>
 		<Platform
-			Name="Win32"/>
+			Name="Win32"
+		/>
 	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="ReleasePentium|Win32"
 			OutputDirectory=".\XPilot__"
 			IntermediateDirectory=".\XPilot__"
 			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="2"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="1"
+				TypeLibraryName=".\XPilot__/xpilot.tlb"
+				HeaderFileName=""
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				OptimizeForProcessor="1"
 				AdditionalIncludeDirectories="..\..\common,..\..\common\NT,..\..\..\..\zlib"
 				PreprocessorDefinitions="NDEBUG;x_BETAEXPIRE;WIN32;_WINDOWS;X_SOUND;PAINT_FREE=0;ZLIB_DLL"
-				StringPooling="TRUE"
+				StringPooling="true"
 				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="TRUE"
+				EnableFunctionLevelLinking="true"
 				PrecompiledHeaderFile=".\XPilot__/xpilot.pch"
 				AssemblerListingLocation=".\XPilot__/"
 				ObjectFile=".\XPilot__/"
 				ProgramDataBaseFileName=".\XPilot__/"
 				BrowseInformation="1"
 				WarningLevel="3"
-				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="2"
-				CompileAs="0"/>
+				SuppressStartupBanner="true"
+				DebugInformationFormat="1"
+				CompileAs="0"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="winmm.lib d:\xpilotbuild\zlib\lib\zdll.lib"
 				OutputFile=".\Release\XPilot.exe"
 				LinkIncremental="1"
-				SuppressStartupBanner="TRUE"
+				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\XPilot__/XPilot.pdb"
-				GenerateMapFile="TRUE"
+				GenerateMapFile="true"
 				MapFileName=".\XPilot__/XPilot.map"
 				SubSystem="2"
-				TargetMachine="1"/>
+				TargetMachine="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="NDEBUG"
-				MkTypLibCompatible="TRUE"
-				SuppressStartupBanner="TRUE"
-				TargetEnvironment="1"
-				TypeLibraryName=".\XPilot__/xpilot.tlb"
-				HeaderFileName=""/>
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
+			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy Release\XPilot.exe c:\XPilot"/>
-			<Tool
-				Name="VCPreBuildEventTool"/>
-			<Tool
-				Name="VCPreLinkEventTool"/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+				CommandLine="copy Release\XPilot.exe c:\XPilot"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory=".\Debug"
 			IntermediateDirectory=".\Debug"
 			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="2"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="1"
+				TypeLibraryName=".\Debug/xpilot.tlb"
+				HeaderFileName=""
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
@@ -100,58 +155,88 @@
 				ProgramDataBaseFileName=".\Debug/"
 				BrowseInformation="1"
 				WarningLevel="3"
-				SuppressStartupBanner="TRUE"
+				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
-				CompileAs="0"/>
+				CompileAs="0"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="winmm.lib d:\xpilotbuild\zlib\lib\zdll.lib"
 				OutputFile=".\Debug/xpilot.exe"
 				LinkIncremental="1"
-				SuppressStartupBanner="TRUE"
-				GenerateDebugInformation="TRUE"
+				SuppressStartupBanner="true"
+				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\Debug/xpilot.pdb"
 				SubSystem="2"
-				TargetMachine="1"/>
+				TargetMachine="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="_DEBUG"
-				MkTypLibCompatible="TRUE"
-				SuppressStartupBanner="TRUE"
-				TargetEnvironment="1"
-				TypeLibraryName=".\Debug/xpilot.tlb"
-				HeaderFileName=""/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCXMLDataGeneratorTool"/>
+				Name="VCWebDeploymentTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory=".\Release"
 			IntermediateDirectory=".\Release"
 			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="2"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="1"
+				TypeLibraryName=".\Release/xpilot.tlb"
+				HeaderFileName=""
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="4"
@@ -164,50 +249,57 @@
 				ProgramDataBaseFileName=".\Release/"
 				BrowseInformation="1"
 				WarningLevel="3"
-				SuppressStartupBanner="TRUE"
-				CompileAs="0"/>
+				SuppressStartupBanner="true"
+				CompileAs="0"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="winmm.lib ..\..\..\zlib\lib\libz.lib"
 				OutputFile=".\Release/xpilot.exe"
 				LinkIncremental="1"
-				SuppressStartupBanner="TRUE"
+				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\Release/xpilot.pdb"
-				GenerateMapFile="TRUE"
+				GenerateMapFile="true"
 				MapFileName=".\Release/xpilot.map"
 				SubSystem="2"
-				TargetMachine="1"/>
+				TargetMachine="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="NDEBUG"
-				MkTypLibCompatible="TRUE"
-				SuppressStartupBanner="TRUE"
-				TargetEnvironment="1"
-				TypeLibraryName=".\Release/xpilot.tlb"
-				HeaderFileName=""/>
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
+			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy Release\XPilot.exe C:\XPilot"/>
-			<Tool
-				Name="VCPreBuildEventTool"/>
-			<Tool
-				Name="VCPreLinkEventTool"/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+				CommandLine="copy Release\XPilot.exe C:\XPilot"
+			/>
 		</Configuration>
 	</Configurations>
 	<References>
@@ -215,2270 +307,2839 @@
 	<Files>
 		<Filter
 			Name="Source Files"
-			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat;for;f90">
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat;for;f90"
+			>
 			<Filter
 				Name="client"
-				Filter="">
+				>
 				<File
-					RelativePath="..\.cvsignore">
+					RelativePath="..\.cvsignore"
+					>
 				</File>
 				<File
-					RelativePath="about.c">
+					RelativePath="about.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="bitmaps.c">
+					RelativePath="bitmaps.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="bitmaps.h">
+					RelativePath="bitmaps.h"
+					>
 				</File>
 				<File
-					RelativePath="..\client.c">
+					RelativePath="..\client.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\client.h">
+					RelativePath="..\client.h"
+					>
 				</File>
 				<File
-					RelativePath="..\clientcommand.c">
+					RelativePath="..\clientcommand.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\clientcommand.h">
+					RelativePath="..\clientcommand.h"
+					>
 				</File>
 				<File
-					RelativePath="..\clientrank.c">
+					RelativePath="..\clientrank.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\clientrank.h">
+					RelativePath="..\clientrank.h"
+					>
 				</File>
 				<File
-					RelativePath="colors.c">
+					RelativePath="colors.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="configure.c">
+					RelativePath="configure.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\configure.h">
+					RelativePath="..\configure.h"
+					>
 				</File>
 				<File
-					RelativePath="..\connectparam.h">
+					RelativePath="..\connectparam.h"
+					>
 				</File>
 				<File
-					RelativePath="..\datagram.c">
+					RelativePath="..\datagram.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\datagram.h">
+					RelativePath="..\datagram.h"
+					>
 				</File>
 				<File
-					RelativePath="dbuff.h">
+					RelativePath="dbuff.h"
+					>
 				</File>
 				<File
-					RelativePath="..\default.c">
+					RelativePath="..\default.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\default.h">
+					RelativePath="..\default.h"
+					>
 				</File>
 				<File
-					RelativePath="..\event.c">
+					RelativePath="..\event.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\gfx2d.c">
+					RelativePath="..\gfx2d.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\gfx2d.h">
+					RelativePath="..\gfx2d.h"
+					>
 				</File>
 				<File
-					RelativePath="guimap.c">
+					RelativePath="guimap.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\guimap.h">
+					RelativePath="..\guimap.h"
+					>
 				</File>
 				<File
-					RelativePath="guiobjects.c">
+					RelativePath="guiobjects.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\guiobjects.h">
+					RelativePath="..\guiobjects.h"
+					>
 				</File>
 				<File
-					RelativePath="icon.h">
+					RelativePath="icon.h"
+					>
 				</File>
 				<File
-					RelativePath="join.c">
+					RelativePath="join.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\mapdata.c">
+					RelativePath="..\mapdata.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\messages.c">
+					RelativePath="..\messages.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\netclient.c">
+					RelativePath="..\netclient.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\netclient.h">
+					RelativePath="..\netclient.h"
+					>
 				</File>
 				<File
-					RelativePath="..\option.c">
+					RelativePath="..\option.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\option.h">
+					RelativePath="..\option.h"
+					>
 				</File>
 				<File
-					RelativePath="..\paint.c">
+					RelativePath="..\paint.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\paint.h">
+					RelativePath="..\paint.h"
+					>
 				</File>
 				<File
-					RelativePath="paintdata.c">
+					RelativePath="paintdata.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\paintdata.h">
+					RelativePath="..\paintdata.h"
+					>
 				</File>
 				<File
-					RelativePath="painthud.c">
+					RelativePath="painthud.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\paintmacros.h">
+					RelativePath="..\paintmacros.h"
+					>
 				</File>
 				<File
-					RelativePath="..\paintmap.c">
+					RelativePath="..\paintmap.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\paintobjects.c">
+					RelativePath="..\paintobjects.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="paintradar.c">
+					RelativePath="paintradar.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\query.c">
+					RelativePath="..\query.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="record.c">
+					RelativePath="record.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="record.h">
+					RelativePath="record.h"
+					>
 				</File>
 				<File
-					RelativePath="recordfmt.h">
+					RelativePath="recordfmt.h"
+					>
 				</File>
 				<File
-					RelativePath="..\talk.h">
+					RelativePath="..\talk.h"
+					>
 				</File>
 				<File
-					RelativePath="..\talkmacros.c">
+					RelativePath="..\talkmacros.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\textinterface.c">
+					RelativePath="..\textinterface.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\usleep.c">
+					RelativePath="..\usleep.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="widget.c">
+					RelativePath="widget.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="widget.h">
+					RelativePath="widget.h"
+					>
 				</File>
 				<File
-					RelativePath="xdefault.c">
+					RelativePath="xdefault.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="xevent.c">
+					RelativePath="xevent.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="xevent.h">
+					RelativePath="xevent.h"
+					>
 				</File>
 				<File
-					RelativePath="xeventhandlers.c">
+					RelativePath="xeventhandlers.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="xeventhandlers.h">
+					RelativePath="xeventhandlers.h"
+					>
 				</File>
 				<File
-					RelativePath="xinit.c">
+					RelativePath="xinit.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="xinit.h">
+					RelativePath="xinit.h"
+					>
 				</File>
 				<File
-					RelativePath="xpaint.c">
+					RelativePath="xpaint.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\xpclient.h">
+					RelativePath="..\xpclient.h"
+					>
 				</File>
 				<File
-					RelativePath="xpclient_x11.h">
+					RelativePath="xpclient_x11.h"
+					>
 				</File>
 				<File
-					RelativePath="xpilot.c">
+					RelativePath="xpilot.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\xpmread.h">
+					RelativePath="..\xpmread.h"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="clientNT"
-				Filter="">
+				>
 				<File
-					RelativePath=".cvsignore">
+					RelativePath=".cvsignore"
+					>
 				</File>
 				<File
-					RelativePath="BSString.cpp">
-					<FileConfiguration
-						Name="ReleasePentium|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
-					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="BSString.h">
-				</File>
-				<File
-					RelativePath="credits.inc.h">
-				</File>
-				<File
-					RelativePath="MainFrm.cpp">
-					<FileConfiguration
-						Name="ReleasePentium|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="2"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							Optimization="0"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
-					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="MainFrm.h">
-				</File>
-				<File
-					RelativePath="RecordDummy.c">
+					RelativePath="BSString.cpp"
+					>
 					<FileConfiguration
 						Name="ReleasePentium|Win32"
-						ExcludedFromBuild="TRUE">
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Debug|Win32"
-						ExcludedFromBuild="TRUE">
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Release|Win32"
-						ExcludedFromBuild="TRUE">
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="resource.h">
+					RelativePath="BSString.h"
+					>
 				</File>
 				<File
-					RelativePath="Splash.cpp">
+					RelativePath="credits.inc.h"
+					>
+				</File>
+				<File
+					RelativePath="MainFrm.cpp"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="Splash.h">
+					RelativePath="MainFrm.h"
+					>
 				</File>
 				<File
-					RelativePath="stdafx.h">
-				</File>
-				<File
-					RelativePath="TalkWindow.cpp">
+					RelativePath="RecordDummy.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						ExcludedFromBuild="true"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						ExcludedFromBuild="true"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="TalkWindow.h">
+					RelativePath="resource.h"
+					>
 				</File>
 				<File
-					RelativePath="winAbout.cpp">
+					RelativePath="Splash.cpp"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="winAbout.h">
+					RelativePath="Splash.h"
+					>
 				</File>
 				<File
-					RelativePath="winAudio.c">
+					RelativePath="stdafx.h"
+					>
+				</File>
+				<File
+					RelativePath="TalkWindow.cpp"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="winAudio.h">
+					RelativePath="TalkWindow.h"
+					>
 				</File>
 				<File
-					RelativePath="winBitmap.c">
+					RelativePath="winAbout.cpp"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="winBitmap.h">
+					RelativePath="winAbout.h"
+					>
 				</File>
 				<File
-					RelativePath="winClient.h">
-				</File>
-				<File
-					RelativePath="winColors.c">
+					RelativePath="winAudio.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="wintalk.c">
+					RelativePath="winAudio.h"
+					>
+				</File>
+				<File
+					RelativePath="winBitmap.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="winXThread.c">
+					RelativePath="winBitmap.h"
+					>
+				</File>
+				<File
+					RelativePath="winClient.h"
+					>
+				</File>
+				<File
+					RelativePath="winColors.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="winXThread.h">
-				</File>
-				<File
-					RelativePath="winXXPilot.h">
-				</File>
-				<File
-					RelativePath="xpilot.rc">
-				</File>
-				<File
-					RelativePath="xpilotDoc.cpp">
+					RelativePath="wintalk.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="xpilotDoc.h">
-				</File>
-				<File
-					RelativePath="XPilotNT.cpp">
+					RelativePath="winXThread.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="XPilotNT.h">
+					RelativePath="winXThread.h"
+					>
 				</File>
 				<File
-					RelativePath="xpilotView.cpp">
+					RelativePath="winXXPilot.h"
+					>
+				</File>
+				<File
+					RelativePath="xpilot.rc"
+					>
+				</File>
+				<File
+					RelativePath="xpilotDoc.cpp"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="xpilotView.h">
+					RelativePath="xpilotDoc.h"
+					>
+				</File>
+				<File
+					RelativePath="XPilotNT.cpp"
+					>
+					<FileConfiguration
+						Name="ReleasePentium|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							Optimization="2"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+							BrowseInformation="1"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							Optimization="0"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+							BrowseInformation="1"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+							BrowseInformation="1"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="XPilotNT.h"
+					>
+				</File>
+				<File
+					RelativePath="xpilotView.cpp"
+					>
+					<FileConfiguration
+						Name="ReleasePentium|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							Optimization="2"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+							BrowseInformation="1"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							Optimization="0"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+							BrowseInformation="1"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+							BrowseInformation="1"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="xpilotView.h"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="common"
-				Filter="">
+				>
 				<File
-					RelativePath="..\..\common\.cvsignore">
+					RelativePath="..\..\common\.cvsignore"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\astershape.h">
+					RelativePath="..\..\common\astershape.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\audio.h">
+					RelativePath="..\..\common\audio.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\bit.h">
+					RelativePath="..\..\common\bit.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\checknames.c">
+					RelativePath="..\..\common\checknames.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\checknames.h">
+					RelativePath="..\..\common\checknames.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\commonproto.h">
+					RelativePath="..\..\common\commonproto.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\config.c">
+					RelativePath="..\..\common\config.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\const.h">
+					RelativePath="..\..\common\const.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\draw.h">
+					RelativePath="..\..\common\draw.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\error.c">
+					RelativePath="..\..\common\error.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\error.h">
+					RelativePath="..\..\common\error.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\item.h">
+					RelativePath="..\..\common\item.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\keys.h">
+					RelativePath="..\..\common\keys.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\math.c">
+					RelativePath="..\..\common\math.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\net.c">
+					RelativePath="..\..\common\net.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\net.h">
+					RelativePath="..\..\common\net.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\pack.h">
+					RelativePath="..\..\common\pack.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\portability.c">
+					RelativePath="..\..\common\portability.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\portability.h">
+					RelativePath="..\..\common\portability.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\randommt.c">
+					RelativePath="..\..\common\randommt.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\rules.h">
+					RelativePath="..\..\common\rules.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\setup.h">
+					RelativePath="..\..\common\setup.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\shipshape.c">
+					RelativePath="..\..\common\shipshape.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\socklib.c">
+					RelativePath="..\..\common\socklib.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\socklib.h">
+					RelativePath="..\..\common\socklib.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\strdup.c">
+					RelativePath="..\..\common\strdup.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\strlcpy.c">
+					RelativePath="..\..\common\strlcpy.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\wreckshape.h">
+					RelativePath="..\..\common\wreckshape.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\xpconfig.h">
+					RelativePath="..\..\common\xpconfig.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\xpmemory.c">
+					RelativePath="..\..\common\xpmemory.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 			</Filter>
 			<Filter
 				Name="commonNT"
-				Filter="">
+				>
 				<File
-					RelativePath="..\..\common\NT\.cvsignore">
+					RelativePath="..\..\common\NT\.cvsignore"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\NT\winNet.c">
+					RelativePath="..\..\common\NT\winNet.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\NT\winNet.h">
+					RelativePath="..\..\common\NT\winNet.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\NT\winX.c">
+					RelativePath="..\..\common\NT\winX.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\NT\winX.h">
+					RelativePath="..\..\common\NT\winX.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\NT\winX11.c">
+					RelativePath="..\..\common\NT\winX11.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\NT\winX_.h">
+					RelativePath="..\..\common\NT\winX_.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\NT\winXKey.c">
+					RelativePath="..\..\common\NT\winXKey.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\common\NT\winXKey.h">
+					RelativePath="..\..\common\NT\winXKey.h"
+					>
 				</File>
 				<File
-					RelativePath="..\..\common\NT\wsockerrs.c">
+					RelativePath="..\..\common\NT\wsockerrs.c"
+					>
 					<FileConfiguration
-						Name="ReleasePentium|Win32">
+						Name="ReleasePentium|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="2"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug|Win32">
+						Name="Debug|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							Optimization="0"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32">
+						Name="Release|Win32"
+						>
 						<Tool
 							Name="VCCLCompilerTool"
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
-							BrowseInformation="1"/>
+							BrowseInformation="1"
+						/>
 					</FileConfiguration>
 				</File>
 			</Filter>
 			<Filter
 				Name="items"
-				Filter="">
+				>
 				<File
-					RelativePath="..\items\itemAfterburner.xbm">
+					RelativePath="..\items\itemAfterburner.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemArmor.xbm">
+					RelativePath="..\items\itemArmor.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemAutopilot.xbm">
+					RelativePath="..\items\itemAutopilot.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemCloakingDevice.xbm">
+					RelativePath="..\items\itemCloakingDevice.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemDeflector.xbm">
+					RelativePath="..\items\itemDeflector.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemEcm.xbm">
+					RelativePath="..\items\itemEcm.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemEmergencyShield.xbm">
+					RelativePath="..\items\itemEmergencyShield.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemEmergencyThrust.xbm">
+					RelativePath="..\items\itemEmergencyThrust.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemEnergyPack.xbm">
+					RelativePath="..\items\itemEnergyPack.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemHyperJump.xbm">
+					RelativePath="..\items\itemHyperJump.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemLaser.xbm">
+					RelativePath="..\items\itemLaser.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemMinePack.xbm">
+					RelativePath="..\items\itemMinePack.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemMirror.xbm">
+					RelativePath="..\items\itemMirror.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemPhasingDevice.xbm">
+					RelativePath="..\items\itemPhasingDevice.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemRearShot.xbm">
+					RelativePath="..\items\itemRearShot.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemRocketPack.xbm">
+					RelativePath="..\items\itemRocketPack.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemSensorPack.xbm">
+					RelativePath="..\items\itemSensorPack.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemTank.xbm">
+					RelativePath="..\items\itemTank.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemTractorBeam.xbm">
+					RelativePath="..\items\itemTractorBeam.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemTransporter.xbm">
+					RelativePath="..\items\itemTransporter.xbm"
+					>
 				</File>
 				<File
-					RelativePath="..\items\itemWideangleShot.xbm">
+					RelativePath="..\items\itemWideangleShot.xbm"
+					>
 				</File>
 			</Filter>
 		</Filter>
 		<Filter
 			Name="Resource Files"
-			Filter="ico;cur;bmp;dlg;rc2;rct;bin;cnt;rtf;gif;jpg;jpeg;jpe">
+			Filter="ico;cur;bmp;dlg;rc2;rct;bin;cnt;rtf;gif;jpg;jpeg;jpe"
+			>
 			<File
-				RelativePath="..\..\..\lib\textures\ball.xpm">
+				RelativePath="..\..\..\lib\textures\ball.xpm"
+				>
 			</File>
 			<File
-				RelativePath="..\..\..\lib\textures\rock4.xpm">
+				RelativePath="..\..\..\lib\textures\rock4.xpm"
+				>
 			</File>
 			<File
-				RelativePath="res\Splsh16.bmp">
+				RelativePath="res\Splsh16.bmp"
+				>
 			</File>
 			<File
-				RelativePath="res\xpilot.ico">
+				RelativePath="res\xpilot.ico"
+				>
 			</File>
 			<File
-				RelativePath="res\xpilot.rc2">
+				RelativePath="res\xpilot.rc2"
+				>
 			</File>
 			<File
-				RelativePath="..\..\server\NT\res\xpilots.ico">
+				RelativePath="..\..\server\NT\res\xpilots.ico"
+				>
 			</File>
 		</Filter>
 	</Files>

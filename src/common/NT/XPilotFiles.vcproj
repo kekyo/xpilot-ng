@@ -1,41 +1,64 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="7.10"
+	Version="8.00"
 	Name="XPilotFiles"
-	SccProjectName=""
-	SccLocalPath=""
-	Keyword="MakeFileProj">
+	ProjectGUID="{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}"
+	Keyword="MakeFileProj"
+	>
 	<Platforms>
 		<Platform
-			Name="Win32"/>
+			Name="Win32"
+		/>
 	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory=".\Release"
 			IntermediateDirectory=".\Release"
 			ConfigurationType="0"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			>
 			<Tool
 				Name="VCNMakeTool"
 				BuildCommandLine="NMAKE /f XPilotFiles.mak"
 				ReBuildCommandLine="NMAKE /f XPilotFiles.mak /a"
-				Output="XPilotFiles.exe"/>
+				CleanCommandLine=""
+				Output="XPilotFiles.exe"
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory=".\Debug"
 			IntermediateDirectory=".\Debug"
 			ConfigurationType="0"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			>
 			<Tool
 				Name="VCNMakeTool"
 				BuildCommandLine="NMAKE /f XPilotFiles.mak"
 				ReBuildCommandLine="NMAKE /f XPilotFiles.mak /a"
-				Output="XPilotFiles.exe"/>
+				CleanCommandLine=""
+				Output="XPilotFiles.exe"
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
 		</Configuration>
 	</Configurations>
 	<References>
@@ -43,105 +66,135 @@
 	<Files>
 		<Filter
 			Name="bindist"
-			Filter="">
+			>
 			<File
-				RelativePath="bindist\creditsUpdate.pl">
+				RelativePath="bindist\creditsUpdate.pl"
+				>
 			</File>
 			<File
-				RelativePath="bindist\makeDistribution">
+				RelativePath="bindist\makeDistribution"
+				>
 			</File>
 			<File
-				RelativePath="bindist\README.txt.msub">
+				RelativePath="bindist\README.txt.msub"
+				>
 			</File>
 			<File
-				RelativePath="bindist\READMEbin.txt.msub">
+				RelativePath="bindist\READMEbin.txt.msub"
+				>
 			</File>
 			<File
-				RelativePath="bindist\ServerMOTD.txt.msub">
+				RelativePath="bindist\ServerMOTD.txt.msub"
+				>
 			</File>
 			<File
-				RelativePath="XPilot.ini">
+				RelativePath="XPilot.ini"
+				>
 			</File>
 			<File
-				RelativePath="bindist\XPilot.nsi">
+				RelativePath="bindist\XPilot.nsi"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="./"
-			Filter="">
+			>
 			<File
-				RelativePath="..\..\..\.cvsignore">
+				RelativePath="..\..\..\.cvsignore"
+				>
 			</File>
 			<File
-				RelativePath="..\..\..\COPYING">
+				RelativePath="..\..\..\COPYING"
+				>
 			</File>
 			<File
-				RelativePath="..\..\..\Imakefile">
+				RelativePath="..\..\..\Imakefile"
+				>
 			</File>
 			<File
-				RelativePath="..\..\..\INSTALL.txt">
+				RelativePath="..\..\..\INSTALL.txt"
+				>
 			</File>
 			<File
-				RelativePath="..\..\..\Local.config">
+				RelativePath="..\..\..\Local.config"
+				>
 			</File>
 			<File
-				RelativePath="..\..\..\Local.rules">
+				RelativePath="..\..\..\Local.rules"
+				>
 			</File>
 			<File
-				RelativePath="..\..\..\README.txt">
+				RelativePath="..\..\..\README.txt"
+				>
 			</File>
 			<File
-				RelativePath="..\..\..\README.txt.msub">
+				RelativePath="..\..\..\README.txt.msub"
+				>
 			</File>
 			<Filter
 				Name="doc"
-				Filter="">
+				>
 				<File
-					RelativePath="..\..\..\doc\.cvsignore">
+					RelativePath="..\..\..\doc\.cvsignore"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\ChangeLog">
+					RelativePath="..\..\..\doc\ChangeLog"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\ChangeLog-3">
+					RelativePath="..\..\..\doc\ChangeLog-3"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\CREDITS">
+					RelativePath="..\..\..\doc\CREDITS"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\FAQ">
+					RelativePath="..\..\..\doc\FAQ"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\Imakefile">
+					RelativePath="..\..\..\doc\Imakefile"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\README.MAPS">
+					RelativePath="..\..\..\doc\README.MAPS"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\README.MAPS2">
+					RelativePath="..\..\..\doc\README.MAPS2"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\README.SHIPS">
+					RelativePath="..\..\..\doc\README.SHIPS"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\README.sounds">
+					RelativePath="..\..\..\doc\README.sounds"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\README.talkmacros">
+					RelativePath="..\..\..\doc\README.talkmacros"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\TODO">
+					RelativePath="..\..\..\doc\TODO"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\xpilot-linux.dif">
+					RelativePath="..\..\..\doc\xpilot-linux.dif"
+					>
 				</File>
 				<File
-					RelativePath="..\..\..\doc\xpilot.spec">
+					RelativePath="..\..\..\doc\xpilot.spec"
+					>
 				</File>
 			</Filter>
 		</Filter>
 		<File
-			RelativePath="XPilotFiles.bsc">
+			RelativePath="XPilotFiles.bsc"
+			>
 		</File>
 	</Files>
 	<Globals>
