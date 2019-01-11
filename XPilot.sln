@@ -1,5 +1,5 @@
-Microsoft Visual Studio Solution File, Format Version 9.00
-# Visual Studio 2005
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPilot", "src\client\NT\xpilot.vcproj", "{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPilotFiles", "src\common\NT\XPilotFiles.vcproj", "{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}"
