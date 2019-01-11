@@ -1,0 +1,531 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4837a30e-3535-4df7-a379-1fea25bfd5a4}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat;for;f90</Extensions>
+    </Filter>
+    <Filter Include="Source Files\client">
+      <UniqueIdentifier>{944a33ec-d211-497e-9b81-be1b8a2cd4d0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\clientNT">
+      <UniqueIdentifier>{6ed3e069-adec-4953-bb9a-16ebd4f327c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\common">
+      <UniqueIdentifier>{3d9d0377-f042-4552-a2e5-e53e36188c51}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\commonNT">
+      <UniqueIdentifier>{99e47a53-653e-4ee6-b34a-0c7f74a21654}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\items">
+      <UniqueIdentifier>{1637fd37-f0e2-42d1-98f7-3e58abfd7b13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{931c0662-233b-4130-879e-217e07d7a191}</UniqueIdentifier>
+      <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;cnt;rtf;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\.cvsignore">
+      <Filter>Source Files\client</Filter>
+    </None>
+    <None Include=".cvsignore">
+      <Filter>Source Files\clientNT</Filter>
+    </None>
+    <None Include="..\..\common\.cvsignore">
+      <Filter>Source Files\common</Filter>
+    </None>
+    <None Include="..\..\common\NT\.cvsignore">
+      <Filter>Source Files\commonNT</Filter>
+    </None>
+    <None Include="..\items\itemAfterburner.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemArmor.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemAutopilot.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemCloakingDevice.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemDeflector.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemEcm.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemEmergencyShield.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemEmergencyThrust.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemEnergyPack.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemHyperJump.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemLaser.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemMinePack.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemMirror.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemPhasingDevice.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemRearShot.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemRocketPack.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemSensorPack.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemTank.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemTractorBeam.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemTransporter.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\items\itemWideangleShot.xbm">
+      <Filter>Source Files\items</Filter>
+    </None>
+    <None Include="..\..\..\lib\textures\ball.xpm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\..\..\lib\textures\rock4.xpm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\Splsh16.bmp">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\xpilot.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\xpilot.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\..\server\NT\res\xpilots.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="about.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="bitmaps.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\client.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\clientcommand.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\clientrank.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="colors.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="configure.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\datagram.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\default.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\event.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\gfx2d.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="guimap.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="guiobjects.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="join.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mapdata.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\messages.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netclient.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\option.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\paint.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="paintdata.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="painthud.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\paintmap.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\paintobjects.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="paintradar.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\query.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="record.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\talkmacros.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\textinterface.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\usleep.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="widget.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="xdefault.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="xevent.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="xeventhandlers.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="xinit.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="xpaint.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="xpilot.c">
+      <Filter>Source Files\client</Filter>
+    </ClCompile>
+    <ClCompile Include="BSString.cpp">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="MainFrm.cpp">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="RecordDummy.c">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="Splash.cpp">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="TalkWindow.cpp">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="winAbout.cpp">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="winAudio.c">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="winBitmap.c">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="winColors.c">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="wintalk.c">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="winXThread.c">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="xpilotDoc.cpp">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="XPilotNT.cpp">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="xpilotView.cpp">
+      <Filter>Source Files\clientNT</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\checknames.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\config.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\error.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\math.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\net.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\portability.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\randommt.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\shipshape.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\socklib.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\strdup.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\strlcpy.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\xpmemory.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\NT\winNet.c">
+      <Filter>Source Files\commonNT</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\NT\winX.c">
+      <Filter>Source Files\commonNT</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\NT\winX11.c">
+      <Filter>Source Files\commonNT</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\NT\winXKey.c">
+      <Filter>Source Files\commonNT</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\NT\wsockerrs.c">
+      <Filter>Source Files\commonNT</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="bitmaps.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\client.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\clientcommand.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\clientrank.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\configure.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\connectparam.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\datagram.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="dbuff.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\default.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gfx2d.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\guimap.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\guiobjects.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="icon.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netclient.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\option.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\paint.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\paintdata.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\paintmacros.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="record.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="recordfmt.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\talk.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="widget.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="xevent.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="xeventhandlers.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="xinit.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\xpclient.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="xpclient_x11.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\xpmread.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="BSString.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="credits.inc.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="MainFrm.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="Splash.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="TalkWindow.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="winAbout.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="winAudio.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="winBitmap.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="winClient.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="winXThread.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="winXXPilot.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="xpilotDoc.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="XPilotNT.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="xpilotView.h">
+      <Filter>Source Files\clientNT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\astershape.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\audio.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\bit.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\checknames.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\commonproto.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\const.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\draw.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\error.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\item.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\keys.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\net.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\pack.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\portability.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\rules.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\setup.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\socklib.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\wreckshape.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\xpconfig.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\NT\winNet.h">
+      <Filter>Source Files\commonNT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\NT\winX.h">
+      <Filter>Source Files\commonNT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\NT\winX_.h">
+      <Filter>Source Files\commonNT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\NT\winXKey.h">
+      <Filter>Source Files\commonNT</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="xpilot.rc">
+      <Filter>Source Files\clientNT</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

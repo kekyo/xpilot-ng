@@ -1,12 +1,12 @@
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPilot", "src\client\NT\xpilot.vcproj", "{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}"
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xpilot", "src\client\NT\xpilot.vcxproj", "{DF0E23D7-642E-49C8-8D86-2C73836BCCF5}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPilotFiles", "src\common\NT\XPilotFiles.vcproj", "{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPilotFiles", "src\common\NT\XPilotFiles.vcxproj", "{04BD7D8E-0BA9-44F0-A23B-D497F9C1BB7E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPilotServer", "src\server\NT\xpilots.vcproj", "{4AD24770-DE90-40AA-921C-D52204D7FD78}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPilotServer", "src\server\NT\xpilots.vcxproj", "{4AD24770-DE90-40AA-921C-D52204D7FD78}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPreplay", "src\replay\NT\XPreplay.vcproj", "{04556968-1D52-4B5C-9BA8-7B13F18983D1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XPreplay", "src\replay\NT\XPreplay.vcxproj", "{04556968-1D52-4B5C-9BA8-7B13F18983D1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

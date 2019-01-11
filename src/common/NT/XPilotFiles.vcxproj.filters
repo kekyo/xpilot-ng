@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="bindist">
+      <UniqueIdentifier>{a6ea8f82-09a5-42c7-b081-0da1e32f3317}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="./">
+      <UniqueIdentifier>{b0d02ddd-0b13-4253-95d5-2e66e2397916}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="./\doc">
+      <UniqueIdentifier>{59ffc8b1-0d0a-4d10-aff7-620c1844ead7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="bindist\creditsUpdate.pl">
+      <Filter>bindist</Filter>
+    </None>
+    <None Include="bindist\makeDistribution">
+      <Filter>bindist</Filter>
+    </None>
+    <None Include="bindist\README.txt.msub">
+      <Filter>bindist</Filter>
+    </None>
+    <None Include="bindist\READMEbin.txt.msub">
+      <Filter>bindist</Filter>
+    </None>
+    <None Include="bindist\ServerMOTD.txt.msub">
+      <Filter>bindist</Filter>
+    </None>
+    <None Include="XPilot.ini">
+      <Filter>bindist</Filter>
+    </None>
+    <None Include="bindist\XPilot.nsi">
+      <Filter>bindist</Filter>
+    </None>
+    <None Include="..\..\..\.cvsignore">
+      <Filter>./</Filter>
+    </None>
+    <None Include="..\..\..\COPYING">
+      <Filter>./</Filter>
+    </None>
+    <None Include="..\..\..\Imakefile">
+      <Filter>./</Filter>
+    </None>
+    <None Include="..\..\..\INSTALL.txt">
+      <Filter>./</Filter>
+    </None>
+    <None Include="..\..\..\Local.config">
+      <Filter>./</Filter>
+    </None>
+    <None Include="..\..\..\Local.rules">
+      <Filter>./</Filter>
+    </None>
+    <None Include="..\..\..\README.txt">
+      <Filter>./</Filter>
+    </None>
+    <None Include="..\..\..\README.txt.msub">
+      <Filter>./</Filter>
+    </None>
+    <None Include="..\..\..\doc\.cvsignore">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\ChangeLog">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\ChangeLog-3">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\CREDITS">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\FAQ">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\Imakefile">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\README.MAPS">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\README.MAPS2">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\README.SHIPS">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\README.sounds">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\README.talkmacros">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\TODO">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\xpilot-linux.dif">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="..\..\..\doc\xpilot.spec">
+      <Filter>./\doc</Filter>
+    </None>
+    <None Include="XPilotFiles.bsc" />
+  </ItemGroup>
+</Project>

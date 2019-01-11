@@ -1,0 +1,153 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{846958c6-46c3-4b94-9239-982718cc0636}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{61f42f1d-d8aa-4da1-9454-565139c8520b}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{241e3b9f-e2b6-4d88-a78e-72b67794d237}</UniqueIdentifier>
+      <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;cnt;rtf;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+    <Filter Include="Resource Files\items">
+      <UniqueIdentifier>{681b5769-fc8e-40f6-aaa4-8adb678cb1ff}</UniqueIdentifier>
+      <Extensions>xpm</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="MainFrm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Properties.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SliderBar.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="StdAfx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XPreplay.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XPreplayDoc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XPreplayView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="XPreplay.rc">
+      <Filter>Source Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MainFrm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Properties.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SliderBar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="StdAfx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XPreplay.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XPreplayDoc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XPreplayView.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\Toolbar.bmp">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\XPreplay.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\XPreplay.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\XPreplayDoc.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\..\client\items\itemAfterburner.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemArmor.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemAutopilot.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemCloakingDevice.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemDeflector.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemEcm.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemEmergencyShield.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemEmergencyThrust.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemEnergyPack.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemHyperJump.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemLaser.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemMinePack.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemMirror.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemPhasingDevice.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemRearShot.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemRocketPack.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemSensorPack.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemTank.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemTractorBeam.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemTransporter.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="..\..\client\items\itemWideangleShot.xbm">
+      <Filter>Resource Files\items</Filter>
+    </None>
+    <None Include="XPreplay.reg" />
+  </ItemGroup>
+</Project>

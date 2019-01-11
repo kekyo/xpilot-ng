@@ -1,0 +1,357 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{0c5274a1-f89a-419c-8e86-e7b47eeaab18}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat;for;f90</Extensions>
+    </Filter>
+    <Filter Include="Source Files\server">
+      <UniqueIdentifier>{5721207b-cb56-4f84-83e5-1cc838f3f249}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\serverNT">
+      <UniqueIdentifier>{2582a746-897b-4f9c-ae07-a72a3729936b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\common">
+      <UniqueIdentifier>{8925cbb0-8b79-4902-996a-bfafdca5d7b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\commonNT">
+      <UniqueIdentifier>{09ae2651-0aad-4347-ba8a-5022ea802922}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{f6530b16-bc60-4fcf-a121-7e7a74e7bfd3}</UniqueIdentifier>
+      <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;cnt;rtf;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\alliance.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\asteroid.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cannon.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cell.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cmdline.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\collision.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\command.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\contact.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\event.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fileparser.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\frame.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\id.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\item.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\laser.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\map.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\metaserver.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netserver.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\object.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\objpos.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\option.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\parser.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\play.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\player.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\robot.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\robotdef.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\rules.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\saudio.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sched.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\score.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\server.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ship.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\shot.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\showtime.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tuner.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\update.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\walls.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\wildmap.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
+    <ClCompile Include="ConfigDlg.cpp">
+      <Filter>Source Files\serverNT</Filter>
+    </ClCompile>
+    <ClCompile Include="ExitXpilots.cpp">
+      <Filter>Source Files\serverNT</Filter>
+    </ClCompile>
+    <ClCompile Include="ReallyShutdown.cpp">
+      <Filter>Source Files\serverNT</Filter>
+    </ClCompile>
+    <ClCompile Include="UrlWidget.cpp">
+      <Filter>Source Files\serverNT</Filter>
+    </ClCompile>
+    <ClCompile Include="winSvrThread.c">
+      <Filter>Source Files\serverNT</Filter>
+    </ClCompile>
+    <ClCompile Include="xpilots.cpp">
+      <Filter>Source Files\serverNT</Filter>
+    </ClCompile>
+    <ClCompile Include="xpilotsDlg.cpp">
+      <Filter>Source Files\serverNT</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\checknames.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\config.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\error.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\list.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\math.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\net.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\portability.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\randommt.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\shipshape.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\socklib.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\strdup.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\strlcpy.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\xpmemory.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\NT\winNet.c">
+      <Filter>Source Files\commonNT</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\NT\wsockerrs.c">
+      <Filter>Source Files\commonNT</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\asteroid.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cannon.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\click.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\defaults.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\global.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\map.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\metaserver.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netserver.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\object.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\objpos.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\proto.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\robot.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\saudio.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sched.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\score.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\server.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tuner.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\walls.h">
+      <Filter>Source Files\server</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigDlg.h">
+      <Filter>Source Files\serverNT</Filter>
+    </ClInclude>
+    <ClInclude Include="ExitXpilots.h">
+      <Filter>Source Files\serverNT</Filter>
+    </ClInclude>
+    <ClInclude Include="ReallyShutdown.h">
+      <Filter>Source Files\serverNT</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Source Files\serverNT</Filter>
+    </ClInclude>
+    <ClInclude Include="StdAfx.h">
+      <Filter>Source Files\serverNT</Filter>
+    </ClInclude>
+    <ClInclude Include="UrlWidget.h">
+      <Filter>Source Files\serverNT</Filter>
+    </ClInclude>
+    <ClInclude Include="winServer.h">
+      <Filter>Source Files\serverNT</Filter>
+    </ClInclude>
+    <ClInclude Include="WinSvrThread.h">
+      <Filter>Source Files\serverNT</Filter>
+    </ClInclude>
+    <ClInclude Include="xpilots.h">
+      <Filter>Source Files\serverNT</Filter>
+    </ClInclude>
+    <ClInclude Include="xpilotsDlg.h">
+      <Filter>Source Files\serverNT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\bit.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\checknames.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\commonproto.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\config.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\const.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\draw.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\error.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\item.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\keys.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\net.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\pack.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\portability.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\rules.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\setup.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\socklib.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\version.h">
+      <Filter>Source Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\NT\winNet.h">
+      <Filter>Source Files\commonNT</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="xpilots.rc">
+      <Filter>Source Files\serverNT</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\icon1.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\xpilots.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\xpilots.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+</Project>
