@@ -40,7 +40,7 @@ extern "C" {
 
 #define	MAXHOSTNAMELEN	64
 
-#define	EWOULDBLOCK		WSAEWOULDBLOCK
+//#define	EWOULDBLOCK		WSAEWOULDBLOCK
 
     extern long alarm(long seconds, void (__cdecl * func) (int));
 

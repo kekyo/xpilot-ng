@@ -85,14 +85,6 @@ extern int xpprintf(const char* fmt, ...);
  */
 extern bool is_this_windows(void);
 
-
-/*
- * Round to nearest integer.
- */
-#ifdef _WINDOWS
-double rint(double x);
-#endif
-
 #ifdef _MSC_VER
 typedef unsigned short uint16_t; /* e.g. in client.c */
 typedef unsigned int uint32_t;

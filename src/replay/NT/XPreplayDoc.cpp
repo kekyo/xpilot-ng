@@ -110,7 +110,8 @@ void CXPreplayDoc::Serialize(CArchive& ar)
 		file.Seek(min, CFile::begin);
 
 		char	buffer[4096];
-		for(DWORD i = min; i < max - 4096; i+= 4096)
+        DWORD i;
+		for(i = min; i < max - 4096; i+= 4096)
 		{
 			file.Read(buffer, 4096);
 			ar.Write(buffer, 4096);
@@ -284,7 +285,7 @@ void CXPreplayDoc::ReadHeader(CArchive& ar)
 			manycolors = true;
 	}
 
-	for(i = 0; i < rc.maxColors; i++)
+	for(int i = 0; i < rc.maxColors; i++)
 	{
 		if(manycolors)
 		{
