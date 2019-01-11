@@ -1,0 +1,61 @@
+This is the README file for @PACKAGE_STRING@.
+
+@XP_COPYRIGHT@.
+
+Please see the COPYING file for further details.  You may not
+distribute this project without all the documentation,
+source code, and the COPYING file.
+
+
+
+Installation instructions are in the INSTALL file.
+
+The documentation for @PACKAGE_NAME@ is far from complete.
+
+For further reading, see the manuals in the doc/man directory.
+
+
+
+OTHER SOURCES OF INFORMATION ON THE INTERNET
+
+XPilot NG: http://xpilot.sourceforge.net/
+
+XPilot FAQ: telnet meta.xpilot.org 4402
+	(also in the doc/ subdirectory)
+
+XPilot Page on WWW: http://www.xpilot.org/
+
+XPilot for Windows info on WWW: http://www.buckosoft.com/xpilot/
+
+XPilot Newbie Manual on WWW: http://bau2.uibk.ac.at/erwin/NM/www
+
+XPilot FTP archive: ftp://ftp.xpilot.org/pub/
+
+XPilot newsgroup: rec.games.computer.xpilot
+
+
+CONTRIBUTED SOFTWARE
+
+Check out the contrib directory subdirectory for some extra nifty programs.
+
+Also try the xp2 mapeditor which is included in this XPilot distribution.
+It is a nifty graphical editor with which you can design a new XPilot world.
+
+
+REPORTING PROBLEMS AND BUGS
+
+If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
+
+        @PACKAGE_BUGREPORT@
+
+Remember to include the version of @PACKAGE_NAME@, your platform and the
+symptoms in as much detail as possible.
+
+
+DEVELOPERS CORNER
+
+A wider group of developers are discussing technical internals of the
+software on the mailing list xpilot-hacks@nslug.ns.ca. If you want to
+discuss your potential contributions to the source code, please see the
+URL http://nslug.ns.ca/mailman/listinfo/xpilot-hacks for further
+information.

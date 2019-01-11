@@ -1,0 +1,87 @@
+# Set maximum density of any given item type to 1 every 12000 blocks.
+# For instance, no more than 3 items may exist in Continent (the default map).
+maxItemDensity:         3.46021e-04
+
+# Set probability of for each item to appear at a tick in a block
+itemEnergyPackProb:     4.01323e-09
+itemTankProb:           2.40292e-09
+itemECMProb:            1.92426e-09
+itemMineProb:           6.40779e-09
+itemMissileProb:        1.92426e-09
+itemCloakProb:          1.60596e-09
+itemSensorProb:         1.60596e-09
+itemWideangleProb:      2.70371e-09
+itemRearshotProb:       2.94386e-09
+itemAfterburnerProb:    2.74620e-09
+itemTransporterProb:    1.60596e-09
+itemLaserProb:	        1.60596e-09
+itemEmergencyThrustProb:1.60596e-09
+itemTractorBeamProb:    2.74620e-09
+itemAutoPilotProb:      1.60596e-09
+itemEmergencyShieldProb:1.60596e-09
+
+# A few items appear moving.  It is fun to chase them
+# when they are bouncing.
+movingItemProb:		0.3
+
+# We like stronger gravity
+gravity:		-0.25
+
+# Nukes and clusters are rather heavy.
+allowNukes:             no
+allowClusters:          no
+allowModifiers:         yes
+
+# Set the frames per second
+framesPerSecond:	50
+gameSpeed:		12.5
+
+# Define a group of settings which make the world bouncy for players.
+define: SoftWalls \override: \multiline: EndSoftWalls
+EndSoftWalls
+
+# Define settings for private play.  To activate do "-expand PrivateSettings".
+define: PrivateSettings \override: \multiline: EndPrivateSettings
+idleRun:                no
+noQuit:                 no
+reportToMetaServer:     no
+searchDomainForXPilot:  no
+contactPort:            15000
+serverHost:             localhost
+EndPrivateSettings
+
+# Settings for public Internet play.  To activate do "-expand PublicSettings".
+define: PublicSettings \override: \multiline: EndPublicSettings
+idleRun:                yes
+noQuit:                 yes
+reportToMetaServer:     yes
+EndPublicSettings
+
+# Settings for everything bouncing.  To activate do "-expand BounceAll".
+define: BounceAll \override: \multiline: EndBounceAll
+allowPlayerBounces:                      yes
+shotsWallBounce:                         yes
+ballsWallBounce:                         yes
+minesWallBounce:                         yes
+itemsWallBounce:                         yes
+missilesWallBounce:                      no
+sparksWallBounce:                        yes
+debrisWallBounce:                        yes
+asteroidsWallBounce:                     yes
+maxObjectWallBounceSpeed:                180
+maxShieldedWallBounceSpeed:              180
+maxUnshieldedWallBounceSpeed:            180
+maxShieldedPlayerWallBounceAngle:        180
+maxUnshieldedPlayerWallBounceAngle:      180
+playerWallBounceBrakeFactor:             0.95
+objectWallBounceBrakeFactor:             0.98
+objectWallBounceLifeFactor:              0.99
+wallBounceFuelDrainMult:                 1.0
+wallBounceDestroyItemProb:               0.0
+edgeBounce:                              yes
+EndBounceAll
+
+# For Internet games we allow remote clients to bounce softly by
+# expanding the SoftWalls define.
+expand: SoftWalls
+

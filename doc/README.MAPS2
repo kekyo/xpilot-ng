@@ -1,0 +1,96 @@
+There's a utility in the contrib directory called mapmapper which
+converts old style maps (1.x) to new style maps (2.x).
+
+The new map format is as follows:
+
+	SYMBOL			MEANING
+
+	x			Completely filled block
+	s			Upper left half filled
+	w			Lower left half filled
+	q			Lower right half filled
+	a			Upper right half filled
+
+	b			Completely filled decoration block
+	h			Upper left half filled
+	y			Lower left half filled
+	t			Lower right half filled
+	g			Upper right half filled
+
+	#			Fuel block
+
+	r			Upwards cannon
+	d			Leftwards cannon
+	f			Rightwards cannon
+	c			Downwards cannon
+
+	_			Neutral base
+	0..9			Base belonging to team n
+	*			Treasure (belongs to team with closest base)
+	!			Target (belongs to team with closest base)
+
+	+, -			Positive/repelling and negative/attracting grav
+	>, <			Clockwise and anti-clockwise grav
+	i			Upwards gravity current
+	j			Leftwards gravity current
+	k			Rightwards gravity current
+	m			Downwards gravity current
+
+	@, (, )			In/out, in and out wormholes respectively
+
+	A..Z			Checks, 'A' = start
+
+	$			Force the direction of homebases.
+				Players starting on homebases that are
+				adjacent to this symbol will start with the
+				front of their ship pointing to this dollar
+				sign.  Clients don't draw this symbol.
+
+	%			Item concentrator.  Putting it in a map will
+				determine where items appear.  When one or more
+				item concentrators are in a map then
+				itemConcentratorProb (1.0 by default) of all
+				items appear only in an area around the item
+				concentrators; the remainder of the items, or
+				all of them if no item concentrators are
+				defined, popup anywhere.  The area is a circle
+				with a radius determined by the server option
+				-itemConcentratorRadius.  An item concentrator
+				is drawn on screen as three rotating triangles.
+
+	z			Friction block.  Ships in this kind of block
+				have friction acting on them equal to
+				blockFriction, not friction.  The option
+				blockFrictionVisible determines whether
+				or not players see the friction block as
+				decor or not at all.
+
+	^			Empty Treasure.  Belongs to the team with
+				closest base.  An empty treasure behaves
+				like a regular treasure, except that it
+				does not own a ball.
+
+	&			Asteroid concentrator.  Putting it in a map
+				will determine where asteroids appear.  When
+				one or more asteroid concentrators are in a
+				map then asteroidConcentratorProb (1.0 by default) of
+				all asteroids appear only in an area around the
+				asteroid concentrators; the remainder of the
+				asteroids, or all of them if no asteroid
+				concentrators are defined, popup anywhere.  The
+				area is a circle with a radius determined by the
+				server option -asteroidConcentratorRadius.  An asteroid
+				concentrator is drawn on screen as three rotating
+				squares.
+
+	any other char		Empty block
+
+	elnopuv~`=[]{}|:;"',.?/ are free for future expansion.
+
+In case you are wondering if all the characters for map symbols have any
+special meaning, they are not abbreviations, but if you take a look at
+where they are placed on the keyboard, you might grasp the logic behind
+selecting them.  Try imagining the block center between the keys qwas
+(for the logica behind qwas) and between dfrc (for the logic behind dfrc).
+'x' was just chosen since it makes a nice 'fill it all' character.
+

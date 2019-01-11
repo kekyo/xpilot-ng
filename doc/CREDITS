@@ -1,0 +1,210 @@
+This is a very abbreviated credit list.  We couldn't possibly enumerate all
+the people who have been involved in XPilot, especially since we have no such
+list at hand. :)  If you find someone (yourself!?) missing from this list
+then please don't hesitate to complain to the authors at xpilot@xpilot.org.
+
+xpilot.org is:
+
+    Bert Gijsbers           xpilot@xpilot.org
+    Dick Balaska
+    Kimiko Koopman
+    Mark Boyns              DNS services
+    Scott Adkins            www, ftp, and meta2 services
+    Dick Balaska            mail services
+    uni-Tromso, Norway      meta services
+
+Release 4.5 credits:
+
+    Jarno van der Kolk      Bugfix, Windows recording,
+                            draw asteroid concentrators.
+    Paul Alexander Drees    Asteroid Concentrators.
+    Kimiko Koopman          Ball racing, kinetic energy in
+                            shot hits, scores as floats,
+                            alliances, cannon defense,
+                            Esound support.
+    Austin Donnelly         Auto-kick of paused players.
+    Paul Alexander Drees    Bugfixes, sensitive mines,
+                            asteroid concentrators, lag meter.
+    Thorsten Kroeger        Messages to standard output,
+                            server security fix.
+    Kristian Söderblom      Several bugfixes.
+
+Release 4.4 credits:
+
+    Paul Alexander Drees    Lots of small new features + bugfixes.
+    Guido Koopman           Balls in non-team-mode, asteroids.
+    Ben Jackson             Bugfix.
+    Paul Forman             Disallow stationary mines.
+    Jarrod Miller           Mapeditor updates
+    Austin Donnelly         OSF/1 fixes, ball string & collisions.
+    Ben Armstrong           Documentation, bugfixes.
+    Joe Groff               Multiple keys per mouse button.
+    Jarno van der Kolk      More server tuning, Windows XPreplay.
+                            Windows NSIS Install script.
+    Bob Glickstein          Flak.
+    Juha Lindström          radar on HUD.Release 4.3 credits:
+
+    Claus Leth Gregersen    Several patches, graphics look.
+    Marcus Sundberg         Radar color fix + localnet fix.
+    Jarrod Miller           Fix base orientation, update mapeditor.
+    Peder Herborg           Fixes for sliding radar under Windows.
+    Ben Jackson             Several fixes + ping button.
+    Jarno van der Kolk      Windows sliding radar performance fix.
+    Juha Lindström          Windows fixes for new socklib.
+    Ben Armstrong           UDP port range + ideas + documentation.
+
+Release 4.2 credits:
+
+    Ben Jackson             Numerous patches.
+    Uoti Urpala             Numerous patches.
+    Jonny Svärling,         Talk macros.
+    Adam Lorentzon
+    Teemu Elias Hirsimäki   xp-replay fix.
+    Guido Koopman           Armor item.
+    Sven Mascheck           Joined the maintenance team.
+
+Release 4.1 credits:
+
+    Guido Koopman           Several patches + 1 new item.
+    Sven Mascheck           Erase work + fixes & testing.
+    Rakk & Murx             Analytical Collision Detection.
+
+Release 4.0 credits:
+
+    Guido Koopman           Several patches + 3 new items
+                            + much improved robots.
+    Rodney R. Korte         Port to OS/2 + fixes.
+    Sven Mascheck           Bugfixes + snooping.
+    Mark Lambert            Memory leak fix.
+    Espen Skoglund          Ship wreckages.
+
+Release 3.7 credits:
+
+    Dick Balaska            Port to Windows NT & 95.
+    Martin Sandiford        Windows port debugging + fixes.
+    E. Hugh Woods III       Windows installation script.
+    Mark Boyns              Ideas and discussions.
+    Jens Koerber            VMS patches.
+    Ben Aveling             Several speed improvements + meaner robots.
+    Santeri Paavolainen     X11 Double Buffering extension.
+    David Leonard           msub fix for BSD.
+    Michael Driscoll        Diff for README.MAPS2
+    Guido Koopman           Several new patches.
+
+Release 3.6 credits:
+
+    Tim Auckland            Gravity currents
+    Mark Boyns              Several patches and comments
+    Scott Manley            
+    Ben Jackson
+    Andrew Mobbs            itemConcentratorProb
+    Ian Jackson             itemConcentratorProb
+
+Release 3.5 credits:
+
+    Steve Payne             Ship checking, Linux plock + option
+    Claus Leth Gregersen    Item limits, hud ship, textured balls
+    Aleksi Suhonen          X multibuffer
+    Jens Koerber            VMS changes
+
+Release 3.4 credits:
+
+    Mark Boyns              Map decorations + other things.
+    Michael Gruber          Left & right rear guns.
+    Jens Koerber            Changes for VMS.
+    Bretton Wade            Ball movement research + code.
+    Christian Montanari     Changes to HP audio.
+    Tom Hansen              Drop items.
+
+Release 3.3 credits:
+
+    Steven Singer           Record & playback, filled walls.
+    Christian Engstler      Bug reports & Sun guinea pig.
+
+Release 3.2 credits:
+
+    Harvey Thompson         Bugfixes and new code.
+    Scott W. Adkins         Emergency Shield.
+    John E. Norlin          Robots ship shapes.
+    Patrick Kenny           GOD log, bugfix, Blood's Music.
+    Pete Ford               New ship shape format.
+    Jyke Jokinen            xpilot host alias.
+    Russ Glaeser            Better scoring system.
+    Steven Singer           Mouse control, race mode.
+    Nicholas Vargish        rogues options & persistence ;-)
+    Joshua Yelon            Better explosion system, shove patch.
+    Eckard Kopatzki         Joystick support for Linux.
+    Tom De Pauw &           AF audio support.
+    Lance Berc  
+    Ben Jackson             Bug fixes.
+    Steve Marsden           User controllable mine detonation.
+
+Release 3.1 credits:
+
+    Harvey Thompson         Lots of first class wonderful new
+                            features, ideas and cleanups.  Thanks!
+    Mark Boyns              Sound.
+    Stig Sæther Bakken      Imakefile, testing & feedback.
+    Scott W. Adkins         Ship shapes.
+    Tony Plate              Missile length and names.
+    Steven Singer           Sun tester & knowledge provider. :-)
+
+Release 3.0 credits:
+
+    Maurice Abraham         Robots, more flexible bouncing etc.
+    Mark Boyns &            RPlay - original sound support.
+    David J. Bianco 
+    Greg Renda              Sound scheme client/serverized
+                            and added NCD sound support.
+    Dave Lemke
+    Curt Hjorring           VMS port.
+    Andrew Scherpbier       Random sound patch.  Xpmtp.
+    Steven Singer           Sun tester & knowledge provider. :-)
+    Andy Skinner
+    Tero Kivinen            Outline world.
+    David Chatterton &      Ultrix and SGI.
+    Johan Danielsson
+    Fred Hucht &            Several (big) patches
+    Michael Staats  
+    Maurice Abraham
+    Makoto Matsushita
+    Stig Sæther Bakken      patches & feedback.
+    & all the beta testers
+
+Version 2.0 credits:    (Never released)
+
+    Bert Gijsbers           Too much to mention really.
+    Robert Blum &           Lots of features.
+    more from Aachen
+    Andy Skinner            Target code and maps.
+    Paul Gardner            Random map generator + optimisations.
+    Greg Renda
+    Randall Severly
+    Evan Miller
+    Eric Flink
+    Karthik P. Sheka
+    Stig Sæther Bakken
+    Jim Hickey
+    Harvey Thompson
+    Ted Lemon
+
+Version 1.2 credits:
+
+    Christos Zoulas         Monochrome fixes
+    Abraham Maurice         Robots, timing.
+    Greg Renda              Rebinding of keys, wormholes etc.
+    Dave Lemke
+    Keith Cantrell
+    Chris Marshall
+    Sigmund Austigard
+    Martin Rutishauser
+    Frank Tore Johansen
+    Hermann Dunkel
+
+Pre version 1.2 credits:
+
+    Arne Helme              Socklib
+    Tom Grydeland           Maps, fonts and ideas
+
+    Lots of, LOTS OF beta 
+    testers at our site.

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = remove ]; then
+    update-alternatives --remove xpilot /usr/games/xpilot-ng-sdl
+    update-alternatives --remove xpilot-ng /usr/games/xpilot-ng-sdl
+fi
+
+#DEBHELPER#

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+case "$1" in
+	purge)
+	    rm -rf /etc/xpilot-ng
+	    # Remove xpilotng user and group, if they exist
+	    id xpilotng >/dev/null 2>&1 && userdel xpilotng
+	;;
+esac
+
+#DEBHELPER#

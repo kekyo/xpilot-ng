@@ -1,0 +1,137 @@
+xpilot-ng (1:4.7.1-2.0cvs1) unstable; urgency=low
+
+  * Incremented version# and changed maintainer so there's no confusion
+    between this version and the official Debian version.
+
+ -- Unofficial Debian XPilot <xpilot-hacks@lists.sourceforge.net>  Wed, 17 Aug 2005 13:10:17 -0300
+
+xpilot-ng (1:4.7.1-2) unstable; urgency=low
+
+  * Use ship_red.ppm to create an xpilot-ng menu icon.  (Closes: #275646).
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Wed, 17 Aug 2005 07:00:25 -0300
+
+xpilot-ng (1:4.7.1-1) unstable; urgency=low
+
+  * New upstream release.
+  * First upload.  (Closes: #141099).
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Sun,  7 Aug 2005 12:17:11 -0300
+
+xpilot-ng (1:4.6.6ng+4.7a1.20050108-2) unstable; urgency=low
+
+  * Add ng suffix so version matches what is reported to metaserver.
+  * Fix init script & wrapper to correctly save pid of server, not
+    of wrapper.
+  * Parameterise version# to make it easier to create new versions
+    of package.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Sun,  9 Jan 2005 12:49:05 -0400
+
+xpilot-ng (1:4.6.6ng+4.7a1.20050108-1) unstable; urgency=low
+
+  * New CVS snapshot.
+  * Fix CVS epoch date (wrong year).
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Sun,  9 Jan 2005 12:27:40 -0400
+
+xpilot-ng (4.6.6+4.7a1.20040106-3) unstable; urgency=low
+
+  * Fix init script: relying on --name and --user is fragile.  Use
+    --make-pidfile instead.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Sat,  8 Jan 2005 18:06:57 -0400
+
+xpilot-ng (4.6.6+4.7a1.20040106-2) unstable; urgency=low
+
+  * Misc fixes: password file postinst problem; conf files now have .txt 
+    suffix; shipshapes.txt belongs in -client-common; missing -client-sdl
+    dependency added to xpilot-ng metapackage.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Sat,  8 Jan 2005 11:37:14 -0400
+
+xpilot-ng (4.6.6+4.7a1.20040106-1) unstable; urgency=low
+
+  * New upstream.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Thu,  6 Jan 2005 19:48:47 -0400
+
+xpilot-ng (4.5.4.cvs.20040120-1) unstable; urgency=low
+
+  * New upstream.
+  * Fixed manpages to match binary names.
+  * Dropped 'cruft' (xp-replay, xp-mapedit, which can just as easily
+    be obtained from official version which, after all, does not
+    conflict with -ng anymore).
+  * Switched to non-redundant version# scheme.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Tue, 20 Jan 2004 20:30:05 -0400
+
+xpilot-ng (4.5.4.ng.20040110-1) unstable; urgency=low
+
+  * New upstream.
+  * Changed name from xpilot to xpilot-ng so that this package does
+    not conflict with the original.
+    - Removed pre-ng changelog entries.
+    - Fixed paths & dependencies so both versions can co-exist.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Sat, 10 Jan 2004 10:34:00 -0400
+
+xpilot (4.5.4.ng.20040102-1) unstable; urgency=low
+
+  * New upstream.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Fri,  2 Jan 2004 13:56:14 -0400
+
+xpilot (4.5.4.ng.20040101-1) unstable; urgency=low
+
+  * New upstream.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Thu,  1 Jan 2004 12:02:43 -0400
+
+xpilot (4.5.4.ng.20031210-1) unstable; urgency=low
+
+  * New upstream.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Wed, 10 Dec 2003 17:01:18 -0400
+
+xpilot (4.5.4.ng.20031203-2) unstable; urgency=low
+
+  * Replace xpilot-extra.
+    - The one map worth keeping (teamcup.xp) is now in xpilot-server.  
+    - The other maps are widely considered not very good.
+    - Sounds are no longer supported.
+    - The meta server script isn't needed as there is a meta interface
+      in the client now.
+    - Add example configs to xpilot-client-common.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Sun,  7 Dec 2003 14:51:06 -0400
+
+xpilot (4.5.4.ng.20031203-1) unstable; urgency=low
+
+  * New upstream.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Wed,  3 Dec 2003 11:47:30 -0400
+
+xpilot (4.5.4.ng.20031122-2) unstable; urgency=low
+
+  * Fix dependencies.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Sun, 30 Nov 2003 14:13:19 -0400
+
+xpilot (4.5.4.ng.20031122-1) unstable; urgency=low
+
+  * New upstream.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Sat, 22 Nov 2003 14:59:18 -0400
+
+xpilot (4.5.4.ng.20031116-1) unstable; urgency=low
+
+  * Moved from xpilot.org to xpilot.sf.net fork.
+  * Simplified packaging.
+  * Dropped -nas and -rplay versions, as they've never worked well,
+    and all of the xpilot developers agree the sound support needs to
+    be redone with a modern sound daemon anyway.
+
+ -- Ben Armstrong <synrg@sanctuary.nslug.ns.ca>  Sun, 16 Nov 2003 19:41:31 -0400
+

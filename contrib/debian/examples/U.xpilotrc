@@ -1,0 +1,143 @@
+! Here is my .xpilotrc. The key mappings are optimized for bloods so
+! that I can use the mouse with my right hand and use all the important
+! keys with my left hand, but they are usable on item maps too. The alt
+! settings with turnresistance 0 are for using improved mouse control on
+! servers with my patch. Currently all the important bloods servers have
+! my patch, so I might swap those as the primary settings. I never play
+! with keys, so I don't even have turning keys configured. Disturbing
+! HUD parts like HUD lines and fuel gauge are turned off. ShotSize is
+! larger than default (although scaleFactor 1.17 makes shots smaller
+! than they would be with shotSize 5 and scale 1). I also don't like
+! using mouse buttons while trying to manoeuver carefully, so the
+! pointerButton settings aren't that important.
+
+xpilot.name:			U
+xpilot.power:			55.000
+xpilot.turnSpeed:               64.000
+xpilot.turnResistance:          0.2
+xpilot.altPower:                55.000
+xpilot.altTurnSpeed:            16.000
+xpilot.altTurnResistance	0.0
+xpilot.speedFactHUD:            -0.000
+xpilot.speedFactPTR:            0.000
+xpilot.fuelNotify:              101.000
+xpilot.fuelWarning:             0.000
+xpilot.fuelCritical:            0.000
+xpilot.showShipName:            True
+xpilot.showMineName:            True
+xpilot.showMessages:            True
+xpilot.showHUD:			True
+xpilot.verticalHUDLine:         False
+xpilot.horizontalHUDLine:       False
+xpilot.fuelMeter:               True
+xpilot.fuelGauge:               Off
+xpilot.turnSpeedMeter:          False
+xpilot.powerMeter:              False
+xpilot.packetSizeMeter:         False
+xpilot.packetLossMeter:         False
+xpilot.packetDropMeter:         False
+xpilot.slidingRadar:            True
+xpilot.showItems:               False
+xpilot.showItemsTime:           2.000
+xpilot.outlineWorld:            True
+xpilot.filledWorld:             True
+xpilot.texturedWalls:           False
+xpilot.clock:           	False
+xpilot.clockAMPM:               False
+xpilot.backgroundPointDist:     8
+xpilot.backgroundPointSize:     3
+xpilot.sparkSize:               2
+xpilot.sparkProb:               0.488
+xpilot.shotSize:                5
+xpilot.teamShotSize:            2
+xpilot.hudColor:                2
+xpilot.hudLockColor:            2
+xpilot.wallColor:               2
+xpilot.decorColor:              3
+xpilot.showDecor:               True
+xpilot.outlineDecor:            True
+xpilot.filledDecor:             False
+xpilot.texturedDecor:           False
+xpilot.texturedBalls:           False
+xpilot.receiveWindowSize:       3
+xpilot.charsPerSecond:          200
+xpilot.markingLights:           True
+xpilot.toggleShield:            True
+xpilot.autoShield:              True
+xpilot.keyThrust:               d
+xpilot.keyShield:               Control_L
+xpilot.keyFireShot:             f Return
+xpilot.keyFireMissile:          a
+xpilot.keyFireTorpedo:          z
+xpilot.keyFireHeat:             q
+xpilot.keyFireLaser:            f Return
+xpilot.keyDropMine:             s
+xpilot.keyDetachMine:           w
+xpilot.keyDetonateMines:        x
+xpilot.keyLockClose:            r
+xpilot.keyLockNextClose:        t
+xpilot.keyLockNext:             5
+xpilot.keyLockPrev:             4
+xpilot.keyRefuel:               g
+xpilot.keyRepair:               f
+xpilot.keyCloak:                Tab
+xpilot.keyEcm:			e
+xpilot.keySelfDestruct:         Shift_L
+xpilot.keyIdMode:               i
+xpilot.keyPause:                p Pause
+xpilot.keySwapSettings:         Escape
+xpilot.keyChangeHome:           h
+xpilot.keyConnector:            space
+xpilot.keyDropBall:             a
+xpilot.keyTankNext:             u
+xpilot.keyTankPrev:             y
+xpilot.keyTankDetach:           6
+xpilot.keyIncreasePower:        KP_Multiply KP_F1
+xpilot.keyDecreasePower:        KP_Divide KP_F2
+xpilot.keyIncreaseTurnspeed:    KP_Add KP_F3
+xpilot.keyDecreaseTurnspeed:    KP_Subtract KP_F4
+xpilot.keyTransporter:          t
+xpilot.keyTalk:			m
+xpilot.keyToggleNuclear:        n
+xpilot.keyToggleCluster:        c
+xpilot.keyToggleImplosion:      i
+xpilot.keyToggleVelocity:       o
+xpilot.keyToggleMini:           j
+xpilot.keyToggleSpread:         k
+xpilot.keyTogglePower:          b
+xpilot.keyToggleCompass:        semicolon
+xpilot.keyToggleAutoPilot:      h
+xpilot.keyToggleLaser:          l
+xpilot.keyEmergencyThrust:      v
+xpilot.keyEmergencyShield:      Caps_Lock
+xpilot.keyTractorBeam:          comma
+xpilot.keyPressorBeam:          period
+xpilot.keyToggleMessages:       0
+xpilot.keyReprogram:            grave
+xpilot.keyToggleRecord:         KP_5
+xpilot.keySelectItem:           Insert
+xpilot.keyLoseItem:             Delete
+xpilot.modifierBank1:
+xpilot.modifierBank2:
+xpilot.modifierBank3:
+xpilot.modifierBank4:
+xpilot.keyTurnRight:
+xpilot.keyLoadLock1:            1
+xpilot.keyLoadLock2:            2
+xpilot.keyLoadLock3:            3
+xpilot.keyLoadLock4:
+xpilot.keyClearModifiers:
+xpilot.keyLoadModifiers1:
+xpilot.keyLoadModifiers2:
+xpilot.keyLoadModifiers3:
+xpilot.keyLoadModifiers4:
+xpilot.keyToggleOwnedItems:     g
+xpilot.keyTurnLeft:
+xpilot.keyFireNuke:             n
+xpilot.pointerButton1:          keyTractorBeam
+xpilot.pointerButton2:          keyPressorBeam
+xpilot.pointerButton3:          keyThrust
+xpilot.keyPointerControl:       KP_Enter
+xpilot.scaleFactor:             1.17
+xpilot.maxColors:               8
+xpilot.geometry:                1146x894

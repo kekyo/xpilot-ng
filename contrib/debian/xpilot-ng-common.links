@@ -1,0 +1,4 @@
+etc/xpilot-ng/defaults.txt usr/share/games/xpilot-ng/defaults.txt
+etc/xpilot-ng/password.txt usr/share/games/xpilot-ng/password.txt
+etc/xpilot-ng/robots.txt usr/share/games/xpilot-ng/robots.txt
+etc/xpilot-ng/shipshapes.txt usr/share/games/xpilot-ng/shipshapes.txt

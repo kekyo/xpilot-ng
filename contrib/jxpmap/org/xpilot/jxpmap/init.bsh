@@ -1,0 +1,551 @@
+addScript(name, tooltip, method) {
+    if (tooltip == null) tooltip = name;
+    menuItem = new JMenuItem(name);
+    menuItem.addActionListener(this);
+    menuItem.setToolTipText(tooltip);
+    global.scriptMenu.add(menuItem);
+    actionPerformed(ae) {
+        this.invokeMethod(method, null);
+    }
+}
+
+addScript("Randomize", "Randomize the selected wall polygons", "randomize");
+addScript("Shadow", "Adds a shadow to the selected wall polygons", "shadow");
+addScript("Round", "Rounds the corners of the selected wall polygons", "round");
+addScript("Image to polygon", "Creates a polygon from an image", "imageToPoly");
+addScript("Bevel-border", "Adds a bevel border to a polygon", "bevelBorder");
+addScript("Depth-decor", "Adds a depth decoration to a polygon", "depthDecor");
+addScript("Select all polygons", "Selects all top-level polygons", "selectAllPolys");
+
+import org.xpilot.jxpmap.*;
+
+
+/************************ Misc Utils ******************************/
+
+
+/**
+ * Utility to check if a map objects is a regular wall polygon
+ */
+isWall(p) {
+    return (p instanceof MapPolygon); 
+}
+
+/**
+ * Finds a style with the matching id from the list
+ */
+findStyle(id, list) {
+    for (style:list) 
+        if (style.id.equals(id))
+            return style;
+    return null;
+}
+
+/**
+ * Shows a message box.
+ */
+alert(msg) {
+    JOptionPane.showMessageDialog(null, msg);
+}
+
+/**
+ * Prompts the user for input.
+ */
+prompt(msg) {
+    return JOptionPane.showInputDialog(null, msg);
+}
+
+/**
+ * Prompts the user for input with the given default value.
+ */
+prompt(msg, def) {
+    return JOptionPane.showInputDialog(null, msg, def);
+}
+
+/**
+ * Gets the center point of the visible area on the map.
+ */
+center() {
+    center = new Point(editor.width / 2, editor.height / 2);
+    return editor.getInverse().transform(center, new Point());
+}
+
+/**
+ * Selects all top-level polygons.
+ */
+selectAllPolys() {
+    editor.setSelectedObject(null);
+    for(o:editor.model.objects)
+        if (o instanceof MapPolygon)
+            editor.addSelectedObject(o);
+    editor.repaint();
+}
+
+/************************ Randomize script ******************************/
+
+
+/**
+ * Randomizes a wall polygon with the given amount of pixels.
+ */
+doRandomize(pixels, o) {
+    if (isWall(o)) {    
+        for (i = 0; i < o.getNumPoints(); i++) {
+            p = o.getPoint(i);
+            p.translate((int)((Math.random() - 0.5) * pixels * 64),
+            (int)((Math.random() - 0.5) * pixels * 64));
+            o.setPoint(i, p.x, p.y);
+        }
+    } else if (o instanceof Group) {
+        for (i:o.members) doRandomize(pixels, i);
+        o.invalidate();
+    }
+}
+
+randomize() {
+    if (editor.getSelectedObjects().isEmpty()) {
+        alert("First select a polygon");
+        return;
+    }
+    value = prompt("How many pixels to randomize");
+    if (value == null) return;
+    for (o:editor.selectedObjects)
+        doRandomize(Integer.parseInt(value), o);
+    editor.repaint();        
+}
+
+
+/************************ Shadow script ******************************/
+
+
+/**
+ * Adds a drop shadow to a wall polygon by creating
+ * a dark gray decoration polygon below it.
+ */
+addShadow(polygon, style) {
+    p = polygon.getPolygon();
+    sp = new Polygon(p.xpoints, p.ypoints, p.npoints);
+    for(i = 0; i < sp.npoints; i++) {
+        sp.xpoints[i] += 240;
+        sp.ypoints[i] -= 640;
+    }
+    sp.invalidate();
+    decor = new Decoration();
+    decor.addToFront(new MapPolygon(sp, style));
+    editor.model.addToBack(decor);   
+}
+
+/**
+ * Finds or creates the edge style and polygon style required
+ * for a drop shadow.
+ */
+getShadowStyle() {
+    model = editor.model;
+    es = findStyle("hidden", model.edgeStyles);
+    if (es == null) {
+        es = new LineStyle("hidden", 1, Color.darkGray, LineStyle.STYLE_HIDDEN);
+        model.edgeStyles.add(es);
+    }
+    ps = findStyle("shadow", model.polyStyles);
+    if (ps == null) {
+        ps = new PolygonStyle();
+        ps.setColor(new Color(50,50,50));
+        ps.setFillStyle(PolygonStyle.FILL_COLOR);
+        ps.setId("shadow");
+        ps.setVisibleInRadar(false);
+        ps.setDefaultEdgeStyle(es);
+        model.getPolyStyles().add(ps);
+    }
+    return ps;    
+}
+
+doShadow(o) {
+    style = getShadowStyle();
+    if (isWall(o)) addShadow(o, style);
+    else if (o instanceof Group) {
+        for (i:o.members) doShadow(i);
+        o.invalidate();
+    }
+}
+
+shadow() {
+    if (editor.selectedObjects.isEmpty()) {
+        alert("First select a polygon");
+        return;
+    }
+    for (o:editor.selectedObjects) doShadow(o);
+    editor.repaint();            
+}
+
+
+/************************ Round script ******************************/
+
+/**
+ * Moves a point to the specified direction the specified length.
+ */
+movePoint(p, dir, len) {
+    a = len * Math.pow(p.distanceSq(dir), -0.5);
+    p.translate((int)(a * (dir.x - p.x)), (int)(a * (dir.y - p.y)));
+}    
+
+/**
+ * Rounds the corners of a wall polygon by adding one additional
+ * vertex to each corner and moving the original vertex. The max parameter 
+ * controls the maximum amount of pixels a vertex gets moved.
+ */
+doRound(mp, max) {
+    if (!isWall(mp)) return;
+    if (mp instanceof Group) {
+        for (o:mp.members) 
+            doRound(o, max);
+        mp.invalidate();
+    }
+    if (mp.getNumPoints() < 3) return;
+    minDist = 1 * 64;
+    maxMove = max * 64;
+    p2 = mp.getPoint(mp.getNumPoints() - 1);
+    p3 = mp.getPoint(0);
+    for (i = 1; i <= mp.getNumPoints(); i++) {
+        p1 = p2;
+        p2 = p3;
+        p3 = mp.getPoint(i % mp.getNumPoints());
+        d12 = p1.distance(p2);
+        if (d12 <= minDist) continue;
+        d23 = p2.distance(p3);
+        if (d23 <= minDist) continue;
+        pn = new Point(p2);
+        movePoint(pn, p1, Math.min(maxMove, (int)(d12 / 2)));
+        movePoint(p2, p3, Math.min(maxMove, (int)(d23 / 2)));
+        mp.insertPoint(i - 1, pn);
+        mp.setPoint(i, p2.x, p2.y);
+        i++;
+    }
+}
+
+round() {
+    if (editor.selectedObjects.isEmpty()) {
+        alert("First select a polygon");
+        return;
+    }
+    value = prompt("How many pixels to round");
+    if (value == null) return;
+    max = Integer.parseInt(value);
+    value = prompt("How many times to run");
+    if (value == null) return;
+    times = Integer.parseInt(value);   
+    for (o:editor.selectedObjects)
+        for (i = 0; i < times; i++)
+            doRound(o, max);
+    editor.repaint();
+}
+
+/*********************** Image to polygon ***************************/
+
+imageToPoly(pixmap) {
+    model = editor.model;
+    poly = FindPolygon.findPolygon(pixmap.image);
+    if (poly == null) {
+        alert("Couldn't find a polygon in the image");
+        return;
+    }
+    es = findStyle("hidden", model.edgeStyles);
+    if (es == null) {
+        es = new LineStyle("hidden", 1, Color.darkGray, LineStyle.STYLE_HIDDEN);
+        model.edgeStyles.add(es);
+    }   
+    ps = findStyle(pixmap.fileName, model.polyStyles);
+    if (ps == null) {
+        ps = new PolygonStyle();
+        ps.setId(pixmap.fileName);        
+        ps.setColor(new Color(0,0,128));
+        ps.setFillStyle(PolygonStyle.FILL_TEXTURED);
+        ps.setTexture(pixmap);
+        ps.setVisibleInRadar(true);
+        ps.setDefaultEdgeStyle(es);
+        model.getPolyStyles().add(ps);        
+    }
+    p = center();
+    poly.translate(p.x, p.y);
+    editor.addMapObject(new MapPolygon(poly, ps));    
+}
+
+imageToPoly() {
+    model = editor.model;
+    if (model.pixmaps.isEmpty()) {
+        alert("First add an image using the Image Manager");
+        return;
+    }
+    map = new HashMap();
+    for(p:editor.model.pixmaps)
+        map.put(p.fileName, p);
+    images = map.keySet().toArray();
+    name = JOptionPane.showInputDialog(null,
+        "Select an image", "Question",
+        JOptionPane.INFORMATION_MESSAGE, null,
+        images, images[0]);
+    pixmap = map.get(name);
+    if (pixmap == null) return;
+    imageToPoly(pixmap);
+}
+
+/*********************** 3D effects ***************************/
+
+import java.awt.image.*;
+
+/**
+ * A 2D vector object.
+ */
+vec(x, y) {
+    add(v) { return vec(v.x + x, v.y + y); }
+    mul(a) { return vec(a*x, a*y); }
+    len() { return Math.sqrt(1.0*x*x + 1.0*y*y); }
+    unit() { return mul(1d/len()); }
+    normal() { return vec(-y, x); }
+    dot(v) { return x*v.x + y*v.y; }
+    eq(v) { return v.x == x && v.y == y; }
+    return this;
+}
+
+/**
+ * Gets the average color of the given polygon style.
+ */
+getAverageColor(style) {
+    averageColor(img) {
+        bi = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+        bi.graphics.drawImage(img, 0, 0, 1, 1, Color.black, null);
+        return new Color(bi.getRGB(0, 0));
+    }
+    switch(style.fillStyle) {
+        case PolygonStyle.FILL_COLOR: 
+            if (!Color.black.equals(style.color))
+                return style.color;
+            break;
+        case PolygonStyle.FILL_TEXTURED:
+            return averageColor(style.texture.image);
+    }
+    return Color.darkGray;
+}
+
+/**
+ * Returns an image that is a copy of the given image img
+ * with brightness adjusted by the given level.
+ *
+ * @param img the original image
+ * @param level a float that is used to multiply the color components
+ * of the original image
+ */
+adjustBrightness(img, level) {
+    op = new ConvolveOp(new Kernel(1, 1, new float[] { level }));
+    dst = op.createCompatibleDestImage(img,
+        new DirectColorModel(24, 0xff0000, 0xff00, 0xff));
+    op.filter(img, dst);
+    return dst;
+}   
+
+
+getColoredStyle(level, name, orig) {
+    var id = level < -0.5 ? 0 : level < 0 ? 1 : level < 0.5 ? 2 : 3;
+    var sid = name + "-color" + id;
+    var ps = findStyle(sid, editor.model.polyStyles);
+    if (ps == null) {
+        var es = findStyle("hidden", editor.model.edgeStyles);
+        if (es == null) {
+            es = new LineStyle("hidden", 1, Color.darkGray, 
+                LineStyle.STYLE_HIDDEN);
+            editor.model.edgeStyles.add(es);
+        }
+        var c = null;
+        switch(id) {
+            case 0:  c = orig.brighter().brighter(); break;
+            case 1:  c = orig.brighter(); break;
+            case 2:  c = orig.darker(); break;
+            default: c = orig.darker().darker(); break;
+        }
+        ps = new PolygonStyle();
+        ps.setId(sid);        
+        ps.setColor(c);
+        ps.setFillStyle(PolygonStyle.FILL_COLOR);
+        ps.setVisibleInRadar(false);
+        ps.setDefaultEdgeStyle(es);
+        editor.model.polyStyles.add(ps);            
+    }
+    return ps;
+}
+
+getTexturedStyle(level, orig) {
+    var id = level < -0.5 ? 0 : level < 0 ? 1 : level < 0.5 ? 2 : 3;
+    var sid = orig.id + "-light" + id;
+    var ps = findStyle(sid, editor.model.polyStyles);
+    if (ps == null) {
+        var es = findStyle("hidden", editor.model.edgeStyles);
+        if (es == null) {
+            es = new LineStyle("hidden", 1, Color.darkGray, 
+                LineStyle.STYLE_HIDDEN);
+            editor.model.edgeStyles.add(es);
+        }
+        var c = orig.color;
+        if (c == null) c = Color.black;
+        switch(id) {
+            case 0:  c = c.brighter().brighter(); break;
+            case 1:  c = c.brighter(); break;
+            case 2:  c = c.darker(); break;
+            default: c = c.darker().darker(); break;
+        }        
+        var img = adjustBrightness(orig.texture.image, -level + 1.2);
+        var pixmap = new Pixmap();
+        pixmap.image = img;
+        pixmap.fileName = "light" + id + "-" + orig.texture.fileName;
+        editor.model.pixmaps.add(pixmap);
+        ps = new PolygonStyle();
+        ps.setId(sid);        
+        ps.setColor(c);
+        ps.setTexture(pixmap);
+        ps.setFillStyle(PolygonStyle.FILL_TEXTURED);
+        ps.setVisibleInRadar(false);
+        ps.setDefaultEdgeStyle(es);
+        editor.model.polyStyles.add(ps);
+    }
+    return ps;   
+}
+
+/**
+ * Returns equivalent polygon without edges with length 0.
+ */
+filterPoints(poly) {
+    var pnew = new Polygon();
+    int x = poly.xpoints[0];
+    int y = poly.ypoints[0];
+    pnew.addPoint(x, y);
+    for(int i = 1; i < poly.npoints; i++) {
+        int x2 = poly.xpoints[i];
+        int y2 = poly.ypoints[i];
+        if (x == x2 && y == y2) continue;
+        pnew.addPoint(x2, y2);
+        x = x2; y = y2;
+    }
+    return pnew;
+}
+
+/**
+ * Returns a group of polygons that makes the given map polygon look like
+ * it had 3rd dimension (depth).
+ *
+ * @param mp the map polygon
+ * @param d the depth in pixels
+ * @param view a vec that shows the view direction
+ * @param light a vec that shows the light direction
+ * @param tex if true then the added polygons are filled with textures
+ * otherwise they are filled with colors
+ * @param decor if true then the group is a Decoration otherwise it is a
+ * Group
+ */
+makeDepthBorder(mp, d, view, light, tex, decor) {
+    var vu = view.unit();
+    var lu = light.unit();
+    int sgn = mp.isCounterClockwise() ? -1 : 1;
+    var dv = view.mul(-d);
+    var quads = new ArrayList();
+    var p = filterPoints(mp.polygon);
+    int np = p.npoints;
+    if (np < 2) return;
+    if (mp.defaultStyle.fillStyle != PolygonStyle.FILL_TEXTURED)
+        tex = false;
+    var orig = tex ? mp.defaultStyle : getAverageColor(mp.defaultStyle);
+    var p1 = vec(p.xpoints[0], p.ypoints[0]);
+    for(int i = 0; i < np; i++) {
+        var p2 = vec(p.xpoints[(i + 1) % np], p.ypoints[(i + 1) % np]);
+        var n = p2.add(p1.mul(-1)).mul(sgn).normal().unit();
+        if (n.dot(view) <= 0) {
+            var level = n.dot(lu);
+            var style = tex ? getTexturedStyle(level, orig) 
+                : getColoredStyle(level, mp.defaultStyle.id, orig);
+            quads.add(new MapPolygon(new Polygon(
+                new int[] {p1.x, (int)(p1.x + dv.x), (int)(p2.x + dv.x), p2.x},
+                new int[] {p1.y, (int)(p1.y + dv.y), (int)(p2.y + dv.y), p2.y},
+                4), style));
+        }
+        p1 = p2;            
+    }
+    if (decor) return new Decoration(quads);
+    return new Group(quads);
+}
+
+makeBevelBorder(mp, d, light, tex) {
+    if (mp.defaultStyle.fillStyle != PolygonStyle.FILL_TEXTURED)
+        tex = false;
+    var lu = light.unit();
+    int sgn = mp.isCounterClockwise() ? 1 : -1;
+    var quads = new ArrayList();
+    var p = filterPoints(mp.polygon);
+    var np = p.npoints;
+    if (np < 3) return;
+    if (mp.defaultStyle.fillStyle != PolygonStyle.FILL_TEXTURED)
+        tex = false;
+    var orig = tex ? mp.defaultStyle : getAverageColor(mp.defaultStyle);
+    var p1 = vec(p.xpoints[0], p.ypoints[0]);
+    var p2 = vec(p.xpoints[1], p.ypoints[1]);
+    var p3 = vec(p.xpoints[2], p.ypoints[2]);    
+    for(int i = 0; i < np; i++) {
+        var p4 = vec(p.xpoints[(i + 3) % np], p.ypoints[(i + 3) % np]);
+        var n12 = p2.add(p1.mul(-1)).mul(sgn).normal().unit();
+        var n23 = p3.add(p2.mul(-1)).mul(sgn).normal().unit();
+        var n34 = p4.add(p3.mul(-1)).mul(sgn).normal().unit();
+        var newp2 = p2.add(n12.add(n23).unit().mul(d));
+        var newp3 = p3.add(n23.add(n34).unit().mul(d));
+        var level = -n23.dot(lu);
+        var style = tex ? getTexturedStyle(level, orig) 
+            : getColoredStyle(level, mp.defaultStyle.id, orig);
+        quads.add(new MapPolygon(new Polygon(
+            new int[] {p2.x, p3.x, newp3.x, newp2.x},
+            new int[] {p2.y, p3.y, newp3.y, newp2.y},
+            4), style));
+        p1 = p2; p2 = p3; p3 = p4;
+    }
+    return new Group(quads);    
+}
+
+bevelBorder() {
+    if (editor.selectedObjects.isEmpty()) {
+        alert("First select a polygon");
+        return;
+    }
+    var value = prompt("Enter border height in pixels", "10");
+    if (value == null) return;
+    var height = Integer.parseInt(value) * 64;
+    for(o:editor.selectedObjects) {
+        if (isWall(o)) {
+            var bb = makeBevelBorder(o, height, vec(1,-1), true); 
+            editor.addMapObject(bb);
+        }
+    }
+    editor.repaint();
+}
+
+depthDecor() {
+    if (editor.selectedObjects.isEmpty()) {
+        alert("First select a polygon");
+        return;
+    }
+    var value = prompt("Enter depth in pixels", "10");
+    if (value == null) return;
+    var height = Integer.parseInt(value) * 64;
+    for(o:editor.selectedObjects) {
+        if (isWall(o)) {
+            var db = makeDepthBorder(o, height, 
+                vec(-1,2), vec(1,-1), true, false);
+            editor.model.addToBack(db);
+        }
+    }
+    editor.repaint();
+}
+
+
+
+/************************ User scripts ******************************/
+
+
+loadUserScripts() {
+    String home = System.getProperty("user.home");
+    f = new File(home + "/.jxpmaprc");
+    if (!f.exists()) f = new File(home + "/jxpmaprc.bsh");
+    if (f.exists()) source(f.getAbsolutePath());
+}
+loadUserScripts();

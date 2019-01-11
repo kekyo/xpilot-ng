@@ -1,0 +1,84 @@
+FEATURES
+========
+
+The xpilot polygon (also known as xpilot upgrade) package includes 
+the following differences from official xpilot (xpilot-4.5.4)
+
+General:
+
+	* ./configure builds instead of xmkmf -a - easier to build.
+
+	* .rpm .deb and .tar.gz packages available.
+	
+	* Full Backward compatibility with older xpilot clients, and
+	  servers. (support dropped for xpilot versions prior to 4.2.1).
+	
+	* Numerous bug fixes, and code cleanups / quality improvement. 
+
+Client:
+
+	* An XPilot client written using SDL and OpenGL - works in 
+	  both windows/linux and unix with slick new textures, common
+	  code shared with the X11 client.
+
+	* Client options are no longer reliant on X11, option code 
+	  completely rewritten so options port cleanly to windows.
+	
+	* The client has better capabilities for displaying graphics, 
+	  and the map format allows specifying different textures and 
+	  colors.
+
+	* Improved meta interface on the X11 client.
+
+	* Improved Colour handling and a full colour configuration menu
+	  in the client.
+
+	* Server downloadable textures, enabling maps to export their
+	  own textures directly to a client.
+	
+	* Several client improvements, basewarning, toggle off radar
+	  and score windows, improved hud, direction pointer.
+
+Server :
+
+	* Total rewriting of the map format - walls and some other 
+	  features can now be described as arbitrarily shaped polygons.
+
+	* XML based map descriptions, new xp2 map format. 
+	
+	* The game speed is no longer tied to the number of frames per 
+	  second (FPS). This means that servers can run at higher FPS, 
+	  and the game will still proceed at a reasonable rate, giving 
+	  a smooth game update.
+
+	* New collision code, collisions are handled properly and ships 
+	  cannot get stuck on acute walls anymore.
+
+	* Many new server commands, more server variables can be altered
+ 	  online such as gamespeed and fps.
+
+	* Players can now spectate without taking up a base whilst 
+	  pausing. 
+
+	* Improved precision in thrusting and shooting..
+
+	* Server side recordings - more accurate, and you can review 
+	  the recording for any player, much smaller and compact than 
+	  the xp-replay recordings.
+
+        * Full integration of teamcup code, run your own xpilot cup.
+	
+        * Improved ball handling, better collisions, and the ball is no
+	  longer treated as a point.
+
+        * better collision detection for laser pulses and shots, added
+          an option to make laser pulses bounce off walls.
+
+Tools:
+
+	* A Python map conversion script for converting old style maps 
+	  to new style maps.
+ 
+	* A Java map editor for the polygon map format, outputs the map
+	  in XML format.
+ 

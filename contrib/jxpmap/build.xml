@@ -1,0 +1,36 @@
+<project name="jxpmap" default="jar" basedir=".">
+
+  <property name="build" location="build"/>
+
+  <target name="init">
+    <mkdir dir="${build}"/>
+  </target>
+
+  <target name="compile" depends="init">
+    <javac 
+        classpath="bsh-2.0b1.jar"
+        debug="true"
+        srcdir="." 
+        destdir="${build}" 
+        includes="org/**/*.java"/>
+  </target>
+
+  <target name="jar" depends="compile">
+    <jar jarfile="jxpmap.jar">
+        <fileset dir="." includes="images/*.gif"/>
+        <fileset dir="${build}"/>
+        <fileset dir="." includes="org/xpilot/jxpmap/defopts"/>
+        <fileset dir="." includes="org/xpilot/jxpmap/init.bsh"/>
+        <zipfileset src="bsh-2.0b1.jar"/>
+        <zipfileset src="kunststoff.jar"/>
+        <manifest>
+            <attribute name="Main-Class" 
+                value="org.xpilot.jxpmap.MainFrame"/>
+        </manifest>
+    </jar>
+  </target>
+
+  <target name="clean">
+    <delete dir="${build}"/>
+  </target>
+</project>

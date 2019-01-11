@@ -1,0 +1,38 @@
+Working On
+----------
+You should make the MAPDIR configurable at least in the Makefile.
+But perhaps also by a X resource.
+Using a few more X resources would be nice.
+ 
+LoadOldMap is reading version 1.0 maps, not 2.0.
+ 
+The resize limits do not get set sometimes...
+
+
+Can't Reproduce ( need more info )
+----------------------------------
+Map name in save doesn't come up for bert.
+
+Some of the blocks in the big drawing window are not correctly drawn
+in the small window with the full map.  This may be due to not completely
+correct subarea exposure drawing.  I don't know.
+
+
+Enhancements ( feel free to contribute )
+----------------------------------------
+Why should the selection area always be a rectangle?  It would be nice
+to have an arbitrarily shaped (polygon, etc) area to be filled by one
+click.  Or if I draw a shape with a particular block (like solid)
+then have that shape be filled with that particular block type after
+another click on some button or so.
+
+Apart from unlimited Undo which is very very nice, a Redo facility might
+be nice too.
+
+A more wider drawing pencil would be nice, like a brush or so.
+It could also be a drawing thickness parameter of some kind.
+This would aid in drawing the outlines of new (and big) map quickly.
+
+It would perhaps be nice to have a generic Cannon symbol which would,
+when used to draw with, draw a cannon with the base line attached to
+the nearest wall.

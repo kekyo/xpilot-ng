@@ -1,0 +1,246 @@
+.\" -*-Text-*-
+.\"
+.\" Copyright © 1991-2004 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha Lindström, Kristian Söderblom and Erik Andersson & Steven Singer.
+.\"
+.TH XPILOT-NG-REPLAY 6 "Requires X11"
+.ds )H GNU General Public License 2.0 applies
+.ds ]W XPilotNG 4.6.0: Mar 18, 2004
+.if n .ad l	\" If nroff formatter, adjust left margin only
+.if t .ad b	\" If troff formatter, adjust both margins
+
+.SH NAME
+
+xpilot-ng-replay \- Playback an XPilot session.
+
+
+.SH SYNOPSIS
+
+.B xpilot-ng-replay
+.B [-help]
+.B [-scale \fIfactor\fC]
+.B [-gamma \fIfactor\fC]
+.B [-compress]
+.B [-fps \fIvalue\fC]
+.B [-FPS \fIvalue\fC]
+.B [-loop]
+.B [-play]
+.B [-verbose]
+.B inputfile
+
+
+.SH OVERVIEW
+
+xpilot-ng-replay is a program to view an XPilot recording. It takes record files
+produced by \fIxpilot-ng-x11(6)\fP and allows the user to replay them and make
+snapshots of frames.
+
+.SS Options
+
+.TP 15
+.B -help
+Prints some help, including commandline options.
+.TP 15
+.B -verbose
+Prints some information about the record file.
+.TP 15
+.B -compress
+Save frames in compress format using the \fBcompress\fP program.
+.TP 15
+.B -scale \fIfactor\fP
+Sets the scale reduction factor for saving operations.
+Valid scale factors are in the range [0.01 - 1.0].
+.TP 15
+.B -gamma \fIfactor\fP
+Sets the gamma correction factor when saving scaled frames.
+Valid gamma correction factors are in the range [0.1 - 10].
+.TP 15
+.B -fps \fIvalue\fP
+Set the number of frames per second used for replay and recording.
+.TP 15
+.B -FPS \fIvalue\fP
+Same as -fps \fIvalue\fP.
+.TP 15
+.B -play
+Start playing immediately.
+.TP 15
+.B -loop
+Loop after playing.
+.PP
+If the filename given is `\-' then the standard input is read. Frames read
+from the standard input are stored in memory to allow the user to jump
+backward and forward through them, however, with large record files earlier
+frames may be discarded to make way for later frames. This will mean that
+it may not be possible to jump back to the start of a large recording. This
+restriction only affects files read from pipes.
+
+
+.SH THE GRAPHICAL USER INTERFACE
+
+When you start the program you will be presented two windows.
+The first and largest window is the recording view window
+where you will see the recorded game.
+The second window is the control window which contains a row
+of pushbuttons and which shows some information about
+the recorded game. A third window may be popped up giving access to the
+controls to save frames.
+
+The buttons in the control window allow you to move through the recording.
+They are, from left to right: record, rewind, reverse play, play,
+fast-forward, pause, stop and eject. The symbols on them match the standard
+symbols seen on tape and CD players.
+
+Just below the buttons is information about the recording. The position of
+the current frame within the recording, the server the game was played on,
+the player's nickname and username, the client that the player connected
+from and the number of frames per second the server was running at.
+
+Playback can be in either of two modes \- normal or paused. In normal mode
+the recording will play back in real time as close to the original frame rate
+as possible. In paused mode, you can single step through frames.
+
+In addition to the buttons certain keys perform shortcuts.
+
+.SS Buttons
+.TP 15
+.B Record
+This button pops up a window allowing you to mark frames for recording, and to
+save the marked frames in either a standard graphics format (\fIppm\fP)
+or in the XPilot Record format.
+.TP 15
+.B Rewind
+In normal mode this plays the recording backwards at 10 times normal
+speed. In paused mode this button steps backward 10 frames.
+.TP 15
+.B Reverse play
+In normal mode this plays the recording backwards. In paused mode it
+single steps backward one frame.
+.TP 15
+.B Play
+In normal mode this plays the recording forward at normal speed. In paused
+mode it single steps forward 1 frame.
+.TP 15
+.B Fast-forward
+In normal mode this plays the recording forward at 10 times normal speed. In
+paused mode it steps forward 10 frames.
+.TP 15
+.B Pause
+This suspends playback and switches to paused mode.
+.TP 15
+.B Stop
+This suspends playback and switches to normal mode.
+.TP 15
+.B Eject
+This quits the program.
+
+.SS Keys
+.TP 15
+.B f, space
+Step forward 1 frame.
+.TP 15
+.B b, delete, backspace
+Step backward one frame.
+.TP 15
+.B z
+Go to frame zero.
+.TP 15
+.B [
+Mark this as the first frame to be saved.
+.TP 15
+.B ]
+Mark this as the last frame to be saved.
+.TP 15
+.B *
+Save marked frames in PPM format.
+.TP 15
+.B &
+Save marked frames in XPilot Recording format.
+.TP 15
+.B q
+Quit the program.
+
+.SS Recording
+Either by using the keys, or the popup record window, you can mark a
+section of the playback for recording. To do that, you move to the first
+frame you wish to save and mark it as the first frame. Then move to the
+last frame and mark that. Then save the marked frames. When saving in
+PPM format the frames will be saved in files called
+.B xpNNNNN.ppm.
+Each frame wil be placed in a separate file, and the
+.B NNNNN 
+will be replaced by the frame number within the original recording.
+When saving in XPilot Recording format the frames will be saved in
+one new file called
+.B xpN-M.xpr,
+where N is the frame number of the first frame
+and M is the frame number of the last frame to be saved.
+
+Since having a large number of PPM files can be quite costly in diskspace,
+an option exists to automatically shrink them whilst saving. Use the
+.B -scale
+option to specify a scaling factor, for example, a scale factor of 0.25
+on a 768x768 recording would result in the saved frames being 192x192.
+When a frame is shrunk like that, the thin lines draw by
+.B xpilot
+can appear dimmed. To overcome this, use the
+.B -gamma
+option with a gamma value greater than 1. That should brighten up the
+saved frames.
+In addition a
+.B -compress
+option is available to save files in compressed format.
+
+
+.SH EXAMPLES
+
+The simplest invocation is
+.IP
+.B xpilot-ng-replay test-recording.xpr
+.PP
+which will play back a recording, and save frames at the original size.
+
+You may want to compress the recording files to save disk space. You can
+then play them back directly without uncompressing them first using
+.IP
+.B gzip -cd test-recording.xpr.gz | xpilot-ng-replay -
+.PP
+however, this may limit your ability to rewind through the recording.
+
+.B xpilot-ng-replay
+automatically recognizes if a file is in gzip, bzip2 or compress format.
+If this is the case then it automatically starts
+.B gzip -d
+or
+.B bzip2 -d
+or
+.B compress -d
+to uncompress the file before playback.
+
+To save frames smaller that the original size use something like
+.IP
+.B xpilot-ng-replay -scale 0.5 -gamma 2 test-recording.xpr
+.PP
+which will save frames at half size.
+
+
+.SH AUTHORS
+
+\fBxp-replay\fP was originally designed and developed by
+Steven Singer (S.Singer@ph.surrey.ac.uk). Additional development was
+performed by Bert Gijsbers (bert@xpilot.org). \fBxpilot-ng-replay\fP
+is a slightly improved version.
+
+The scaling and gamma correction code was taken from the \fBpbmplus\fP
+package, which is Copyright (C) 1989, 1991 by Jef Poskanzer.
+
+
+.SH BUG REPORTS
+
+Bugs can be mailed to \fBkps@users.sourceforge.net\fP.
+
+
+.SH SEE ALSO
+xpilot-ng-x11(6), xpilot-ng-server(6), ppm(5), gzip(1)
+.\"
+.\" index		\fIxpilot-ng-x11\fP \- multiplayer war game
+.\" index		\fIxpilot-ng-server\fP \- XPilotNG server
+

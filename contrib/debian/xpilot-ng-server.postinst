@@ -1,0 +1,70 @@
+#!/bin/bash
+
+DEFAULTFILE=/etc/default/xpilot-ng-server
+
+if [ ! -e $DEFAULTFILE ]; then
+  touch $DEFAULTFILE
+  chmod 644 $DEFAULTFILE
+fi
+
+grep -q AUTOSTART $DEFAULTFILE || cat >>$DEFAULTFILE <<EOF
+# If you want the XPilot NG server to start automatically when the
+# machine boots then set AUTOSTART to "YES".
+AUTOSTART="NO"
+EOF
+
+grep -q DEFAULTMAP $DEFAULTFILE || cat >>$DEFAULTFILE <<EOF
+
+# DEFAULTMAP specifies the complete path to the map you want the server
+# to start at boot up.
+DEFAULTMAP="/usr/share/games/xpilot-ng/maps/polybloods.xp2"
+EOF
+
+grep -q REPORTMETA $DEFAULTFILE || cat >>$DEFAULTFILE <<EOF
+
+# Set REPORTMETA to "YES" and the XPilot NG server will automatically
+# declare itself to the metasever when it boots so other players outside 
+# of your local network can find and connect to it.
+# ----------
+# IMPORTANT: If you are behind a firewall, to allow outside users to 
+#            connect to your server, you will need to:
+# ----------
+# 1. set the -clientPortStart and -clientPortEnd options below
+# 2. configure your firewall to forward the specified UDP ports as well 
+#    as the contact port (15345/udp) to the XPilot server host
+REPORTMETA="NO"
+EOF
+
+grep -q OTHEROPTIONS $DEFAULTFILE || cat >>$DEFAULTFILE <<EOF
+
+# Set OTHEROPTIONS to any additional options desired when the XPilot NG
+# server starts, e.g.
+#
+# -timerResolution 100
+# 	This hack attempts to make the frame rate more accurate.
+#	Without it, the server will be a fraction of a frame per second
+#	slower than the specified value.  However, on a loaded system
+#	(e.g. running the distributed.net client) it has been found
+#	that -timerResolution is not effective, and ends up further
+#	slowing down the framerate.
+#
+# -clientPortStart 40000 -clientPortEnd 40009
+#	If the server is run behind an IP masquerading firewall which is
+#	set up to port-forward a range of UDP ports to the server machine,
+#	this pair of switches establishes that range of ports which is
+#	used between each client and the server after a connection is
+#	negotiated (as distinct from the XPilot NG server port, which
+#	defaults to 15345/udp and is only used to initially establish 
+#	the connection).
+#
+OTHEROPTIONS="-timerResolution 100"
+EOF
+
+# Normally added by dh_installinit, but included here manually because
+# we customize the prerm and therefore run dh_installinit --noscripts.
+if [ -x "/etc/init.d/xpilot-ng-server" ]; then
+        update-rc.d xpilot-ng-server defaults >/dev/null
+        /etc/init.d/xpilot-ng-server start
+fi
+
+#DEBHELPER#

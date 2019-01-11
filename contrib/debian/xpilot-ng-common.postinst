@@ -1,0 +1,9 @@
+#!/bin/bash
+
+adduser --system --home /var/run/xpilot-ng-server --group \
+  --shell /bin/sh --disabled-password xpilotng >/dev/null 2>&1
+chmod 700 /var/run/xpilot-ng-server
+chown -R xpilotng.xpilotng /etc/xpilot-ng
+chmod -f 600 /etc/xpilot-ng/password.txt
+    
+#DEBHELPER#

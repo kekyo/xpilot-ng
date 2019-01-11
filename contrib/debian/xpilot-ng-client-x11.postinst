@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = configure ]; then
+    # Add an alternative for xpilot and xpilot-ng
+    # - we prefer xpilot-ng-x11 over xpilot for 'xpilot' as it is a
+    #   superset of xpilot functionality
+    update-alternatives --install /usr/games/xpilot xpilot \
+        /usr/games/xpilot-ng-x11 20
+    # - but only make x11 version "normal" priority for xpilot-ng,
+    #   as the SDL version is expected to be better when it is
+    #   ready
+    update-alternatives --install /usr/games/xpilot-ng xpilot-ng \
+        /usr/games/xpilot-ng-x11 10
+fi
+
+#DEBHELPER#

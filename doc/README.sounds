@@ -1,0 +1,131 @@
+
+XPilot README.sounds
+
+    #()#
+
+XPilot currently has rplay, NCD, DEC AudioFile and HP Aserver sound support.  
+See the Local.config in the toplevel directory or the Makefile.std in the
+src directory for details on how to compile XPilot with sound support enabled.
+
+rplay 3.1.x supports SunOS 4.1.x, Solaris 2.x, Linux, 386bsd, BSDI/386,
+HP-UX, and SGI Indigo.  It can be obtained from ftp.rplay.org in
+the /pub/rplay directory.  Email rplay questions to boyns@doit.org.
+
+For NCD sound support the NCD MCX X terminals must be running release 3.1
+or later of the NCD software.  Email NCD questions to gred@ncd.com.
+
+DEC AudioFile sound support was provided by Tom de Pauw.
+
+HP Aserver sound support is NOT working well on a HP 715.
+
+Most sound files can be obtained from ftp.rplay.org in the /pub/xpilot-sounds
+directory.
+
+XPilot sound events are defined in a file with the following format:
+
+SOUND_EVENT	SOUND_NAME[|SOUND_NAME ... ]
+
+Where SOUND_EVENT is one of the events listed below and SOUND_NAME
+is the name or complete pathname of an audio file.  Different sounds
+for the same event must be separated by a '|' and will be chosen
+randomly.  Sound events that are not specified in the file are not 
+used during the game.  Lines that begin with the '#' character are 
+considered comments.
+
+The sound events file is by default located in LIBDIR/sounds, but
+can be changed using the xpilot*sounds X resource.  For example,
+the following can be added to your .Xdefaults (or .Xresources):
+
+xpilot*sounds:	/usr/local/lib/xpilot/ren+stimpy_sounds	
+
+which tells xpilot to use the ren+stimpy_sounds.  Remember to use
+xrdb when modifying your X resources.
+
+The following sound events are supported:
+
+Event				Sound is played when
+-----				--------------------
+start				Someone enters the game
+fire_shot			A shot is fired
+fire_torpedo			A torpedo is fired
+fire_heat_shot			A heat shot is fired
+fire_smart_shot			A smart shot is fired
+player_explosion		A player explodes
+player_hit_player		A player hits another player
+player_hit_cannon		A player hits a cannon
+player_hit_mine			A player hits a mine
+player_eat_torpedo_shot		A player is hit by a torpedo
+player_eat_heat_shot		A player is hit by a heat shot
+player_eat_smart_shot		A player is hit by a smart shot
+drop_mine			A player drops a mine
+player_hit_wall			A player smashes into a wall
+worm_hole			A player goes into a worm hole
+wideangle_shot_pickup		A wide shot is picked up
+sensor_pack_pickup		Sensors/Instruments are picked up
+back_shot_pickup		A back/rear shot is picked up
+smart_shot_pickup		Pack of smart shots is picked up
+cloaking_device_pickup		A cloak is picked up
+energy_pack_pickup		Fuel is picked up
+mine_pack_pickup		A mine is picked up
+thrust				A player is trusting
+cloak				A player cloaks
+change_home			A player changes their home base
+ecm_pickup			A ECM is picked up
+afterburner_pickup		An afterburner is picked up
+tank_pickup			A tank is picked up
+drop_moving_mine		A player throws a mine
+mine_explosion			A mine explodes
+ecm				A ECM is fired
+tank_detach			A fuel tank is detached
+cannon_fire			A cannon fires a shot
+player_shot_themself		A player shoots themself
+declare_war			A robot declares war on a someone
+player_hit_cannonfire		A player is shot by a cannon
+object_explosion		A generic explosion sound
+player_eat_shot			A player is hit by a shot
+transporter_pickup		A transporter is picked up
+transporter_success		A transport is successful
+transporter_fail		A transport fails
+nuke_launch			A nuke is launched
+nuke_explosion			A nuke explodes
+player_ran_over_player		A player runs over another player
+laser_pickup			A laser is picked up
+emergency_thrust_pickup		An emergency thrust is picked up
+autopilot_pickup		A autopilot has been picked up
+tractor_beam_pickup		A tractor/pressor beam has been picked up
+player_bounced			A player bounces
+fire_laser			A laser pulse is fired
+autopilot_on			Autopilot is turned on
+autopilot_off			Autopilot is turned off
+emergency_thrust_on		Emergency thrust is turned on
+emergency_thrust_off		Emergency thrust is turned off
+tractor_beam			Tractor beam activated
+pressor_beam			Pressor beam activated
+connect_ball			Ball is connected
+drop_ball			Ball is dropped
+explode_ball			Ball explodes
+destroy_ball			Ball is destroyed
+destroy_target			A target is destroyed
+team_win			A team wins
+team_draw			There's a draw
+player_win			A player wins
+player_draw			There's a draw
+player_roasted			A player is roasted by a laser
+player_eat_laser		A player is hit by a laser
+
+A sample sound file is located in the lib/sounds and several others are
+available.  Known XPilots sounds are:
+
+* The Simpsons
+
+* Ren and Stimpy
+
+* Arnold Schwarzengger
+
+* Star Trek
+
+* Star Trek the Next Generation
+
+This file was written by Mark Boyns <boyns@doit.org>.
+If you have any questions or comments or suggestions, please let me know.
+

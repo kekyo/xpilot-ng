@@ -1,0 +1,176 @@
+*********************************************************************
+Changes to xmapedit V4.4.2a to bring it up to V4.5.0
+
+Added 17 new options
+teamShareScore, allowAlliances, announceAlliances, maxPauseTime,
+asteroidConcentratorVisible, asteroidConcentratorRadius, asteroidConcentratorProb,
+ballrace, ballraceconnected, mineShotDetonateDistance, asteroidPoints,
+asteroidMaxScore, cannonPoints, cannonMaxScore, cannonsDefend, asteroidItemProb,
+asteroidMaxItems
+
+Removed asteroidScoring
+
+Added Asteroid Concentrator: &
+
+Misc. cleanup in the prefs pages.
+
+Daedlaes (jarrod@xpilot.org) February 25, 2002
+*********************************************************************
+Changes to xmapedit V4.4.1a to bring it up to V4.4.2a
+
+Completely reworked options dialog to make it useable.
+
+Added 4 new options
+ballSporkCollisions, ballCollisions, connectorIsString, cannonFlak
+
+Daedlaes (jarrod@xpilot.org) September 19, 2001
+*********************************************************************
+Changes to xmapedit V4.4.0a to bring it up to V4.4.1a
+
+Paul Forman submitted a patch to fix the drawing of the selection box
+on most commonly used X servers.
+
+Daedlaes (jarrod@xpilot.org) June 28, 2001
+*********************************************************************
+Changes to xmapedit V4.2.1a to bring it up to V4.4.0a
+
+Completely reworked options dialog to make it useable.
+
+Added 28 new options
+minMineSpeed, defaultShipShape, tankShipShape, selfImmunity,
+turnThrust, tankScoreDecrement, robotRealName, robotHostName,
+tankRealName, tankHostName, coriolis, blockFriction, blockFrictionVisible,
+captureTheFlag, randomItemProb, targetDeadTime, cannonDeadTime,
+ballConnectorLength, maxBallConnectorRatio, ballConnectorDamping,
+ballConnectorSpringConstant, ballMass, asteroidsWallBounce,
+asteroidCollisionMayKill, asteroidsOnRadar, asteroidScoring,
+asteroidProb, maxAsteroidDensity
+
+Added new block type: empty treasure (character: ^)
+Added new block type: friction (character: z)
+
+Patch from Jarno to clean up command line options.
+Commandline now works as xp-mapedit [options] [mapfile]
+[mapfile] is the map you wish to edit. Leaving it blank will start a new map
+[options] can be
+  -font <string>
+    Use this font instead of the default
+  -display <string>
+    Display mapeditor on this display instead of the current
+  -help
+    Output this help
+
+Jarno submitted another patch to apply ".xp" when saving,
+if the user neglects to.
+
+Removed onePlayerOnly and analyticalCollisionDetection as these were removed from
+the server.
+
+
+Daedlaes (jarrod@xpilot.org) June 1, 2001
+*********************************************************************
+Changes to xmapedit V4.2.0c to bring it up to V4.2.1a
+
+Added new server options that came in with Xpilot 4.2.1:
+useWreckage, roundsToPlay, timerResolution, password.
+
+Renamed the map structure type from map_t to xpmap_t to avoid a bug
+reported on AIX.
+
+Daedlaes (jlmiller@ctitech.com) Apr 20, 2000.
+*********************************************************************
+Changes to xmapedit V4.2.0b to bring it up to V4.2.0c
+
+Removed armorHits, as this option
+won't be included in xpilot-4.2.0
+
+Daedlaes (jlmiller@ctitech.com) Mar 13, 2000.
+
+*********************************************************************
+Changes to xmapedit V4.2.0a to bring it up to V4.2.0b
+
+Switched to source code included in Xpilot distribution as it
+was more recent.
+
+Total check of all supported map options, out of date options removed
+current ones installed and updated.
+
+Alternative option names supported as of xpilot4.2.0
+
+Set some more reasomable defaults for some of the options.
+
+Xmapedit should now compile out as xp-mapedit.
+
+Added Install script for stand alone compilation.
+
+
+Daedlaes (jlmiller@ctitech.com) Mar 8, 2000.
+*********************************************************************
+Changes to xmapedit V3.6.2 to bring it up to V4.2.0a
+
+Reorgaized some of the preferences, adding the latest options
+that have shown up since the last release, now should be current
+with 4.2.0beta2.
+
+I've included the Imakefile that can be used if xmapedit is placed 
+in the xpilot source tree, in the folder "mapedit"
+
+Daedlaes (jlmiller@ctitech.com) Mar 5, 2000.
+*********************************************************************
+
+Changes to xmapedit V3.5.1c+Tuneup to V3.6.2
+
+Applied Vincent's patches.
+
+Put reasonable defaults in Imakefile.
+
+renamed to xmapedit 3.6.2 because that is the XPilot featureset 
+supported.
+
+Bucko (bucko@xpilot.org) Mar 3, 1998.
+
+*********************************************************************
+Changes to xmapedit V3.5.1c to bring it up to V3.5.1d
+
+* Fixed bug causing some of the yes/no options on the preference menu
+  to malfunction
+
+William Docter, Feb 22, 1997
+*********************************************************************
+Changes to xmapedit V3.5.1b to bring it up to V3.5.1c
+
+* Support for new items, including Currents, Item Concentrators, Base
+  facing specifiers.
+
+* Easier changing of editor colors.  More colors used for various items.
+
+* Target symbol now looks like target.
+
+* Help page updated
+
+* '^' Support Removed.  Space in current button array for 3 more items.
+
+* -DMONO option has not been updated and probably doesn't work at this time.
+
+  William Docter, Jan 12, 1997
+*********************************************************************
+Changes to xmapedit V1.00 to bring it up to V3.5.1b
+
+* I have updated the xmapedit editor to handle the new decorative
+  map pieces.
+
+* It now starts off with sensible options in the prefs window as
+  opposd to no options set at all.
+  
+* Also alterred is the prefs window, which now allows alterring of all
+  the options supported by xpilots3.5.1.  Unfortunately it doesn't
+  range or validate the floating point values entered, so ensure
+  they are correct before saving the map.
+  
+* It also has space on the menu for five other pieces, one is used
+  by a diamond shape that adds an '^' (for patches to my server, or
+  yours if you please!).  It needs the code fiddling to add more
+  pieces, but the basic template for more is there.
+
+  Robert Templeman, Jul 5, 1996.
+*********************************************************************

@@ -1,0 +1,3 @@
+?package(xpilot-ng-client-sdl):needs="x11" section="Games/Arcade" \
+	title="XPilot NG (modern)" command="xpilot-ng-sdl" \
+	icon="/usr/share/pixmaps/xpilot-ng.xpm"

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+set -e
+
+USER=`whoami`
+PIDFILE="/var/run/xpilot-ng-server/xpilot-ng-server.pid"
+LOGFIFO="/var/run/xpilot-ng-server/xpilot-ng-server.fifo"
+
+if [ "$USER" = "xpilotng" ]; then
+  source /etc/default/xpilot-ng-server
+  test -f "$DEFAULTMAP" || exit 0
+
+  OPTIONS=""
+  echo $REPORTMETA |grep -iq no && OPTIONS="+reportMeta"
+  OPT="-noquit $OPTIONS $OTHEROPTIONS -map $DEFAULTMAP"
+  LOGGER="logger -p daemon.notice -t xpilot-ng-server"
+
+  rm -f $LOGFIFO ; mkfifo $LOGFIFO
+  /usr/games/xpilot-ng-server $OPT 2>&1 >$LOGFIFO &
+  echo "$!" >$PIDFILE
+  $LOGGER -f $LOGFIFO &
+elif [ "$USER" = "root" ]; then
+  echo "XPilot server should not be run as root."
+  exit 1
+else
+  /usr/games/xpilot-ng-server $*
+fi

@@ -1,0 +1,24 @@
+This is the Debian GNU/Linux prepackaged version of XPilot.
+
+This package was put together by Ben Armstrong <synrg@sanctuary.nslug.ns.ca>
+from the source at http://xpilot.sourceforge.net/
+
+   Copyright © 1991-2003 by Bjørn Stabell, Ken Ronny Schouten,
+   Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha Lindström,
+   Kristian Söderblom and Erik Andersson.
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; version 2 dated June, 1991.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program;  if not, write to the Free Software
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111, USA.
+
+On Debian GNU/Linux systems, the complete text of the GNU General
+Public License can be found in `/usr/share/common-licenses/GPL'.

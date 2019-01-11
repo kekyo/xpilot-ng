@@ -1,0 +1,316 @@
+
+===============================================================================
+====                       XPilot NG Change Log                            ====
+===============================================================================
+
+This is a summary of changes of release 4.7.3 compared to release 4.7.2.
+
+Common:
+	* OpenAL has split alut into a separate library, freealut.  Configure
+	  now checks for both libraries and will not work with OpenAL versions
+	  prior to the split.   OpenAL 0.0.8 and freealut 1.0.1 have been
+	  tested and work.
+
+Server:
+	* Fix unpause when baselessPausing is on.
+	* Improved signal handling.
+	* Revert to the old policy of allowing players to "steal" bases
+	  from teammates regardless of score.
+	* Added the playerCollisionFuelDrain option (default 100):
+	  How much fuel does a player collision cost?
+	* Generate nicer rank webpages in valid XHTML 1.0 Strict.
+	* Add the -rankWebpageCSS option to support custom style sheets
+	  for the rank webpages.
+	* Don't pause players for idling while they are waiting or appearing.
+
+Client:
+	* Improved ball message scan.  Clear color attributes of
+	  out-of-date ball messages.
+	* Fix a bug that made it impossible to lose items.
+	* Minimum value for hudRadarLimit option changed from 0 to 0.05
+	  because at 0, a randomly flashing dot will be drawn on top of
+	  the ship in the center of screen.
+	* Rename textinterface.c function readline() to read_line().
+	  Otherwise it will not build with eglibc 2.10 which always defines
+	  readline, since it became a standard in POSIX2008.
+
+X11 Client only:
+	* Improve shipshape rendering by fixing some rounding errors.
+	* Fix bug that prevented radar colors from being set from xpilotrc.
+	* Remove window title flipping.
+
+XPilot NG XP-Replay:
+	* Disable some code in color allocation function, it breaks certain
+	  recordings.
+	* Space key now toggles pause.
+
+Maps:
+	* Provide only one version polybloods map, namely that used at the
+	  Chaos server (v8T2).  Call it v9.
+
+===============================================================================
+
+This is a summary of changes of release 4.7.2 compared to release 4.7.1.
+
+XPilot NG Control Center:
+        * Some usability improvements.
+
+SDL & X11 Client:
+	* Renamed option sounds to soundFile.
+	* Added boolean option sound which can be used to enable/disable the
+	  sound without changing the value of the maxVolume option. Default
+	  is true if sound has been compiled into the client.
+	* Added option keyToggleSound which toggles the value of option
+	  sound. It has no default value.
+	* When using X11, only warn about Emulate3Buttons, don't disable it.
+
+SDL Client only:
+	* Fixed some memory leaks, e.g. one for HUD messages.
+	* Texture bug fixes, should fix the bug in 4.7.1 where the
+	  ship is painted as a white box on some machines.
+
+X11 Client only:
+	* Configure options --enable-dbe and --enable-mbx should work again.
+
+Server:
+	* Put back the old behaviour that dropped mines are immune to gravity.
+	  Explanation is that they are "anchored" to the map the same way
+	  as the walls are.
+	* New option ballCollisionDetaches (default false):
+	  Does a ball get freed by a collision with a player?
+	* New option playerBallBounceBrakeFactor (default 0.7):
+	  Elastic or inelastic properties of the player-ball collision,
+	  1 means fully elastic, 0 fully inelastic.
+
+XPilot NG XP-Replay:
+        * A fix so that big old recordings don't slow down to a crawl.
+	* Possibility to jump forward in a recording by pressing number keys:
+	  the number pressed tells how many minutes to forward.
+
+===============================================================================
+	
+This is a summary of changes of release 4.7.1 compared to release 4.7.0.
+
+Server: 
+	* Bugfix: Gives feedback when player tries to unpause too soon
+	  after pausing.
+
+SDL Client: 
+	* Bugfix: unpausing with menu works more than twice.
+	* Redesign: The Join/Pause menu works a lot differently, since it
+	  checks the player's pause status.
+	
+===============================================================================
+	
+This is a summary of changes of release 4.7.0 compared to release 4.6.6.
+
+Common:
+
+* Support for MinGW/MSys build environment on windows, now the the server
+  can also be built on Windows.
+* XPilot NG network protocol is extended so that polygon styles can be
+  changed during the game. This feature can then be used to make e.g.
+  polygon cannons disappear when destroyed.
+* Shipshape code removes 0 length edges from ships, making bugs and weird
+  features less likely e.g. in the ship wall bounce code.
+
+
+xp to xp2 map converter (mapconvert.py):
+
+* Support for more map elements
+
+
+XPilot NG Control Center:
+
+* New super elegant user interface for XPilot NG written in python. It
+  can launch all other XPilot NG programs. In the Windows binary distribution,
+  this is used by default. On other platforms it is 'contrib' software, that
+  is players can use it if they want.
+
+
+Maps:
+
+* Added maps:
+  - blood-music.xp2
+  - circle2.xp2
+  - dodgers-legacy.xp2
+  - dodgers-robots.xp2
+  - ndh.xp2: New default map
+  - spaceball-0.1.xp2
+  - spaceball-0.2.xp2
+  - tourmination.xp2
+
+
+Client:
+
+* New option: clientDirPrediction: the client tries to guess the current
+  direction of the ship in the server, which reduces apparent lag.
+* Stuck keys bug fixed which caused e.g. "shield bug", i.e. that shield
+  won't go down any more automatically when firing.
+* New options: keyExit, keyYes, keyNo: now one can quit by pressing keyExit
+  (Escape by default), the client will ask for confirmation
+* Code to disable and/or warn about X emulate3buttons, which can cause
+  delays and lost shots and thrust when mouse steering is used.
+* Client displays client lag, that is time to draw a frame.
+* Ability to paint messages above hud in white color (used for newbie messags
+  and quit (y/n) ? message).
+* Fix bug in texturePath handling with caused paths like
+  polybloods/.../polybloods/.
+* Activate mouse steering by clicking background with left mouse button.
+* Don't bother announce if robot declares war or seeks some player.
+* Removed option selectionAndHistory.
+* No keyboard turning configured by default.
+* Arrow keys handle locking on players like in XPilot 4.5.4.
+* Faster drawing of non-wrapping polygon maps.
+* Shot textures up to size 16 (previous max was 8).
+
+
+X11 client:
+
+* Polygon radar bug which was visible on ndh.xp2 and dragon map fixed.
+* Option teamShipColor changes the color of friendly ships.
+
+
+SDL/OpenGL client:
+
+* Hover widgets used to display help for options in configure menu.
+* Cut and paste support for messages.
+* Join menu can be used to swap the team instead of using a /team N server
+  command.
+* TexturedShips option, default true
+* Option teamShipColorRGBA changes the color of friendly ships.
+* Option decorColorRGBA and decor support on block maps
+* Paint targets on block maps
+* Support for polygon "internal" edges: they are not drawn
+* Paint hidden wall edges if walls are painted unfilled
+* Changed some color defaults: better visible messages, meters and ship names
+* Paint items on HUD correctly
+
+
+Server:
+
+* Configure with --enable-select-sched to enable code that gives more correct
+  server FPS on Linux 2.6
+* Turnpush code which makes ship push itself away from a wall if turning
+  hits the wall
+* Some server optimizations, e.g. less memory is used for shots and objects.
+* Objects of all types are now warped by wormholes.
+* Added /shutdown command.
+* More realistic sparks: faster and lighter.
+* Possibility to pause when ship is appearing on base.
+* More accurate compatibility mode for block (old) clients playing on
+  polygon maps.
+* Score by survival time (test map: circle.xp2)
+* Don't allow players to steal bases from teammates with higher score.
+* Don't clear pausers' scores when doing /reset all.
+* Allow activating normal pause in an area of radius of 1.5 blocks around base.
+  Previously one had to be in the exact block where the base is.
+  If player is too far away, attempt to activate hoverpause.
+* Allow changing base in an area of radius of 1.5 blocks around base.
+* Allow player to fly at very slow speed at 0 fuel to reach some refuel
+  station using very last "drops" of fuel.
+
+* Added server options:
+  - initial item options for cannons
+  - treasureCollisionKills
+  - ballCollisionFuelDrain
+  - maxSparkWallBounceSpeed
+  - playerWallBounceType
+  - cannonsPickupItems
+  - cannonShotSpeed
+  - minCannonShotLife
+  - maxCannonShotLife
+  - survivalScore
+  - zeroSumScoring
+  - turnPushPersistence
+  - turnGrip
+  - thrustWidth
+  - thrustMass
+  - sparkSpeed
+  - deadFramesPerSecond: Maximum FPS sent to client when player is in dead state
+
+* Removed server options:
+  - robotLeaveScore
+  - robotLeaveRatio,
+  - robotTicksPerSecond: Robots are updated once per tick (game time unit)
+  - silent
+  - cannonsUseItems: Cannons now always use items if they have any
+  - cannonsDefend: They always defend if they can
+  - teamShareScore
+  - asteroidPoints
+  - cannonPoints,
+  - asteroidMaxScore
+  - cannonMaxScore
+  - maraWallBounce: Use playerWallBounceType instead
+
+* Possibility to specify base orders in xp2 maps: a lower value for order
+  will mean players will first get that base if they join the team, check
+  polybloods.xp2 map for an example
+
+* Support for "fixed" wormholes in xp2 maps.
+  Syntax for such is like in this example:
+
+  <Wormhole x="59120" y="240160" type="fixed">
+  <Polygon x="168000" y="439040" style="scary">
+  <Offset x="4240" y="0"/><Offset x="0" y="4240"/>
+  <Offset x="-4240" y="0"/><Offset x="0" y="-4240"/>
+  </Polygon>
+  </Wormhole>
+
+  The x and y values in a fixed wormhole tell to what destination objects will
+  be warped. The polygon defines the area your ship must hit for you to get
+  warped
+
+* Possibility to specify some options for individual cannons on xp2 maps.
+  Values of these will override general map options where appropriate.
+  Supported options are initial item options, cannonsmartess (0-3)
+  and cannonshotspeed.
+  An example cannon would look like this: 	 
+  	 
+         <Cannon x="7467" y="283360" dir="0"> 	 
+         <Option name="initiallasers" value="4"/> 	 
+         <Option name="initialemergencyshields" value="1"/> 	 
+         <Option name="cannonsmartness" value="3"/> 	 
+         <Polygon x="7467" y="283360" style="emptywhite"> 	 
+         <Style state="destroyed" id="invisible"/> 	 
+         <Offset x="-747" y="1120"/> 	 
+         <Offset x="0" y="-2240"/> 	 
+         <Offset x="747" y="1120"/> 	 
+         </Polygon></Cannon>
+
+xpilot-ng-xp-mapedit: xp (block based) map editor for unix (renamed xp-mapedit)
+
+===============================================================================
+
+This is a summary of changes of release 4.5.4X compared to release 4.5.4.
+
+===============================================================================
+
+This is a summary of changes of release 4.3.1X compared to release 4.3.1.
+
+An evil buffer overflow bug has been fixed in the server.
+
+VMS is no longer supported since nobody took care of it.
+The default installation path has been changed.
+
+Two new client options (user, host). Patch by Paul Alexander Drees. This
+allows you to specify the user@host on the command line or in your .xpilotrc.
+
+New client option messagesToStdout for players that want player messages (and
+optionally status messages) to go to standard output. (Thorsten Kroeger)
+
+Player passwords support. Several new server options: allowPlayerPasswords
+(-PlayerPasswords), playerPasswordsFileName and playerPasswordsFileSizeLimit
+(-playerPasswordsFile and -playerPasswordsLimit). Passwords are disabled by
+default. Default file name is LIBDIR/player_passwords. Default limit is
+1 megabyte (file may grow a little bigger than the limit!). (Thorsten Kroeger)
+
+Regarding the player passwords support, have a look at the new commands
+/setpass and /auth.
+
+A minor bug has been fixed that would cause the client not to work properly
+if it fixed the nick name at startup. It also wouldn't work correctly with
+the newly implemented password support. This fix implies a new MAGIC version.
+(Thorsten)
+
+===============================================================================

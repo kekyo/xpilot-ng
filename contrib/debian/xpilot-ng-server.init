@@ -1,0 +1,60 @@
+#!/bin/bash
+#
+# xpilot-ng-server: start or stop the xpilot server
+#
+#		Written by Miquel van Smoorenburg <miquels@cistron.nl>.
+#		Modified for Debian GNU/Linux
+#		by Ian Murdock <imurdock@gnu.ai.mit.edu>.
+#		Modified for Debian GNU/Linux xpilot-server package
+#		by Matt Kern <matt.kern@pobox.com>
+#		and by Ben Armstrong <synrg@sanctuary.nslug.ns.ca>
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+test -x /usr/games/start-xpilot-ng-server || exit 0
+
+USER=xpilotng
+PIDFILE=/var/run/xpilot-ng-server/xpilot-ng-server.pid
+
+set -e
+
+source /etc/default/xpilot-ng-server
+
+case "$1" in
+  start)
+	echo "$AUTOSTART" |grep -iq yes || exit 0
+	test -f "$DEFAULTMAP" || exit 0
+
+	echo -n "Starting XPilot NG server: "
+	start-stop-daemon --start --quiet --chuid $USER --background \
+		--oknodo --exec /usr/games/start-xpilot-ng-server
+	echo "xpilot-ng-server."
+	;;
+  stop)
+	echo -n "Stopping XPilot NG server: "
+	if start-stop-daemon --stop --quiet --pidfile $PIDFILE \
+		--oknodo --retry 5 >/dev/null 2>&1; then
+	   echo "xpilot-ng-server."
+        else
+           echo "system-wide XPilot NG server not running."
+	fi
+	;;
+  restart|force-reload)
+	echo -n "Restarting XPilot NG server: "
+	start-stop-daemon --stop --quiet --pidfile $PIDFILE \
+		--oknodo --retry 5 >/dev/null 2>&1
+	echo "$AUTOSTART" |grep -iq yes || exit 0
+	test -f "$DEFAULTMAP" || exit 0
+
+	start-stop-daemon --start --quiet --chuid $USER --background \
+		--oknodo --exec /usr/games/start-xpilot-ng-server
+	echo "xpilot-ng-server."
+	;;
+  *)
+	N=/etc/init.d/xpilot-ng-server
+	echo "Usage: $N {start|stop|restart|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

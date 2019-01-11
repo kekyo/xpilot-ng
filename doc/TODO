@@ -1,0 +1,83 @@
+
+Claus Leth Gregersen:
+    new sort of teamgame:
+    I don't know if you ever played Z but the idea is to add some areas
+    on the map you have to conquer. Which you do by flying over it.
+    (maybe the diamonds used as checkpoints on race maps could be reused)
+    Each team has a total number of lives, not split out on the individuals, so
+    they share them between them. Each area will every 30 second or so produce an
+    extra life to the team who posesses it. Winner is the team who survive longest.
+    I'm not sure how this would work in practise, maybe it takes too many players..
+
+Mark Boyns:
+    Even pieces of this are good ideas.  Shared team lives could make team
+    games more interesting.  Conquering areas could be neat if there were
+    4 such areas and 4 players per team.  The first team to conquer all 4
+    at the same time wins.
+
+Claus Leth Gregersen:
+    ##############################################################################
+    ##                         cccc             |  |  |                         ##
+    ##                                          |  |  |                     1   ##
+    ##                                          |  |  |                  *      ##
+    ##                     v   cccc             |  |  |                         ##
+    ##      ######################################################################
+    ##                                          |                               ##
+    ##                          *               |                             <-##
+    ##->                                        |                               ##
+    ##                                          |                               ##
+    ######################################################################      ##
+    ##                                          |                               ##
+    ##->                        *               |                               ##
+    ##                                          |                             <-##
+    ##                                          |                               ##
+    ##        ####################################################################
+    ##                         CCCC             |  |  |                         ##
+    ##                                          |  |  |                    *    ##
+    ##                                          |  |  |                     2   ##
+    ##                     V   CCCC             |  |  |                         ##
+    ##############################################################################
+
+    1 and 2 are where the teams are located
+
+    # is walls
+
+    * is areas that has to be conquered.
+
+    |
+    |  is laser fences i imagine that the laser shot isn't moving, just a long
+    |  long beam that lives for 5-10 frames, then recharges for some frames and
+       fire again. (yeah i played too many video games when i was a kid)
+
+    c are cannons that aims instead of firing at random, should be able to turn
+    with
+      a decent speed.
+
+    V are spark volcano's, map needs gravity then, will make a nice
+      sparkling effect
+
+
+    -> and <- should be firing heat seekers or torpedos, just to spice it up a bit.
+
+    Would be great if cannons and fences could belong to the team that controls
+    the area which they're closest at, or just be owned by a team.
+
+    I know that human readable maps is desired, and that there isn't many
+    readable AscII chars left, well maybe allow the map file to contain overrides
+    for the meaning of each symbol? like:
+
+    Define c cannon  T1
+    Define C cannon  T2
+    Define v volcano T1
+    Define V volcano T2
+    Define | laserFence
+
+    where T1 & T2 says which team it belongs to.
+    that way old maps will work, and we got a way to add alot of new map features.
+    I doubt that anyone would use all the different types of features in 1 map
+    anyway. The way it is now, there is too little room for making funny stuff.
+
+    Oh i talk too much and code too little...
+
+    /Claus Leth Gregersen.
+

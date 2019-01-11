@@ -1,0 +1,211 @@
+Users can define their own ship shape with a few limitations.
+The server has an option -allowShipShapes to enable
+user-defined ship shapes (the default is to enable it).
+The client has a new option called -shipShape <decription>.
+Where description defines the edges of the ship.  When the ship
+is drawn the edges are connected in the order they are listed
+in the description, with lines connecting them.  The first and last
+point are also connected, so your first and last point should not
+be the same.
+
+The 3.1.0 version was the first XPilot version which featured
+user definable ship shapes.  The format was changed in the 3.2.0
+version to include more features and be more easily extensible.
+First the old format is explained for completeness, then the new one.
+
+The ship shape is defined as if it was rotated 90 degrees to the right.
+
+For example, the following defines the default ship in old format:
+
+    xpilot -shipShape '(3,1,2)(15,0)(-9,8)(-9,-8)'
+
+Where the first parentheses surrounds a triple of numbers.
+The first number of this triple denotes the number of points that
+follow.  The second and third number of the triple define the two back
+points of the ship, which are marked with the marking lights.
+These two back points also determine where the thrust of the ship
+originates, namely at the mean of these points.
+All of the points follow, each one surrounded by parentheses.
+The first point should be the top point of the ship as this is the
+point where shots originate from (otherwise the ship will kill itself
+by its own shots).
+
+The definition should meet some requirements to enforce users to define
+a ship which is not too small or too weird.  These restrictions are
+arbitrary and open to discussion.  Currently they are as follows:
+  1) each ship should have at least three different points and not more
+     than twentyfour points.
+  2) at least one point should be eight or more pixels left from the origin.
+  3) at least one point should be eight or more pixels right from the origin.
+  4) at least one point should be eight or more pixels above the origin.
+  5) at least one point should be eight or more pixels below the origin.
+  6) at least three points should be eight or more pixels away from the origin.
+  7) no point may be more than fifteen pixels away from the x- or y-axis.
+
+In the 3.2.0 XPilot version Pete Ford has come up with a new, more rational,
+ship-shape format.  It features:
+
+    1. Keyword oriented system, to allow for more flexibility and future 
+       extension.
+
+    2. Additional gun sites allowed on ships; main gun is relocatable and up 
+       to three extra gun sites are allowed on each side of the ship for wide 
+       angle guns.
+
+    3. Additional marking light positions allowed - up to three for each 
+       color (red = left, blue = right as before).
+
+    4. Alternative missile racks - positions where missiles launch from. Up 
+       to four racks can be given, and mini missiles will launch from separate
+       racks if available.
+
+    5. Engine is relocatable, although it still fires along the x-axis of the 
+       ship as defined.
+
+    6. Compatibility with the 3.1 ship-shape format for exisiting 3.1 clients 
+       joining '3.2' servers and 3.2 clients joining 3.1 servers.
+
+    The new ship shape format is:
+
+    xpilot*shipShape: (keyword: x1,y1 ...) (keyword: x1, y1) etc.
+
+    Keywords can appear any number of times in the shape string; the 
+    behaviour is dependent on the keyword.
+    If a keyword is not given then a default will be applied: if the shape is 
+    not defined then the default shape is used.
+    Allowed keywords are:
+
+    shape:  defines points for ship shape. Up to 24 points will be stored, 
+            any more than 24 are ignored. Points should appear as x,y pairs, 
+            each pair separated with at least one space character. 
+            Multiple 'shape:' keywords have a cumulative effect; adding extra 
+            points to the list, up to the limit of 24. There is no requirement
+            to give the number of points to expect - this is worked out after
+            the whole string is parsed.
+            The existing restrictions on separation of points apply.
+            If no 'shape:' keyword present then the contents of the string 
+            will be ignored and the default ship used.
+
+    mainGun: defines the firing position for the main gun. Only one x,y pair 
+             is read; further 'mainGun:' keywords will be ignored.
+             Default is the foremost point in the 'shape:' list.
+
+    leftGun: defines a firing position for an additional left-side gun. Up to 
+             three of these can be specified, any more will be ignored.
+             The left-hand part of any wide-angle shots will be fired from
+             these points if they exist.
+             Default is to have no left guns: only a main gun.
+
+    rightGun: defines a firing position for an additional left-side gun. Up to
+              three of these can be specified, any more will be ignored.
+              The left-hand part of any wide-angle shots will be fired from
+              these points if they exist. There is no need for left and right
+              guns to balance (or even be on the correct side of the ship!)
+              Default is to have no right guns: only a main gun.
+
+    leftRearGun: defines a firing position for an additional left-side rear gun.
+                 Up to three of these can be specified, any more will be ignored.
+                 If you have an even number of rear gun items the rear shots
+                 are distributed among left and right rear gun positions.
+                 If you have an odd number of rear gun items one rear shot is
+                 fired from the usual rear position and the others are distributed.
+                 Default is to have no left rear guns: only a main rear gun.
+
+    rightRearGun: defines a firing position for an additional right-side rear gun.
+                  Up to three of these can be specified, any more will be ignored.
+                  If you have an even number of rear gun items the rear shots
+                  are distributed among left and right rear gun positions.
+                  If you have an odd number of rear gun items one rear shot is
+                  fired from the usual rear position and the others are distributed.
+                  Default is to have no right rear guns: only a main rear gun.
+
+    leftLight: defines a position for the left (red) marking light. Up to 
+               three of these can be given.
+               Default is one light on the left-most point on the ship.
+
+    rightLight: defines a position for the right (blue) marking light. Up to 
+                three of these can be given.
+                Default is one light on the right-most point on the ship.
+
+    engine: defines the point from which the engine thrust originates. Only 
+            one of these points will be defined; multiple 'engine:' keywords 
+            will override previous positions.
+            Default is on the ship x-axis at the rear-most x-value defined.
+
+    missileRack: defines a missile launch point. More than one of these will
+                 mean that missiles are launched from each rack in turn. This 
+                 works best with mini missiles (especially torpedos).
+                 Default is one rack at the main gun position.
+
+    Because the ship shape string would become extremely long in the new
+    format short aliases for the keywords in the shipshape string are
+    provided.  The list of keywords together with their aliases is:
+
+        Full version   Short Version   Meaning
+        ------------   -------------   -------
+        shape:         SH:             ship shape points
+        mainGun:       MG:             Main gun position
+        leftGun:       LG:             Left wide gun position(s)
+        rightGun:      RG:             Right wide gun position(s)
+        leftLight:     LL:             Left (red) light position(s)
+        rightLight:    RL:             Right (blue) light positions(s)
+        engine:        EN:             Engine thrust point
+        missileRack:   MR:             Missile launch point(s)
+        name:          NM:             The name of the ship
+
+    The points given for weapons, lights etc. need not be points defined in 
+    the ship shape definition.
+
+    Example:
+    This is my latest version of my own ship-shape (called Enigma); note that 
+    it should be read as one continuous string without line breaks.
+
+    xpilot*shipShape: (shape: 15,0 -2,4 -8,13 0,13 0,14 -15,14 -12,3 -15,3 
+    -15,-3 -12,-3 -15,-14 0,-14 0,-13 -8,-13 -2,-4) (missileRack: 0,14 0,-14) 
+    (leftGun: 0,14 -5,14) (rightGun: 0,-14 -5,-14) (leftLight: -15,14 0,0) 
+    (rightLight: -15,-14 0,0) (engine: -15,0)
+
+    I've tried to make the format easy to extend; extensions can be added in 
+    the parsing routines in math.c quite easily. Of course, the playing code 
+    will have to be changed to accommodate any extension.
+    My own ideas for improvement are to include a 'name:' string for the name 
+    of the ship (possibly to allow selection from a set of shapes while 
+    playing...) and positions for rear guns.
+
+    Known Problems:
+
+    1. At the moment, mini smart and heat missiles still spread from the
+       missile racks, so the effect is lost a little. It is probably possible
+       to determine whether spread is required, but I haven't done that yet.
+
+    2. Wide angle guns all fire from additional gun positions if possible; 
+       they probably should use the main gun more. Also they spread in the 
+       same way as the existing program - of course setting Z3 on the weapons 
+       mods will fire in parallel lines of shots; Z3 was could almost have 
+       been designed for this patch!
+
+    Thanks to those people who've made suggestions already (Bjoern & Bert).
+    Any comments/suggestions/bugs/bug-fixes should be sent to me:
+
+    p.s.ford@durham.ac.uk
+
+    The latest improvements are:
+
+    1. Code to restrict lights,guns etc. to within the ship-shape design.
+       It's not perfect, but it tends to allow invalid positions rather than
+       disallow valid ones. Thanks to Bert for a very nice diagram of the
+       problem!
+
+    Pete Ford (Enigma)
+
+New ship shapes should obey a new size restriction.  This is because some
+ship-shape-artists made ships very small to have a slight advantage in
+manouvring in tight places.  Also, those small ships are a little less
+easy to spot.  Therefore the following size restriction is now enforced:
+the width and height of the ship added together should be at least 38.
+To give everybody some time to convert their ships to the new format
+and to adapt it to meet this restriction it is not enforced right away, but
+rather a warning is printed that it will be enforced in a future version.
+
+The left and right rear-guns were added by Michael Gruber.
+

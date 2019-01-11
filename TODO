@@ -1,0 +1,185 @@
+(also check src/client/sdl/TODO)
+Note that for each task there is a developer. If you want to work on any of
+these tasks, ask that developer first, so you can agree on how to proceed.
+
+
+TASKS FOR XPILOT NG 5.0.0
+-------------------------
+
+Client:
+Add client option disableEmulate3Buttons
+Fix the garish item package icon colour scheme (says SynrG)
+Add a clock to SDL client (kevin requested one)
+
+XPNGCC:
+Port to windows and macosx.
+Add an xp2 map editor that doesn't depend on non-free software.
+Make sure xp2 map editor works with 1-button mouse.
+
+
+SOME OTHER TASKS TODO FOR XPILOT NG
+-----------------------------------
+
+
+Task: Rewrite INSTALL.txt for ng. Especially describe SDL client compiling.
+Maybe append INSTALL file to INSTALL.txt and rename the current INSTALL.txt
+to INSTALL.
+Developer: ?
+
+Task: Make it so that no defaultsFile is used in server by default.
+Developer: ?
+
+Task: Write a "getting started" / tutorial webpage for newbies.
+Developer: ?
+
+Task: Create a useful set of newbie messages that are shown to players
+using the Add_newbie_message() function if client option 'newbie' is on.
+Examples: message that 'm' is used to talk, message when you pick up an
+item, what key one can use to use it e.g.
+Developer: ?
+
+Task: implement drawing lists in the SDL client so that the windows client
+can support drawing in a resizable window.
+
+Task: Make baselesspausing option work for non-teamplay maps.
+Developer: ?
+
+Task: Change ball-wall brakefactor to be a property of the polygon.
+      Allow for negative brakefactors. 
+Developer: -
+
+Task: Let server request only very few (1) alarm signals if no one 
+      is playing.
+Developer: ?
+
+Task: Implement compatibility mode for old clients (block protocol) in server,
+when running a polygon map. For this task, one needs to make sure that the
+number of map objects (e.g. fuel boxes) in the sent mapdata matches the number
+on the map. Note that for checkpoints, some hack might be needed since an
+xp2 map can have more than 26 checkpoints, which is the maximum on old maps.
+Note also that server migth need to rearrange the map objects so that the old
+clients see e.g. the bases in the right order. When this task is done, mapdata
+option support can be removed from xp2 maps. Check file src/server/xpmap.c.
+Developer: ?
+
+Task: Change hit area of ships to match the default triangle shipshape. You
+need to modify the analytical collision detection code in file
+src/server/collision.c. More difficult task would be to write collision
+detection code for an arbitrary, possibly a concave shape.
+Developer: ?
+
+Task: Create a "physically correct" replacement for the oldthrust hack. This
+could possibly be done by adding an emergency thruster that would activate
+when the ship has turned. Idea with this is that when ship has turned,
+it is assumed the player tries to maneuver, and the emergency thruster
+activates automatically. Reason that extra thruster can't be used all the time
+is either that it would overheat or that it gets its energy from ship turns :)
+Developer: ?
+
+Task: Fix ship maneuverability so that fighting at high fps works as well
+or rather better than it used to work on low fps. This should work on all maps,
+not just on maps that have oldthrust option not equal to zero etc.
+Developer: ?
+
+Task: Server lag should be minimised, ideally so that when the time comes
+to send the next frame to the clients, the frame could be sent at once,
+or at least so that variance in time between frames is minimised. Possibly
+send frame updates earliest to the players with the largest net lag
+Developer: ?
+
+Task: Change server to use only 1 or 2 ports. Currently server uses
+one contact port and one port per client. In case server is made to use only
+one port, that would mean active clients would use that same port for
+communication. If server is made to use 2 ports, the contact port would be
+reserved for contact stuff and the other port for all clients.
+Developer: ?
+
+Task: Fix server recordings. The server recodings are not robust.
+In a test game with 6 players, the replay of the recording only worked about
+10 minutes. Thirdly, the recording should be put behind some interface so
+that it doesn't mess up the code too much.
+Developer: ?
+
+Task: Fix elimination race mode and clean up the race related code.
+Developer: ?
+
+Task: Make a new polygon based race map.
+Developer: ?
+
+Task: Write robot code that can control robots on a race map.
+Developer: ?
+
+Task: Rewrite robot navigation so that it isn't block based.
+Developer: ?
+
+Task: Rewrite smart missile navigation so that it isn't block based.
+Developer: ?
+
+Task: Remove bottlenecks in server. This means using a profiler and trying
+to find ways to speed up processing in places where the server uses a lot
+of time.
+Developer: ?
+
+Task: Remove the need to have X running, if the client ist started with
+      the -list command 
+Developer: ?
+
+Task: Add code that handles the case when some map object reappears on top
+of some object. This can happen for example when a destroyed cannon reappears.
+Developer: ?
+
+Task: Add support for more map objects in mapconvert.py. Also possibly add
+a default texture file for these converted maps.
+Developer: ?
+
+Task: Improve audio support. Add support for "3D" sound where info about
+the sound sources' positions and velocities are sent to clients so that
+stuff like Doppler effect can be done. Note that there should be some
+uncertainty (noise) in the positions and velocities so that this info can't
+be used to make an automatic targetting system.
+Developer: ?
+
+Task: Improve newbie mode, for example automatically change scale factor
+so that the whole visible area is seen if screen resolution is small.
+Developer: ?
+
+Task: Client side position prediction, which could be used to reduce lag
+a bit, possibly even allowing local style ship control.
+Developer: ?
+
+Task: Optimise Frame_radar() so that object list is not traversed if
+there are no objects that could be shown on radar. This can be implemented
+e.g. by keeping a count of nukes, missiles etc.
+Developer: ?
+
+Task: Add a way to be able to specify for each cannon/base what start items
+(or more generally options) will be used for that cannon/base. Values of these
+will override general map options where appropriate. Not all options
+will be supported, only a small subset. An example cannon would look like this:
+
+	<Cannon x="7467" y="283360" dir="0">
+	<Option name="initiallasers" value="4"/>
+	<Option name="initialemergencyshields" value="1"/>
+	<Option name="cannonsmartness" value="3"/>
+	<Polygon x="7467" y="283360" style="emptywhite">
+	<Style state="destroyed" id="invisible"/>
+	<Offset x="-747" y="1120"/>
+	<Offset x="0" y="-2240"/>
+	<Offset x="747" y="1120"/>
+	</Polygon></Cannon>
+
+An example base:
+
+	<Base team="0" x="372960" y="269920" dir = "32">
+	<Option name="initialmissiles" value="4"/>
+	<Option name="initialmines" value="4"/>
+	<Base/>
+
+Note that this feature makes it possible to make Predators vs Marines style
+maps where each team has a different set of start items, but also maps where
+team members have different roles, e.g. fighters and bombers.
+http://groups.google.ca/groups?hl=en&lr=&threadm=4iu3mg%2462t%40oban.cc.ic.ac.uk&rnum=1&prev=/groups%3Fq%3Dpredators%2Bxpilot%26hl%3Den%26lr%3D%26ie%3DUTF-8%26scoring%3Dr%26selm%3D4iu3mg%252462t%2540oban.cc.ic.ac.uk%26rnum%3D1
+Developer: ?
+
+Task: Add support for cannons having individual id, score, smartness etc.
+Developer: ?

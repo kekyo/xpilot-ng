@@ -1,0 +1,3 @@
+Manifest-Version: 1.0
+Class-Path: bsh-2.0b1.jar
+Main-Class: org.xpilot.jxpmap.MainFrame

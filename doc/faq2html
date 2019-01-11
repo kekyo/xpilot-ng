@@ -1,0 +1,43 @@
+#!/bin/sh
+#
+# This file is part of XPilot and is Copyright (C) 2002 by
+# the XPilot authors; see provided LICENSE file for details.
+# 
+# Convert the unformatted XPilot text FAQ to HTML.
+#
+
+if [ ! -r FAQ ]; then
+    echo "No readable file named FAQ could be found!"
+    exit 1
+fi
+
+cat > FAQ.html << END_OF_HEADER
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<HTML><HEAD><TITLE>
+This is the Frequently Asked Questions list With Answers for XPilot.
+</TITLE></HEAD>
+<BODY>
+END_OF_HEADER
+
+cat FAQ |
+sed \
+    -e '/^From:/,/^Keywords:/d' \
+    -e 's|<URL:\([^>]*\)>|<A HREF="\1">\1</A>|g' \
+    -e '/^Questions:/,/^Answers:/s|^\([0-9]\+\)) \(.*\)|\1. <A NAME="Q\1" HREF="#A\1">\2</A>|' \
+    -e '/^Answers:/,/^EOFAQ/s|^\([0-9]\+\)) \(.*\)|<B><A NAME="A\1" HREF="#Q\1">\1.</A> \2</B>|' \
+    -e '/^New questions .*:/s|\([0-9]\+\)|<A HREF="#A\1">\1</A>|g' \
+    -e '/^Questions changed .*:/s|\([0-9]\+\)|<A HREF="#A\1">\1</A>|g' \
+    -e 's|\(question \)\([0-9]\+\)|<A HREF="#A\2">\1\2</A>|g' \
+    -e 's|^\([A-Z][-a-zA-Z_]\+:\)|<B>\1</B>|' \
+    -e 's|^\([a-z]\{1,3\}[.)]\) |<B>\1</B> |' \
+    -e 's|^EOFAQ$|<B>EOFAQ</B>|' \
+    -e 's|^    \(.*\)|<DD>    \1</DD>|' \
+    -e '/<pre>/,/<\/pre>/!s|\(.\)$|\1<BR>|' \
+    -e '/<pre>/,/<\/pre>/!s|^$|<P>|' \
+>> FAQ.html
+
+cat >> FAQ.html << END_OF_TRAILER
+</BODY></HTML>
+END_OF_TRAILER
+
+

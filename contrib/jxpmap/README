@@ -1,0 +1,46 @@
+jXPMap - A map editor for the new XPilot map format
+
+Copyright © 2001 by Juha Lindström
+
+1. Overview
+
+This is a simple map editor for editing the XML based map files 
+used in the new xpilot server by Uoti Urpala. The new server
+allows the map to be defined in terms of arbitrary polygons and
+the new client supprts map-specific textures, so the new maps can
+be visually a lot nicer compared to the old maps. This editor is
+supposed to support all the new stuff so that people could easily
+experiment with the new map format.
+
+2. Requirements
+
+The editor is implemented in java and it requires the Java Runtime 
+Environment (JRE) 1.4. If you want to start it directly from its
+web page (http://xpilot.sourceforge.net/jxpmap) you need to have
+Java Web Start installed. In windows Java Web Start is automatically 
+installed when you install JRE. However, on linux etc. you (usually) 
+have to manually install Java Web Start.
+
+3. Trying it out
+
+If you have Java Web Start installed, the easiest way to test the editor 
+is to go to http://xpilot.sourceforge.net/jxpmap and click the 
+"Start jXPMap" link. If you don't have it you can just download the
+jxpmap.jar file and run it with java -jar jxpmap.jar.
+
+4. Compiling (written by kps)
+
+To create the jxpmap.jar you need the Apache Ant build tool, a BeanShell jar
+and a kunststoff jar file. You can get the beanshell.jar from www.beanshell.org
+and the kunststoff.jar from http://incors.org/archive/. Copy the bsh-2.0b4.jar
+and kunststoff.jar into the xpilot/contrib/jxpmap directory. Change the
+build.xml file so that the filename of the bsh jar matches that what you have
+(e.g. I had to change bsh-2.0b1.jar to bsh-2.0b4.jar). Now to make the
+jxpmap.jar file you issue the unix command:
+
+ant jar
+
+5. Other issues
+
+In case you have any questions, suggestions, etc. feel free to mail me to 
+juhal@users.sourceforge.net.

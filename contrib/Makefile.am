@@ -1,0 +1,2 @@
+SUBDIRS = xpngcc
+

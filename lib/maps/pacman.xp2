@@ -1,0 +1,2899 @@
+<XPilotMap version="1.1">
+<GeneralOptions>
+<Option name="" value=""/>
+<Option name="teamplay" value="true"/>
+<Option name="shieldedMining" value="true"/>
+<Option name="shieldedItemPickup" value="true"/>
+<Option name="cannonInitialDeflectors" value="10"/>
+<Option name="cannonDeadTicks" value="1"/>
+<Option name="allowRobotShields" value="yes" comment="not yet implemented"/>
+<Option name="allowShields" value="no"/>
+<Option name="cannonInitialArmor" value="10"/>
+<Option name="maxEmergencyShields" value="20"/>
+<Option name="cannonInitialEmergencyShields" value="20"/>
+<Option name="initialAfterburners" value="3"/>
+<Option name="initialFuel" value="1800"/>
+<Option name="initialWideangles" value="1"/>
+<Option name="maxECMs" value="0"/>
+<Option name="maxTransporters" value="0"/>
+<Option name="minRobots" value="6"/>
+<Option name="targetDeadTicks" value="6000"/>
+<Option name="targetSync" value="yes"/>
+<Option name="targetTeamCollision" value="no"/>
+<Option name="teamCannons" value="yes"/>
+<Option name="limitedLives" value="false"/>
+<Option name="worldLives" value="3"/>
+<Option name="wormholeStableTicks" value="1"/>
+</GeneralOptions>
+<BmpStyle id="p2.ppm" filename="p2.ppm" scalable="yes"/>
+<EdgeStyle id="default" width="0" color="0000FF" style="0"/>
+<EdgeStyle id="invisiedge" width="-1" color="000000" style="0"/>
+<EdgeStyle id="hidden" width="-1" color="404040" style="0"/>
+<PolyStyle id="default" color="CCCCFF" defedge="default" flags="1"/>
+<PolyStyle id="p2.ppm" color="000080" texture="p2.ppm" defedge="hidden" flags="3"/>
+<PolyStyle id="invisible" color="000000" defedge="invisiedge" flags="12"/>
+<PolyStyle id="target" color="FF0000" defedge="default" flags="1"/>
+<PolyStyle id="wormhole" color="FF3300" defedge="hidden" flags="9"/>
+<PolyStyle id="cannon" color="000000" defedge="default" flags="0"/>
+<Polygon x="0" y="125760" style="default">
+<Offset x="53120" y="0"/>
+<Offset x="-64" y="28288"/>
+<Offset x="-35136" y="-128"/>
+<Offset x="0" y="64000"/>
+<Offset x="92160" y="320"/>
+<Offset x="-320" y="-28800"/>
+<Offset x="6720" y="0"/>
+<Offset x="0" y="28480"/>
+<Offset x="92480" y="-320"/>
+<Offset x="0" y="-64000"/>
+<Offset x="-34560" y="0"/>
+<Offset x="-192" y="-27776"/>
+<Offset x="49776" y="32"/>
+<Offset x="4" y="3418"/>
+<Offset x="-47028" y="6"/>
+<Offset x="0" y="21760"/>
+<Offset x="35072" y="128"/>
+<Offset x="1088" y="69312"/>
+<Offset x="-198080" y="640"/>
+<Offset x="0" y="-69760"/>
+<Offset x="35520" y="192"/>
+<Offset x="0" y="-22464"/>
+<Offset x="-50539" y="-85"/>
+<Offset x="-21" y="-3243"/>
+</Polygon>
+<Polygon x="32896" y="168320" style="default">
+<Offset x="20352" y="64"/>
+<Offset x="0" y="6528"/>
+<Offset x="-20384" y="32"/>
+<Offset x="32" y="-6624"/>
+</Polygon>
+<Polygon x="68032" y="203392" style="default">
+<Offset x="0" y="-13824"/>
+<Offset x="27072" y="0"/>
+<Offset x="0" y="13824"/>
+<Offset x="-27072" y="0"/>
+</Polygon>
+<Polygon x="68032" y="174976" style="default">
+<Offset x="0" y="-48960"/>
+<Offset x="6144" y="0"/>
+<Offset x="0" y="21312"/>
+<Offset x="21312" y="0"/>
+<Offset x="0" y="6144"/>
+<Offset x="-21312" y="0"/>
+<Offset x="0" y="21504"/>
+<Offset x="-6144" y="0"/>
+</Polygon>
+<Polygon x="138093" y="175008" style="default">
+<Offset x="-48960" y="-66"/>
+<Offset x="8" y="-6145"/>
+<Offset x="21313" y="29"/>
+<Offset x="29" y="-21311"/>
+<Offset x="6144" y="7"/>
+<Offset x="-29" y="21313"/>
+<Offset x="21502" y="29"/>
+<Offset x="-7" y="6144"/>
+</Polygon>
+<Polygon x="158944" y="125962" style="default">
+<Offset x="192" y="48960"/>
+<Offset x="-6144" y="24"/>
+<Offset x="-84" y="-21312"/>
+<Offset x="-21311" y="84"/>
+<Offset x="-77" y="-6198"/>
+<Offset x="21364" y="-30"/>
+<Offset x="-84" y="-21504"/>
+<Offset x="6144" y="-24"/>
+</Polygon>
+<Polygon x="137802" y="89568" style="default">
+<Offset x="-48960" y="-192"/>
+<Offset x="24" y="-6144"/>
+<Offset x="21312" y="84"/>
+<Offset x="84" y="-21312"/>
+<Offset x="6144" y="24"/>
+<Offset x="-84" y="21312"/>
+<Offset x="21504" y="84"/>
+<Offset x="-24" y="6144"/>
+</Polygon>
+<Polygon x="173952" y="168576" style="default">
+<Offset x="20352" y="64"/>
+<Offset x="0" y="6528"/>
+<Offset x="-20384" y="32"/>
+<Offset x="32" y="-6624"/>
+</Polygon>
+<Polygon x="131776" y="203392" style="default">
+<Offset x="0" y="-13824"/>
+<Offset x="27072" y="0"/>
+<Offset x="0" y="13824"/>
+<Offset x="-27072" y="0"/>
+</Polygon>
+<Polygon x="173760" y="203456" style="default">
+<Offset x="0" y="-13440"/>
+<Offset x="20352" y="0"/>
+<Offset x="0" y="13440"/>
+<Offset x="-20352" y="0"/>
+</Polygon>
+<Polygon x="67712" y="110976" style="default">
+<Offset x="0" y="-27392"/>
+<Offset x="6656" y="0"/>
+<Offset x="0" y="27392"/>
+<Offset x="-6656" y="0"/>
+</Polygon>
+<Polygon x="152448" y="111232" style="default">
+<Offset x="0" y="-27392"/>
+<Offset x="6656" y="0"/>
+<Offset x="0" y="27392"/>
+<Offset x="-6656" y="0"/>
+</Polygon>
+<Polygon x="67867" y="61845" style="default">
+<Offset x="27391" y="215"/>
+<Offset x="-53" y="6655"/>
+<Offset x="-27391" y="-215"/>
+<Offset x="53" y="-6655"/>
+</Polygon>
+<Polygon x="131867" y="62101" style="default">
+<Offset x="27237" y="43"/>
+<Offset x="0" y="6656"/>
+<Offset x="-27290" y="-44"/>
+<Offset x="53" y="-6655"/>
+</Polygon>
+<Polygon x="32768" y="62144" style="default">
+<Offset x="14272" y="0"/>
+<Offset x="-64" y="-21248"/>
+<Offset x="6144" y="0"/>
+<Offset x="64" y="27904"/>
+<Offset x="-20480" y="0"/>
+<Offset x="64" y="-6656"/>
+</Polygon>
+<Polygon x="180032" y="41088" style="default">
+<Offset x="-64" y="21696"/>
+<Offset x="14464" y="0"/>
+<Offset x="0" y="6272"/>
+<Offset x="-20736" y="0"/>
+<Offset x="-64" y="-27904"/>
+<Offset x="6400" y="-64"/>
+</Polygon>
+<Polygon x="32768" y="19712" style="default">
+<Offset x="62720" y="128"/>
+<Offset x="0" y="6016"/>
+<Offset x="-21248" y="0"/>
+<Offset x="0" y="22016"/>
+<Offset x="-6272" y="0"/>
+<Offset x="0" y="-21632"/>
+<Offset x="-35200" y="-128"/>
+<Offset x="0" y="-6400"/>
+</Polygon>
+<Polygon x="131840" y="19712" style="default">
+<Offset x="62336" y="256"/>
+<Offset x="0" y="6400"/>
+<Offset x="-35200" y="0"/>
+<Offset x="0" y="21248"/>
+<Offset x="-6144" y="0"/>
+<Offset x="0" y="-21376"/>
+<Offset x="-21248" y="0"/>
+<Offset x="256" y="-6528"/>
+</Polygon>
+<Polygon x="89088" y="47616" style="default">
+<Offset x="128" y="-6400"/>
+<Offset x="21376" y="0"/>
+<Offset x="0" y="-20992"/>
+<Offset x="5888" y="0"/>
+<Offset x="0" y="21504"/>
+<Offset x="21248" y="0"/>
+<Offset x="0" y="5888"/>
+<Offset x="-48640" y="0"/>
+</Polygon>
+<Polygon x="0" y="108288" style="default">
+<Offset x="50368" y="64"/>
+<Offset x="0" y="-22272"/>
+<Offset x="-35328" y="192"/>
+<Offset x="0" y="-83904"/>
+<Offset x="196608" y="-576"/>
+<Offset x="0" y="84864"/>
+<Offset x="-34752" y="0"/>
+<Offset x="0" y="21888"/>
+<Offset x="46976" y="0"/>
+<Offset x="0" y="2624"/>
+<Offset x="-49408" y="0"/>
+<Offset x="0" y="-27584"/>
+<Offset x="34496" y="0"/>
+<Offset x="0" y="-36096"/>
+<Offset x="-13824" y="0"/>
+<Offset x="384" y="-6336"/>
+<Offset x="13440" y="0"/>
+<Offset x="0" y="-36480"/>
+<Offset x="-191232" y="384"/>
+<Offset x="-384" y="35904"/>
+<Offset x="14592" y="-192"/>
+<Offset x="0" y="6528"/>
+<Offset x="-14400" y="0"/>
+<Offset x="0" y="36096"/>
+<Offset x="35712" y="0"/>
+<Offset x="-192" y="28224"/>
+<Offset x="-53056" y="-64"/>
+<Offset x="0" y="-3264"/>
+</Polygon>
+<Polygon x="105856" y="129152" style="default">
+<Offset x="0" y="3328"/>
+<Offset x="-16640" y="0"/>
+<Offset x="-256" y="-27648"/>
+<Offset x="48896" y="0"/>
+<Offset x="-64" y="27669"/>
+<Offset x="-16811" y="-21"/>
+<Offset x="64" y="-3307"/>
+<Offset x="13995" y="0"/>
+<Offset x="0" y="-21269"/>
+<Offset x="-43264" y="-256"/>
+<Offset x="-21" y="21483"/>
+<Offset x="14101" y="21"/>
+</Polygon>
+<Polygon x="32960" y="203200" style="default">
+<Offset x="0" y="-13440"/>
+<Offset x="20352" y="0"/>
+<Offset x="0" y="13440"/>
+<Offset x="-20352" y="0"/>
+</Polygon>
+<Polygon x="213226" y="220287" style="target">
+<Offset x="0" y="-4288"/>
+<Offset x="4267" y="0"/>
+<Offset x="21" y="4288"/>
+<Offset x="-4288" y="0"/>
+</Polygon>
+<Target team="0">
+<Polygon x="200319" y="213098" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="188287" y="213610" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="176767" y="212586" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="164991" y="212586" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="151167" y="212330" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="138111" y="212330" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="123519" y="212330" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="123263" y="198250" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="122495" y="184938" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="133503" y="184426" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="145535" y="184682" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="165247" y="183914" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="165503" y="194154" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="165503" y="203114" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="176511" y="184170" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="187263" y="183914" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="201087" y="183914" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="201343" y="194154" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="201343" y="203114" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="165759" y="173162" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="165759" y="161898" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="182399" y="161642" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="192639" y="161642" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="200831" y="161642" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="200831" y="172650" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="173695" y="161898" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="156031" y="184426" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="145535" y="174442" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="145535" y="164202" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="134271" y="164458" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="123519" y="164458" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="122751" y="151914" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="122495" y="141674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="134271" y="141674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="145023" y="141674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="144511" y="130922" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="144511" y="120938" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="112255" y="184938" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="101759" y="184682" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="101759" y="203626" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Cannon x="108544" y="108736" dir="32" team="0">
+<Polygon x="107328" y="107968" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="2368" y="0"/>
+<Offset x="-1280" y="960"/>
+<Offset x="-1088" y="-960"/>
+</Polygon>
+</Cannon>
+<Cannon x="100416" y="108928" dir="32" team="0">
+<Polygon x="99328" y="107904" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="2368" y="0"/>
+<Offset x="-1280" y="960"/>
+<Offset x="-1088" y="-960"/>
+</Polygon>
+</Cannon>
+<Cannon x="93376" y="108544" dir="32" team="0">
+<Polygon x="92288" y="107840" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="2368" y="0"/>
+<Offset x="-1280" y="960"/>
+<Offset x="-1088" y="-960"/>
+</Polygon>
+</Cannon>
+<Cannon x="124608" y="108800" dir="32" team="0">
+<Polygon x="123520" y="107968" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="2368" y="0"/>
+<Offset x="-1280" y="960"/>
+<Offset x="-1088" y="-960"/>
+</Polygon>
+</Cannon>
+<Cannon x="132416" y="108864" dir="32" team="0">
+<Polygon x="131264" y="107968" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="2368" y="0"/>
+<Offset x="-1280" y="960"/>
+<Offset x="-1088" y="-960"/>
+</Polygon>
+</Cannon>
+<Cannon x="116096" y="109056" dir="32" team="0">
+<Polygon x="115008" y="108032" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="2368" y="0"/>
+<Offset x="-1280" y="960"/>
+<Offset x="-1088" y="-960"/>
+</Polygon>
+</Cannon>
+<Cannon x="134558" y="115497" dir="64" team="0">
+<Polygon x="135037" y="114302" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-4" y="2391"/>
+<Offset x="-953" y="-1216"/>
+<Offset x="957" y="-1175"/>
+</Polygon>
+</Cannon>
+<Cannon x="92621" y="115851" dir="0" team="0">
+<Polygon x="92139" y="117049" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="4" y="-2395"/>
+<Offset x="960" y="1210"/>
+<Offset x="-964" y="1185"/>
+</Polygon>
+</Cannon>
+<Cannon x="92621" y="122379" dir="0" team="0">
+<Polygon x="92139" y="123577" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="4" y="-2395"/>
+<Offset x="960" y="1210"/>
+<Offset x="-964" y="1185"/>
+</Polygon>
+</Cannon>
+<Cannon x="134558" y="122473" dir="64" team="0">
+<Polygon x="135037" y="121278" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-4" y="2391"/>
+<Offset x="-953" y="-1216"/>
+<Offset x="957" y="-1175"/>
+</Polygon>
+</Cannon>
+<Target team="0">
+<Polygon x="101759" y="213098" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="89727" y="213610" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="78463" y="213610" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="69503" y="213866" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="59263" y="213610" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="59263" y="203370" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="59263" y="194922" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="58495" y="184938" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="58495" y="174698" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="59263" y="163946" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="59263" y="151914" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="59263" y="140650" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="59263" y="129642" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="59007" y="120426" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="70015" y="119914" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="81023" y="119914" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="81279" y="131178" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="81279" y="140906" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="91775" y="140906" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="102015" y="141418" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="113023" y="141674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="102527" y="152426" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="102271" y="163434" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="92287" y="163434" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="81023" y="163690" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="81023" y="173930" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="80767" y="185194" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="70271" y="185194" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="91775" y="185194" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="101759" y="194410" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="48255" y="213866" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="37759" y="214122" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="25471" y="213610" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="26239" y="203370" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="26239" y="193130" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="25727" y="184170" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="36991" y="184426" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="47743" y="184426" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="25471" y="174442" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="25727" y="162666" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="36991" y="162666" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="46975" y="162922" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="58751" y="109674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="58751" y="98922" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="58495" y="87402" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="80511" y="109162" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="79999" y="98922" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="79999" y="88682" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="80511" y="78442" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="69759" y="78186" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="58751" y="77674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="47231" y="78186" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="33919" y="78442" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="23423" y="78442" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="23679" y="67434" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="23423" y="56938" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="32127" y="56938" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="41087" y="57194" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="40319" y="46698" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="39807" y="35178" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="51071" y="34666" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="60543" y="34922" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="59775" y="46442" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="59775" y="57194" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="59263" y="67690" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="24191" y="35434" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="24447" y="24682" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="32639" y="35434" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="23935" y="13930" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="34175" y="13930" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="44671" y="13418" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="54399" y="13674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="65407" y="13418" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="76415" y="13418" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="87935" y="13418" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="102271" y="13162" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="102015" y="23914" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="102015" y="35946" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="91263" y="36202" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="81023" y="35946" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="80511" y="45930" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="80767" y="56682" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="70527" y="56682" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="93311" y="56426" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="103039" y="56938" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="102271" y="67178" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="101759" y="77930" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="91775" y="77930" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="112255" y="56938" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="123519" y="56682" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="123007" y="67178" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="122495" y="77930" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="134015" y="77418" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="144767" y="77162" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="144255" y="89194" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="144255" y="99690" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="144255" y="109674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="134015" y="99946" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="124287" y="99946" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="113023" y="99690" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="101759" y="99434" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="90495" y="99178" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="165759" y="152682" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="165247" y="141674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="165503" y="131434" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="165247" y="120682" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="155263" y="120426" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="165247" y="109674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="164991" y="99690" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="164479" y="88682" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="164735" y="77930" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="155007" y="77674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="176767" y="77930" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="187775" y="77674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="200575" y="77418" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="200575" y="67690" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="200575" y="57194" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="186751" y="57962" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="186751" y="46442" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="186495" y="35946" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="199807" y="35178" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="200575" y="24170" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="200575" y="13930" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="186495" y="13674" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="173439" y="14186" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="160127" y="14442" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="147327" y="14186" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="134527" y="14186" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="122495" y="14442" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="113023" y="14442" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="122751" y="24938" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="122751" y="35946" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="134527" y="35690" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="144255" y="35434" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="144255" y="46698" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="143999" y="57450" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="134015" y="57194" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="154495" y="56938" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="164991" y="56426" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="164991" y="67434" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="164991" y="46186" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Target team="0">
+<Polygon x="164991" y="35434" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Cannon x="115776" y="130112" dir="32" team="0">
+<Polygon x="114688" y="129088" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="2368" y="0"/>
+<Offset x="-1280" y="960"/>
+<Offset x="-1088" y="-960"/>
+</Polygon>
+</Cannon>
+<Cannon x="110272" y="130240" dir="32" team="0">
+<Polygon x="109184" y="129216" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="2368" y="0"/>
+<Offset x="-1280" y="960"/>
+<Offset x="-1088" y="-960"/>
+</Polygon>
+</Cannon>
+<Target team="0">
+<Polygon x="176255" y="35178" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Wormhole x="53642" y="179679" type="out">
+<Polygon x="51498" y="181823" style="wormhole">
+<Offset x="0" y="-4288"/>
+<Offset x="4267" y="0"/>
+<Offset x="21" y="4288"/>
+<Offset x="-4288" y="0"/>
+</Polygon>
+</Wormhole>
+<Wormhole x="96138" y="11743" type="out">
+<Polygon x="93994" y="13887" style="wormhole">
+<Offset x="0" y="-4288"/>
+<Offset x="4267" y="0"/>
+<Offset x="21" y="4288"/>
+<Offset x="-4288" y="0"/>
+</Polygon>
+</Wormhole>
+<Wormhole x="166282" y="49119" type="out">
+<Polygon x="164138" y="51263" style="wormhole">
+<Offset x="0" y="-4288"/>
+<Offset x="4267" y="0"/>
+<Offset x="21" y="4288"/>
+<Offset x="-4288" y="0"/>
+</Polygon>
+</Wormhole>
+<Wormhole x="76170" y="76255" type="out">
+<Polygon x="74026" y="78399" style="wormhole">
+<Offset x="0" y="-4288"/>
+<Offset x="4267" y="0"/>
+<Offset x="21" y="4288"/>
+<Offset x="-4288" y="0"/>
+</Polygon>
+</Wormhole>
+<Wormhole x="5002" y="118751" type="out">
+<Polygon x="2858" y="120895" style="wormhole">
+<Offset x="0" y="-4288"/>
+<Offset x="4267" y="0"/>
+<Offset x="21" y="4288"/>
+<Offset x="-4288" y="0"/>
+</Polygon>
+</Wormhole>
+<Wormhole x="113546" y="120031" type="in">
+<Polygon x="111402" y="122175" style="wormhole">
+<Offset x="0" y="-4288"/>
+<Offset x="4267" y="0"/>
+<Offset x="21" y="4288"/>
+<Offset x="-4288" y="0"/>
+</Polygon>
+</Wormhole>
+<Cannon x="115776" y="130112" dir="32" team="0">
+<Polygon x="114688" y="129088" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="2368" y="0"/>
+<Offset x="-1280" y="960"/>
+<Offset x="-1088" y="-960"/>
+</Polygon>
+</Cannon>
+<Cannon x="110272" y="130240" dir="32" team="0">
+<Polygon x="109184" y="129216" style="cannon">
+<Style state="destroyed" id="invisible"/>
+<Offset x="2368" y="0"/>
+<Offset x="-1280" y="960"/>
+<Offset x="-1088" y="-960"/>
+</Polygon>
+</Cannon>
+<Target team="0">
+<Polygon x="176255" y="35178" style="target">
+<Style state="destroyed" id="invisible"/>
+<Offset x="-1280" y="-1280"/>
+<Offset x="0" y="-1728"/>
+<Offset x="1280" y="-1280"/>
+<Offset x="1707" y="0"/>
+<Offset x="1286" y="1279"/>
+<Offset x="9" y="1730"/>
+<Offset x="-1274" y="1279"/>
+<Offset x="-1728" y="0"/>
+</Polygon>
+</Target>
+<Fuel x="134272" y="201088"/>
+<Fuel x="142336" y="201088"/>
+<Fuel x="150400" y="201088"/>
+<Fuel x="137728" y="191104"/>
+<Fuel x="146560" y="191104"/>
+<Fuel x="155392" y="191104"/>
+<Fuel x="154240" y="170752"/>
+<Fuel x="130048" y="170368"/>
+<Fuel x="98560" y="169984"/>
+<Fuel x="84736" y="149248"/>
+<Fuel x="70144" y="164992"/>
+<Fuel x="77440" y="191488"/>
+<Fuel x="91648" y="201472"/>
+<Fuel x="47104" y="200704"/>
+<Fuel x="35584" y="191488"/>
+<Fuel x="43648" y="152704"/>
+<Fuel x="127360" y="130816"/>
+<Fuel x="138112" y="151936"/>
+<Fuel x="154240" y="143488"/>
+<Fuel x="157696" y="126976"/>
+<Fuel x="178816" y="127360"/>
+<Fuel x="154240" y="105472"/>
+<Fuel x="115072" y="81280"/>
+<Fuel x="88960" y="67456"/>
+<Fuel x="69376" y="94336"/>
+<Fuel x="69760" y="136192"/>
+<Fuel x="50176" y="110080"/>
+<Fuel x="51328" y="67072"/>
+<Fuel x="69760" y="45952"/>
+<Fuel x="92032" y="45952"/>
+<Fuel x="115456" y="39424"/>
+<Fuel x="128896" y="42880"/>
+<Fuel x="154240" y="43264"/>
+<Fuel x="157696" y="27904"/>
+<Fuel x="167296" y="24832"/>
+<Fuel x="176896" y="42112"/>
+<Fuel x="177280" y="67840"/>
+<Fuel x="186880" y="63616"/>
+<Fuel x="199552" y="45952"/>
+<Fuel x="210304" y="16768"/>
+<Fuel x="81664" y="3328"/>
+<Fuel x="175744" y="109696"/>
+<Fuel x="182656" y="191104"/>
+<Fuel x="192640" y="202240"/>
+<Fuel x="176896" y="202240"/>
+<Fuel x="178816" y="173824"/>
+<Fuel x="184576" y="169984"/>
+<Fuel x="192256" y="173824"/>
+<Fuel x="49024" y="173440"/>
+<Fuel x="34816" y="169984"/>
+<Fuel x="40576" y="173440"/>
+<Fuel x="45568" y="169600"/>
+<Fuel x="30208" y="127360"/>
+<Fuel x="3712" y="110080"/>
+<Fuel x="18688" y="84736"/>
+<Fuel x="20608" y="45952"/>
+<Fuel x="20608" y="45952"/>
+<Fuel x="30592" y="42112"/>
+<Fuel x="35584" y="24832"/>
+<Fuel x="70528" y="20992"/>
+<Base x="96448" y="109184" team="0" dir="32" order="0"/>
+<Base x="104320" y="108928" team="0" dir="32" order="0"/>
+<Base x="113152" y="109312" team="0" dir="32" order="0"/>
+<Base x="120064" y="109312" team="0" dir="32" order="0"/>
+<Base x="129280" y="109312" team="0" dir="32" order="0"/>
+<Base x="93056" y="125760" team="0" dir="0" order="0"/>
+<Base x="133888" y="125120" team="0" dir="64" order="0"/>
+<Base x="134016" y="119168" team="0" dir="64" order="0"/>
+<Base x="134016" y="112768" team="0" dir="64" order="0"/>
+<Base x="93120" y="119936" team="0" dir="0" order="0"/>
+<Base x="93056" y="113088" team="0" dir="0" order="0"/>
+<Base x="100096" y="49408" team="2" dir="32" order="0"/>
+<Base x="183808" y="204992" team="2" dir="32" order="0"/>
+<Base x="145600" y="204640" team="2" dir="32" order="0"/>
+<Base x="81664" y="204544" team="2" dir="32" order="0"/>
+<Base x="119424" y="49024" team="2" dir="32" order="0"/>
+<Base x="42496" y="205056" team="2" dir="32" order="0"/>
+<Fuel x="103936" y="130944"/>
+<Fuel x="111872" y="149120"/>
+<Fuel x="114944" y="149056"/>
+<Group>
+<Fuel x="155551" y="202154"/>
+<Fuel x="157641" y="202133"/>
+<Fuel x="157652" y="200106"/>
+<Fuel x="155572" y="200085"/>
+</Group>
+<Base x="183040" y="70656" team="2" dir="32" order="0"/>
+</XPilotMap>

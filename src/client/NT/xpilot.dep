@@ -1,0 +1,842 @@
+# Microsoft Developer Studio Generated Dependency File, included by xpilot.mak
+
+..\about.c : \
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\client.h"\
+	"..\configure.h"\
+	"..\dbuff.h"\
+	"..\netclient.h"\
+	"..\paint.h"\
+	"..\protoclient.h"\
+	"..\widget.h"\
+	"..\xinit.h"\
+	".\winClient.h"\
+	".\winXXPilot.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\blockbitmaps.c : \
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\portability.h"\
+	"..\blockbitmaps.h"\
+	"..\client.h"\
+	"..\gfx2d.h"\
+	"..\paint.h"\
+	".\winBitmap.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\client.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\portability.h"\
+	"..\..\common\rules.h"\
+	"..\..\common\setup.h"\
+	"..\client.h"\
+	"..\netclient.h"\
+	"..\paint.h"\
+	"..\protoclient.h"\
+	"..\talk.h"\
+	"..\xinit.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\colors.c : \
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winX.h"\
+	"..\client.h"\
+	"..\dbuff.h"\
+	"..\paint.h"\
+	"..\protoclient.h"\
+	"..\xinit.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\configure.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\portability.h"\
+	"..\..\common\setup.h"\
+	"..\client.h"\
+	"..\configure.h"\
+	"..\netclient.h"\
+	"..\paint.h"\
+	"..\protoclient.h"\
+	"..\widget.h"\
+	"..\xinit.h"\
+	".\winClient.h"\
+	".\winConfig.h"\
+	".\winXXPilot.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\datagram.c : \
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winNet.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\portability.h"\
+	"..\..\common\socklib.h"\
+	"..\client.h"\
+	"..\datagram.h"\
+	"..\protoclient.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\default.c : \
+	"..\..\common\audio.h"\
+	"..\..\common\bit.h"\
+	"..\..\common\checknames.h"\
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\pack.h"\
+	"..\..\common\portability.h"\
+	"..\client.h"\
+	"..\default.h"\
+	"..\netclient.h"\
+	"..\paint.h"\
+	"..\protoclient.h"\
+	"..\talk.h"\
+	"..\xinit.h"\
+	".\winConfig.h"\
+	".\winXXPilot.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\gfx2d.c : \
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\portability.h"\
+	"..\gfx2d.h"\
+	
+
+..\gfx3d.c : \
+	"..\..\common\const.h"\
+	"..\gfx3d.h"\
+	
+
+..\guimap.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\rules.h"\
+	"..\..\common\setup.h"\
+	"..\blockbitmaps.h"\
+	"..\client.h"\
+	"..\gfx2d.h"\
+	"..\guimap.h"\
+	"..\paint.h"\
+	"..\paintdata.h"\
+	"..\paintmacros.h"\
+	"..\protoclient.h"\
+	"..\record.h"\
+	"..\texture.h"\
+	"..\xinit.h"\
+	".\winBitmap.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\guiobjects.c : \
+	"..\..\common\astershape.h"\
+	"..\..\common\bit.h"\
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\pack.h"\
+	"..\..\common\portability.h"\
+	"..\..\common\rules.h"\
+	"..\..\common\setup.h"\
+	"..\..\common\wreckshape.h"\
+	"..\blockbitmaps.h"\
+	"..\client.h"\
+	"..\gfx2d.h"\
+	"..\guiobjects.h"\
+	"..\paint.h"\
+	"..\paintdata.h"\
+	"..\paintmacros.h"\
+	"..\protoclient.h"\
+	"..\record.h"\
+	"..\texture.h"\
+	"..\xinit.h"\
+	".\winBitmap.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\join.c : \
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\portability.h"\
+	"..\client.h"\
+	"..\netclient.h"\
+	"..\protoclient.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\netclient.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\net.h"\
+	"..\..\common\NT\winNet.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\pack.h"\
+	"..\..\common\portability.h"\
+	"..\..\common\setup.h"\
+	"..\..\common\socklib.h"\
+	"..\client.h"\
+	"..\netclient.h"\
+	"..\paint.h"\
+	"..\protoclient.h"\
+	"..\talk.h"\
+	"..\xinit.h"\
+	".\winAudio.h"\
+	".\winClient.h"\
+	".\winXThread.h"\
+	".\winXXPilot.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\paint.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\portability.h"\
+	"..\..\common\rules.h"\
+	"..\..\common\setup.h"\
+	"..\blockbitmaps.h"\
+	"..\client.h"\
+	"..\dbuff.h"\
+	"..\gfx2d.h"\
+	"..\netclient.h"\
+	"..\paint.h"\
+	"..\paintdata.h"\
+	"..\record.h"\
+	"..\texture.h"\
+	"..\xinit.h"\
+	".\winClient.h"\
+	".\winXXPilot.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\paintdata.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\rules.h"\
+	"..\..\common\setup.h"\
+	"..\client.h"\
+	"..\dbuff.h"\
+	"..\paint.h"\
+	"..\paintdata.h"\
+	"..\protoclient.h"\
+	"..\record.h"\
+	"..\xinit.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\painthud.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\rules.h"\
+	"..\..\common\setup.h"\
+	"..\blockbitmaps.h"\
+	"..\client.h"\
+	"..\gfx2d.h"\
+	"..\paint.h"\
+	"..\paintdata.h"\
+	"..\paintmacros.h"\
+	"..\protoclient.h"\
+	"..\record.h"\
+	"..\texture.h"\
+	"..\xinit.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\paintmap.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\rules.h"\
+	"..\..\common\setup.h"\
+	"..\client.h"\
+	"..\guimap.h"\
+	"..\paint.h"\
+	"..\paintdata.h"\
+	"..\paintmacros.h"\
+	"..\protoclient.h"\
+	"..\record.h"\
+	"..\texture.h"\
+	"..\xinit.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\paintobjects.c : \
+	"..\..\common\astershape.h"\
+	"..\..\common\bit.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\portability.h"\
+	"..\..\common\rules.h"\
+	"..\..\common\setup.h"\
+	"..\..\common\wreckshape.h"\
+	"..\blockbitmaps.h"\
+	"..\client.h"\
+	"..\gfx2d.h"\
+	"..\gfx3d.h"\
+	"..\guimap.h"\
+	"..\guiobjects.h"\
+	"..\paint.h"\
+	"..\paintdata.h"\
+	"..\paintmacros.h"\
+	"..\protoclient.h"\
+	"..\record.h"\
+	"..\texture.h"\
+	"..\xinit.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\paintradar.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\rules.h"\
+	"..\..\common\setup.h"\
+	"..\client.h"\
+	"..\paint.h"\
+	"..\paintdata.h"\
+	"..\xinit.h"\
+	".\winXXPilot.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\query.c : \
+	"..\..\common\xpconfig.h"\
+	"..\..\common\NT\winNet.h"\
+	"..\..\common\socklib.h"\
+	"..\protoclient.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\record.c : \
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\NT\winX_.h"\
+	"..\..\common\setup.h"\
+	"..\client.h"\
+	"..\paint.h"\
+	"..\record.h"\
+	"..\recordfmt.h"\
+	"..\xinit.h"\
+	"..\xpmread.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\talkmacros.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winNet.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\portability.h"\
+	"..\..\common\rules.h"\
+	"..\..\common\setup.h"\
+	"..\client.h"\
+	"..\netclient.h"\
+	"..\protoclient.h"\
+	"..\talk.h"\
+	".\winAudio.h"\
+	".\winClient.h"\
+	".\winXThread.h"\
+	".\winXXPilot.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\textinterface.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\checknames.h"\
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\net.h"\
+	"..\..\common\NT\winNet.h"\
+	"..\..\common\pack.h"\
+	"..\..\common\portability.h"\
+	"..\..\common\socklib.h"\
+	"..\connectparam.h"\
+	"..\datagram.h"\
+	"..\protoclient.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\texture.c : \
+	"..\..\..\lib\textures\ball.xpm"\
+	"..\..\..\lib\textures\rock4.xpm"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\portability.h"\
+	"..\client.h"\
+	"..\paint.h"\
+	"..\texture.h"\
+	"..\xinit.h"\
+	"..\xpmread.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\usleep.c : \
+	"..\..\common\NT\winNet.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\widget.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\portability.h"\
+	"..\client.h"\
+	"..\paint.h"\
+	"..\paintdata.h"\
+	"..\protoclient.h"\
+	"..\widget.h"\
+	"..\xinit.h"\
+	".\winClient.h"\
+	".\winXXPilot.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\xevent.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\NT\winXKey.h"\
+	"..\..\common\portability.h"\
+	"..\..\common\setup.h"\
+	"..\client.h"\
+	"..\configure.h"\
+	"..\netclient.h"\
+	"..\paint.h"\
+	"..\paintdata.h"\
+	"..\record.h"\
+	"..\talk.h"\
+	"..\widget.h"\
+	"..\xevent.h"\
+	"..\xeventhandlers.h"\
+	"..\xinit.h"\
+	".\winAudio.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\xeventhandlers.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\NT\winXKey.h"\
+	"..\..\common\portability.h"\
+	"..\..\common\setup.h"\
+	"..\client.h"\
+	"..\configure.h"\
+	"..\netclient.h"\
+	"..\paint.h"\
+	"..\paintdata.h"\
+	"..\record.h"\
+	"..\talk.h"\
+	"..\widget.h"\
+	"..\xeventhandlers.h"\
+	"..\xinit.h"\
+	".\winAudio.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\xinit.c : \
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\portability.h"\
+	"..\client.h"\
+	"..\configure.h"\
+	"..\dbuff.h"\
+	"..\icon.h"\
+	"..\items\itemAfterburner.xbm"\
+	"..\items\itemArmor.xbm"\
+	"..\items\itemAutopilot.xbm"\
+	"..\items\itemCloakingDevice.xbm"\
+	"..\items\itemDeflector.xbm"\
+	"..\items\itemEcm.xbm"\
+	"..\items\itemEmergencyShield.xbm"\
+	"..\items\itemEmergencyThrust.xbm"\
+	"..\items\itemEnergyPack.xbm"\
+	"..\items\itemHyperJump.xbm"\
+	"..\items\itemLaser.xbm"\
+	"..\items\itemMinePack.xbm"\
+	"..\items\itemMirror.xbm"\
+	"..\items\itemPhasingDevice.xbm"\
+	"..\items\itemRearShot.xbm"\
+	"..\items\itemRocketPack.xbm"\
+	"..\items\itemSensorPack.xbm"\
+	"..\items\itemTank.xbm"\
+	"..\items\itemTractorBeam.xbm"\
+	"..\items\itemTransporter.xbm"\
+	"..\items\itemWideangleShot.xbm"\
+	"..\netclient.h"\
+	"..\paint.h"\
+	"..\protoclient.h"\
+	"..\widget.h"\
+	"..\xinit.h"\
+	".\winClient.h"\
+	".\winXXPilot.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\xpilot.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\checknames.h"\
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\net.h"\
+	"..\..\common\NT\winNet.h"\
+	"..\..\common\pack.h"\
+	"..\..\common\portability.h"\
+	"..\..\common\socklib.h"\
+	"..\connectparam.h"\
+	"..\protoclient.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+.\BSString.cpp : \
+	".\BSString.h"\
+	".\stdafx.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+.\MainFrm.cpp : \
+	"..\..\common\NT\winX.h"\
+	".\MainFrm.h"\
+	".\Splash.h"\
+	".\stdafx.h"\
+	".\winXXPilot.h"\
+	".\XPilotNT.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+.\Splash.cpp : \
+	".\Splash.h"\
+	".\stdafx.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+.\TalkWindow.cpp : \
+	".\stdafx.h"\
+	".\TalkWindow.h"\
+	".\XPilotNT.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+.\winAbout.cpp : \
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\NT\winX_.h"\
+	".\credits.inc.h"\
+	".\stdafx.h"\
+	".\winAbout.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+.\winBitmap.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\NT\winX_.h"\
+	"..\..\common\setup.h"\
+	"..\blockbitmaps.h"\
+	"..\client.h"\
+	"..\gfx2d.h"\
+	"..\paint.h"\
+	"..\protoclient.h"\
+	".\winBitmap.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+.\winConfig.c : \
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT\winX.h"\
+	"..\client.h"\
+	"..\default.h"\
+	"..\paint.h"\
+	".\winClient.h"\
+	".\winConfig.h"\
+	".\winXXPilot.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+.\winXThread.c : \
+	"..\..\common\NT\winX.h"\
+	"..\..\common\NT\winX_.h"\
+	".\winXThread.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+.\xpilot.rc : \
+	"..\..\server\NT\res\xpilots.ico"\
+	".\res\Splsh16.bmp"\
+	".\res\xpilot.ico"\
+	".\res\xpilot.rc2"\
+	
+
+.\xpilotDoc.cpp : \
+	".\stdafx.h"\
+	".\xpilotDoc.h"\
+	".\XPilotNT.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+.\XPilotNT.cpp : \
+	".\MainFrm.h"\
+	".\Splash.h"\
+	".\stdafx.h"\
+	".\TalkWindow.h"\
+	".\winAbout.h"\
+	".\xpilotDoc.h"\
+	".\XPilotNT.h"\
+	".\xpilotView.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+.\xpilotView.cpp : \
+	"..\..\common\NT\winNet.h"\
+	"..\..\common\NT\winX.h"\
+	".\BSString.h"\
+	".\stdafx.h"\
+	".\winClient.h"\
+	".\winXXPilot.h"\
+	".\xpilotDoc.h"\
+	".\XPilotNT.h"\
+	".\xpilotView.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\..\common\checknames.c : \
+	"..\..\common\checknames.h"\
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\pack.h"\
+	
+
+..\..\common\config.c : \
+	"..\..\common\xpconfig.h"\
+	
+
+..\..\common\error.c : \
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\portability.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\..\common\math.c : \
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	
+
+..\..\common\net.c : \
+	"..\..\common\bit.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\net.h"\
+	"..\..\common\NT\winNet.h"\
+	"..\..\common\socklib.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\..\common\portability.c : \
+	"..\..\common\commonproto.h"\
+	"..\..\common\xpconfig.h"\
+	"..\..\common\portability.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\..\common\shipshape.c : \
+	"..\..\common\xpconfig.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\NT\winX.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\..\common\socklib.c : \
+	"..\..\common\commonproto.h"\
+	"..\..\common\NT\winNet.h"\
+	"..\..\common\socklib.h"\
+	"..\..\server\NT\winServer.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\..\common\strdup.c : \
+	"..\..\common\commonproto.h"\
+	
+
+..\..\common\strlcpy.c : \
+	"..\..\common\commonproto.h"\
+	
+
+..\..\common\xpmemory.c : \
+	"..\..\common\commonproto.h"\
+	
+
+..\..\common\NT\winNet.c : \
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\..\common\NT\winX.c : \
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\NT\winX_.h"\
+	"..\client.h"\
+	"..\paint.h"\
+	"..\protoclient.h"\
+	"..\widget.h"\
+	"..\xinit.h"\
+	".\winClient.h"\
+	".\winXThread.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\..\common\NT\winX11.c : \
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\NT\winX_.h"\
+	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\..\common\NT\winXKey.c : \
+	"..\..\common\NT\winX.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\..\common\NT\wsockerrs.c : \
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	

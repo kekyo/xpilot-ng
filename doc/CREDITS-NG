@@ -1,0 +1,6 @@
+Release 4.3X credits:
+
+    Ben Jackson             Several fixes.
+    Thorsten Kroeger        Server security fix, player passwords,
+                            numerous other patches.
+    Paul Alexander Drees    user/host client options.

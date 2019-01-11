@@ -1,0 +1,85 @@
+# Microsoft Developer Studio Generated Dependency File, included by XPreplay.mak
+
+.\MainFrm.cpp : \
+	".\MainFrm.h"\
+	".\SliderBar.h"\
+	".\StdAfx.h"\
+	".\XPreplay.h"\
+	
+
+.\Properties.cpp : \
+	".\Properties.h"\
+	".\StdAfx.h"\
+	".\XPreplay.h"\
+	
+
+.\SliderBar.cpp : \
+	".\Properties.h"\
+	".\SliderBar.h"\
+	".\StdAfx.h"\
+	".\XPreplay.h"\
+	".\XPreplayDoc.h"\
+	
+
+.\StdAfx.cpp : \
+	".\StdAfx.h"\
+	
+
+.\XPreplay.cpp : \
+	".\MainFrm.h"\
+	".\Properties.h"\
+	".\SliderBar.h"\
+	".\StdAfx.h"\
+	".\XPreplay.h"\
+	".\XPreplayDoc.h"\
+	".\XPreplayView.h"\
+	
+
+.\XPreplay.rc : \
+	".\res\Toolbar.bmp"\
+	".\res\XPreplay.ico"\
+	".\res\XPreplay.rc2"\
+	".\res\XPreplayDoc.ico"\
+	
+
+.\XPreplayDoc.cpp : \
+	"..\..\client\recordfmt.h"\
+	".\MainFrm.h"\
+	".\Properties.h"\
+	".\SliderBar.h"\
+	".\StdAfx.h"\
+	".\XPreplay.h"\
+	".\XPreplayDoc.h"\
+	
+
+.\XPreplayView.cpp : \
+	"..\..\client\items\itemAfterburner.xbm"\
+	"..\..\client\items\itemArmor.xbm"\
+	"..\..\client\items\itemAutopilot.xbm"\
+	"..\..\client\items\itemCloakingDevice.xbm"\
+	"..\..\client\items\itemDeflector.xbm"\
+	"..\..\client\items\itemEcm.xbm"\
+	"..\..\client\items\itemEmergencyShield.xbm"\
+	"..\..\client\items\itemEmergencyThrust.xbm"\
+	"..\..\client\items\itemEnergyPack.xbm"\
+	"..\..\client\items\itemHyperJump.xbm"\
+	"..\..\client\items\itemLaser.xbm"\
+	"..\..\client\items\itemMinePack.xbm"\
+	"..\..\client\items\itemMirror.xbm"\
+	"..\..\client\items\itemPhasingDevice.xbm"\
+	"..\..\client\items\itemRearShot.xbm"\
+	"..\..\client\items\itemRocketPack.xbm"\
+	"..\..\client\items\itemSensorPack.xbm"\
+	"..\..\client\items\itemTank.xbm"\
+	"..\..\client\items\itemTractorBeam.xbm"\
+	"..\..\client\items\itemTransporter.xbm"\
+	"..\..\client\items\itemWideangleShot.xbm"\
+	"..\..\client\recordfmt.h"\
+	".\MainFrm.h"\
+	".\Properties.h"\
+	".\SliderBar.h"\
+	".\StdAfx.h"\
+	".\XPreplay.h"\
+	".\XPreplayDoc.h"\
+	".\XPreplayView.h"\
+	

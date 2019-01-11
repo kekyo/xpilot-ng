@@ -1,0 +1,15 @@
+#! /bin/sh
+
+#
+# Use this script to create the configure script and some other files.
+#
+# NOTE:
+# autoconf version should be >= 2.57
+# automake version should be >= 1.6
+#
+
+set -x
+aclocal -I config
+autoheader
+automake --gnu --add-missing --copy
+autoconf

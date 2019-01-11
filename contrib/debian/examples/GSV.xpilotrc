@@ -1,0 +1,108 @@
+xpilot.power:			55.000
+
+xpilot.turnSpeed:		45.000
+
+xpilot.turnResistance:		0.120
+
+xpilot.altPower:		35.000
+
+xpilot.altTurnSpeed:		45.000
+
+xpilot.altTurnResistance:	0.120
+
+xpilot.toggleShield:		False
+
+xpilot.fuelGauge:		True
+
+xpilot.fuelNotify:		9900.000
+
+xpilot.fuelWarning:             500.000
+
+xpilot.fuelCritical:		200.000
+
+xpilot.charsPerSecond:		50
+
+xpilot.showMessages:		True
+
+xpilot.charsPerSecond:		95
+
+xpilot.gameFont:		-b&h-lucidatypewriter-medium-r-normal-sans-12-120-75-75-m-70-iso8859-1
+
+xpilot.showShipName:		True
+
+xpilot.showMineName:		True
+
+xpilot.backgroundPointDist:	8
+
+xpilot.backgroundPointSize:	2
+
+xpilot.sparkSize:		2
+
+xpilot.sparkProb:		1.0
+
+xpilot.shotSize:		3
+
+xpilot.teamShotSize:		1
+
+xpilot.maxColors:		8
+
+xpilot.hudColor:		1
+
+xpilot.hudLockColor:		2
+
+xpilot.wallColor:               2
+
+xpilot.filledWorld:		True
+
+xpilot.verticalHUDLine:         True
+
+xpilot.horizontalHUDLine:	True
+
+xpilot.slidingRadar:            True
+
+xpilot.showItems:		True
+
+xpilot.clock:			True
+
+xpilot.clockAMPM:		True
+
+xpilot.modifierBank1:           CV2B3Z2
+xpilot.modifierBank2:           CX4B3Z2
+xpilot.modifierBank3:           CB3Z2
+xpilot.modifierBank4:           NCB3Z2
+
+xpilot.markingLights:           True
+
+xpilot.autoServerMotdPopup:	False
+xpilot.noLocalMotd:		True
+
+xpilot.autoShield:		False
+
+xpilot.geometry:		1270x994
+
+xpilot.keyPointerControl:	k
+xpilot.keyPause:		Page_Up
+xpilot.keyPhasing:		p
+
+xpilot.maxVolume:		70
+
+xpilot.recordFile:		/home/jtjm2/xpilotvid
+xpilot.keyToggleRecord:		F12
+
+xpilot.pointerButton1:          keyThrust
+xpilot.pointerButton3:          keyFireShot
+xpilot.pointerButton2:          keyDetachMine
+xpilot.pointerButton4:          keyTankDetach
+xpilot.pointerButton5:          keyDetonateMines
+
+xpilot.msg1:			#t:****** BALL ******
+xpilot.msg2:			#t:****** BALL - #ln ******
+xpilot.msg9:			#t:****** SAFE ******
+xpilot.msg10:			#t:****** SAFE ******
+
+xpilot.name:		GSVGravitas
+xpilot.shipShape:(SH: -5,9 1,4 4,3 5,2 3,0 5,2 14,0 5,-2 3,0 5,-2 4,-3 1,-4 -5,-9 -13,-12 -7,-6 -10,0 1,-4 -6,0 1,4 -10,0 -7,6 -13,12)(EN: -10,0)(MG: 2,0)(LG: -5,9 1,4 -13,12)(RG: -5,-9 1,-4 -13,-12)(LL: -13,12 1,4 -7,-6)(RL: 1,-4 -7,6 -13,-12)(MR: -5,9 -5,-9 -13,12 -13,-12)(NM:GSVfinal)(AU:jtjm@argonet.co.uk)
+
+(SH: -5,9 1,4 4,3 5,2 3,0 5,2 14,0 5,-2 3,0 5,-2 4,-3 1,-4 -5,-9 -13,-12 -7,-6 -10,0 1,-4 -6,0 1,4 -10,0 -7,6 -13,12)(EN: -10,0)(MG: 13,0)(LG: -5,9 1,4 -13,12)(RG: -5,-9 1,-4 -13,-12)(LL: -13,12 1,4 -7,-6)(RL: 1,-4 -7,6 -13,-12)(MR: -5,9 -5,-9 -13,12 -13,-12)(NM:GSV)(AU:GSV)
+
+(SH: -5,9 1,4 4,3 5,2 3,0 5,2 14,0 5,-2 3,0 5,-2 4,-3 1,-4 -5,-9 -13,-12 -7,-6 -10,0 1,-4 -6,0 1,4 -10,0 -7,6 -13,12)(EN: -10,0)(MG: 2,0)(LG: -5,9 1,4 -13,12)(RG: -5,-9 1,-4 -13,-12)(LL: -13,12 1,4 -7,-6)(RL: 1,-4 -7,6 -13,-12)(MR: -5,9 -5,-9 -13,12 -13,-12)(NM:GSV)(AU:GSV)

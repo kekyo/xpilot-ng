@@ -1,0 +1,292 @@
+---------------------------
+        X P I L O T
+
+    T A L K   P A T C H
+
+        M A N U A L
+
+	  v 1.2
+---------------------------
+Talk Patch by HeadAce and H.E.R.O. 1995
+
+
+What is this talk patch thing?
+==============================
+
+It's a patch that allows you to send predefined messages with
+one single keystroke.
+
+
+How do I install it?
+====================
+
+Replace the files in the original source with our modified files
+and compile as usual. Note: These files were originally made
+for XPilot 3.3.0 and 3.3.1 so if any of these files av changed
+since then it's not an good idea to replace the files...or you
+could insert all pieces of code surrounded by /* TalkPatchBegin */
+and /* TalkPatchEnd */ into the newer versions.
+
+The modified files are:
+
+	netclient.c
+	xevent.c
+	default.c
+	client.c
+	const.h
+	keys.h
+
+How do I define the messages?
+=============================
+
+The messages are defined in your .xpilotrc file.
+The option name is msg<n> where n is the message number (1 to 20)
+
+Example (from .xpilotrc):
+
+	xpilot.msg1:	Hello World!
+	xpilot.msg2:	Arrrgggghhhhhh
+	...
+	xpilot.msg20:	The last message
+
+You only have to define the messages you want to use - not all 20.
+
+
+How do I use them in the game?
+==============================
+
+A message you want to use must have a key bound to it.
+You define these key with the option keySendMsg<n>.
+
+Example:
+	xpilot.keySendMsg1:	F1
+	xpilot.keySendMsg2:	Control_L
+	...
+
+By default, the first 12 messages are bound to the function keys, F1-F12.
+The others are not bound to any key by default.
+  
+
+Is that all? Booorriiiinnnggg...
+================================
+
+No! Wait! Don't go!
+You can make special messages using control codes inside them.
+All control codes are preceded by a '#' character.
+If the code takes arguments, they are separated by the '|' character
+and surrounded by brackets, '[' and ']'.
+
+
+List of control codes: 
+
+
+r - random message
+------------------
+
+This is a very powerful code since it allows you to randomly
+choose from an arbitrary number of messages.
+
+Syntax:		#r[a|b|c|...]
+
+Example: 	#r[Arggghh|Ouch!|gurgl|oh no!!!]
+
+
+f - message file
+----------------
+
+Also powerful, you can include files containing another (possibly
+big) message. This second message (in the file) is treated and parsed
+exactly like normal messages, so for instance, it's possible to include
+another file recursively in this file and so on.
+
+Syntax:		#f[filename]
+
+Examples:	#f[ball.txt]
+		#f[/home/darthvader/force.msg]
+		#f[#h/mymessage]	(read about #h below)
+
+
+h - home directory
+------------------
+
+Is substituted by your home directory (from your environment variable HOME).
+
+Syntax:		#h
+
+Example:	See example above (message file)
+
+
+t - your team
+-------------
+
+Is substituted by your team number. This is very useful 
+when you want to send a message to your own team. If you aren't in a
+team play game, '#t' is ignored.
+
+Syntax:		#t
+
+Examples:	#t:Oh no!! They got our B A L L !!!!
+		Team #t rules!!!!
+
+
+n - new message
+---------------
+
+Sends the accumulated message up to this control code and
+starts on a new message. Note: The last 'line' sent doesn't 
+need a trailing #n
+Note: A real newline (in a file) is treated like nothing
+(use #n to make newlines).
+
+Syntax:		#n
+
+Example:	This message is getting long so it's#nbest to split it.
+ 		
+		Message1#nMessage2#nMessage3
+
+
+
+The following two codes selects a player:
+
+s - yourself
+------------
+
+Selects yourself.
+
+
+l - locked
+----------
+
+Selects the player you are locked on. If you, at the time you send the
+message, don't have a lock on any player, the whole message is cancelled.
+
+
+When you have selected a player - the next letter decides what info about
+the player that is put into the message:
+
+	t - team
+	--------
+	
+	Is substituted by the number of the team of the selected player,
+	or nothing if you aren't in a team play game.
+	Note: #st is the same as #t
+
+	Example:	Team #st is the best!
+			Team #lt sucks.
+
+
+	s - score
+	---------
+
+	Is substituted by the score of the selected player.
+
+	Example:	Wow, I have #ss points!
+
+
+	n - name
+	--------
+
+	Is substitutes by the name of the selected player.
+
+	Example:	#ln:Look for some missiles coming your way, hehe!!
+
+
+	l - lives
+	---------
+
+	Is substitutes by the number of lives the selected player
+	currently has. Ignored if the play mode uses unlimited lives.
+
+	Example:	You only have #ll lives left, #ln!
+
+
+
+= - String comparison
+---------------------
+
+Compares the first and second parsed fields and then parses the 3rd or the
+(optional)4th field, depending on how the comparison went.
+	
+Syntax:		#=[string1|string2|true-string|false-string]
+    or:		#=[string1|string2|true-string]
+
+Example:	#=[#ln|H.E.R.O.|Please don't kill me, #ln|#ln:Prepare to die!]
+		#=[HeadAce|#ln|Stay away from our treasure, #ln]
+
+
+< and >  - Number comparison
+----------------------------
+
+Compares the first and second parsed fields and then parses the 3rd or the
+(optional)4th field, depending on how the comparison went.
+	
+Syntax:		#<[number1|number2|true-string|false-string]
+    or:		#<[number1|number2|true-string]
+
+Example:	#>[#ss|#ls|I rule!|#ln rules...]
+		#<[#ln|0|#ln:sub-zero, huh? :)]
+
+
+
+More info
+=========
+
+All codes can be nested and of course it's possible to use filenames
+inside a random message or the opposite, use random messages to
+generate the filename...
+If the generated message is too long, it will be split up.
+If you want to use the '#' character itself in a message, enter it as '##'.
+The '[', '|' and ']' characters cannot be used in a message inside
+a pair of brackets. If you must use any of them inside, for example
+a random statement, put the message in a file and use the #f[filename]
+instead.
+
+Example:	#r[:)|:-)|:}|#f[smiley4.txt]]
+where smiley4.txt contains:	:]
+
+
+About Xpilot and smileys
+========================
+
+When you're sending a message to another player, be careful about what
+character you put after the colon (':'). Xpilot interprets a colon plus,
+for example, a right bracket as a smiley. So if your message to the
+other player starts with a right bracket you must insert a space before
+the bracket.
+Known Xpilot-smileys:
+:)  :]  :}  :-)  :~)
+
+
+Ok...some more examples to show how they work together:
+=======================================================
+
+In .xpilotrc
+------------
+
+xpilot.msg1:	#t:****** BALL!!! ******
+xpilot.msg2:	ARGGGHHHHH!
+xpilot.msg3:	#f[#h/xpilotstuff/message-#r[1|2|3|4]]
+xpilot.msg9:	I hate this #r[LAG|map|game|base]!!!
+xpilot.msg15:	#r[#f[file1.txt]|#f[file2.txt]]
+
+xpilot.keySendMsg15:	KP_9
+
+
+file1.txt could look something like...
+--------------------------------------
+
+Hello guys! I'm back again and fit for fight!#n
+#r[BEWARE!|Watch out, here I come!|#f[bigthreat.txt]]
+
+
+Contacting the authors
+======================
+
+If you want to ask about or comment on anything, or report a bug,
+just mail us (HeadAce or H.E.R.O.)
+
+
+HeadAce:  Jonny Svärling, d93-jsv@nada.kth.se
+H.E.R.O.: Adam Lorentzon, d93-alo@nada.kth.se	
+
+[code modified and adapted, svenske@xpilot.org]

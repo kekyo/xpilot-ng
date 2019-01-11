@@ -1,0 +1,7 @@
+Python version of the map editor. Not ready yet but can be used for
+modifying maps if you know what you're doing. Requires Python 2.1 or
+newer, python-gtk and python-xml. Based on the Java version so some
+"literally" translated code may look a bit odd.
+You'll need to edit config.py before starting the program.
+Start with "python MainFrame.py mapname".
+Copyright 2002 Uoti Urpala. Released under GPL (version 2).

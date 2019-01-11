@@ -1,0 +1,4 @@
+The xpngcc directory contains the XPilot NG Control Center, a user interface
+for starting XPilot NG programs. XPNGCC is written in python and uses the
+wxWidgets Cross-platform C++ GUI toolkit.
+NOTE: wxpython version must be 2.6 or greater.

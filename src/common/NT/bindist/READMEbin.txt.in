@@ -1,0 +1,28 @@
+This is the README for XPilot.exe Release @XP_VERSION_WINDOWS@.
+XPilot.exe is based on @VERSION@.
+
+@XP_COPYRIGHT@.
+
+The documentation for XPilot is far from complete.
+
+Be sure to read doc/Changelog for information about the differences
+between this release and previous releases.
+
+--------------------------------------
+SOURCES OF INFORMATION ON THE INTERNET
+
+Improved XPilot Page: http://xpilot.sf.net/
+
+XPilot Page on WWW: http://www.xpilot.org/
+
+XPilot.exe info on WWW: http://www.buckosoft.com/xpilot/
+
+--------------------------------------
+REPORTING BUGS
+
+If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
+
+        @PACKAGE_BUGREPORT@
+
+Remember to include the version of XPilot, your platform, the symptoms
+and, if you have one, a fix when reporting bugs.

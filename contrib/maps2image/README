@@ -1,0 +1,82 @@
+README for maps2image -- a xpilot maps to image converter.
+
+WHAT IS IT?
+This program will take a set of xpilot maps and builds a
+single PBM image from them. Each image is labeled with the
+map's name below it.
+
+WHAT USE IS IT?
+If you have a lot of xpilot maps, this is a simple way to
+remind yourself of what the different maps are/look like.
+Each image will show only the walls of a map. Normally this
+is enough to remind you of what it really looks like when
+you actually play the map.
+
+HOW DO I COMPILE?
+Simple. If you have gcc, you don't need to change anything.
+If you do not have gcc, you need to change the Makefile to
+reflect the ANSI compiler. Follow the ``detailed''
+instructions in the Makefile to do this. :-)
+And now, the big moment has arrived! Type:
+
+	make
+
+If everything goes well, you should now have the executable
+maps2image.
+(Note: gcc gives a warning about some unreachable code. This
+warning is bogus and should thusly be ignored!)
+
+If, for some reason, you do not like the font that is used,
+you can change the FONT= line in the Makefile. This should
+point to a BDF format fontfile. Included is the 8 point
+Helvetica font from the 75dpi directory of the X11R5
+distribution. You can substitute any BDF font here. However,
+if you use a large font, the map name will not be completely
+displayed.
+
+HOW DO I USE IT?
+The list of maps you want converted to an image are given on
+the command line and the PBM image is written to stdout.
+Here is a typical use of the program:
+
+	maps2image /usr/local/lib/xpilot/maps/*.map | xv -
+
+The program has a couple of optional switches:
+
+	-s image_size	specifies the size of each of the individual
+			map images.  The default is 64.
+
+	-x ncols	specifies the number of columns of map images
+			to use.  If this switch is not specified, it will
+			try to make the image as square as possible.
+	-i		invert the images.  By default areas you can fly
+			in are white, with this option it is more like
+			what it looks like when playing.
+	-v		Turn on verbose mode.  This will output progress
+			messages to stderr.  Useful only when bored.
+	-b		Instead of a pbm image, create an X11 bitmap
+	-l		Do not add a label to each image
+
+The list of files should be xpilot map files.  They may be compressed
+with gzip or compress.  (Standard extension looked for are .gz and .Z)
+
+PBM???  WHAT'S THAT?
+The PBM image is format is a simple Portable BitMap format.
+Most X based image viewers can deal with PBM files, but you
+can always get the latest pbmplus image conversion package
+to convert this image to whatever format you want.
+
+SO, NOW WHAT?
+Now it is your job to write an X program which will display
+this image and then allow you to select a map you want to
+start a server with... What? Are you still reading this
+instead of writing this xpilots starter????
+
+COMPLAINTS?
+You can complain to Andrew@SDSU.Edu (Ender) if you want.
+However all whines will be ignored. If you don't like the
+program, don't use it; I assume you were doing ok without it
+before you got it... If you find bugs or have other
+suggestions, let me know. I have only compiled this on a Sun
+using both gcc 2.5.8 and Sun's acc. (We run SunOS 4.1.3_U1)
+

@@ -1,0 +1,106 @@
+Source: xpilot-ng
+Section: games
+Priority: extra
+Maintainer: Unofficial Debian XPilot <xpilot-hacks@lists.sourceforge.net>
+Build-Depends: debhelper (>= 4.0.0), xlibs-dev, zlib1g-dev, libexpat1-dev, libsdl1.2-dev, libsdl-image1.2-dev, libsdl-ttf2.0-dev, xlibmesa-gl-dev, xlibmesa-glu-dev, libopenal-dev
+Standards-Version: 3.6.2
+
+Package: xpilot-ng
+Architecture: all
+Depends: xpilot-ng-client-x11 (= ${Source-Version}), xpilot-ng-client-sdl (= ${Source-Version}), xpilot-ng-server (= ${Source-Version}), xpilot-ng-utils (= ${Source-Version})
+Description: Multi-player tactical game for X (NG version)
+ XPilot is a multi-player tactical manoeuvring game for X.  Each
+ player controls their own fighter equipped with a variety of weapons
+ and power-ups.  Players compete as teams or as individuals;  the
+ object of the game is to score points by blasting the opposition,
+ stealing their treasure or by racing round a circuit.
+ WARNING: This game is very addictive.
+ .
+ This package is a complete XPilot installation, including the
+ XPilot client, server and utilities.
+ .
+ This package is for the "Next Generation" (NG) fork at http://xpilot.sf.net
+
+Package: xpilot-ng-common
+Architecture: all
+Depends: ${misc:Depends}, adduser (>=3.34)
+Suggests: xpilot-ng-server, xpilot-ng-utils, xpilot-ng-client-x11, xpilot-ng-client-sdl
+Description: Common files for XPilot NG
+ XPilot is a multi-player tactical manoeuvring game for X.  Each
+ player controls their own fighter equipped with a variety of weapons
+ and power-ups.  Players compete as teams or as individuals;  the
+ object of the game is to score points by blasting the opposition,
+ stealing their treasure or by racing round a circuit.
+ WARNING: This game is very addictive.
+ .
+ This package contains the common files for the server, clients and
+ utilities including both data and documentation.
+ .
+ This package is for the "Next Generation" (NG) fork at http://xpilot.sf.net
+
+Package: xpilot-ng-client-x11
+Architecture: any
+Depends: ${shlibs:Depends}, xpilot-ng-common (= ${Source-Version})
+Description: Client for XPilot NG
+ XPilot is a multi-player tactical manoeuvring game for X.  Each
+ player controls their own fighter equipped with a variety of weapons
+ and power-ups.  Players compete as teams or as individuals;  the
+ object of the game is to score points by blasting the opposition,
+ stealing their treasure or by racing round a circuit.
+ WARNING: This game is very addictive.
+ .
+ This package contains the classic client needed to play the game.
+ Because it is X11-based, it is has a very basic, clean look-and-feel,
+ and is suitable for use on older, less powerful systems.
+ .
+ This package is for the "Next Generation" (NG) fork at http://xpilot.sf.net
+
+Package: xpilot-ng-client-sdl
+Architecture: any
+Depends: ${shlibs:Depends}, xpilot-ng-common (= ${Source-Version})
+Description: Client for XPilot NG
+ XPilot is a multi-player tactical manoeuvring game for X.  Each
+ player controls their own fighter equipped with a variety of weapons
+ and power-ups.  Players compete as teams or as individuals;  the
+ object of the game is to score points by blasting the opposition,
+ stealing their treasure or by racing round a circuit.
+ WARNING: This game is very addictive.
+ .
+ This package contains a modern client with fancier graphics.  It is 
+ suitable for use on modern systems with sufficient resources to run SDL 
+ and GL.
+ .
+ This package is for the "Next Generation" (NG) fork at http://xpilot.sf.net
+
+Package: xpilot-ng-utils
+Architecture: any
+Depends: ${shlibs:Depends}, xpilot-ng-common (= ${Source-Version})
+Description: Utilities for XPilot NG
+ XPilot is a multi-player tactical manoeuvring game for X.  Each
+ player controls their own fighter equipped with a variety of weapons
+ and power-ups.  Players compete as teams or as individuals;  the
+ object of the game is to score points by blasting the opposition,
+ stealing their treasure or by racing round a circuit.
+ WARNING: This game is very addictive.
+ .
+ This package contains utilities for making XPilot maps and playing
+ back recordings of XPilot games.
+ .
+ This package is for the "Next Generation" (NG) fork at http://xpilot.sf.net
+
+Package: xpilot-ng-server
+Architecture: any
+Depends: ${shlibs:Depends}, xpilot-ng-common (= ${Source-Version})
+Description: Server for hosting XPilot NG games
+ XPilot is a multi-player tactical manoeuvring game for X.  Each
+ player controls their own fighter equipped with a variety of weapons
+ and power-ups.  Players compete as teams or as individuals;  the
+ object of the game is to score points by blasting the opposition,
+ stealing their treasure or by racing round a circuit.
+ WARNING: This game is very addictive.
+ .
+ This package contains the server daemon you need in order to host
+ your own game of XPilot.
+ .
+ This package is for the "Next Generation" (NG) fork at http://xpilot.sf.net
+

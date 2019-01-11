@@ -1,0 +1,486 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON    DISCARDABLE     "res\\XPreplay.ico"
+IDR_XPREPLTYPE          ICON    DISCARDABLE     "res\\XPreplayDoc.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDR_MAINFRAME           BITMAP  MOVEABLE PURE   "res\\Toolbar.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Toolbar
+//
+
+IDR_MAINFRAME TOOLBAR DISCARDABLE  23, 22
+BEGIN
+    BUTTON      IDT_TOSTART
+    BUTTON      IDT_REWIND
+    BUTTON      IDT_REVERSE
+    BUTTON      IDT_SLOWBACK
+    BUTTON      IDT_SLOWPLAY
+    BUTTON      IDT_PLAY
+    BUTTON      IDT_FORWARD
+    BUTTON      IDT_TOEND
+    BUTTON      IDT_STOP
+    BUTTON      IDT_PAUSE
+    SEPARATOR
+    BUTTON      IDT_STARTFRAME
+    BUTTON      IDT_ENDFRAME
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MAINFRAME MENUEX PRELOAD DISCARDABLE 
+BEGIN
+    POPUP "&File",                          65535,MFT_STRING,MFS_ENABLED
+    BEGIN
+        MENUITEM "&Open...\tCtrl+O",            57601,MFT_STRING,MFS_ENABLED
+        MENUITEM "&Save selection\tCtrl+S",     57603,MFT_STRING,MFS_GRAYED
+        MENUITEM "Save selection &As...",       57604,MFT_STRING,MFS_GRAYED
+        MENUITEM MFT_SEPARATOR
+        MENUITEM "Recent File",                 57616,MFT_STRING,MFS_GRAYED
+        MENUITEM MFT_SEPARATOR
+        MENUITEM "&Properties\tAlt+Enter",      32781,MFT_STRING,MFS_GRAYED
+        MENUITEM "E&xit",                       57665,MFT_STRING,MFS_ENABLED
+    END
+    POPUP "&View",                          65535,MFT_STRING,MFS_ENABLED
+    BEGIN
+        MENUITEM "&Toolbar",                    59392,MFT_STRING,MFS_ENABLED
+        MENUITEM "S&liderbar",                  32789,MFT_STRING,MFS_ENABLED
+        MENUITEM "&Status Bar",                 59393,MFT_STRING,MFS_ENABLED
+    END
+    POPUP "&Options",                       65535,MFT_STRING,MFS_ENABLED
+    BEGIN
+        MENUITEM "&Trust windowsize in header", 32784,MFT_STRING,MFS_CHECKED
+    END
+    POPUP "&Help",                          65535,
+    MFT_STRING | MFT_RIGHTORDER | MFT_RIGHTJUSTIFY,MFS_ENABLED
+    BEGIN
+        MENUITEM "&About XPreplay...",          57664,MFT_STRING,MFS_ENABLED
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_MAINFRAME ACCELERATORS PRELOAD MOVEABLE PURE 
+BEGIN
+    ",",            IDT_TOEND,              ASCII,  NOINVERT
+    ".",            IDT_STOP,               ASCII,  NOINVERT
+    "/",            IDT_PAUSE,              ASCII,  NOINVERT
+    "B",            IDT_SLOWPLAY,           VIRTKEY, NOINVERT
+    "C",            IDT_REVERSE,            VIRTKEY, NOINVERT
+    "M",            IDT_FORWARD,            VIRTKEY, NOINVERT
+    "N",            IDT_PLAY,               VIRTKEY, NOINVERT
+    "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL, NOINVERT
+    "S",            ID_FILE_SAVE,           VIRTKEY, CONTROL, NOINVERT
+    "V",            IDT_SLOWBACK,           VIRTKEY, NOINVERT
+    VK_F6,          ID_NEXT_PANE,           VIRTKEY, NOINVERT
+    VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
+    VK_RETURN,      ID_FILE_PROPERTIES,     VIRTKEY, ALT, NOINVERT
+    "X",            IDT_REWIND,             VIRTKEY, NOINVERT
+    "Z",            IDT_TOSTART,            VIRTKEY, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 217, 149
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About XPreplay"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,83,128,45,14,WS_GROUP
+    LTEXT           "http://home.online.no/~s-with/",IDC_STATIC_URL1,23,82,
+                    99,8,NOT WS_GROUP
+    LTEXT           "http://www.daimi.au.dk/~herborg/xpilot/ballruns.html",
+                    IDC_STATIC_URL2,23,93,169,8,NOT WS_GROUP
+    LTEXT           "http://www.crosswinds.net/~suicide_king/",
+                    IDC_STATIC_URL3,23,104,137,8,NOT WS_GROUP
+    ICON            IDR_MAINFRAME,IDC_STATIC,7,7,20,20
+    LTEXT           "XPreplay Version 0.4",IDC_STATIC,37,10,119,8,
+                    SS_NOPREFIX
+    LTEXT           "Copyright © 2001",IDC_STATIC,37,20,119,8
+    LTEXT           "This is the Windowsport of the original xp-replay for Unix.",
+                    IDC_STATIC,14,48,178,8
+    GROUPBOX        "Info",IDC_STATIC,7,35,203,84
+    LTEXT           "Windowsplayer now can view xpilotrecordings too.",
+                    IDC_STATIC,14,57,160,8
+    LTEXT           "You can download recordings of ballruns from these sites :",
+                    IDC_STATIC,14,66,184,8
+END
+
+IDD_SLIDERBAR DIALOG DISCARDABLE  0, 0, 245, 25
+STYLE WS_CHILD
+FONT 8, "MS Sans Serif"
+BEGIN
+END
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 0,4,0,0
+ PRODUCTVERSION 0,4,0,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "Comments", "\0"
+            VALUE "CompanyName", "j-a-r-n-o.nl\0"
+            VALUE "FileDescription", "XPreplay\0"
+            VALUE "FileVersion", "0.4\0"
+            VALUE "InternalName", "XPreplay\0"
+            VALUE "LegalCopyright", "Copyright (C) 2001\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "OriginalFilename", "XPreplay.exe\0"
+            VALUE "PrivateBuild", "\0"
+            VALUE "ProductName", "XPreplay\0"
+            VALUE "ProductVersion", "0.4\0"
+            VALUE "SpecialBuild", "\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 210
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 142
+    END
+
+    IDD_SLIDERBAR, DIALOG
+    BEGIN
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 24
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE PRELOAD DISCARDABLE 
+BEGIN
+    IDR_MAINFRAME           "XPreplay\n\nXPreplay\nXPilot recordings (*.xpr)\n.xpr\nXPreplay.Document\nXPilot recording"
+END
+
+STRINGTABLE PRELOAD DISCARDABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "XPreplay"
+    AFX_IDS_IDLEMESSAGE     "Ready"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_INDICATOR_EXT        "EXT"
+    ID_INDICATOR_CAPS       "CAP"
+    ID_INDICATOR_NUM        "NUM"
+    ID_INDICATOR_SCRL       "SCRL"
+    ID_INDICATOR_OVR        "OVR"
+    ID_INDICATOR_REC        "REC"
+    ID_INDICATOR_FRAMECOUNTER "frame 0 of 0"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_FILE_NEW             "Create a new document\nNew"
+    ID_FILE_OPEN            "Open an existing document\nOpen"
+    ID_FILE_CLOSE           "Close the active document\nClose"
+    ID_FILE_SAVE            "Save the active document\nSave"
+    ID_FILE_SAVE_AS         "Save the active document with a new name\nSave As"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_APP_ABOUT            "Display program information, version number and copyright\nAbout"
+    ID_APP_EXIT             "Quit the application; prompts to save documents\nExit"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_FILE_MRU_FILE1       "Open this document"
+    ID_FILE_MRU_FILE2       "Open this document"
+    ID_FILE_MRU_FILE3       "Open this document"
+    ID_FILE_MRU_FILE4       "Open this document"
+    ID_FILE_MRU_FILE5       "Open this document"
+    ID_FILE_MRU_FILE6       "Open this document"
+    ID_FILE_MRU_FILE7       "Open this document"
+    ID_FILE_MRU_FILE8       "Open this document"
+    ID_FILE_MRU_FILE9       "Open this document"
+    ID_FILE_MRU_FILE10      "Open this document"
+    ID_FILE_MRU_FILE11      "Open this document"
+    ID_FILE_MRU_FILE12      "Open this document"
+    ID_FILE_MRU_FILE13      "Open this document"
+    ID_FILE_MRU_FILE14      "Open this document"
+    ID_FILE_MRU_FILE15      "Open this document"
+    ID_FILE_MRU_FILE16      "Open this document"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_NEXT_PANE            "Switch to the next window pane\nNext Pane"
+    ID_PREV_PANE            "Switch back to the previous window pane\nPrevious Pane"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_WINDOW_SPLIT         "Split the active window into panes\nSplit"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_EDIT_CLEAR           "Erase the selection\nErase"
+    ID_EDIT_CLEAR_ALL       "Erase everything\nErase All"
+    ID_EDIT_COPY            "Copy the selection and put it on the Clipboard\nCopy"
+    ID_EDIT_CUT             "Cut the selection and put it on the Clipboard\nCut"
+    ID_EDIT_FIND            "Find the specified text\nFind"
+    ID_EDIT_PASTE           "Insert Clipboard contents\nPaste"
+    ID_EDIT_REPEAT          "Repeat the last action\nRepeat"
+    ID_EDIT_REPLACE         "Replace specific text with different text\nReplace"
+    ID_EDIT_SELECT_ALL      "Select the entire document\nSelect All"
+    ID_EDIT_UNDO            "Undo the last action\nUndo"
+    ID_EDIT_REDO            "Redo the previously undone action\nRedo"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_VIEW_TOOLBAR         "Show or hide the toolbar\nToggle ToolBar"
+    ID_VIEW_STATUS_BAR      "Show or hide the status bar\nToggle StatusBar"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    AFX_IDS_SCSIZE          "Change the window size"
+    AFX_IDS_SCMOVE          "Change the window position"
+    AFX_IDS_SCMINIMIZE      "Reduce the window to an icon"
+    AFX_IDS_SCMAXIMIZE      "Enlarge the window to full size"
+    AFX_IDS_SCNEXTWINDOW    "Switch to the next document window"
+    AFX_IDS_SCPREVWINDOW    "Switch to the previous document window"
+    AFX_IDS_SCCLOSE         "Close the active window and prompts to save the documents"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    AFX_IDS_SCRESTORE       "Restore the window to normal size"
+    AFX_IDS_SCTASKLIST      "Activate Task List"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDT_STOP                "Stop playing\nStop"
+    IDT_PLAY                "Play\nPlay"
+    IDT_REVERSE             "Play in reverse\nReverse"
+    IDT_FORWARD             "Fast forward\nForward"
+    IDT_REWIND              "Rewind\nRewind"
+    IDT_TOSTART             "Move to start of recording\nMove to start"
+    IDT_TOEND               "Move to end of recording\nMove to end"
+    IDT_PAUSE               "Pause recording\nPause"
+    IDT_STARTFRAME          "Set the startframe of the selection\nSet startmarker"
+    IDT_ENDFRAME            "Set the endframe of the selection\nSet endmarker"
+    ID_FILE_PROPERTIES      "More info about the recording"
+    ID_OPTIONS_TRUSTHEADERFORSIZE 
+                            "XPilotrecordings from older version of XPilot contain invalid screensizes"
+    ID_OPTIONS_USEDEFAULTCOLORS 
+                            "Uses the default colorpalette instead of the one in the xpr-file"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_OPTIONS_TRUSTHEADER  "Older versions of XPilot recorded the wrong windowsize."
+    ID_SLOWPLAY             "Play the recording in slowmotion\nSlow play"
+    ID_SLOWBACK             "Play the recording backwards in slowmotion\nSlow reverse"
+    ID_VIEW_SLIDERBAR       "Show or hide the slider bar\nToggle Sliderbar"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Dutch (Netherlands) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NLD)
+#ifdef _WIN32
+LANGUAGE LANG_DUTCH, SUBLANG_DUTCH
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_PROPERTIES DIALOG DISCARDABLE  0, 0, 186, 154
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Properties"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,67,133,50,14
+    GROUPBOX        "Recorded by",IDC_STATIC,7,7,172,37
+    LTEXT           "nickname",IDC_NICK,17,18,155,8
+    LTEXT           "user@host",IDC_USERHOST,17,29,156,8
+    GROUPBOX        "Serverinfo",IDC_STATIC,7,53,172,37
+    LTEXT           "serveraddress",IDC_SERVERADDRESS,17,64,156,8
+    LTEXT           "running at xx fps",IDC_FPS,17,75,155,8
+    GROUPBOX        "Date of recording",IDC_STATIC,7,99,172,26
+    LTEXT           "Recordingdate",IDC_RECDATE,17,110,156,8
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_PROPERTIES, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 147
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif\r\n"
+    "#include ""res\\XPreplay.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // Dutch (Netherlands) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif
+#include "res\XPreplay.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

@@ -1,0 +1,322 @@
+-------------------------------------------------------------------
+Problem :
+Found by:
+Solution:
+Fixed by:
+Files 
+affected:
+
+-------------------------------------------------------------------
+Problem : Tooltips in sdl client config menu are broken for Red,
+	  Green, Blue and Alpha (that is when you expand a color option)
+Found by:
+Solution:
+Fixed by:
+Files 
+affected:
+
+-------------------------------------------------------------------
+Problem : client wants to quit if keypad 0 is pressed
+	  (does item selection and release work) ?
+Found by: xswift
+Solution: Add missing break in switch.
+Fixed by: Serge De Marre (committed by veenhuizen)
+Files 
+affected:
+
+
+-------------------------------------------------------------------
+Problem : base is painted as white when basenamecolor is 0
+Found by:
+Solution:
+Fixed by:
+Files 
+affected:
+
+
+-------------------------------------------------------------------
+Problem : scalefactor is displayed as an int in x11 client config menu
+Found by: 
+Solution:
+Fixed by:
+Files 
+affected:
+
+
+-------------------------------------------------------------------
+Problem : textures and map are downloaded more than once
+          and put into deeper levels of .xpilot_data by the client.
+          I.e. you will see a directory structure like:
+          .xpilot_data/polybloods/polybloods/polybloods/polybloods
+          or similar
+Found by: Throat
+Solution:
+Fixed by:
+Files 
+affected:
+
+
+-------------------------------------------------------------------
+Problem : Very thin walls are not displayed on radar. More of those
+          walls seem to be displayed in SDL client than in X11 client
+          but not all of them either 
+Found by: Throat
+Solution: 
+Fixed by:
+Files 
+affected:
+
+
+-------------------------------------------------------------------
+Problem : If you use \set geometry in windows sdl client all the
+textures are lost.
+Found by: Baron
+Solution: Upgrade to linux ;)
+Fixed by:
+Files 
+affected:
+
+-------------------------------------------------------------------
+Problem :Toggle full screen does not work in the sdl client
+if you have a geometry that cannot work in fullscreenmode
+Found by: Colonel Blood
+Solution:
+Fixed by:
+Files 
+affected:
+
+-------------------------------------------------------------------
+Problem : if you have a msg key and toggleradarscore on the same key
+the client exits cleanly (default xpilotrc does not have this problem)
+Found by: Colonel Blood
+Solution:
+Fixed by:
+Files 
+affected:
+
+-------------------------------------------------------------------
+Problem : shotsize 8 with texturedObjects works ok in the lg [old] client
+          while it doesnt work in ng X11 client (in ng shotsize comes out
+          too small)
+Found by: Throat
+Solution: New textures extend the limit of "maximum size" of a shot
+Fixed by: Throat
+Files 
+affected:
+
+-------------------------------------------------------------------
+Problem : If you build the sdl client you HAVE to make install from root
+          otherwise it will not find the fonts file and Seg Fault!!
+	  seems a bit strange to expect a make install for it to work?
+
+Found by: Colonel Blood
+Solution:
+Fixed by:
+Files 
+affected:
+
+
+-------------------------------------------------------------------
+Problem : an empty texturePath in .xpilotrc leads to problems
+	  If you have xpilot.texturePath: in your .xpilotrc it
+	  gets set to an empty string, but then mapdata.c tags on 
+	  .xpilot_data/blah to it, if you hit save, then the texturePath
+	  option gets killed effectively. I dont know how the texturePath
+	  option ended up in my .xpilotrc
+Found by: Colonel Blood
+Solution:
+Fixed by:
+Files 
+affected: default.c mapdata.c
+
+----------------------------------------------------------------------
+Problem : \ignore with textmask doesnt work properly - "ball" "safe"
+Found by: Throat
+Solution:
+Fixed by:
+Files 
+affected: clientcommand.c messages.c
+
+-----------------------------------------------------------------
+Problem :When TreasureCollisionDestroys is set to false it doesnt bounce off the ship it sticks to it.basically the server doesn't have a bounce routine that could be used for non-destructive collisions between objects
+Found by:Throat
+Solution:
+Fixed by:
+Files 
+affected:
+
+-----------------------------------------------------------------
+
+Problem : Items that form in target areas of the map that has been destroyed,
+	  remain after the targets reform.
+	  A player can also get trapped within a target area if they reform on
+	  top of you.
+Found by: Ross Venable
+Solution:
+Fixed by:
+Files 
+affected:
+-----------------------------------------------------------------
+
+Problem : ngControls break server recordings,
+	  if ncControls if off, they work.
+Found by: kps
+Solution:
+Fixed by:
+Files 
+affected:
+
+-----------------------------------------------------------------
+Problem :Hitting the pause key while floating makes the ship got to
+	 autopilot and then start spinning out of control
+Found by:Colonel Blood
+Solution:
+Fixed by:
+Files 
+affected:
+
+-----------------------------------------------------------------
+
+Problem :Op command can take a + sign with no argument
+Found by:Colonel Blood
+Solution:
+Fixed by:
+Files 
+affected:
+
+-----------------------------------------------------------------
+Problem: The wall textures are only drawn partially on the left side of
+	 the view in the X client. This problem only appears on some systems.
+Found by:kps (Tarzan reported this bug earlier)
+Solution:
+Fixed by:
+Files affected:
+
+-----------------------------------------------------------------
+Problem : If you put logo.ppm in your current dirctory and start the X
+          client, this file will be used in the score list. More generally
+	  the client should take the textures first from texturedir.
+Found by: kps
+Solution:
+Fixed by:
+Files 
+affected:
+
+-----------------------------------------------------------------
+Problem :
+Found by:
+Solution:
+Fixed by:
+Files 
+affected:
+
+
+
+
+
+
+FIXED:
+
+-----------------------------------------------------------------
+Problem : score/ranking is case sensitive, the test, if a player is
+          already in the game is not i.e. Banzai and BanZai cannot play at the
+          same time, but get different scores
+Found by: Throat
+Solution: make name comparisons case insensitive in rank.c
+Fixed by: kps
+Files 
+affected: src/server/rank.c
+
+-----------------------------------------------------------------
+Problem : If someone in your team died and is recovering, you can
+	  take his base and then he will be swapped to have some other
+	  base, but with full recovery delay. This way you can keep
+	  a team member from recovering if you take his base all the time.
+Found by: Throat
+Solution: Don't set pl->count to RECOVERY_DELAY in Pick_startpos().
+Fixed by: kps
+Files 
+affected: src/server/player.c
+
+-----------------------------------------------------------------
+Problem: X client crashes in Talk_delete_emphasized_text() in talk.c.
+ 	 To reproduce the bug:
+	 1. press m to write a message
+	 2. write some garbage into the message buffer
+	 3. use the mouse to select some text there from the
+      	  	middle of what you wrote
+     	 4. press escape to close the message window
+     	 5. press m again to write another message (the old message
+	    will be gone)
+	 6. start writing the new message and the client crashes
+Found by: kps
+Solution: The problem was that the code tried to write over the seclected
+          part of the message, but that was no longer in the talk string.
+          To fix set selection.draw.state to SEL_NONE when starting to write
+          a new message.
+Fixed by: kps
+Files affected: talk.c
+
+-----------------------------------------------------------------
+Problem : Joining a game with textures turned off (walls or objects)
+	  and then trying to turn them on in game, does not work!
+Found by: Colonel Blood
+Solution: Call Mapdata_setup when texturedwalls is changed to true.
+	  Note that if textures aren't yet downloaded, client will
+	  freeze while download is done.
+Fixed by: kps
+Files 
+affected: src/client/mapdata.c src/client/default.c
+
+-----------------------------------------------------------------
+
+
+Problem :Bouncing laser shots dont kill yourself possibly make your 
+	 own lasers deadly to your self or atleast an option that 
+	 stipulates that, along with an option for 
+	 laserfirerepeatrate like shots so you can have a solid 
+	 laser beam.
+Found by:Colonel Blood
+Solution: Added laserrepeatrate server option, made pulses deadly to whoever
+	  fired it (after wall bounce; requires pulsesWallBounce true).
+Fixed by: kps
+Files 
+affected: walls.c cmdline.c
+
+
+-----------------------------------------------------------------
+Problem : nuke shots last for a long long long time
+Found by: Colonel Blood, Ross Venable
+Solution: limit nuke shot life time to max 10 seconds
+Fixed by: kps
+Files 
+affected: src/server/shot.c
+
+
+-----------------------------------------------------------------
+Problem :Lasers can sometimes shoot through walls. appears to be 
+	 due to the fact that the drawing of the lasers start 
+	 inside a wall.
+Found by:Colonel Blood
+Solution:use server is_inside() function to check if laser start point
+         is inside a wall
+Fixed by:kps, Tue Jan  6 16:13:10 EET 2004
+Files 
+affected:src/server/shot.c
+
+-----------------------------------------------------------------
+Problem : Pasting of http://groups.google.com/groups?hl=en&lr=&ie=UTF-8&oe=UTF-8&threadm=376bdecc.1091741937%40enews.newsguy.com&rnum=10&prev=/groups%3Fq%3Dslarti%2Bgroup:rec.games.computer.xpilot%26hl%3Den%26lr%3D%26ie%3DUTF-8%26oe%3DUTF-8%26group%3Drec.games.computer.xpilot%26selm%3D376bdecc.1091741937%2540enews.newsguy.com%26rnum%3D10 into the talk window causes an assertion to fail in
+talk.c (X11 client code).
+Found by: Col. Blood
+Solution: Enlarge a few buffers by 2 bytes.
+Fixed by: Uau
+Files 
+affected: talk.c
+
+----------------------------------------------------------------------
+Problem : Internal edges are painted in SDL client
+Found by: kps
+Solution:
+Fixed by: kps
+Files 
+affected: sdl/sdlgui.c

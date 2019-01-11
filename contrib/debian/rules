@@ -1,0 +1,145 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# GNU copyright 1997 to 1999 by Joey Hess.
+#
+# Modified to make a template file for a multi-binary package with separated
+# build-arch and build-indep targets  by Bill Allombert 2001
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# This has to be exported to make some magic below work.
+export DH_OPTIONS
+
+# These are used for cross-compiling and for saving the configure script
+# from having to guess our platform (since we know it already)
+DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+
+package = xpilot-ng
+
+CFLAGS = -Wall -g
+
+ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -O0
+else
+	CFLAGS += -O2
+endif
+ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
+	INSTALL_PROGRAM += -s
+endif
+
+config.status: configure
+	dh_testdir
+	CFLAGS="$(CFLAGS)" ./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --prefix=/usr --mandir=\$${prefix}/share/man --libdir=\$${prefix}/share/games --datadir=\$${prefix}/share/games --bindir=\$${prefix}/games --enable-sound
+
+
+#Architecture 
+build: build-arch build-indep
+
+build-arch: build-arch-stamp
+build-arch-stamp:  config.status
+
+	$(MAKE)
+	touch build-arch-stamp
+
+build-indep: build-indep-stamp
+build-indep-stamp:  config.status
+
+	cd lib/textures; $(MAKE)
+	touch build-indep-stamp
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-arch-stamp build-indep-stamp
+
+	# Add here commands to clean up after the build process.
+	-$(MAKE) distclean
+ifneq "$(wildcard /usr/share/misc/config.sub)" ""
+	cp -f /usr/share/misc/config.sub config.sub
+endif
+ifneq "$(wildcard /usr/share/misc/config.guess)" ""
+	cp -f /usr/share/misc/config.guess config.guess
+endif
+	rm -f config.status
+
+	dh_clean 
+
+install: install-indep install-arch
+install-indep:
+	dh_testdir
+	dh_testroot
+	dh_clean -k -i 
+	dh_installdirs -i
+
+	# common
+	$(MAKE) -C lib install-data-recursive DESTDIR=$(CURDIR)/debian/$(package)-common libdatadir=/etc/$(package)
+	cd $(CURDIR)/debian/$(package)-common/usr/share/games/$(package) ; mv *.txt ../../../../etc/$(package)
+	# Password file needs to be protected:
+	chmod 600 debian/$(package)-common/etc/$(package)/password.txt
+
+	# menu icon:
+	cp -f debian/$(package).xpm \
+	  debian/$(package)-common/usr/share/pixmaps/
+
+	dh_install -i
+
+install-arch:
+	dh_testdir
+	dh_testroot
+	dh_clean -k -s 
+	dh_installdirs -s
+
+	# client-x11
+	$(MAKE) -C src/client/x11 install-binPROGRAMS DESTDIR=$(CURDIR)/debian/$(package)-client-x11
+	
+	# client-sdl
+	$(MAKE) -C src/client/sdl install-binPROGRAMS DESTDIR=$(CURDIR)/debian/$(package)-client-sdl
+	
+	# utils
+	$(MAKE) -C src/replay install-binPROGRAMS DESTDIR=$(CURDIR)/debian/$(package)-utils
+	$(MAKE) -C src/mapedit install-binPROGRAMS DESTDIR=$(CURDIR)/debian/$(package)-utils
+
+	# server
+	$(MAKE) -C src/server install DESTDIR=$(CURDIR)/debian/$(package)-server
+
+        # A start script called from the init script:
+	install -o 0 -g 0 -m 755 debian/start-$(package)-server \
+	  debian/$(package)-server/usr/games
+
+	dh_install -s
+# Must not depend on anything. This is to be called by
+# binary-arch/binary-indep
+# in another 'make' thread.
+binary-common:
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs -N$(package)-client-x11 -N$(package)-client-sdl ChangeLog
+	dh_installdocs -N$(package)-client-x11 -N$(package)-client-sdl
+	dh_installexamples
+	dh_installmenu
+	dh_installman
+	# Don't modify scripts so we can stop reliably in prerm
+	dh_installinit -p $(package)-server --init-script=$(package)-server --noscripts
+	dh_link
+	dh_strip
+	dh_compress 
+	dh_fixperms
+	dh_makeshlibs
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+# Build architecture independant packages using the common target.
+binary-indep: build-indep install-indep
+	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
+
+# Build architecture dependant packages using the common target.
+binary-arch: build-arch install-arch
+	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
+
+binary: binary-arch binary-indep
+.PHONY: build clean binary-indep binary-arch binary install install-indep install-arch 

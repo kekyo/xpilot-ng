@@ -1,0 +1,935 @@
+<XPilotMap version="1.2">
+<GeneralOptions>
+<Option name="mapname" value="Blood's Music"/>
+<Option name="mapauthor" value="Patrick Kenny"/>
+<Option name="mapwidth" value="3500"/>
+<Option name="mapheight" value="3500"/>
+
+<Option name="framespersecond" value="12"/>
+<Option name="gamespeed" value="12"/>
+<Option name="ballradius" value="0"/>
+<Option name="constantspeed" value="0"/>
+<Option name="turnpush" value="0"/>
+<Option name="legacymode" value="yes"/>
+<Option name="kineticenergyfueldrain" value="no"/>
+<Option name="playerwallbouncetype" value="0"/>
+<Option name="baselesspausing" value="yes"/>
+
+<Option name="teamplay" value="yes"/>
+<Option name="teamimmunity" value="yes"/>
+<Option name="limitedlives" value="yes"/>
+<Option name="worldlives" value="3"/>
+<Option name="edgewrap" value="yes"/>
+<Option name="maxplayershots" value="12"/>
+
+<Option name="playersonradar" value="yes"/>
+<Option name="treasuresonradar" value="no"/>
+<Option name="nukesonradar" value="no"/>
+<Option name="missilesonradar" value="no"/>
+<Option name="minesonradar" value="no"/>
+<Option name="asteroidsonradar" value="no"/>
+
+<Option name="allowshields" value="no"/>
+<Option name="allowplayerbounces" value="no"/>
+<Option name="allowshipshapes" value="yes"/>
+<Option name="allowplayercrashes" value="yes"/>
+<Option name="allowplayerkilling" value="yes"/>
+<Option name="allowmodifiers" value="no"/>
+
+<Option name="playerstartsshielded" value="yes"/>
+
+<Option name="usewreckage" value="false"/>
+
+<Option name="itemprobmult" value="0.0000"/>
+
+<Option name="gravity" value="0"/>
+
+<Option name="robots" value="0"/>
+
+<Option name="playerwallbouncebrakefactor" value="0.5"/>
+<Option name="maxshieldedwallbouncespeed" value="100"/>
+<Option name="maxunshieldedwallbouncespeed" value="90"/>
+<Option name="ballswallbounce" value="yes"/>
+<Option name="sparkswallbounce" value="yes"/>
+<Option name="debriswallbounce" value="no"/>
+<Option name="shotswallbounce" value="no"/>
+
+<Option name="limitedvisibility" value="no"/>
+
+<Option name="initialfuel" value="1000"/>
+<Option name="initialafterburners" value="2"/>
+<Option name="initialautopilots" value="1"/>
+<Option name="initialmines" value="0"/>
+<Option name="initiallasers" value="0"/>
+<Option name="initialsensors" value="0"/>
+<Option name="initialtransporters" value="0"/>
+<Option name="initialemergencyshields" value="0"/>
+<Option name="initialrearshots" value="0"/>
+<Option name="initialmissiles" value="0"/>
+<Option name="initialcloaks" value="0"/>
+<Option name="initialecms" value="0"/>
+<Option name="initialwideangles" value="0"/>
+<Option name="initialtanks" value="0"/>
+<Option name="initialemergencythrusts" value="0"/>
+
+</GeneralOptions>
+<Edgestyle id="xpbluehidden" width="2" color="4E7CFF" style="0"/>
+<Edgestyle id="xpredhidden" width="-1" color="FF3A27" style="0"/>
+<Edgestyle id="blue0" width="2" color="3E63CC" style="0"/>
+<Edgestyle id="blue2" width="2" color="3E63CC" style="0"/>
+<Edgestyle id="blue3" width="2" color="3E63CC" style="0"/>
+<Edgestyle id="blue4" width="2" color="3E63CC" style="0"/>
+<Edgestyle id="yellow" width="2" color="FFFF00" style="0"/>
+<Edgestyle id="white" width="2" color="FFFFFF" style="0"/>
+<Edgestyle id="invisiedge" width="-1" color="0" style="0"/>
+<Edgestyle id="ballarea2" width="1" color="4E7CFF" style="0"/>
+<Edgestyle id="ballarea4" width="1" color="FF3A27" style="0"/>
+<Edgestyle id="balltarget" width="1" color="FF3A27" style="0"/>
+<Polystyle id="xpblue" color="4E7CFF" defedge="xpbluehidden" flags="1"/>
+<Polystyle id="xpred" color="FF3A27" defedge="xpredhidden" flags="0"/>
+<Polystyle id="emptyyellow" color="FF" defedge="yellow" flags="0"/>
+<Polystyle id="emptywhite" color="FF" defedge="white" flags="0"/>
+<Polystyle id="invisible" color="0" defedge="invisiedge" flags="12"/>
+<Polystyle id="balltarget" color="000000" defedge="balltarget" flags="12"/>
+<Polystyle id="ballarea2" color="000000" defedge="ballarea2" flags="0"/>
+<Polystyle id="ballarea4" color="000000" defedge="ballarea4" flags="0"/>
+<Polystyle id="blue0" color="3E63CC" defedge="blue0" flags="2"/>
+<Polystyle id="blue2" color="3E63CC" defedge="blue2" flags="2"/>
+<Polystyle id="blue3" color="3E63CC" defedge="blue3" flags="2"/>
+<Polystyle id="blue4" color="3E63CC" defedge="blue4" flags="2"/>
+
+
+
+<Polygon x="87360" y="0" style="blue0">
+<Offset x="4480" y="-4480"/>
+<Offset x="2240" y="0"/>
+<Offset x="11200" y="-11200"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-6720" y="0"/>
+<Offset x="-2240" y="-2240"/>
+</Polygon>
+<Polygon x="150080" y="2240" style="blue2">
+<Offset x="0" y="-4480"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-6720" y="-6720"/>
+<Offset x="0" y="-2240"/>
+<Offset x="6720" y="-6720"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="4480"/>
+<Offset x="4480" y="4480"/>
+<Offset x="6720" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="6720"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-6720" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="6720"/>
+<Offset x="2240" y="2240"/>
+<Offset x="6720" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="-6720" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-6720" y="-6720"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="6720" y="-6720"/>
+</Polygon>
+<Polygon x="22400" y="215040" style="blue4">
+<Offset x="-2240" y="-2240"/>
+<Offset x="11200" y="-11200"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="4480"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="4480" y="4480"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-4480" y="-4480"/>
+<Offset x="-6720" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-6720" y="6720"/>
+<Offset x="-2240" y="0"/>
+</Polygon>
+<Polygon x="192640" y="215040" style="blue2">
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-6720" y="-6720"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="6720" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="4480"/>
+<Offset x="0" y="2240"/>
+<Offset x="4480" y="4480"/>
+<Offset x="0" y="4480"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+</Polygon>
+<Polygon x="15680" y="190400" style="blue4">
+<Offset x="-2240" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="0" y="-2240"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-4480" y="0"/>
+</Polygon>
+<Polygon x="78400" y="188160" style="blue4">
+<Offset x="-8960" y="-8960"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="6720" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="-6720" y="6720"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-4480" y="0"/>
+</Polygon>
+<Polygon x="118720" y="188160" style="blue4">
+<Offset x="-2240" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="0" y="-8960"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-4480" y="-4480"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-4480" y="-4480"/>
+<Offset x="0" y="-4480"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="4480"/>
+<Offset x="0" y="4480"/>
+<Offset x="2240" y="2240"/>
+<Offset x="8960" y="0"/>
+<Offset x="6720" y="-6720"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="15680"/>
+<Offset x="4480" y="4480"/>
+<Offset x="0" y="4480"/>
+<Offset x="-6720" y="6720"/>
+<Offset x="-6720" y="0"/>
+</Polygon>
+<Polygon x="212800" y="179200" style="blue0">
+<Offset x="-4480" y="-4480"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-4480" y="-4480"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-4480" y="-4480"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="6720" y="6720"/>
+<Offset x="0" y="2240"/>
+<Offset x="4480" y="4480"/>
+<Offset x="0" y="4480"/>
+<Offset x="-2240" y="0"/>
+</Polygon>
+<Polygon x="105280" y="174720" style="blue4">
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="4480" y="4480"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-4480" y="0"/>
+</Polygon>
+<Polygon x="51520" y="168000" style="blue4">
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-4480"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="-4480" y="-4480"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="2240" y="0"/>
+<Offset x="6720" y="6720"/>
+<Offset x="4480" y="0"/>
+<Offset x="6720" y="-6720"/>
+<Offset x="4480" y="0"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="4480"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="4480"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-8960" y="0"/>
+</Polygon>
+<Polygon x="145600" y="168000" style="blue4">
+<Offset x="-4480" y="-4480"/>
+<Offset x="0" y="-11200"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="4480"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-6720" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+</Polygon>
+<Polygon x="67200" y="125440" style="blue0">
+<Offset x="-2240" y="-2240"/>
+<Offset x="-8960" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-4480"/>
+<Offset x="-6720" y="-6720"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="8960" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="0" y="-4480"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="0" y="2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="4480"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-4480" y="0"/>
+</Polygon>
+<Polygon x="103040" y="123200" style="blue4">
+<Offset x="-6720" y="-6720"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="6720" y="0"/>
+<Offset x="6720" y="-6720"/>
+<Offset x="4480" y="0"/>
+<Offset x="4480" y="4480"/>
+<Offset x="0" y="2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="6720"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-6720" y="0"/>
+</Polygon>
+<Polygon x="201600" y="123200" style="blue3">
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="8960" y="-8960"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="4480"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="6720"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-6720" y="6720"/>
+<Offset x="-4480" y="0"/>
+</Polygon>
+<Polygon x="143360" y="109760" style="blue3">
+<Offset x="-2240" y="-2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="-4480" y="-4480"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="6720" y="6720"/>
+<Offset x="0" y="2240"/>
+<Offset x="-6720" y="6720"/>
+<Offset x="-2240" y="0"/>
+</Polygon>
+<Polygon x="170240" y="107520" style="blue3">
+<Offset x="-4480" y="-4480"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+</Polygon>
+<Polygon x="17920" y="105280" style="blue3">
+<Offset x="-2240" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="0" y="4480"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-4480" y="0"/>
+</Polygon>
+<Polygon x="47040" y="98560" style="blue0">
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="8960" y="-8960"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="0" y="2240"/>
+<Offset x="-8960" y="8960"/>
+<Offset x="-6720" y="0"/>
+</Polygon>
+<Polygon x="100800" y="96320" style="blue2">
+<Offset x="-6720" y="-6720"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="6720" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="4480" y="4480"/>
+<Offset x="0" y="2240"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-8960" y="0"/>
+</Polygon>
+<Polygon x="24640" y="94080" style="blue3">
+<Offset x="-2240" y="-2240"/>
+<Offset x="-6720" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="0" y="-4480"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="4480" y="4480"/>
+<Offset x="-2240" y="2240"/>
+</Polygon>
+<Polygon x="138880" y="91840" style="blue3">
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="11200" y="-11200"/>
+<Offset x="6720" y="0"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="2240" y="2240"/>
+<Offset x="-4480" y="0"/>
+</Polygon>
+<Polygon x="221760" y="85120" style="blue3">
+<Offset x="-4480" y="-4480"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-4480" y="-4480"/>
+<Offset x="0" y="-2240"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="0" y="-8960"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="0" y="6720"/>
+<Offset x="2240" y="2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="4480"/>
+<Offset x="0" y="2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="4480"/>
+<Offset x="-4480" y="0"/>
+</Polygon>
+<Polygon x="47040" y="78400" style="blue0">
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-6720" y="-6720"/>
+<Offset x="-6720" y="0"/>
+<Offset x="0" y="-2240"/>
+<Offset x="6720" y="-6720"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="11200" y="0"/>
+<Offset x="13440" y="-13440"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="6720"/>
+<Offset x="2240" y="2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-11200" y="0"/>
+<Offset x="-8960" y="8960"/>
+<Offset x="-2240" y="0"/>
+</Polygon>
+<Polygon x="192640" y="76160" style="blue3">
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-4480"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="6720" y="0"/>
+<Offset x="0" y="2240"/>
+<Offset x="-6720" y="6720"/>
+</Polygon>
+<Polygon x="150080" y="71680" style="blue2">
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="2240" y="0"/>
+<Offset x="0" y="2240"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-6720" y="0"/>
+</Polygon>
+<Polygon x="17920" y="67200" style="blue0">
+<Offset x="-4480" y="-4480"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="4480" y="4480"/>
+<Offset x="0" y="6720"/>
+<Offset x="-6720" y="6720"/>
+</Polygon>
+<Polygon x="96320" y="67200" style="blue2">
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="0" y="-6720"/>
+<Offset x="11200" y="-11200"/>
+<Offset x="0" y="-6720"/>
+<Offset x="-4480" y="-4480"/>
+<Offset x="0" y="-4480"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="4480"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="4480"/>
+<Offset x="6720" y="0"/>
+<Offset x="6720" y="-6720"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="6720" y="6720"/>
+<Offset x="2240" y="0"/>
+<Offset x="0" y="2240"/>
+<Offset x="-8960" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="4480"/>
+<Offset x="2240" y="2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-6720" y="6720"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-6720" y="0"/>
+<Offset x="-6720" y="6720"/>
+<Offset x="-4480" y="0"/>
+</Polygon>
+<Polygon x="132160" y="67200" style="blue2">
+<Offset x="-2240" y="-2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="6720" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="4480" y="4480"/>
+<Offset x="0" y="2240"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-4480" y="0"/>
+</Polygon>
+<Polygon x="161280" y="53760" style="blue2">
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="0" y="-6720"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="11200" y="0"/>
+<Offset x="6720" y="-6720"/>
+<Offset x="0" y="-4480"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="0" y="4480"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-6720" y="0"/>
+<Offset x="0" y="11200"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="4480"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="-4480" y="0"/>
+<Offset x="-6720" y="6720"/>
+<Offset x="0" y="2240"/>
+<Offset x="-6720" y="6720"/>
+<Offset x="-2240" y="0"/>
+</Polygon>
+<Polygon x="42560" y="49280" style="blue0">
+<Offset x="0" y="-2240"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="2240" y="0"/>
+<Offset x="0" y="4480"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-4480" y="0"/>
+</Polygon>
+<Polygon x="15680" y="33600" style="blue0">
+<Offset x="0" y="-4480"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="2240" y="0"/>
+<Offset x="4480" y="-4480"/>
+<Offset x="2240" y="0"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-4480" y="4480"/>
+<Offset x="-2240" y="0"/>
+</Polygon>
+<Polygon x="190400" y="15680" style="blue2">
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="-2240" y="0"/>
+<Offset x="-2240" y="-2240"/>
+<Offset x="0" y="-2240"/>
+<Offset x="2240" y="-2240"/>
+<Offset x="4480" y="0"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="2240" y="2240"/>
+<Offset x="0" y="2240"/>
+<Offset x="-2240" y="2240"/>
+<Offset x="-2240" y="0"/>
+</Polygon>
+
+<Ball team="4" x="119840" y="182081"/>
+<BallArea>
+<Polygon x="118720" y="181440" style="ballarea4">
+<Offset x="2240" y="0"/>
+<Offset x="0" y="1120"/>
+<Offset x="-38" y="290"/>
+<Offset x="-112" y="270"/>
+<Offset x="-178" y="232"/>
+<Offset x="-232" y="178"/>
+<Offset x="-270" y="112"/>
+<Offset x="-290" y="38"/>
+<Offset x="-290" y="-38"/>
+<Offset x="-270" y="-112"/>
+<Offset x="-232" y="-178"/>
+<Offset x="-178" y="-232"/>
+<Offset x="-112" y="-270"/>
+<Offset x="-38" y="-290"/>
+<Offset x="0" y="-1120"/>
+
+</Polygon></BallArea>
+
+<BallTarget team="4">
+<Polygon x="118720" y="181440" style="balltarget">
+<Offset x="2240" y="0"/>
+<Offset x="0" y="1120"/>
+<Offset x="-38" y="290"/>
+<Offset x="-112" y="270"/>
+<Offset x="-178" y="232"/>
+<Offset x="-232" y="178"/>
+<Offset x="-270" y="112"/>
+<Offset x="-290" y="38"/>
+<Offset x="-290" y="-38"/>
+<Offset x="-270" y="-112"/>
+<Offset x="-232" y="-178"/>
+<Offset x="-178" y="-232"/>
+<Offset x="-112" y="-270"/>
+<Offset x="-38" y="-290"/>
+<Offset x="0" y="-1120"/>
+</Polygon></BallTarget>
+
+<Ball team="2" x="140000" y="49921"/>
+<BallArea>
+<Polygon x="138880" y="49280" style="ballarea2">
+<Offset x="2240" y="0"/>
+<Offset x="0" y="1120"/>
+<Offset x="-38" y="290"/>
+<Offset x="-112" y="270"/>
+<Offset x="-178" y="232"/>
+<Offset x="-232" y="178"/>
+<Offset x="-270" y="112"/>
+<Offset x="-290" y="38"/>
+<Offset x="-290" y="-38"/>
+<Offset x="-270" y="-112"/>
+<Offset x="-232" y="-178"/>
+<Offset x="-178" y="-232"/>
+<Offset x="-112" y="-270"/>
+<Offset x="-38" y="-290"/>
+<Offset x="0" y="-1120"/>
+</Polygon></BallArea>
+
+<BallTarget team="2">
+<Polygon x="138880" y="49280" style="balltarget">
+<Offset x="2240" y="0"/>
+<Offset x="0" y="1120"/>
+<Offset x="-38" y="290"/>
+<Offset x="-112" y="270"/>
+<Offset x="-178" y="232"/>
+<Offset x="-232" y="178"/>
+<Offset x="-270" y="112"/>
+<Offset x="-290" y="38"/>
+<Offset x="-290" y="-38"/>
+<Offset x="-270" y="-112"/>
+<Offset x="-232" y="-178"/>
+<Offset x="-178" y="-232"/>
+<Offset x="-112" y="-270"/>
+<Offset x="-38" y="-290"/>
+<Offset x="0" y="-1120"/>
+</Polygon></BallTarget>
+
+<Base team="4" x="101920" y="171360" dir = "32"/>
+<Base team="4" x="59360" y="169120" dir = "32"/>
+<Base team="4" x="75040" y="166880" dir = "32"/>
+<Base team="4" x="86240" y="157920" dir = "32"/>
+<Base team="2" x="144480" y="32480" dir = "32"/>
+<Base team="2" x="153440" y="21280" dir = "32"/>
+<Base team="2" x="187040" y="12320" dir = "32"/>
+<Base team="2" x="164640" y="3360" dir = "32"/>
+<Fuel x="169120" y="218400"/>
+<Fuel x="160160" y="213920"/>
+<Fuel x="140000" y="204960"/>
+<Fuel x="151200" y="204960"/>
+<Fuel x="81760" y="184800"/>
+<Fuel x="86240" y="184800"/>
+<Fuel x="128800" y="182560"/>
+<Fuel x="104160" y="171360"/>
+<Fuel x="104160" y="169120"/>
+<Fuel x="126560" y="169120"/>
+<Fuel x="57120" y="166880"/>
+<Fuel x="59360" y="166880"/>
+<Fuel x="126560" y="166880"/>
+<Fuel x="50400" y="164640"/>
+<Fuel x="72800" y="164640"/>
+<Fuel x="75040" y="164640"/>
+<Fuel x="126560" y="164640"/>
+<Fuel x="115360" y="160160"/>
+<Fuel x="86240" y="155680"/>
+<Fuel x="52640" y="148960"/>
+<Fuel x="66080" y="148960"/>
+<Fuel x="115360" y="146720"/>
+<Fuel x="133280" y="144480"/>
+<Fuel x="54880" y="142240"/>
+<Fuel x="75040" y="142240"/>
+<Fuel x="88480" y="142240"/>
+<Fuel x="106400" y="142240"/>
+<Fuel x="106400" y="135520"/>
+<Fuel x="106400" y="122080"/>
+<Fuel x="72800" y="119840"/>
+<Fuel x="54880" y="117600"/>
+<Fuel x="86240" y="113120"/>
+<Fuel x="191520" y="110880"/>
+<Fuel x="110880" y="108640"/>
+<Fuel x="54880" y="106400"/>
+<Fuel x="218400" y="99680"/>
+<Fuel x="72800" y="97440"/>
+<Fuel x="45920" y="95200"/>
+<Fuel x="88480" y="86240"/>
+<Fuel x="1120" y="84000"/>
+<Fuel x="108640" y="84000"/>
+<Fuel x="48160" y="77280"/>
+<Fuel x="204960" y="77280"/>
+<Fuel x="68320" y="68320"/>
+<Fuel x="32480" y="66080"/>
+<Fuel x="79520" y="61600"/>
+<Fuel x="39200" y="59360"/>
+<Fuel x="57120" y="59360"/>
+<Fuel x="110880" y="59360"/>
+<Fuel x="211680" y="59360"/>
+<Fuel x="16800" y="57120"/>
+<Fuel x="23520" y="57120"/>
+<Fuel x="97440" y="57120"/>
+<Fuel x="218400" y="57120"/>
+<Fuel x="70560" y="50400"/>
+<Fuel x="108640" y="39200"/>
+<Fuel x="180320" y="36960"/>
+<Fuel x="16800" y="32480"/>
+<Fuel x="187040" y="32480"/>
+<Fuel x="131040" y="30240"/>
+<Fuel x="144480" y="30240"/>
+<Fuel x="106400" y="25760"/>
+<Fuel x="151200" y="19040"/>
+<Fuel x="153440" y="19040"/>
+<Fuel x="39200" y="14560"/>
+<Fuel x="153440" y="12320"/>
+<Fuel x="187040" y="10080"/>
+<Fuel x="184800" y="7840"/>
+<Fuel x="189280" y="5600"/>
+<Fuel x="151200" y="1120"/>
+<Fuel x="164640" y="1120"/>
+<Fuel x="166880" y="1120"/>
+</XPilotMap>

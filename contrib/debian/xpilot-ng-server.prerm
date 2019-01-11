@@ -1,0 +1,22 @@
+#! /bin/sh
+# prerm script for xpilot-ng-server
+
+set -e
+
+echo -n "Stopping XPilot NG server: "
+if start-stop-daemon --stop --quiet --user xpilotng \
+	--name xpilot-ng-server --retry 30 >/dev/null 2>&1; then
+   echo "xpilot-ng-server."
+else
+   # Take more draconian measures, as 'xpilotng' user may be
+   # removed by this point by an earlier failed --stop.
+   # We risk also terminating servers run by users other
+   # than xpilotng here, but this is better than the alternative
+   # (keeping an earlier, potentially buggy XPilot NG server
+   # running).
+   if start-stop-daemon --stop --quiet --name xpilot-ng-server --retry 30; then
+      echo "xpilot-ng-server."
+   fi
+fi
+
+#DEBHELPER#

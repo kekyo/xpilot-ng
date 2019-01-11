@@ -1,0 +1,34 @@
+TODO
+----
+
+If you see a (free) task you would like to do, put your name under the task
+and just do it. If your favourite feature is missing, go ahead and add a task 
+for it.
+
+Task:
+Implement the missing Gui_* methods in sdlgui.c. Still left:
+Gui_paint_decor_dot, Gui_paint_setup_target, Gui_paint_wreck, Gui_paint_asteroid, Gui_paint_ecm, Gui_paint_transporter
+Developer:
+  
+Task:
+Implement the missing functions in radar.c. Still left:
+Radar_show_Target and Radar_hide_target
+Developer:
+
+Task:
+Meta interface in SDL, make it so that you can change to another server whilst in game (saves doing quit and restart).
+Developer: colonel
+
+Task:
+Make the client playable on windows. Currently it is laggier than the standard
+windows client.
+Developer: Tarzan (i hope)
+
+Task:
+Improve font loading. Add options for font names and sizes and font path.
+Developer:
+
+Task:
+Add the missing options:
+radar window geometry, score window location
+Developer:

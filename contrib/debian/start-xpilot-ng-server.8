@@ -1,0 +1,25 @@
+.\" Copyright 1999 Matt Kern <Matt.Kern@pobox.com>
+.\"
+.TH MAN 8 "10 Jan 2004" "Linux" "Debian GNU/Linux"
+.SH NAME
+start-xpilot-ng-server \- start the XPilot NG server
+.SH SYNOPSIS
+.B start-xpilot-ng-server
+.HP
+.B start-xpilot-ng-server
+.IR "args"
+.SH DESCRIPTION
+This manual page explains the
+.B "start-xpilot-ng-server"
+script, which is used by
+.B "/etc/init.d/xpilot-ng-server"
+to start the XPilot daemon.  It checks the configuration file
+.B "/etc/default/xpilot-ng-server"
+to determine which map should be started.  When run as root, the script takes 
+no arguments.  If an unprivileged users calls
+.B "start-xpilot-ng-server"
+then all arguments given on the command line are passed on to
+.B "xpilot-ng-server"
+.
+.SH AUTHOR
+Matt Kern <matt.kern@pobox.com>

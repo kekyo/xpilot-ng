@@ -1,0 +1,15 @@
+#!/bin/bash
+
+case "$1" in
+	purge)
+	    rm -f /etc/default/xpilot-ng-server
+	;;
+esac
+
+# Normally added by dh_installinit, but included here manually because
+# we customize the prerm and therefore run dh_installinit --noscripts.
+if [ "$1" = "purge" ] ; then
+        update-rc.d xpilot-ng-server remove >/dev/null
+fi
+
+#DEBHELPER#

@@ -1,0 +1,26 @@
+$Id: BUGS,v 1.1.1.1 2000/11/01 11:24:59 uau Exp $
+
+#
+# Each bug has its unique number and some additional info.
+# The <BUG> field has the number (this marks the start of the bug entry).
+# The <STATUS> field can be: open|fixed|unconfirmed|deferred
+# Additionally, one may have an extra /-separated priority modifier
+# (low|medium|high), for example: <STATUS>open/medium.
+# The <VER> field is the version the bug was reported against.
+# The <DESC> field holds the person (+email) who reported the bug
+# plus the description of the bug.
+# The <WORK> field reports progress made on fixing it
+# (same format as <DESC>).
+#
+# The six digit dates used here are in yymmdd format for easy sorting.
+#
+# When refering to bugs one may use B+<the bug number>,
+# i.e. B001 refers to the ball-string bug.
+#
+
+<BUG>	002
+<STATUS>open/low
+<VER>	2.0
+<DESC>	bjoerns
+	Ball should be affected by object collisions. 
+

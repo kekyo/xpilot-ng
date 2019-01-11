@@ -1,0 +1,270 @@
+
+How to set up an XPilot NG ranking server
+-----------------------------------------
+
+Written by kps at users.sourceforge.net.
+
+The XPilot NG server contains a modified version of Marcus Sundberg's
+ranking patch.
+[ Look for the original at http://www.stacken.kth.se/~mackan/xpilot/ ]
+
+Short tutorial:
+---------------
+
+Install XPilot NG.
+
+Start server, using options rankFileName and rankWebpageFileName, e.g.
+
+xpilot-ng-server -rankFileName rank.txt -rankWebpageFileName rank.html
+
+In this example ranking info will be stored in rank.txt and the webpage
+in rank.html. You might want to put the webpage in some public html
+directory so that players can have a look.
+
+If that did not work:
+---------------------
+
+To set up a ranking server you should do the following, I assume you have
+some Unix-like OS. Example commands are given in a way that should work in a
+bash-compatible shell, the example commands start with a '$', or '#' if you
+need to be the root user to execute the command. You may need to edit some
+text files, I have used emacs in this tutorial, feel free to use some other
+editor.
+
+1.   Install / make sure you have expat and zlib on your system.
+     Expat is needed to read the new XML map files (file extension xp2)
+     and the rank file. If you install binary packages of your favorite
+     OS distro, and want to compile XPilot NG yourself, make sure you
+     install both the libraries and the development headers,
+
+     For example on Debian:
+     # apt-get install libexpat1 libexpat1-dev zlib1g zlib1g-dev
+
+     Source code for expat can be found here:
+     http://expat.sourceforge.net/
+
+     zlib:
+     http://www.gzip.org/zlib/
+
+2.   Install XPilot NG. There are several ways to do this, either
+     download source code from xpilot.sourceforge.net, compile and install
+     or download binaries from xpilot.sourceforge.net and install
+     or install XPilot NG if that exists as software available for your
+     platform, e.g. Debian package or FreeBSD port.
+     How to install from source code is described in files INSTALL or
+     INSTALL.txt.
+
+3.   Select a directory where you will have server data (e.g. ranking data
+     and password file) for example you can select "$HOME/xpilot-ng/".
+     Create the directory and specify an environment variable for the
+     directory.
+
+     $ mkdir "$HOME/xpilot-ng"
+     $ export SERVERDIR="$HOME/xpilot-ng/"
+
+4.   Specify a password file and password for the server.
+
+     Edit a password file and set its mode so only you can read and write it:
+
+     $ emacs "$SERVERDIR/password.txt"
+     $ chmod 600 "SERVERDIR/password.txt"
+
+     After you edited it the contents should look like this,
+     however change mypassword to your own top secret password:
+
+     # set this to a unique word and chmod 600 this file:
+     password: \override: mypassword
+
+5.   Start the server. The most easy way to do this is to have a script to
+     do it for you.
+
+     $ emacs $HOME/bin/rankserver.sh
+     $ $HOME/bin/rankserver.sh
+
+     Contents of the script should be something like this:
+
+     #! /bin/bash
+     export SERVERDIR="$HOME/xpilot-ng/"
+     export RANKFILE="$SERVERDIR/rankfile.txt"
+     # possibly change this to something else
+     export RANKWEBPAGE="$HOME/public_html/rank.html"
+     export LOGFILE="$SERVERDIR/log.txt"
+
+     touch "$RANKWEBPAGE"
+     chmod 644 "$RANKWEBPAGE"
+
+     xpilot-ng-server -passwordFileName "$SERVERDIR/password.txt" \
+     -rankFileName "$RANKFILE" -rankWebpage "$RANKWEBPAGE" \
+     -map polybloods.xp2 -FPS 50 -gameSpeed 12 -noQuit $@ >> "$LOGFILE"
+
+6.   Start an xpilot client and test your server.
+     Check that your password works by writing a password command
+     (press the 'm' key when the client window is active to write a message):
+
+     /password mypassword
+     
+     The server should reply:
+
+     You got operator status. [*Server reply*]
+
+-----------------------------------------------------------------------------
+
+Marcus Sundberg's ChangeLog:
+
+2002-07-25 16:56  e94_msu
+
+	* src/common/version.h (1.5): Updated version status to rank2.
+
+2002-07-25 16:52  e94_msu
+
+	* Local.config (1.5): Updated version status to rank2.
+
+2002-07-25 15:38  e94_msu
+
+	* src/server/player.c (1.9): Although we don't want to terminate
+	the server when everyone left we do want to write out the score
+	file.
+
+2002-07-19 03:51  e94_msu
+
+	* src/common/version.h (1.4): Changed VERSION_STATUS to rank1.
+
+2002-07-19 03:26  e94_msu
+
+	* Local.config (1.4): Changed VERSION_STATUS to rank1.
+
+2002-07-19 02:15  e94_msu
+
+	* src/server/rank.c (1.7): Made writing score file much safer. Now
+	we first write to a temporary file, and only when everything is
+	written do we rename the temporary file to it's correct name.
+
+2002-07-19 01:58  e94_msu
+
+	* src/server/player.c (1.8): Save the score file after each round. 
+	Don't try to always terminate the game when everyone has left.
+
+2002-07-19 01:43  e94_msu
+
+	* src/server/server.c (1.4): Minor formating change.
+
+2002-07-19 01:43  e94_msu
+
+	* src/server/rank.c (1.6): Don't call Rank_score() from
+	Write_score_file().
+
+2002-07-19 01:13  e94_msu
+
+	* src/server/: player.c (1.7), rank.c (1.5), rank.h (1.3), server.c
+	(1.3): Renamed Print_saved_scores() to more sane Write_score_file()
+
+2002-07-19 01:12  e94_msu
+
+	* src/server/rank.c (1.4): Minor cleanups.
+
+2002-07-19 00:33  e94_msu
+
+	* Local.config (1.3), src/common/version.h (1.3),
+	src/server/command.c (1.7), src/server/laser.c (1.3),
+	src/server/object.h (1.5), src/server/update.c (1.4): Merged with
+	4.5.4.
+
+2002-05-26 23:04  e94_msu
+
+	* src/server/: collision.c (1.3), command.c (1.6), netserver.c
+	(1.4), player.c (1.6): Merged with 4.5.3.
+
+2002-05-26 22:37  e94_msu
+
+	* src/server/walls.c (1.3): Merged with 4.5.3.
+
+2002-05-26 22:20  e94_msu
+
+	* src/server/netserver.c (1.3): Get saved score earlier so we can
+	add the player's score to the team score.  Always call TEAM_SCORE()
+	regardless if teamShareScore is on or not.
+
+2002-05-26 22:18  e94_msu
+
+	* src/server/player.c (1.5): Remove player's score from total team
+	score when he leaves.
+
+2002-05-19 19:54  e94_msu
+
+	* src/server/object.h (1.4): We must increase (pl)->shots in
+	FireShot() macro.
+
+2002-05-19 19:53  e94_msu
+
+	* Local.config (1.2), src/common/version.h (1.2): Added 'rank'
+	VERSION_STATUS.
+
+2002-04-26 21:43  e94_msu
+
+	* Local.config (1.1.1.2), README.txt (1.1.1.2), doc/ChangeLog
+	(1.1.1.2), doc/xpilot.spec (1.1.1.2), src/Makefile.std (1.1.1.2),
+	src/common/version.h (1.1.1.2), src/common/NT/bindist/README.txt
+	(1.1.1.2), src/common/NT/bindist/READMEbin.txt (1.1.1.2),
+	src/common/NT/bindist/ServerMOTD.txt (1.1.1.2),
+	src/server/collision.c (1.1.1.2), src/server/command.c (1.1.1.2),
+	src/server/frame.c (1.1.1.2), src/server/netserver.c (1.1.1.2),
+	src/server/player.c (1.1.1.2), src/server/robot.c (1.1.1.2),
+	src/server/rules.c (1.1.1.2), src/server/walls.c (1.1.1.2):
+	Original xpilot 4.5.3.
+
+2002-04-26 21:39  e94_msu
+
+	* src/server/: rank.c (1.2), rank.h (1.2): Made the ranking file
+	portable. Added possibility to import older scorefiles.
+
+2002-04-21 23:04  e94_msu
+
+	* src/server/: command.c (1.4), event.c (1.3), object.h (1.3),
+	update.c (1.3): Updated for new rank structure layout.
+
+2002-04-18 22:54  e94_msu
+
+	* src/server/player.c (1.4): Don't print message about game being
+	unlocked if it wasn't locked.
+
+2002-04-18 22:51  e94_msu
+
+	* src/server/: map.c (1.2), map.h (1.2): Added support for swapping
+	with full teams.
+
+2002-04-18 22:51  e94_msu
+
+	* src/server/player.c (1.3): Added support for swapping with full
+	teams, and support for unlocking server when last operator leave.
+
+2002-04-18 22:50  e94_msu
+
+	* src/server/command.c (1.3): Added support for swapping with full
+	teams, and support for /op command.
+
+2002-04-17 14:26  e94_msu
+
+	* README.rank (1.1): Very brief info on ranking.
+
+2002-04-17 14:20  e94_msu
+
+	* src/server/: collision.c (1.2), command.c (1.2), event.c (1.2),
+	laser.c (1.2), netserver.c (1.2), object.h (1.2), play.c (1.2),
+	player.c (1.2), rank.c (1.1), rank.h (1.1), score.c (1.2), server.c
+	(1.2), shot.c (1.2), update.c (1.2), walls.c (1.2): Added Svan
+	ranking - initial port from 4.U.3.
+
+2002-04-17 13:59  e94_msu
+
+	* src/server/contact.c (1.2): Kick players without the
+	PRIV_AUTOKICKLAST flag first.
+
+2002-04-17 13:56  e94_msu
+
+	* src/server/Imakefile (1.2): RANKING: Added LOCALGURU define and
+	rank.c source file.
+
+2002-04-17 13:53  e94_msu
+
+	* src/common/config.c (1.2): Change default map name to teamcup.xp
+

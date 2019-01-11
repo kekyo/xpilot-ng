@@ -1,0 +1,414 @@
+#!/bin/bash
+# makeDistribution - a script to move things to a directory to make the build script
+#                    and then call makensis to build a Windows binary distribution for
+#                    XPilot, a multiplayer gravity war game.  
+#                    Copyright (C) 2001 by XPilot Team <xpilot@xpilot.org>
+#                    Released under GNU General Public License Version 2 
+#
+# If you're wondering what the heck this file is...
+# Here's a nickel, kid, buy yourself a real shell.  http://www.cygwin.com/
+# The NullSoft Install System can be found here http://www.nullsoft.com/free/nsis/
+
+# directory to stage the distribution.
+# You probably shouldn't make this C:\XPilot (The default installation dir)
+XDIR=/e/staged/XPilot
+
+# Some essential programs are built outside of the source tree.
+# These are built as siblings to our root parent.  C'est la vie.
+# So a build tree might look like this...
+#	/e/source/xpilot
+#	/e/source/xpilot/src
+#	/e/source/xpilot/src/common/NT/bindist	(YouAreHere)
+#	/e/source/xpwho
+#	/e/source/mapxpress
+
+XPWHODIR="xpwho"	# sibling of our parent's dirname
+#MAPXPRESSDIR="staged/mapxpress"
+MAPXPRESSDIR="mapxpress"
+XPREPLAYDIR="replay"
+XPSHIPEDITORDIR="staged/XPShipEditor"
+
+#!#!#!#!#!#!#!#!#!#!#!#!#!# END OF USER CONFIGURATION #!#!#!#!#!#!#!#!#!#!#!#!#!#
+
+PRODUCT="XPilot"
+
+ECHO_ON="set -x"
+ECHO_OFF="set +x"
+
+#
+function doHELP ()
+{
+	echo "makeDistribution [-aqsHh]"
+	echo "  -a = All - does clean before builds"
+	echo "  -q = Quick - doesn't do the builds (they'd better be built)"
+	echo "  -s = Silent - output less noise"
+	echo "  -H = noHelp - doesn't build the MapXpress help file"
+	echo "  -h = Help - this text"
+}
+
+#####################################################################
+#
+# Preset all default conditions
+#
+ALL=N
+QUICK=N
+BUILDHELP=Y
+SILENT=N
+#####################################################################
+#
+# parse the command line options
+#
+while getopts "ahsHq" OPT
+do
+	case $OPT in
+		a) ALL=Y ;;
+		q) QUICK=Y ;;
+		H) BUILDHELP=N ;;
+		s) SILENT=Y ;;
+		h) doHELP ; exit 1 ;;
+		*) doHELP ; exit 1 ;;
+	esac
+done
+
+#####################################################################
+#
+# sanity check are we building from the right place?
+#
+cd ../../../..
+BASE=`pwd`
+echo "Building from $BASE"
+echo "Building to $XDIR"
+X=`echo * | grep XPilot.dsw`
+if [ "x$X" = "x" ]
+then
+	echo "?? $BASE"
+	echo "This does not appear to be an XPilot source tree"
+	exit 1
+fi
+
+#####################################################################
+#
+# see if the output directory exists
+#
+if [ ! -d "$XDIR" ]
+then
+	echo -n "$XDIR doesn't exist. Create? [y] "
+	read K
+	if [ "x$K" = "x" ] 
+	then
+		K=y
+	fi
+	if [ $K = y -o $K = Y ]
+	then
+		mkdir $XDIR
+	else
+		exit 1
+	fi
+fi
+
+#####################################################################
+#
+# make all of our output subdirectories
+#
+if [ ! -d $XDIR/doc ] 
+then
+	mkdir $XDIR/doc
+fi
+if [ ! -d $XDIR/lib ] 
+then
+	mkdir $XDIR/lib
+fi
+if [ ! -d $XDIR/lib/maps ]
+then
+	mkdir $XDIR/lib/maps
+fi
+if [ ! -d $XDIR/lib/textures ]
+then
+	mkdir $XDIR/lib/textures
+fi
+if [ ! -d $XDIR/MapXpress ]
+then
+	mkdir $XDIR/MapXpress
+fi
+if [ ! -d $XDIR/XPShipEditor ]
+then
+	mkdir $XDIR/XPShipEditor
+fi
+
+#####################################################################
+# go make XPilot.exe
+if [ $QUICK = N ]
+then
+	echo go make XPilot.exe
+
+	cd $BASE/src/common/NT/bindist		# first make the credits include file
+	./creditsUpdate.pl
+
+	cd $BASE/src/client/NT
+	if [ $ALL = Y ]
+	then
+		echo "CLEAN `pwd`"
+		nmake CLEAN /NOLOGO /f xpilot.mak CFG="XPilot - Win32 Release"
+	fi
+	nmake /f xpilot.mak CFG="XPilot - Win32 Release"
+	if [ $? != 0 ]
+	then
+		echo "makeDistribution: failed to build XPilot.exe"
+		exit 1
+	fi
+fi
+
+#####################################################################
+# go make XPilotServer.exe
+if [ $QUICK = N ]
+then
+	echo go make XPilotServer.exe
+	cd $BASE/src/server/NT
+	if [ $ALL = Y ]
+	then
+		echo "CLEAN `pwd`"
+		nmake CLEAN /NOLOGO /f xpilots.mak CFG="XPilotServer - Win32 Release"
+	fi
+	nmake /f xpilots.mak CFG="XPilotServer - Win32 Release"
+	if [ $? != 0 ]
+	then
+		echo "makeDistribution: failed to build XPilotServer.exe"
+		exit 1
+	fi
+	# Generate the ServerOpts file.
+	echo make ServerOpts.txt
+	cd Release
+	./XPilotServer /ServerOpts
+fi
+
+#####################################################################
+# go make XPwho.exe
+if [ $QUICK = N ]
+then
+	echo go make XPwho.exe
+	cd $BASE/../$XPWHODIR
+	if [ $ALL = Y ]
+	then
+		echo "CLEAN `pwd`"
+		nmake CLEAN /NOLOGO /f xpwho.mak CFG="XPwho - Win32 Release"
+	fi
+	nmake /f xpwho.mak CFG="XPwho - Win32 Release"
+	if [ $? != 0 ]
+	then
+		echo "makeDistribution: failed to build XPwho.exe"
+		exit 1
+	fi
+fi
+
+#####################################################################
+# go make MapXpress.exe 
+if [ $QUICK = N ]
+then
+	echo go make MapXpress.exe 
+	cd $BASE/../$MAPXPRESSDIR
+	if [ $ALL = Y ]
+	then
+		echo "CLEAN `pwd`"
+		nmake CLEAN /NOLOGO /f MapXpress.mak CFG="MapXpress - Win32 Release"
+	fi
+	nmake /f MapXpress.mak CFG="MapXpress - Win32 Release"
+	if [ $? != 0 ]
+	then
+		echo "makeDistribution: failed to build MapXpress.exe"
+		exit 1
+	fi
+fi
+
+#####################################################################
+# go make XPreplay.exe 
+if [ $QUICK = N ]
+then
+	echo go make XPreplay.exe 
+	cd $BASE/src/replay/NT
+	if [ $ALL = Y ]
+	then
+		echo "CLEAN `pwd`"
+		nmake CLEAN /NOLOGO /f XPreplay.mak CFG="XPreplay - Win32 Release"
+	fi
+	nmake /f XPreplay.mak CFG="XPreplay - Win32 Release"
+	if [ $? != 0 ]
+	then
+		echo "makeDistribution: failed to build XPreplay.exe"
+		exit 1
+	fi
+fi
+
+#####################################################################
+# and go make mapxpress.chm
+if [ $QUICK = N -a $BUILDHELP = Y ]
+then
+	echo and go make mapxpress.chm
+	cd $BASE/../$MAPXPRESSDIR/html_help
+	/c/Program\ Files/HTML\ Help\ Workshop/hhc mapxpress
+	RET=$?
+	if [ $RET != 1 ]
+	then
+		echo "makeDistribution: failed to build MapXpress.chm (RET=$RET)"
+		exit 1
+	fi
+fi
+
+#####################################################################
+# build our output title string to use as the filename of the installer .exe
+#echo build our output title string to use as the filename of the installer .exe
+cd $BASE
+TITLE=`grep TITLE src/common/version.h | grep -v XPilot | cut -f2 -d'"'`
+TITLE="XPilot$TITLE.exe"
+echo ""
+echo "Building $TITLE"
+echo "OutFile $TITLE" >$XDIR/outfilename.txt
+
+
+#####################################################################
+#
+# copy all files over to the staged dir
+#
+$ECHO_ON	# thanks for looking.
+cd $BASE
+cp -p COPYING $XDIR/License.txt
+
+cd $BASE/src/client/NT
+cp -p XPilot.shp		$XDIR
+cp -p XPilot.ini		$XDIR	# this file needs to be tweaked by hand from linux `xpilot -help`
+cp -p Release/XPilot.exe $XDIR
+cp -p res/xpilot.ico	$XDIR
+
+cd $BASE/src/server/NT
+cp -p Release/XPilotServer.exe $XDIR
+cp -p Release/ServerOpts.txt $XDIR/doc
+
+cd $BASE/src/common/NT/bindist
+#cp -p XPilot.nsi 		$XDIR		# don't install the NSI, but we use it there.
+sed "s/\[RELEASE\]/$TITLE/g" <XPilot.nsi >$XDIR/XPilot.nsi
+cp -p xp_off.bmp 		$XDIR		# nsi helper bitmap
+cp -p xp_on.bmp 		$XDIR		# nsi helper bitmap
+cp -p READMEbin.txt		$XDIR/README.txt
+
+cd $BASE/../$XPWHODIR/WinRel
+cp -p XPwho.exe 		$XDIR
+
+cd $BASE/src/replay/NT
+cp -p Release/XPreplay.exe		$XDIR
+cp -p XPreplay.reg				$XDIR
+
+cd $BASE/../$MAPXPRESSDIR
+cp -p Release/MapXpress.exe		$XDIR/MapXpress
+cp -p html_help/MapXpress.chm	$XDIR/MapXpress
+cp -p Changelog.txt				$XDIR/MapXpress
+cp -p Copyright.txt				$XDIR/MapXpress
+cp -p License.txt				$XDIR/MapXpress
+cp -p todo.txt					$XDIR/MapXpress
+cp -p readme.txt				$XDIR/MapXpress
+
+cd $BASE/../$XPSHIPEDITORDIR
+cp -p XPShipEditor.exe	$XDIR/XPShipEditor
+cp -p XPShipEditor.txt	$XDIR/XPShipEditor
+
+cd $BASE/doc
+#cp -p BUGS 				$XDIR/doc/Bugs.txt
+cp -p ChangeLog			$XDIR/doc/ChangeLog.txt
+cp -p CREDITS			$XDIR/doc/Credits.txt
+cp -p FAQ				$XDIR/doc/FAQ.txt
+#cp -p FIXED				$XDIR/doc/Fixed.txt
+cp -p README.MAPS		$XDIR/doc/README.MAPS.txt
+cp -p README.MAPS2		$XDIR/doc/README.MAPS2.txt
+cp -p README.SHIPS		$XDIR/doc/README.SHIPS.txt
+cp -p README.talkmacros	$XDIR/doc/README.talkmacros.txt
+cp -p TODO				$XDIR/doc/Todo.txt
+echo "[InternetShortCut]"	>$XDIR/doc/The\ XPilot\ Page.url
+echo "URL=http://www.xpilot.org/" >>$XDIR/doc/The\ XPilot\ Page.url
+echo "[InternetShortCut]"	>$XDIR/doc/Newbie\ Guide.url
+echo "URL=http://www.j-a-r-n-o.nl/newbie" >>$XDIR/doc/Newbie\ Guide.url
+
+
+cd $BASE/lib
+cp -p defaults			$XDIR/lib/defaults.txt
+cp -p robots			$XDIR/lib/robots.txt
+
+cd $BASE/lib/maps
+cp -p blood-music2.xp	$XDIR/lib/maps
+cp -p CAMD.xp			$XDIR/lib/maps
+cp -p cloudscape.xp		$XDIR/lib/maps
+cp -p default.xp		$XDIR/lib/maps
+cp -p doggy.xp			$XDIR/lib/maps
+cp -p fireball.xp		$XDIR/lib/maps
+cp -p fuzz.xp			$XDIR/lib/maps
+cp -p fuzz2.xp			$XDIR/lib/maps
+cp -p globe.xp			$XDIR/lib/maps
+cp -p grandprix.xp		$XDIR/lib/maps
+cp -p newdarkhell.xp	$XDIR/lib/maps
+cp -p newdarkhell2.xp	$XDIR/lib/maps
+cp -p pad.xp			$XDIR/lib/maps
+cp -p pit.xp			$XDIR/lib/maps
+cp -p planetx.xp		$XDIR/lib/maps
+cp -p teamball.xp		$XDIR/lib/maps
+cp -p tourmination.xp	$XDIR/lib/maps
+cp -p tournament.xp		$XDIR/lib/maps
+cp -p war.xp			$XDIR/lib/maps
+
+cd $BASE/lib/textures
+cp -p allitems.ppm		$XDIR/lib/textures
+cp -p asteroidconcentrator.ppm $XDIR/lib/textures
+cp -p ball.ppm			$XDIR/lib/textures
+cp -p base_down.ppm		$XDIR/lib/textures
+cp -p base_left.ppm		$XDIR/lib/textures
+cp -p base_right.ppm	$XDIR/lib/textures
+cp -p base_up.ppm		$XDIR/lib/textures
+cp -p bullet.ppm		$XDIR/lib/textures
+cp -p bullet_blue.ppm	$XDIR/lib/textures
+cp -p bullet_green.ppm	$XDIR/lib/textures
+cp -p bullet2.ppm		$XDIR/lib/textures
+cp -p cannon_down.ppm	$XDIR/lib/textures
+cp -p cannon_left.ppm	$XDIR/lib/textures
+cp -p cannon_right.ppm	$XDIR/lib/textures
+cp -p cannon_up.ppm		$XDIR/lib/textures
+cp -p checkpoint.ppm	$XDIR/lib/textures
+cp -p clouds.ppm		$XDIR/lib/textures
+cp -p concentrator.ppm	$XDIR/lib/textures
+cp -p fuel2.ppm			$XDIR/lib/textures
+cp -p fuelcell.ppm		$XDIR/lib/textures
+cp -p holder1.ppm		$XDIR/lib/textures
+cp -p holder2.ppm		$XDIR/lib/textures
+cp -p logo.ppm			$XDIR/lib/textures
+cp -p meter.ppm			$XDIR/lib/textures
+cp -p mine_other.ppm	$XDIR/lib/textures
+cp -p mine_team.ppm		$XDIR/lib/textures
+cp -p minus.ppm			$XDIR/lib/textures
+cp -p paused.ppm		$XDIR/lib/textures
+cp -p plus.ppm			$XDIR/lib/textures
+cp -p radar.ppm			$XDIR/lib/textures
+cp -p radar2.ppm		$XDIR/lib/textures
+cp -p radar3.ppm		$XDIR/lib/textures
+cp -p refuel.ppm		$XDIR/lib/textures
+cp -p ship.ppm			$XDIR/lib/textures
+cp -p ship_blue.ppm		$XDIR/lib/textures
+cp -p ship_red.ppm		$XDIR/lib/textures
+cp -p ship_red2.ppm		$XDIR/lib/textures
+cp -p ship_red3.ppm		$XDIR/lib/textures
+cp -p sparks.ppm		$XDIR/lib/textures
+cp -p wall_bottom.ppm	$XDIR/lib/textures
+cp -p wall_dl.ppm		$XDIR/lib/textures
+cp -p wall_dr.ppm		$XDIR/lib/textures
+cp -p wall_fi.ppm		$XDIR/lib/textures
+cp -p wall_left.ppm		$XDIR/lib/textures
+cp -p wall_right.ppm	$XDIR/lib/textures
+cp -p wall_top.ppm		$XDIR/lib/textures
+cp -p wall_ul.ppm		$XDIR/lib/textures
+cp -p wall_ull.ppm		$XDIR/lib/textures
+cp -p wall_ur.ppm		$XDIR/lib/textures
+cp -p wall_url.ppm		$XDIR/lib/textures
+cp -p wormhole.ppm		$XDIR/lib/textures
+
+$ECHO_OFF
+
+#####################################################################
+#
+# build the installer
+#
+cd $XDIR
+makensis XPilot.nsi
