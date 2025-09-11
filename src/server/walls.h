@@ -187,4 +187,12 @@ static inline group_t *groupptr_by_id(int group)
 
 extern int num_polys, num_pstyles, num_estyles, num_bstyles;
 
+struct collans {
+    int line;
+    int point;
+    clvec_t moved;
+};
+
+extern void Move_point(const move_t *move, struct collans *answer);
+
 #endif

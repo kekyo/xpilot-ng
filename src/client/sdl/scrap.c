@@ -57,13 +57,13 @@ typedef uint32_t scrap_type;
 #if defined(X11_SCRAP)
 /* * */
 static Display *SDL_Display;
-static Window SDL_Window;
+static Window SDL_Window_internal;
 static void (*Lock_Display)(void);
 static void (*Unlock_Display)(void);
 
 #elif defined(WIN_SCRAP)
 /* * */
-static HWND SDL_Window;
+static HWND SDL_Window_internal;
 
 #elif defined(QNX_SCRAP)
 /* * */
@@ -285,7 +285,7 @@ init_scrap(void)
       if ( info.subsystem == SDL_SYSWM_X11 )
         {
           SDL_Display = info.info.x11.display;
-          SDL_Window = info.info.x11.window;
+          SDL_Window_internal = info.info.x11.window;
           Lock_Display = info.info.x11.lock_func;
           Unlock_Display = info.info.x11.unlock_func;
 
@@ -302,7 +302,7 @@ init_scrap(void)
 
 #elif defined(WIN_SCRAP)
 /* * */
-      SDL_Window = info.window;
+      SDL_Window_internal = info.window;
       retval = 0;
 
 #elif defined(QNX_SCRAP)
@@ -323,12 +323,12 @@ lost_scrap(void)
 #if defined(X11_SCRAP)
 /* * */
   Lock_Display();
-  retval = ( XGetSelectionOwner(SDL_Display, XA_PRIMARY) != SDL_Window );
+  retval = ( XGetSelectionOwner(SDL_Display, XA_PRIMARY) != SDL_Window_internal );
   Unlock_Display();
 
 #elif defined(WIN_SCRAP)
 /* * */
-  retval = ( GetClipboardOwner() != SDL_Window );
+  retval = ( GetClipboardOwner() != SDL_Window_internal );
 
 #elif defined(QNX_SCRAP)
 /* * */
@@ -360,13 +360,13 @@ put_scrap(int type, int srclen, char *src)
         XA_CUT_BUFFER0, format, 8, PropModeReplace, (unsigned char *)dst, dstlen);
       free(dst);
       if ( lost_scrap() )
-        XSetSelectionOwner(SDL_Display, XA_PRIMARY, SDL_Window, CurrentTime);
+        XSetSelectionOwner(SDL_Display, XA_PRIMARY, SDL_Window_internal, CurrentTime);
       Unlock_Display();
     }
 
 #elif defined(WIN_SCRAP)
 /* * */
-  if ( OpenClipboard(SDL_Window) )
+  if ( OpenClipboard(SDL_Window_internal) )
     {
       HANDLE hMem;
 
@@ -461,7 +461,7 @@ get_scrap(int type, int *dstlen, char **dst)
     Lock_Display();
     owner = XGetSelectionOwner(SDL_Display, XA_PRIMARY);
     Unlock_Display();
-    if ( (owner == None) || (owner == SDL_Window) )
+    if ( (owner == None) || (owner == SDL_Window_internal) )
       {
         owner = DefaultRootWindow(SDL_Display);
         selection1 = XA_CUT_BUFFER0;
@@ -471,7 +471,7 @@ get_scrap(int type, int *dstlen, char **dst)
         int selection_response = 0;
         SDL_Event event;
 
-        owner = SDL_Window;
+        owner = SDL_Window_internal;
         Lock_Display();
         selection1 = XInternAtom(SDL_Display, "SDL_SELECTION", False);
         XConvertSelection(SDL_Display, XA_PRIMARY, format,
@@ -511,7 +511,7 @@ get_scrap(int type, int *dstlen, char **dst)
 
 #elif defined(WIN_SCRAP)
 /* * */
-  if ( IsClipboardFormatAvailable(format) && OpenClipboard(SDL_Window) )
+  if ( IsClipboardFormatAvailable(format) && OpenClipboard(SDL_Window_internal) )
     {
       HANDLE hMem;
       char *src;

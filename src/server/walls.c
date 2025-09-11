@@ -54,12 +54,6 @@ static char msg[MSG_LEN];
 #error "This code assumes that negative numbers round upwards."
 #endif
 
-struct collans {
-    int line;
-    int point;
-    clvec_t moved;
-};
-
 struct tl2 {
     int base;
     int x;
