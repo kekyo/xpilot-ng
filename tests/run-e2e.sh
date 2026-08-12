@@ -283,24 +283,20 @@ wait_until "local metaserver request" 5 meta_fixture_served
 find_game_window || fail "metaserver window was not visible"
 kill -0 "$meta_pid" 2>/dev/null \
     || fail "metaserver client exited before Escape"
-xdotool key --window "$window_id" Escape >/dev/null 2>&1 \
-    || fail "could not close the metaserver UI"
 meta_deadline=$(($(date +%s) + 20))
+meta_escape_sent=false
 while kill -0 "$meta_pid" 2>/dev/null \
     && test "$(date +%s)" -lt "$meta_deadline"; do
+    if find_game_window \
+        && xdotool key --clearmodifiers --window "$window_id" Escape \
+            >/dev/null 2>&1; then
+        meta_escape_sent=true
+    fi
     sleep 0.1
 done
-if kill -0 "$meta_pid" 2>/dev/null; then
-    kill -TERM "$meta_pid" 2>/dev/null || true
-    meta_deadline=$(($(date +%s) + 5))
-    while kill -0 "$meta_pid" 2>/dev/null \
-        && test "$(date +%s)" -lt "$meta_deadline"; do
-        sleep 0.1
-    done
-    if kill -0 "$meta_pid" 2>/dev/null; then
-        kill -KILL "$meta_pid" 2>/dev/null || true
-    fi
-fi
+$meta_escape_sent || fail "could not send Escape to the metaserver UI"
+kill -0 "$meta_pid" 2>/dev/null \
+    && fail "metaserver UI did not close after Escape"
 finished_meta_pid=$meta_pid
 set +e
 wait "$meta_pid"
