@@ -25,6 +25,22 @@ struct TextRendererCache {
 
 static const unsigned char Text_renderer_empty_text[] = {0};
 
+static RendererStatus Text_renderer_retain_failure(
+    const TextRenderer *text_renderer, RendererStatus status)
+{
+    if (status == RENDERER_STATUS_OK)
+        return status;
+    return Sdl_renderer_track_frame_result(text_renderer->sdl_renderer,
+                                           status);
+}
+
+static RendererStatus Text_renderer_preflight(
+    const TextRenderer *text_renderer)
+{
+    return Sdl_renderer_track_frame_result(text_renderer->sdl_renderer,
+                                           RENDERER_STATUS_OK);
+}
+
 static const unsigned char *Text_renderer_normalize_text(
     const unsigned char *text, size_t text_length)
 {
@@ -74,20 +90,39 @@ void Text_renderer_destroy(TextRenderer **text_renderer)
     *text_renderer = NULL;
 }
 
+RendererStatus Text_renderer_track_failure(
+    TextRenderer *text_renderer, RendererStatus status)
+{
+    if (text_renderer == NULL || status == RENDERER_STATUS_OK)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    return Text_renderer_retain_failure(text_renderer, status);
+}
+
 RendererStatus Text_renderer_measure(const TextRenderer *text_renderer,
                                      const unsigned char *text,
                                      size_t text_length,
                                      TextGeometryMetrics *metrics)
 {
     const unsigned char *normalized_text;
+    RendererStatus status;
 
-    if (text_renderer == NULL || metrics == NULL)
+    if (text_renderer == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
+    status = Text_renderer_preflight(text_renderer);
+    if (status != RENDERER_STATUS_OK)
+        return status;
+    if (metrics == NULL)
+        return Text_renderer_retain_failure(
+            text_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
     normalized_text = Text_renderer_normalize_text(text, text_length);
     if (normalized_text == NULL)
-        return RENDERER_STATUS_INVALID_ARGUMENT;
-    return Text_geometry_measure(text_renderer->font, normalized_text,
-                                 text_length, metrics);
+        return Text_renderer_retain_failure(
+            text_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
+    status = Text_geometry_measure(text_renderer->font, normalized_text,
+                                   text_length, metrics);
+    if (status != RENDERER_STATUS_OK)
+        return Text_renderer_retain_failure(text_renderer, status);
+    return RENDERER_STATUS_OK;
 }
 
 static RendererStatus Text_renderer_build_vertices(
@@ -143,20 +178,14 @@ static RendererStatus Text_renderer_draw_measured(
     RendererVertex2D *vertices = NULL;
     RendererStatus status;
 
-    if (metrics->vertex_count > 0) {
-        status = Sdl_renderer_frame_result(text_renderer->sdl_renderer);
-        if (status != RENDERER_STATUS_OK)
-            return status;
-    }
+    status = Text_renderer_preflight(text_renderer);
+    if (status != RENDERER_STATUS_OK)
+        return status;
     status = Text_renderer_build_vertices(
         text_renderer, text, text_length, metrics, anchor, horizontal,
         vertical, color, space, &vertices);
     if (status != RENDERER_STATUS_OK) {
-        if (status == RENDERER_STATUS_OUT_OF_MEMORY) {
-            return Sdl_renderer_track_frame_result(
-                text_renderer->sdl_renderer, status);
-        }
-        return status;
+        return Text_renderer_retain_failure(text_renderer, status);
     }
     if (metrics->vertex_count == 0) {
         free(vertices);
@@ -197,13 +226,11 @@ RendererStatus Text_renderer_draw(
 
     if (text_renderer == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
-    normalized_text = Text_renderer_normalize_text(text, text_length);
-    if (normalized_text == NULL)
-        return RENDERER_STATUS_INVALID_ARGUMENT;
-    status = Text_geometry_measure(text_renderer->font, normalized_text,
-                                   text_length, &metrics);
+    status = Text_renderer_measure(text_renderer, text, text_length,
+                                   &metrics);
     if (status != RENDERER_STATUS_OK)
         return status;
+    normalized_text = Text_renderer_normalize_text(text, text_length);
     return Text_renderer_draw_measured(
         text_renderer, normalized_text, text_length, &metrics, anchor,
         horizontal, vertical, color, space);

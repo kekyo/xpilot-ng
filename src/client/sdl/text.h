@@ -78,9 +78,12 @@ extern enum rendertype {
 	RENDER_UNICODE
 } rendertype;
 
+/** Logical bounds of a formatted byte string. */
 typedef struct {
-    	float width;
-	float height;
+    /** Maximum line width in logical pixels. */
+    float width;
+    /** Total block height in logical pixels. */
+    float height;
 } fontbounds;
 
 /**
@@ -129,21 +132,122 @@ RendererStatus fontclean(font_data *ft_font);
 /* loads a SDL surface onto a GL texture */
 GLuint SDL_GL_LoadTexture(SDL_Surface *surface, texcoord_t *texcoord);
 
-/* Calcs the bounding width,height for the text if it were printed
- * to screen with given font
+/**
+ * Measure at most a given number of formatted bytes.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param length Maximum formatted byte count; must be nonnegative.
+ * @param bounds Receives logical bounds on success and remains unchanged on
+ *        failure.
+ * @param fmt printf-style format, or NULL for an empty string.
+ * @return Operation status.
+ *
+ * @remarks This operation requires an active renderer frame. Formatting is
+ * limited to 1023 bytes before @p length is applied. Bytes unavailable in
+ * the printable-ASCII atlas use the font's fallback glyph.
  */
-fontbounds nprintsize(font_data *ft_font, int length, const char *fmt, ...);
-fontbounds printsize(font_data *ft_font, const char *fmt, ...);
+RendererStatus nprintsize(font_data *ft_font, int length,
+			  fontbounds *bounds, const char *fmt, ...);
 
-/* 
- * NOTE: passing color 0x00000000 causes the painting to *not* set color,
- * it does *not* mean the text will be drawn with color 0x00000000, you
- * should check for that before calling this function.
+/**
+ * Measure one formatted byte string.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param bounds Receives logical bounds on success and remains unchanged on
+ *        failure.
+ * @param fmt printf-style format, or NULL for an empty string.
+ * @return Operation status.
+ *
+ * @remarks This operation requires an active renderer frame. Formatting is
+ * limited to 1023 bytes. Bytes unavailable in the printable-ASCII atlas use
+ * the font's fallback glyph.
  */
-void HUDnprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, int length, const char *fmt, ...);
-void mapnprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, int length, const char *fmt,...);
-void HUDprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *fmt, ...);
-void mapprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *fmt,...);
+RendererStatus printsize(font_data *ft_font, fontbounds *bounds,
+			 const char *fmt, ...);
+
+/**
+ * Draw at most a given number of formatted bytes in HUD coordinates.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param color Unpremultiplied RGBA value.
+ * @param XALIGN Legacy horizontal alignment value.
+ * @param YALIGN Legacy vertical alignment value.
+ * @param x Legacy horizontal anchor.
+ * @param y Legacy bottom-left HUD anchor.
+ * @param length Maximum formatted byte count; must be nonnegative.
+ * @param fmt printf-style format, or NULL for an empty string.
+ * @return Operation status.
+ *
+ * @remarks This operation requires an active renderer frame. Formatting is
+ * limited to 1023 bytes before @p length is applied. Bytes unavailable in
+ * the printable-ASCII atlas use the font's fallback glyph. Any failure is
+ * retained so the incomplete frame is not presented.
+ */
+RendererStatus HUDnprint(font_data *ft_font, int color, int XALIGN,
+			 int YALIGN, int x, int y, int length,
+			 const char *fmt, ...);
+
+/**
+ * Draw at most a given number of formatted bytes in world coordinates.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param color Unpremultiplied RGBA value.
+ * @param XALIGN Legacy horizontal alignment value.
+ * @param YALIGN Legacy vertical alignment value.
+ * @param x World-space horizontal anchor.
+ * @param y World-space vertical anchor.
+ * @param length Maximum formatted byte count; must be nonnegative.
+ * @param fmt printf-style format, or NULL for an empty string.
+ * @return Operation status.
+ *
+ * @remarks This operation requires an active renderer frame. Formatting is
+ * limited to 1023 bytes before @p length is applied. Bytes unavailable in
+ * the printable-ASCII atlas use the font's fallback glyph. Any failure is
+ * retained so the incomplete frame is not presented.
+ */
+RendererStatus mapnprint(font_data *ft_font, int color, int XALIGN,
+			 int YALIGN, int x, int y, int length,
+			 const char *fmt, ...);
+
+/**
+ * Draw one formatted byte string in HUD coordinates.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param color Unpremultiplied RGBA value.
+ * @param XALIGN Legacy horizontal alignment value.
+ * @param YALIGN Legacy vertical alignment value.
+ * @param x Legacy horizontal anchor.
+ * @param y Legacy bottom-left HUD anchor.
+ * @param fmt printf-style format, or NULL for an empty string.
+ * @return Operation status.
+ *
+ * @remarks This operation requires an active renderer frame. Formatting is
+ * limited to 1023 bytes. Bytes unavailable in the printable-ASCII atlas use
+ * the font's fallback glyph. Any failure is retained so the incomplete
+ * frame is not presented.
+ */
+RendererStatus HUDprint(font_data *ft_font, int color, int XALIGN,
+			int YALIGN, int x, int y, const char *fmt, ...);
+
+/**
+ * Draw one formatted byte string in world coordinates.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param color Unpremultiplied RGBA value.
+ * @param XALIGN Legacy horizontal alignment value.
+ * @param YALIGN Legacy vertical alignment value.
+ * @param x World-space horizontal anchor.
+ * @param y World-space vertical anchor.
+ * @param fmt printf-style format, or NULL for an empty string.
+ * @return Operation status.
+ *
+ * @remarks This operation requires an active renderer frame. Formatting is
+ * limited to 1023 bytes. Bytes unavailable in the printable-ASCII atlas use
+ * the font's fallback glyph. Any failure is retained so the incomplete
+ * frame is not presented.
+ */
+RendererStatus mapprint(font_data *ft_font, int color, int XALIGN,
+			int YALIGN, int x, int y, const char *fmt, ...);
 
 /**
  * Cache and draw one byte string through the semantic text renderer.

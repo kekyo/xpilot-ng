@@ -52,6 +52,20 @@ RendererStatus Text_renderer_create(SdlRenderer *sdl_renderer,
 void Text_renderer_destroy(TextRenderer **text_renderer);
 
 /**
+ * Retain a failure produced by a text adapter before geometry submission.
+ *
+ * @param text_renderer Text drawing facade for the active frame.
+ * @param status Failure to retain.
+ * @return The first failure retained for the frame.
+ *
+ * @remarks This is intended for formatting and legacy-adapter validation
+ * that occurs before Text_renderer_measure() or Text_renderer_draw(). The
+ * status must be a non-OK failure and an SDL renderer frame must be active.
+ */
+RendererStatus Text_renderer_track_failure(
+    TextRenderer *text_renderer, RendererStatus status);
+
+/**
  * Measure a byte string using the facade's immutable font metrics.
  *
  * @param text_renderer Text drawing facade.
@@ -59,6 +73,11 @@ void Text_renderer_destroy(TextRenderer **text_renderer);
  * @param text_length Number of bytes to measure.
  * @param metrics Receives the logical measurements on success.
  * @return Operation status.
+ *
+ * @remarks This operation requires an active SDL renderer frame. It returns
+ * the first retained semantic failure without changing @p metrics. A new
+ * measurement failure becomes the retained result so presentation code can
+ * reject the incomplete frame.
  */
 RendererStatus Text_renderer_measure(const TextRenderer *text_renderer,
                                      const unsigned char *text,
@@ -78,7 +97,8 @@ RendererStatus Text_renderer_measure(const TextRenderer *text_renderer,
  * @param space Coordinate convention for the generated vertices.
  * @return Operation status.
  *
- * @remarks A successful nonempty draw is flushed through the transitional
+ * @remarks This operation requires an active SDL renderer frame. A
+ * successful nonempty draw is flushed through the transitional
  * legacy-state-preserving ordering barrier before this function returns.
  */
 RendererStatus Text_renderer_draw(
@@ -136,7 +156,8 @@ RendererStatus Text_renderer_cache_metrics(
  * @param space Coordinate convention for the generated vertices.
  * @return Operation status.
  *
- * @remarks A successful nonempty draw is flushed through the transitional
+ * @remarks This operation requires an active SDL renderer frame. A
+ * successful nonempty draw is flushed through the transitional
  * legacy-state-preserving ordering barrier before this function returns.
  */
 RendererStatus Text_renderer_draw_cached(

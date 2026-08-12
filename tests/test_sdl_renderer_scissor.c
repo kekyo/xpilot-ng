@@ -14,6 +14,7 @@
 typedef struct CapturedDraw {
     int scissor_enabled;
     RendererRect scissor;
+    RendererTransform2D transform;
 } CapturedDraw;
 
 typedef struct FakeBackend {
@@ -40,6 +41,12 @@ static int rect_equal(RendererRect left, RendererRect right)
         && left.width == right.width && left.height == right.height;
 }
 
+static int transform_equal(RendererTransform2D left,
+                           RendererTransform2D right)
+{
+    return memcmp(left.m, right.m, sizeof(left.m)) == 0;
+}
+
 static RendererStatus fake_begin_frame(void *context, int width, int height,
                                        RendererColor clear_color)
 {
@@ -63,6 +70,7 @@ static RendererStatus fake_draw(void *context,
     captured = &fake->draws[fake->draw_count++];
     captured->scissor_enabled = draw->scissor_enabled;
     captured->scissor = draw->scissor;
+    captured->transform = draw->transform;
     return RENDERER_STATUS_OK;
 }
 
@@ -326,6 +334,74 @@ static int check_frame_result_is_sticky_until_successful_begin(void)
     return 0;
 }
 
+static int check_transform_failure_is_sticky_until_next_frame(void)
+{
+    const RendererColor clear = {0, 0, 0, 255};
+    const RendererColor white = {255, 255, 255, 255};
+    const RendererTransform2D identity = {
+        {1.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f,
+         0.0f, 0.0f, 1.0f}
+    };
+    const RendererTransform2D invalid = {
+        {1.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f,
+         0.0f, 0.0f, 0.0f}
+    };
+    const RendererTransform2D replacement = {
+        {2.0f, 0.0f, 0.0f,
+         0.0f, 3.0f, 0.0f,
+         11.0f, 13.0f, 1.0f}
+    };
+    SDL_Window *window = (SDL_Window *)&fake_window_storage;
+    SdlRenderer *sdl_renderer = NULL;
+    Renderer *renderer;
+
+    memset(&backend, 0, sizeof(backend));
+    backend.begin_result = RENDERER_STATUS_OK;
+    TEST_CHECK(Sdl_renderer_create(window, &sdl_renderer)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(sdl_renderer != NULL);
+    TEST_CHECK(Sdl_renderer_set_transform_2d(sdl_renderer, identity)
+               == RENDERER_STATUS_INVALID_STATE);
+
+    TEST_CHECK(Sdl_renderer_begin_frame(sdl_renderer, 100, 80, clear)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Sdl_renderer_set_transform_2d(sdl_renderer, invalid)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Sdl_renderer_frame_result(sdl_renderer)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+
+    /* A later valid transform cannot make the incomplete frame presentable
+     * or mutate the transform after its first semantic failure. */
+    TEST_CHECK(Sdl_renderer_set_transform_2d(sdl_renderer, replacement)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    renderer = Sdl_renderer_frontend(sdl_renderer);
+    TEST_CHECK(Renderer_fill_rect(renderer, 0.0f, 0.0f, 1.0f, 1.0f,
+                                  white) == RENDERER_STATUS_OK);
+    TEST_CHECK(Sdl_renderer_end_frame(sdl_renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(Sdl_renderer_frame_result(sdl_renderer)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(transform_equal(backend.draws[0].transform, identity));
+
+    TEST_CHECK(Sdl_renderer_begin_frame(sdl_renderer, 100, 80, clear)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Sdl_renderer_set_transform_2d(sdl_renderer, replacement)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Sdl_renderer_frame_result(sdl_renderer)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_fill_rect(renderer, 0.0f, 0.0f, 1.0f, 1.0f,
+                                  white) == RENDERER_STATUS_OK);
+    TEST_CHECK(Sdl_renderer_end_frame(sdl_renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 2);
+    TEST_CHECK(transform_equal(backend.draws[1].transform, replacement));
+
+    Sdl_renderer_destroy(sdl_renderer);
+    TEST_CHECK(backend.destroy_count == 1);
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(Sdl_renderer_frame_result(NULL)
@@ -337,5 +413,6 @@ int main(void)
                == RENDERER_STATUS_INVALID_ARGUMENT);
     TEST_CHECK(check_logical_scissor_uses_drawable_pixels() == 0);
     TEST_CHECK(check_frame_result_is_sticky_until_successful_begin() == 0);
+    TEST_CHECK(check_transform_failure_is_sticky_until_next_frame() == 0);
     return 0;
 }

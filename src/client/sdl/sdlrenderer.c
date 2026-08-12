@@ -152,6 +152,20 @@ RendererStatus Sdl_renderer_get_drawable_size(SdlRenderer *renderer,
     return RENDERER_STATUS_OK;
 }
 
+RendererStatus Sdl_renderer_set_transform_2d(
+    SdlRenderer *renderer, RendererTransform2D transform)
+{
+    RendererStatus status;
+
+    if (renderer == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    status = Sdl_renderer_track_frame_result(renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
+        return status;
+    status = Renderer_set_transform_2d(renderer->frontend, transform);
+    return Sdl_renderer_track_frame_result(renderer, status);
+}
+
 RendererStatus Sdl_renderer_begin_frame(SdlRenderer *renderer,
                                         int logical_width,
                                         int logical_height,

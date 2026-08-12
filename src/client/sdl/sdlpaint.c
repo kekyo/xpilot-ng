@@ -66,43 +66,57 @@ int paintSetupMode;
 
 GLWidget *MainWidget = NULL;
 
-static void set_renderer_world_transform(int rounded_translation)
+static RendererStatus set_renderer_world_transform(int rounded_translation)
 {
     SdlRenderer *sdl_renderer = Get_sdl_renderer();
     RendererTransform2D transform;
+    RendererStatus status;
     int drawable_width;
     int drawable_height;
 
-    if (sdl_renderer == NULL
-	|| Sdl_renderer_get_drawable_size(sdl_renderer, &drawable_width,
-					 &drawable_height) != RENDERER_STATUS_OK
-	|| Paint_transform_world(clData.scale, world.x, world.y,
+    if (sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    status = Sdl_renderer_get_drawable_size(
+	sdl_renderer, &drawable_width, &drawable_height);
+    if (status == RENDERER_STATUS_OK
+	&& Paint_transform_world(clData.scale, world.x, world.y,
 				 draw_width, draw_height,
 				 drawable_width, drawable_height,
-				 rounded_translation, &transform) != 0
-	|| Renderer_set_transform_2d(Sdl_renderer_frontend(sdl_renderer),
-				     transform) != RENDERER_STATUS_OK) {
-	warn("Could not update the renderer world transform");
+				 rounded_translation, &transform) != 0) {
+	status = RENDERER_STATUS_INVALID_ARGUMENT;
     }
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_set_transform_2d(sdl_renderer, transform);
+    }
+    if (status != RENDERER_STATUS_OK)
+	return Sdl_renderer_track_frame_result(sdl_renderer, status);
+    return RENDERER_STATUS_OK;
 }
 
-static void set_renderer_hud_transform(void)
+static RendererStatus set_renderer_hud_transform(void)
 {
     SdlRenderer *sdl_renderer = Get_sdl_renderer();
     RendererTransform2D transform;
+    RendererStatus status;
     int drawable_width;
     int drawable_height;
 
-    if (sdl_renderer == NULL
-	|| Sdl_renderer_get_drawable_size(sdl_renderer, &drawable_width,
-					 &drawable_height) != RENDERER_STATUS_OK
-	|| Paint_transform_hud(draw_width, draw_height,
+    if (sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    status = Sdl_renderer_get_drawable_size(
+	sdl_renderer, &drawable_width, &drawable_height);
+    if (status == RENDERER_STATUS_OK
+	&& Paint_transform_hud(draw_width, draw_height,
 			       drawable_width, drawable_height,
-			       &transform) != 0
-	|| Renderer_set_transform_2d(Sdl_renderer_frontend(sdl_renderer),
-				     transform) != RENDERER_STATUS_OK) {
-	warn("Could not update the renderer HUD transform");
+			       &transform) != 0) {
+	status = RENDERER_STATUS_INVALID_ARGUMENT;
     }
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_set_transform_2d(sdl_renderer, transform);
+    }
+    if (status != RENDERER_STATUS_OK)
+	return Sdl_renderer_track_frame_result(sdl_renderer, status);
+    return RENDERER_STATUS_OK;
 }
 
 static void Scorelist_button(Uint8 button, Uint8 state, Uint16 x, Uint16 y, void *data)
@@ -315,7 +329,8 @@ void setupPaint_stationary(void)
 {
     if (paintSetupMode & STATIONARY_MODE) return;
     paintSetupMode = STATIONARY_MODE;
-    set_renderer_world_transform(1);
+    if (set_renderer_world_transform(1) != RENDERER_STATUS_OK)
+	warn("Could not update the renderer world transform");
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
@@ -333,7 +348,8 @@ void setupPaint_moving(void)
 {
     if (paintSetupMode & MOVING_MODE) return;
     paintSetupMode = MOVING_MODE;
-    set_renderer_world_transform(0);
+    if (set_renderer_world_transform(0) != RENDERER_STATUS_OK)
+	warn("Could not update the renderer world transform");
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
@@ -346,7 +362,8 @@ void setupPaint_HUD(void)
 {
     if (paintSetupMode & HUD_MODE) return;
     paintSetupMode = HUD_MODE;
-    set_renderer_hud_transform();
+    if (set_renderer_hud_transform() != RENDERER_STATUS_OK)
+	warn("Could not update the renderer HUD transform");
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();

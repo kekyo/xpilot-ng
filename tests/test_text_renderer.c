@@ -381,10 +381,12 @@ static int check_create_measure_and_empty_draw(void)
                                     &renderer) == RENDERER_STATUS_OK);
     TEST_CHECK(renderer != NULL);
     TEST_CHECK(Text_renderer_measure(renderer, text, sizeof(text), &metrics)
+               == RENDERER_STATUS_INVALID_STATE);
+    begin_fake_frame(&first_sdl_renderer);
+    TEST_CHECK(Text_renderer_measure(renderer, text, sizeof(text), &metrics)
                == RENDERER_STATUS_OK);
     TEST_CHECK(metrics_equal(&metrics, 11.0f, 22.0f, 2, 3, 18));
 
-    first_frontend.frame_active = 1;
     TEST_CHECK(Text_renderer_draw(
                    renderer, NULL, 0, (RendererPoint2D){20.0f, 30.0f},
                    TEXT_GEOMETRY_ALIGN_LEFT, TEXT_GEOMETRY_ALIGN_TOP,
@@ -725,6 +727,7 @@ static int check_invalid_arguments_do_not_publish(void)
 
     TEST_CHECK(Text_renderer_create(&first_sdl_renderer, &first_atlas,
                                     &renderer) == RENDERER_STATUS_OK);
+    begin_fake_frame(&first_sdl_renderer);
     TEST_CHECK(Text_renderer_measure(NULL, text, sizeof(text), &metrics)
                == RENDERER_STATUS_INVALID_ARGUMENT);
     TEST_CHECK(Text_renderer_measure(renderer, NULL, sizeof(text), &metrics)
@@ -748,6 +751,7 @@ static int check_invalid_arguments_do_not_publish(void)
                == RENDERER_STATUS_INVALID_ARGUMENT);
     TEST_CHECK(Text_renderer_cache_metrics(cache, &metrics)
                == RENDERER_STATUS_INVALID_ARGUMENT);
+    begin_fake_frame(&first_sdl_renderer);
     TEST_CHECK(Text_renderer_draw(
                    renderer, text, sizeof(text),
                    (RendererPoint2D){0.0f, 0.0f},
@@ -760,6 +764,72 @@ static int check_invalid_arguments_do_not_publish(void)
 
     Text_renderer_cache_destroy(&other_cache);
     Text_renderer_destroy(&other_renderer);
+    Text_renderer_destroy(&renderer);
+    return 0;
+}
+
+static int check_measure_failure_is_sticky_and_atomic(void)
+{
+    const unsigned char text[] = {'A'};
+    TextRenderer *renderer = NULL;
+    TextGeometryMetrics metrics;
+    TextGeometryMetrics unchanged;
+
+    reset_fixture();
+    TEST_CHECK(Text_renderer_create(&first_sdl_renderer, &first_atlas,
+                                    &renderer) == RENDERER_STATUS_OK);
+    begin_fake_frame(&first_sdl_renderer);
+    memset(&unchanged, 0x5A, sizeof(unchanged));
+    metrics = unchanged;
+
+    TEST_CHECK(Text_renderer_measure(renderer, text, SIZE_MAX, &metrics)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(memcmp(&metrics, &unchanged, sizeof(metrics)) == 0);
+    TEST_CHECK(first_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Text_renderer_measure(renderer, text, sizeof(text), &metrics)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(memcmp(&metrics, &unchanged, sizeof(metrics)) == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(preserving_flush_attempts == 0);
+
+    begin_fake_frame(&first_sdl_renderer);
+    TEST_CHECK(Text_renderer_measure(renderer, text, sizeof(text), &metrics)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(metrics_equal(&metrics, 7.0f, 10.0f, 1, 1, 6));
+    Text_renderer_destroy(&renderer);
+    return 0;
+}
+
+static int check_adapter_failure_tracking_contract(void)
+{
+    TextRenderer *renderer = NULL;
+
+    reset_fixture();
+    TEST_CHECK(Text_renderer_create(&first_sdl_renderer, &first_atlas,
+                                    &renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(Text_renderer_track_failure(
+                   renderer, RENDERER_STATUS_BACKEND_ERROR)
+               == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK(first_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+
+    begin_fake_frame(&first_sdl_renderer);
+    TEST_CHECK(Text_renderer_track_failure(
+                   renderer, RENDERER_STATUS_BACKEND_ERROR)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(Text_renderer_track_failure(
+                   renderer, RENDERER_STATUS_OUT_OF_MEMORY)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(Text_renderer_track_failure(renderer, RENDERER_STATUS_OK)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(first_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+
+    begin_fake_frame(&first_sdl_renderer);
+    TEST_CHECK(Text_renderer_track_failure(
+                   renderer, RENDERER_STATUS_OUT_OF_MEMORY)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
     Text_renderer_destroy(&renderer);
     return 0;
 }
@@ -777,6 +847,10 @@ int main(void)
     if (check_failures_preserve_cache_and_ordering() != 0)
         return 1;
     if (check_invalid_arguments_do_not_publish() != 0)
+        return 1;
+    if (check_measure_failure_is_sticky_and_atomic() != 0)
+        return 1;
+    if (check_adapter_failure_tracking_contract() != 0)
         return 1;
     return 0;
 }

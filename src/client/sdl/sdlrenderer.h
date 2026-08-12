@@ -81,6 +81,19 @@ RendererStatus Sdl_renderer_get_drawable_size(SdlRenderer *renderer,
                                               int *width, int *height);
 
 /**
+ * Set the semantic draw transform and retain any failure for the frame.
+ *
+ * @param renderer Renderer facade with an active frame.
+ * @param transform Column-major local-to-framebuffer transform.
+ * @return The operation status or the first failure retained for the frame.
+ *
+ * @remarks Once a semantic operation has failed, later transform changes are
+ * rejected until a subsequent frame begins successfully.
+ */
+RendererStatus Sdl_renderer_set_transform_2d(
+    SdlRenderer *renderer, RendererTransform2D transform);
+
+/**
  * Begin and clear a frame using the window's current drawable dimensions.
  *
  * @param renderer Renderer facade.

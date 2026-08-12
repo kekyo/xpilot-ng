@@ -8,10 +8,12 @@
 #include <string.h>
 
 #define FLOAT_TOLERANCE 0.0001f
+#define CAPTURED_TEXT_CAPACITY 1024
 
 struct TextRenderer {
     int identity;
     int frame_active;
+    RendererStatus frame_result;
 };
 
 struct TextRendererCache {
@@ -31,19 +33,42 @@ typedef struct FakeDraw {
     TextRendererSpace space;
 } FakeDraw;
 
+typedef struct FakeImmediateDraw {
+    TextRenderer *text_renderer;
+    unsigned char text[CAPTURED_TEXT_CAPACITY];
+    size_t text_length;
+    RendererPoint2D anchor;
+    TextGeometryHorizontalAlign horizontal;
+    TextGeometryVerticalAlign vertical;
+    RendererColor color;
+    TextRendererSpace space;
+} FakeImmediateDraw;
+
 unsigned draw_width = 640;
 unsigned draw_height = 480;
 
-static TextRenderer first_text_renderer = {1, 0};
+static TextRenderer first_text_renderer = {
+    1, 0, RENDERER_STATUS_OK
+};
 static FakeDraw last_draw;
+static FakeImmediateDraw last_immediate_draw;
+static unsigned char last_measured_text[CAPTURED_TEXT_CAPACITY];
+static size_t last_measured_length;
+static int measure_attempts;
+static int immediate_draw_attempts;
+static int immediate_ordering_barrier_attempts;
 static int cache_replace_calls;
 static int cache_destroy_calls;
 static int cached_draw_calls;
 static int ordering_barrier_attempts;
 static int fail_next_cache_replace;
 static int fail_next_cached_draw;
+static int fail_next_measure;
+static int fail_next_immediate_draw;
 static int gl_texture_create_calls;
 static int gl_texture_destroy_calls;
+static int gl_list_create_calls;
+static int gl_list_destroy_calls;
 static int renderer_texture_create_calls;
 static int renderer_texture_update_calls;
 static int renderer_texture_destroy_calls;
@@ -68,6 +93,7 @@ static int color_equal(RendererColor actual, RendererColor expected)
 static int no_gpu_resource_calls(void)
 {
     return gl_texture_create_calls == 0 && gl_texture_destroy_calls == 0
+        && gl_list_create_calls == 0 && gl_list_destroy_calls == 0
         && renderer_texture_create_calls == 0
         && renderer_texture_update_calls == 0
         && renderer_texture_destroy_calls == 0
@@ -79,21 +105,50 @@ static int no_gpu_resource_calls(void)
 static void reset_fixture(void)
 {
     memset(&last_draw, 0, sizeof(last_draw));
+    memset(&last_immediate_draw, 0, sizeof(last_immediate_draw));
+    memset(last_measured_text, 0, sizeof(last_measured_text));
+    last_measured_length = 0;
     first_text_renderer.frame_active = 0;
+    first_text_renderer.frame_result = RENDERER_STATUS_OK;
+    measure_attempts = 0;
+    immediate_draw_attempts = 0;
+    immediate_ordering_barrier_attempts = 0;
     cache_replace_calls = 0;
     cache_destroy_calls = 0;
     cached_draw_calls = 0;
     ordering_barrier_attempts = 0;
     fail_next_cache_replace = 0;
     fail_next_cached_draw = 0;
+    fail_next_measure = 0;
+    fail_next_immediate_draw = 0;
     gl_texture_create_calls = 0;
     gl_texture_destroy_calls = 0;
+    gl_list_create_calls = 0;
+    gl_list_destroy_calls = 0;
     renderer_texture_create_calls = 0;
     renderer_texture_update_calls = 0;
     renderer_texture_destroy_calls = 0;
     renderer_mesh_create_calls = 0;
     renderer_mesh_update_calls = 0;
     renderer_mesh_destroy_calls = 0;
+}
+
+static void begin_fake_frame(TextRenderer *text_renderer)
+{
+    text_renderer->frame_active = 1;
+    text_renderer->frame_result = RENDERER_STATUS_OK;
+}
+
+static RendererStatus retain_frame_failure(TextRenderer *text_renderer,
+                                           RendererStatus status)
+{
+    if (text_renderer->frame_active
+        && text_renderer->frame_result == RENDERER_STATUS_OK
+        && status != RENDERER_STATUS_OK) {
+        text_renderer->frame_result = status;
+    }
+    return text_renderer->frame_result != RENDERER_STATUS_OK
+        ? text_renderer->frame_result : status;
 }
 
 static RendererStatus fake_measure(const unsigned char *text,
@@ -149,9 +204,87 @@ RendererStatus Text_renderer_measure(const TextRenderer *text_renderer,
                                      size_t text_length,
                                      TextGeometryMetrics *metrics)
 {
+    TextRenderer *mutable_renderer = (TextRenderer *)text_renderer;
+    RendererStatus status;
+
     if (text_renderer == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
-    return fake_measure(text, text_length, metrics);
+    if (!text_renderer->frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (text_renderer->frame_result != RENDERER_STATUS_OK)
+        return text_renderer->frame_result;
+    measure_attempts++;
+    if (fail_next_measure) {
+        fail_next_measure = 0;
+        return retain_frame_failure(mutable_renderer,
+                                    RENDERER_STATUS_BACKEND_ERROR);
+    }
+    status = fake_measure(text, text_length, metrics);
+    if (status != RENDERER_STATUS_OK)
+        return retain_frame_failure(mutable_renderer, status);
+    if (text_length >= sizeof(last_measured_text))
+        return retain_frame_failure(mutable_renderer,
+                                    RENDERER_STATUS_INVALID_ARGUMENT);
+    if (text_length > 0)
+        memcpy(last_measured_text, text, text_length);
+    last_measured_length = text_length;
+    return RENDERER_STATUS_OK;
+}
+
+RendererStatus Text_renderer_track_failure(
+    TextRenderer *text_renderer, RendererStatus status)
+{
+    if (text_renderer == NULL || status == RENDERER_STATUS_OK)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!text_renderer->frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+    return retain_frame_failure(text_renderer, status);
+}
+
+RendererStatus Text_renderer_draw(
+    TextRenderer *text_renderer, const unsigned char *text,
+    size_t text_length, RendererPoint2D anchor,
+    TextGeometryHorizontalAlign horizontal,
+    TextGeometryVerticalAlign vertical, RendererColor color,
+    TextRendererSpace space)
+{
+    TextGeometryMetrics metrics;
+    RendererStatus status;
+
+    if (text_renderer == NULL || (text == NULL && text_length > 0))
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!text_renderer->frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (text_renderer->frame_result != RENDERER_STATUS_OK)
+        return text_renderer->frame_result;
+    if (text_length >= sizeof(last_immediate_draw.text))
+        return retain_frame_failure(text_renderer,
+                                    RENDERER_STATUS_INVALID_ARGUMENT);
+
+    immediate_draw_attempts++;
+    status = fake_measure(text != NULL ? text : (const unsigned char *)"",
+                          text_length, &metrics);
+    if (status != RENDERER_STATUS_OK)
+        return retain_frame_failure(text_renderer, status);
+    last_immediate_draw.text_renderer = text_renderer;
+    if (text_length > 0)
+        memcpy(last_immediate_draw.text, text, text_length);
+    last_immediate_draw.text_length = text_length;
+    last_immediate_draw.anchor = anchor;
+    last_immediate_draw.horizontal = horizontal;
+    last_immediate_draw.vertical = vertical;
+    last_immediate_draw.color = color;
+    last_immediate_draw.space = space;
+    if (metrics.vertex_count == 0)
+        return RENDERER_STATUS_OK;
+
+    immediate_ordering_barrier_attempts++;
+    if (fail_next_immediate_draw) {
+        fail_next_immediate_draw = 0;
+        return retain_frame_failure(text_renderer,
+                                    RENDERER_STATUS_BACKEND_ERROR);
+    }
+    return RENDERER_STATUS_OK;
 }
 
 RendererStatus Text_renderer_cache_replace(TextRendererCache **cache,
@@ -276,6 +409,18 @@ void APIENTRY glDeleteTextures(GLsizei count, const GLuint *textures)
 {
     (void)textures;
     gl_texture_destroy_calls += count;
+}
+
+GLuint APIENTRY glGenLists(GLsizei range)
+{
+    gl_list_create_calls += range;
+    return range > 0 ? 1U : 0U;
+}
+
+void APIENTRY glDeleteLists(GLuint list, GLsizei range)
+{
+    (void)list;
+    gl_list_destroy_calls += range;
 }
 
 RendererStatus Renderer_texture_create_with_desc(
@@ -617,6 +762,201 @@ static int check_draw_text_propagates_cached_draw_failure(void)
     return 0;
 }
 
+static int check_immediate_draws_use_semantic_bytes_and_coordinates(void)
+{
+    const RendererColor first_color = {0x11, 0x22, 0x33, 0x44};
+    const RendererColor second_color = {0x55, 0x66, 0x77, 0x88};
+    char long_text[1100];
+    font_data font;
+    int draws_before_empty;
+
+    reset_fixture();
+    begin_fake_frame(&first_text_renderer);
+    font = make_font(&first_text_renderer, 9);
+
+    TEST_CHECK(HUDnprint(&font, 0x11223344, CENTER, UP,
+                         30, 70, 2, "%s-%d", "AB", 7)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(last_immediate_draw.text_renderer == &first_text_renderer);
+    TEST_CHECK(last_immediate_draw.text_length == 2);
+    TEST_CHECK(memcmp(last_immediate_draw.text, "AB", 2) == 0);
+    TEST_CHECK(float_equal(last_immediate_draw.anchor.x, 30.0f));
+    TEST_CHECK(float_equal(last_immediate_draw.anchor.y, 410.0f));
+    TEST_CHECK(last_immediate_draw.horizontal
+               == TEXT_GEOMETRY_ALIGN_CENTER);
+    TEST_CHECK(last_immediate_draw.vertical
+               == TEXT_GEOMETRY_ALIGN_BOTTOM);
+    TEST_CHECK(color_equal(last_immediate_draw.color, first_color));
+    TEST_CHECK(last_immediate_draw.space == TEXT_RENDERER_SPACE_HUD);
+
+    TEST_CHECK(mapnprint(&font, 0x55667788, RIGHT, DOWN,
+                         101, 202, 3, "%s", "ABCD")
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(last_immediate_draw.text_length == 3);
+    TEST_CHECK(memcmp(last_immediate_draw.text, "ABC", 3) == 0);
+    TEST_CHECK(float_equal(last_immediate_draw.anchor.x, 101.0f));
+    TEST_CHECK(float_equal(last_immediate_draw.anchor.y, 202.0f));
+    TEST_CHECK(last_immediate_draw.horizontal
+               == TEXT_GEOMETRY_ALIGN_RIGHT);
+    TEST_CHECK(last_immediate_draw.vertical == TEXT_GEOMETRY_ALIGN_TOP);
+    TEST_CHECK(color_equal(last_immediate_draw.color, second_color));
+    TEST_CHECK(last_immediate_draw.space == TEXT_RENDERER_SPACE_WORLD);
+
+    TEST_CHECK(HUDprint(&font, 0x11223344, LEFT, CENTER,
+                        8, 12, "%s:%d", "A", 7)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(last_immediate_draw.text_length == 3);
+    TEST_CHECK(memcmp(last_immediate_draw.text, "A:7", 3) == 0);
+    TEST_CHECK(float_equal(last_immediate_draw.anchor.x, 8.0f));
+    TEST_CHECK(float_equal(last_immediate_draw.anchor.y, 468.0f));
+    TEST_CHECK(last_immediate_draw.horizontal == TEXT_GEOMETRY_ALIGN_LEFT);
+    TEST_CHECK(last_immediate_draw.vertical
+               == TEXT_GEOMETRY_ALIGN_MIDDLE);
+    TEST_CHECK(last_immediate_draw.space == TEXT_RENDERER_SPACE_HUD);
+
+    TEST_CHECK(mapprint(&font, 0x55667788, CENTER, DOWN,
+                        11, 22, "%s/%s", "A", "B")
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(last_immediate_draw.text_length == 3);
+    TEST_CHECK(memcmp(last_immediate_draw.text, "A/B", 3) == 0);
+    TEST_CHECK(float_equal(last_immediate_draw.anchor.x, 11.0f));
+    TEST_CHECK(float_equal(last_immediate_draw.anchor.y, 22.0f));
+    TEST_CHECK(last_immediate_draw.horizontal
+               == TEXT_GEOMETRY_ALIGN_CENTER);
+    TEST_CHECK(last_immediate_draw.vertical == TEXT_GEOMETRY_ALIGN_TOP);
+    TEST_CHECK(last_immediate_draw.space == TEXT_RENDERER_SPACE_WORLD);
+
+    memset(long_text, 'A', sizeof(long_text) - 1);
+    long_text[sizeof(long_text) - 1] = '\0';
+    TEST_CHECK(HUDprint(&font, 0x11223344, LEFT, DOWN,
+                        0, 0, "%s", long_text)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(last_immediate_draw.text_length == 1023);
+    TEST_CHECK(last_immediate_draw.text[0] == (unsigned char)'A');
+    TEST_CHECK(last_immediate_draw.text[1022] == (unsigned char)'A');
+    TEST_CHECK(immediate_draw_attempts == 5);
+    TEST_CHECK(immediate_ordering_barrier_attempts == 5);
+
+    draws_before_empty = immediate_draw_attempts;
+    TEST_CHECK(HUDprint(&font, 0x11223344, LEFT, DOWN,
+                        0, 0, "%s", "") == RENDERER_STATUS_OK);
+    TEST_CHECK(mapnprint(&font, 0x11223344, LEFT, DOWN,
+                         0, 0, 0, "%s", "AB") == RENDERER_STATUS_OK);
+    TEST_CHECK(immediate_draw_attempts == draws_before_empty);
+    TEST_CHECK(no_gpu_resource_calls());
+    return 0;
+}
+
+static int check_immediate_measurement_contract(void)
+{
+    char long_text[1100];
+    fontbounds bounds = {91.0f, 92.0f};
+    fontbounds unchanged;
+    font_data font;
+    font_data missing_renderer;
+
+    reset_fixture();
+    begin_fake_frame(&first_text_renderer);
+    font = make_font(&first_text_renderer, 9);
+    missing_renderer = make_font(NULL, 9);
+
+    TEST_CHECK(printsize(&font, &bounds, "%s:%d", "AB", 7)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(float_equal(bounds.width, 23.0f));
+    TEST_CHECK(float_equal(bounds.height, 10.0f));
+    TEST_CHECK(last_measured_length == 4);
+    TEST_CHECK(memcmp(last_measured_text, "AB:7", 4) == 0);
+
+    TEST_CHECK(nprintsize(&font, 3, &bounds, "%s", "ABCD")
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(float_equal(bounds.width, 18.0f));
+    TEST_CHECK(float_equal(bounds.height, 10.0f));
+    TEST_CHECK(last_measured_length == 3);
+    TEST_CHECK(memcmp(last_measured_text, "ABC", 3) == 0);
+
+    TEST_CHECK(nprintsize(&font, 5, &bounds, "%s", "A\nBBZ")
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(float_equal(bounds.width, 17.0f));
+    TEST_CHECK(float_equal(bounds.height, 22.0f));
+    TEST_CHECK(last_measured_length == 5);
+    TEST_CHECK(memcmp(last_measured_text, "A\nBBZ", 5) == 0);
+
+    memset(long_text, 'B', sizeof(long_text) - 1);
+    long_text[sizeof(long_text) - 1] = '\0';
+    TEST_CHECK(printsize(&font, &bounds, "%s", long_text)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(last_measured_length == 1023);
+    TEST_CHECK(last_measured_text[0] == (unsigned char)'B');
+    TEST_CHECK(last_measured_text[1022] == (unsigned char)'B');
+    TEST_CHECK(measure_attempts == 4);
+    TEST_CHECK(no_gpu_resource_calls());
+
+    unchanged.width = 31.0f;
+    unchanged.height = 32.0f;
+    bounds = unchanged;
+    TEST_CHECK(printsize(&missing_renderer, &bounds, "%s", "AB")
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(memcmp(&bounds, &unchanged, sizeof(bounds)) == 0);
+    TEST_CHECK(nprintsize(&font, -1, &bounds, "%s", "AB")
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(memcmp(&bounds, &unchanged, sizeof(bounds)) == 0);
+    TEST_CHECK(printsize(&font, NULL, "%s", "AB")
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(measure_attempts == 4);
+    TEST_CHECK(no_gpu_resource_calls());
+    return 0;
+}
+
+static int check_immediate_failures_are_sticky(void)
+{
+    fontbounds bounds;
+    fontbounds unchanged;
+    font_data font;
+
+    reset_fixture();
+    begin_fake_frame(&first_text_renderer);
+    font = make_font(&first_text_renderer, 9);
+
+    unchanged.width = 41.0f;
+    unchanged.height = 42.0f;
+    bounds = unchanged;
+    fail_next_measure = 1;
+    TEST_CHECK(printsize(&font, &bounds, "%s", "AB")
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(memcmp(&bounds, &unchanged, sizeof(bounds)) == 0);
+    TEST_CHECK(first_text_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(measure_attempts == 1);
+    TEST_CHECK(HUDprint(&font, 0xFFFFFFFF, LEFT, DOWN,
+                        0, 0, "%s", "AB")
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(immediate_draw_attempts == 0);
+    TEST_CHECK(immediate_ordering_barrier_attempts == 0);
+
+    begin_fake_frame(&first_text_renderer);
+    fail_next_immediate_draw = 1;
+    TEST_CHECK(mapprint(&font, 0xFFFFFFFF, RIGHT, UP,
+                        10, 20, "%s", "AB")
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(first_text_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(immediate_draw_attempts == 1);
+    TEST_CHECK(immediate_ordering_barrier_attempts == 1);
+    TEST_CHECK(HUDprint(&font, 0xFFFFFFFF, LEFT, DOWN,
+                        0, 0, "%s", "A")
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(immediate_draw_attempts == 1);
+    TEST_CHECK(immediate_ordering_barrier_attempts == 1);
+
+    begin_fake_frame(&first_text_renderer);
+    TEST_CHECK(HUDprint(&font, 0xFFFFFFFF, LEFT, DOWN,
+                        0, 0, "%s", "A") == RENDERER_STATUS_OK);
+    TEST_CHECK(immediate_draw_attempts == 2);
+    TEST_CHECK(immediate_ordering_barrier_attempts == 2);
+    TEST_CHECK(no_gpu_resource_calls());
+    return 0;
+}
+
 int main(void)
 {
     if (check_render_is_cpu_only_and_empty_compatible() != 0)
@@ -630,6 +970,12 @@ int main(void)
     if (check_invalid_arguments_leave_destinations_unchanged() != 0)
         return 1;
     if (check_draw_text_propagates_cached_draw_failure() != 0)
+        return 1;
+    if (check_immediate_draws_use_semantic_bytes_and_coordinates() != 0)
+        return 1;
+    if (check_immediate_measurement_contract() != 0)
+        return 1;
+    if (check_immediate_failures_are_sticky() != 0)
         return 1;
     return 0;
 }
