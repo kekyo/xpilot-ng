@@ -6,14 +6,17 @@ To compile XPilot NG, you'll need at least:
     expat XML library version 1.1
     zlib compression library version 1.1.3 (some systems seem to have older)
     An ANSI C compiler
-    X11     (any revision from R4 up to R6 is fine)
+    pkg-config
 
 Additional requirements for the SDL client are:
 
-    SDL 1.2
-    SDL_ttf 2.0
-    SDL_image 1.2
-    OpenGL (hardware accelerated, no mesa is too slow)
+    SDL2 version 2.0.9 or newer
+    SDL2_ttf version 2.0.12 or newer
+    SDL2_image version 2.0.0 or newer
+    OpenGL and GLU
+
+X11 is required when building the X11 client, replay program, or map editor,
+but the SDL client itself does not depend on X11.
 	
 Also if you enable sound support you'll need OpenAL and freealut.
     
@@ -313,4 +316,3 @@ operates.
 
 `configure' also accepts some other, not widely useful, options.  Run
 `configure --help' for more details.
-
