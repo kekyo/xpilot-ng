@@ -113,6 +113,10 @@ int Init_playing_windows(void)
 
 static void cleanup_window_system(void)
 {
+    if (gamefont_initialized || mapfont_initialized) {
+	error("Refusing to destroy the window system while fonts remain initialized");
+	return;
+    }
     if (main_renderer != NULL) {
 	Sdl_renderer_destroy(main_renderer);
 	main_renderer = NULL;
@@ -154,16 +158,30 @@ static void apply_window_size(int width, int height)
 
 }
 
-static void cleanup_fonts(void)
+static bool cleanup_fonts(void)
 {
+    bool cleaned = true;
+    RendererStatus status;
+
     if (mapfont_initialized) {
-	fontclean(&mapfont);
-	mapfont_initialized = false;
+	status = fontclean(&mapfont);
+	if (status == RENDERER_STATUS_OK) {
+	    mapfont_initialized = false;
+	} else {
+	    error("Could not clean up the map font (%d)", (int)status);
+	    cleaned = false;
+	}
     }
     if (gamefont_initialized) {
-	fontclean(&gamefont);
-	gamefont_initialized = false;
+	status = fontclean(&gamefont);
+	if (status == RENDERER_STATUS_OK) {
+	    gamefont_initialized = false;
+	} else {
+	    error("Could not clean up the game font (%d)", (int)status);
+	    cleaned = false;
+	}
     }
+    return cleaned;
 }
 
 static bool closest_display_mode(int width, int height, SDL_DisplayMode *mode)
@@ -279,14 +297,20 @@ int Init_window(void)
     }
       
     if (gf_exists) {
-    	if (fontinit(&gamefont,gamefontname,gameFontSize)) {
-    	    error("Font initialization failed with %s", gamefontname);
+	renderer_status = fontinit(&gamefont,
+				   Sdl_renderer_frontend(main_renderer),
+				   gamefontname, gameFontSize);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Font initialization failed with %s", gamefontname);
 	} else gf_init = true;
     }
     if (!gf_init && df_exists) {
-    	if (fontinit(&gamefont,defaultfontname,gameFontSize)) {
-    	    error("Default font initialization failed with %s", defaultfontname);
-    	} else gf_init = true;
+	renderer_status = fontinit(&gamefont,
+				   Sdl_renderer_frontend(main_renderer),
+				   defaultfontname, gameFontSize);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Default font initialization failed with %s", defaultfontname);
+	} else gf_init = true;
     }
     
     if (!gf_init) {
@@ -296,14 +320,20 @@ int Init_window(void)
     gamefont_initialized = true;
     
     if (gf_exists) {
-    	if (fontinit(&mapfont,gamefontname,mapFontSize)) {
-    	    error("Font initialization failed with %s", gamefontname);
+	renderer_status = fontinit(&mapfont,
+				   Sdl_renderer_frontend(main_renderer),
+				   gamefontname, mapFontSize);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Font initialization failed with %s", gamefontname);
 	} else mf_init = true;
     }
     if (!mf_init && df_exists) {
-    	if (fontinit(&mapfont,defaultfontname,mapFontSize)) {
-    	    error("Default font initialization failed with %s", defaultfontname);
-    	} else mf_init = true;
+	renderer_status = fontinit(&mapfont,
+				   Sdl_renderer_frontend(main_renderer),
+				   defaultfontname, mapFontSize);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Default font initialization failed with %s", defaultfontname);
+	} else mf_init = true;
     }
 
     if (!mf_init) {
@@ -312,13 +342,20 @@ int Init_window(void)
     }
     mapfont_initialized = true;
 
+    if (gamefont.atlas == NULL || mapfont.atlas == NULL) {
+	error("Font atlas initialization did not publish both atlases");
+	goto fail;
+    }
+    printf("Font atlases ready: game=renderer map=renderer\n");
+    fflush(stdout);
+
     return 0;
 
 fail:
     mapfont_initialized = mf_init;
     gamefont_initialized = gf_init;
-    cleanup_fonts();
-    cleanup_window_system();
+    if (cleanup_fonts())
+	cleanup_window_system();
     return -1;
 }
 
@@ -420,8 +457,8 @@ void Platform_specific_cleanup(void)
 	Console_cleanup();
 	playing_windows_initialized = false;
     }
-    cleanup_fonts();
-    cleanup_window_system();
+    if (cleanup_fonts())
+	cleanup_window_system();
 }
 
 static bool Set_geometry(xp_option_t *opt, const char *s)

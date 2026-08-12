@@ -278,6 +278,9 @@ export XPILOT_META_PORT
 meta_pid=$!
 window_owner_pid=$meta_pid
 wait_until "no-argument SDL initialization" 15 meta_initialized
+wait_until "metaserver font atlases" 10 \
+    grep -q '^Font atlases ready: game=renderer map=renderer$' \
+        "$runtime_dir/meta.log"
 wait_until "semantic metaserver UI" 20 meta_ui_ready
 wait_until "local metaserver request" 5 meta_fixture_served
 find_game_window || fail "metaserver window was not visible"
@@ -330,6 +333,9 @@ wait_until "SDL game window" 20 find_game_window
 wait_until "local client acceptance" 20 client_accepted
 wait_until "game OpenGL context diagnostics" 10 \
     grep -q '^OpenGL context:' "$runtime_dir/client.log"
+wait_until "game font atlases" 10 \
+    grep -q '^Font atlases ready: game=renderer map=renderer$' \
+        "$runtime_dir/client.log"
 
 xdotool windowsize "$window_id" 900 700 >/dev/null 2>&1 \
     || fail "could not request an SDL window resize"

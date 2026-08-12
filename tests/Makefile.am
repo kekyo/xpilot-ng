@@ -65,12 +65,26 @@ test_sdl_event_LDADD = @SDL2_LIBS@
 
 test_gl_legacy_SOURCES = test_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/gl_diagnostics.c \
-	$(top_srcdir)/src/client/sdl/sdlgui.c
+	$(top_srcdir)/src/client/sdl/sdlgui.c \
+	$(top_srcdir)/src/client/sdl/renderer.c \
+	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
+	$(top_srcdir)/src/client/sdl/sdlcompat.c \
+	$(top_srcdir)/src/client/sdl/text.c \
+	$(top_srcdir)/src/client/sdl/text_atlas.c \
+	$(top_srcdir)/src/client/sdl/text_atlas.h \
+	$(top_srcdir)/src/client/sdl/text_geometry.c \
+	$(top_srcdir)/src/client/sdl/text_geometry.h \
+	$(top_srcdir)/src/client/sdl/text_ttf_atlas.c \
+	$(top_srcdir)/src/client/sdl/text_ttf_atlas.h
+test_gl_legacy_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_TEST_FONT_PATH=\"$(top_srcdir)/lib/fonts/FreeSansBoldOblique.ttf\"
 test_gl_legacy_CFLAGS = $(AM_CFLAGS) -DXPILOT_GL_TEST_HOOKS \
 	-ffunction-sections -fdata-sections
 test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
-	-Wl,--wrap=glGetString
-test_gl_legacy_LDADD = @SDL2_LIBS@ @GLU_LIBS@ @GL_LIBS@
+	-Wl,--wrap=glGetString -Wl,--wrap=glGenLists \
+	-Wl,--wrap=glGenTextures
+test_gl_legacy_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
+	@GLU_LIBS@ @GL_LIBS@
 
 test_renderer_commands_SOURCES = test_renderer_commands.c \
 	$(top_srcdir)/src/client/sdl/renderer.c

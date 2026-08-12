@@ -135,7 +135,14 @@ test_gfx2d_picture_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(test_gfx2d_picture_LDFLAGS) $(LDFLAGS) -o $@
 am_test_gl_legacy_OBJECTS = test_gl_legacy-test_gl_legacy.$(OBJEXT) \
 	test_gl_legacy-gl_diagnostics.$(OBJEXT) \
-	test_gl_legacy-sdlgui.$(OBJEXT)
+	test_gl_legacy-sdlgui.$(OBJEXT) \
+	test_gl_legacy-renderer.$(OBJEXT) \
+	test_gl_legacy-renderer_gl_legacy.$(OBJEXT) \
+	test_gl_legacy-sdlcompat.$(OBJEXT) \
+	test_gl_legacy-text.$(OBJEXT) \
+	test_gl_legacy-text_atlas.$(OBJEXT) \
+	test_gl_legacy-text_geometry.$(OBJEXT) \
+	test_gl_legacy-text_ttf_atlas.$(OBJEXT)
 test_gl_legacy_OBJECTS = $(am_test_gl_legacy_OBJECTS)
 test_gl_legacy_DEPENDENCIES =
 test_gl_legacy_LINK = $(CCLD) $(test_gl_legacy_CFLAGS) $(CFLAGS) \
@@ -282,8 +289,15 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/sdlrenderer.Po ./$(DEPDIR)/sdlwindow.Po \
 	./$(DEPDIR)/surface_rgba8.Po ./$(DEPDIR)/test_gfx2d_picture.Po \
 	./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po \
+	./$(DEPDIR)/test_gl_legacy-renderer.Po \
+	./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po \
+	./$(DEPDIR)/test_gl_legacy-sdlcompat.Po \
 	./$(DEPDIR)/test_gl_legacy-sdlgui.Po \
 	./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po \
+	./$(DEPDIR)/test_gl_legacy-text.Po \
+	./$(DEPDIR)/test_gl_legacy-text_atlas.Po \
+	./$(DEPDIR)/test_gl_legacy-text_geometry.Po \
+	./$(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po \
 	./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po \
 	./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po \
 	./$(DEPDIR)/test_image_geometry.Po \
@@ -778,15 +792,31 @@ test_sdl_event_SOURCES = test_sdl_event.c \
 test_sdl_event_LDADD = @SDL2_LIBS@
 test_gl_legacy_SOURCES = test_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/gl_diagnostics.c \
-	$(top_srcdir)/src/client/sdl/sdlgui.c
+	$(top_srcdir)/src/client/sdl/sdlgui.c \
+	$(top_srcdir)/src/client/sdl/renderer.c \
+	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
+	$(top_srcdir)/src/client/sdl/sdlcompat.c \
+	$(top_srcdir)/src/client/sdl/text.c \
+	$(top_srcdir)/src/client/sdl/text_atlas.c \
+	$(top_srcdir)/src/client/sdl/text_atlas.h \
+	$(top_srcdir)/src/client/sdl/text_geometry.c \
+	$(top_srcdir)/src/client/sdl/text_geometry.h \
+	$(top_srcdir)/src/client/sdl/text_ttf_atlas.c \
+	$(top_srcdir)/src/client/sdl/text_ttf_atlas.h
+
+test_gl_legacy_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_TEST_FONT_PATH=\"$(top_srcdir)/lib/fonts/FreeSansBoldOblique.ttf\"
 
 test_gl_legacy_CFLAGS = $(AM_CFLAGS) -DXPILOT_GL_TEST_HOOKS \
 	-ffunction-sections -fdata-sections
 
 test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
-	-Wl,--wrap=glGetString
+	-Wl,--wrap=glGetString -Wl,--wrap=glGenLists \
+	-Wl,--wrap=glGenTextures
 
-test_gl_legacy_LDADD = @SDL2_LIBS@ @GLU_LIBS@ @GL_LIBS@
+test_gl_legacy_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
+	@GLU_LIBS@ @GL_LIBS@
+
 test_renderer_commands_SOURCES = test_renderer_commands.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
 
@@ -1050,8 +1080,15 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gfx2d_picture.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-renderer.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-sdlcompat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text_atlas.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text_geometry.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_image_geometry.Po@am__quote@ # am--include-marker
@@ -1129,46 +1166,144 @@ gfx2d.obj: $(top_srcdir)/src/client/gfx2d.c
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gfx2d.obj `if test -f '$(top_srcdir)/src/client/gfx2d.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/gfx2d.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/gfx2d.c'; fi`
 
 test_gl_legacy-test_gl_legacy.o: test_gl_legacy.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-test_gl_legacy.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo -c -o test_gl_legacy-test_gl_legacy.o `test -f 'test_gl_legacy.c' || echo '$(srcdir)/'`test_gl_legacy.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-test_gl_legacy.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo -c -o test_gl_legacy-test_gl_legacy.o `test -f 'test_gl_legacy.c' || echo '$(srcdir)/'`test_gl_legacy.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo $(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_gl_legacy.c' object='test_gl_legacy-test_gl_legacy.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-test_gl_legacy.o `test -f 'test_gl_legacy.c' || echo '$(srcdir)/'`test_gl_legacy.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-test_gl_legacy.o `test -f 'test_gl_legacy.c' || echo '$(srcdir)/'`test_gl_legacy.c
 
 test_gl_legacy-test_gl_legacy.obj: test_gl_legacy.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-test_gl_legacy.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo -c -o test_gl_legacy-test_gl_legacy.obj `if test -f 'test_gl_legacy.c'; then $(CYGPATH_W) 'test_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/test_gl_legacy.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-test_gl_legacy.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo -c -o test_gl_legacy-test_gl_legacy.obj `if test -f 'test_gl_legacy.c'; then $(CYGPATH_W) 'test_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/test_gl_legacy.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo $(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_gl_legacy.c' object='test_gl_legacy-test_gl_legacy.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-test_gl_legacy.obj `if test -f 'test_gl_legacy.c'; then $(CYGPATH_W) 'test_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/test_gl_legacy.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-test_gl_legacy.obj `if test -f 'test_gl_legacy.c'; then $(CYGPATH_W) 'test_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/test_gl_legacy.c'; fi`
 
 test_gl_legacy-gl_diagnostics.o: $(top_srcdir)/src/client/sdl/gl_diagnostics.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-gl_diagnostics.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo -c -o test_gl_legacy-gl_diagnostics.o `test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/gl_diagnostics.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-gl_diagnostics.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo -c -o test_gl_legacy-gl_diagnostics.o `test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/gl_diagnostics.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo $(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/gl_diagnostics.c' object='test_gl_legacy-gl_diagnostics.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-gl_diagnostics.o `test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/gl_diagnostics.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-gl_diagnostics.o `test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/gl_diagnostics.c
 
 test_gl_legacy-gl_diagnostics.obj: $(top_srcdir)/src/client/sdl/gl_diagnostics.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-gl_diagnostics.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo -c -o test_gl_legacy-gl_diagnostics.obj `if test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-gl_diagnostics.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo -c -o test_gl_legacy-gl_diagnostics.obj `if test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo $(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/gl_diagnostics.c' object='test_gl_legacy-gl_diagnostics.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-gl_diagnostics.obj `if test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-gl_diagnostics.obj `if test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; fi`
 
 test_gl_legacy-sdlgui.o: $(top_srcdir)/src/client/sdl/sdlgui.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-sdlgui.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-sdlgui.Tpo -c -o test_gl_legacy-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-sdlgui.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-sdlgui.Tpo -c -o test_gl_legacy-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-sdlgui.Tpo $(DEPDIR)/test_gl_legacy-sdlgui.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_gl_legacy-sdlgui.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
 
 test_gl_legacy-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-sdlgui.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-sdlgui.Tpo -c -o test_gl_legacy-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-sdlgui.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-sdlgui.Tpo -c -o test_gl_legacy-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-sdlgui.Tpo $(DEPDIR)/test_gl_legacy-sdlgui.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_gl_legacy-sdlgui.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+
+test_gl_legacy-renderer.o: $(top_srcdir)/src/client/sdl/renderer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-renderer.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-renderer.Tpo -c -o test_gl_legacy-renderer.o `test -f '$(top_srcdir)/src/client/sdl/renderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-renderer.Tpo $(DEPDIR)/test_gl_legacy-renderer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer.c' object='test_gl_legacy-renderer.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-renderer.o `test -f '$(top_srcdir)/src/client/sdl/renderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer.c
+
+test_gl_legacy-renderer.obj: $(top_srcdir)/src/client/sdl/renderer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-renderer.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-renderer.Tpo -c -o test_gl_legacy-renderer.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-renderer.Tpo $(DEPDIR)/test_gl_legacy-renderer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer.c' object='test_gl_legacy-renderer.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-renderer.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer.c'; fi`
+
+test_gl_legacy-renderer_gl_legacy.o: $(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-renderer_gl_legacy.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Tpo -c -o test_gl_legacy-renderer_gl_legacy.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Tpo $(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' object='test_gl_legacy-renderer_gl_legacy.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-renderer_gl_legacy.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
+
+test_gl_legacy-renderer_gl_legacy.obj: $(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-renderer_gl_legacy.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Tpo -c -o test_gl_legacy-renderer_gl_legacy.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Tpo $(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' object='test_gl_legacy-renderer_gl_legacy.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-renderer_gl_legacy.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; fi`
+
+test_gl_legacy-sdlcompat.o: $(top_srcdir)/src/client/sdl/sdlcompat.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-sdlcompat.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-sdlcompat.Tpo -c -o test_gl_legacy-sdlcompat.o `test -f '$(top_srcdir)/src/client/sdl/sdlcompat.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlcompat.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-sdlcompat.Tpo $(DEPDIR)/test_gl_legacy-sdlcompat.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlcompat.c' object='test_gl_legacy-sdlcompat.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-sdlcompat.o `test -f '$(top_srcdir)/src/client/sdl/sdlcompat.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlcompat.c
+
+test_gl_legacy-sdlcompat.obj: $(top_srcdir)/src/client/sdl/sdlcompat.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-sdlcompat.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-sdlcompat.Tpo -c -o test_gl_legacy-sdlcompat.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlcompat.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlcompat.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlcompat.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-sdlcompat.Tpo $(DEPDIR)/test_gl_legacy-sdlcompat.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlcompat.c' object='test_gl_legacy-sdlcompat.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-sdlcompat.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlcompat.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlcompat.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlcompat.c'; fi`
+
+test_gl_legacy-text.o: $(top_srcdir)/src/client/sdl/text.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-text.Tpo -c -o test_gl_legacy-text.o `test -f '$(top_srcdir)/src/client/sdl/text.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text.Tpo $(DEPDIR)/test_gl_legacy-text.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text.c' object='test_gl_legacy-text.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text.o `test -f '$(top_srcdir)/src/client/sdl/text.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text.c
+
+test_gl_legacy-text.obj: $(top_srcdir)/src/client/sdl/text.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-text.Tpo -c -o test_gl_legacy-text.obj `if test -f '$(top_srcdir)/src/client/sdl/text.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text.Tpo $(DEPDIR)/test_gl_legacy-text.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text.c' object='test_gl_legacy-text.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text.obj `if test -f '$(top_srcdir)/src/client/sdl/text.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text.c'; fi`
+
+test_gl_legacy-text_atlas.o: $(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text_atlas.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-text_atlas.Tpo -c -o test_gl_legacy-text_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text_atlas.Tpo $(DEPDIR)/test_gl_legacy-text_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_atlas.c' object='test_gl_legacy-text_atlas.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_atlas.c
+
+test_gl_legacy-text_atlas.obj: $(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text_atlas.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-text_atlas.Tpo -c -o test_gl_legacy-text_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_atlas.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text_atlas.Tpo $(DEPDIR)/test_gl_legacy-text_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_atlas.c' object='test_gl_legacy-text_atlas.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_atlas.c'; fi`
+
+test_gl_legacy-text_geometry.o: $(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text_geometry.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-text_geometry.Tpo -c -o test_gl_legacy-text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text_geometry.Tpo $(DEPDIR)/test_gl_legacy-text_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='test_gl_legacy-text_geometry.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
+
+test_gl_legacy-text_geometry.obj: $(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text_geometry.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-text_geometry.Tpo -c -o test_gl_legacy-text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text_geometry.Tpo $(DEPDIR)/test_gl_legacy-text_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='test_gl_legacy-text_geometry.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
+
+test_gl_legacy-text_ttf_atlas.o: $(top_srcdir)/src/client/sdl/text_ttf_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text_ttf_atlas.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-text_ttf_atlas.Tpo -c -o test_gl_legacy-text_ttf_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_ttf_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text_ttf_atlas.Tpo $(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' object='test_gl_legacy-text_ttf_atlas.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_ttf_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_ttf_atlas.c
+
+test_gl_legacy-text_ttf_atlas.obj: $(top_srcdir)/src/client/sdl/text_ttf_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text_ttf_atlas.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-text_ttf_atlas.Tpo -c -o test_gl_legacy-text_ttf_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text_ttf_atlas.Tpo $(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' object='test_gl_legacy-text_ttf_atlas.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_ttf_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; fi`
 
 test_glwidgets_scissor-test_glwidgets_scissor.o: test_glwidgets_scissor.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_scissor_CFLAGS) $(CFLAGS) -MT test_glwidgets_scissor-test_glwidgets_scissor.o -MD -MP -MF $(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Tpo -c -o test_glwidgets_scissor-test_glwidgets_scissor.o `test -f 'test_glwidgets_scissor.c' || echo '$(srcdir)/'`test_glwidgets_scissor.c
@@ -2185,8 +2320,15 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_gfx2d_picture.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-renderer.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlcompat.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-text.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-text_atlas.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-text_geometry.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po
 	-rm -f ./$(DEPDIR)/test_image_geometry.Po
@@ -2290,8 +2432,15 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_gfx2d_picture.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-renderer.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlcompat.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-text.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-text_atlas.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-text_geometry.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po
 	-rm -f ./$(DEPDIR)/test_image_geometry.Po

@@ -24,6 +24,7 @@
 #include "xpclient_sdl.h"
 
 #include "sdlpaint.h"
+#include "text_atlas.h"
 
 #define LEFT 0
 #define DOWN 0
@@ -47,6 +48,8 @@ typedef struct {
     GLuint h; /* char height */
     GLuint linespacing; /* proper line spacing according to FT */
     TTF_Font *ttffont;
+    /** Immutable renderer-backed glyph atlas for this font. */
+    TextAtlas *atlas;
 } font_data;
 
 typedef struct {
@@ -75,13 +78,32 @@ typedef struct {
 	float height;
 } fontbounds;
 
-/* The init function will create a font of
- * of the height h from the file fname.
+/**
+ * Create a font and its legacy and renderer-backed drawing resources.
+ *
+ * @param ft_font Zero-initialized empty destination that receives the font on
+ * success.
+ * @param renderer Renderer that owns the font atlas.
+ * @param fname Font file to load.
+ * @param size Requested point size.
+ * @return Operation status.
+ *
+ * @remarks Creation is atomic and must occur outside an active renderer
+ * frame. The renderer must remain alive until fontclean() succeeds.
  */
-int fontinit(font_data *ft_font, const char * fname, unsigned int size);
+RendererStatus fontinit(font_data *ft_font, Renderer *renderer,
+			const char *fname, unsigned int size);
 
-/* Free all the resources assosiated with the font.*/
-void fontclean(font_data *ft_font);
+/**
+ * Free all resources associated with a font.
+ *
+ * @param ft_font Font to clean; an already-empty font is valid.
+ * @return Operation status.
+ *
+ * @remarks If atlas destruction is rejected, all font resources remain
+ * intact so cleanup can be retried after the active frame ends.
+ */
+RendererStatus fontclean(font_data *ft_font);
 
 /* loads a SDL surface onto a GL texture */
 GLuint SDL_GL_LoadTexture(SDL_Surface *surface, texcoord_t *texcoord);

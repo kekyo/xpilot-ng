@@ -53,10 +53,13 @@
 # endif
 #endif
 
+#include <limits.h>
+
 #include "xpclient_sdl.h"
 
 #include "sdlcompat.h"
 #include "text.h"
+#include "text_ttf_atlas.h"
 
 #define BUFSIZE 1024
 
@@ -68,7 +71,11 @@ void pushScreenCoordinateMatrix(void);
 void pop_projection_matrix(void);
 int next_p2 ( int a );
 void print(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, int length, const char *text, bool onHUD);
-int FTinit(font_data *font, const char * fontname, int ptsize);
+
+static RendererStatus Init_legacy_font(font_data *font,
+				       const char *fontname, int ptsize);
+static bool Font_is_empty(const font_data *font);
+static void Release_legacy_font_resources(font_data *font);
 
 int next_p2 ( int a )
 {
@@ -134,7 +141,8 @@ GLuint SDL_GL_LoadTexture(SDL_Surface *surface, texcoord_t *texcoord)
     return texture;
 }
 
-int FTinit(font_data *font, const char * fontname, int ptsize)
+static RendererStatus Init_legacy_font(font_data *font,
+				       const char *fontname, int ptsize)
 {
     int i;
     SDL_Color white = { 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE };
@@ -142,11 +150,6 @@ int FTinit(font_data *font, const char * fontname, int ptsize)
     GLenum gl_error;
     texcoord_t texcoords;
     int minx = 0,miny = 0,maxx = 0,maxy = 0;
-
-    if (font == NULL || fontname == NULL || ptsize <= 0)
-	return 2;
-
-    memset(font, 0, sizeof(*font));
 
     /* We might support changing theese later */
     /* Look for special rendering types */
@@ -162,16 +165,15 @@ int FTinit(font_data *font, const char * fontname, int ptsize)
     }*/
     font->ttffont = TTF_OpenFont(fontname, ptsize);
     if ( font->ttffont == NULL ) {
-    	fprintf(stderr, "Couldn't load %d pt font from %s: %s\n", ptsize, fontname, SDL_GetError());
-    	return(2);
+	fprintf(stderr, "Couldn't load %d pt font from %s: %s\n", ptsize,
+		fontname, TTF_GetError());
+	return RENDERER_STATUS_BACKEND_ERROR;
     }
     TTF_SetFontStyle(font->ttffont, renderstyle);
     font->list_base=glGenLists(next_p2(NUMCHARS));
     if (font->list_base == 0) {
 	fprintf(stderr, "Couldn't create OpenGL font display lists\n");
-	TTF_CloseFont(font->ttffont);
-	font->ttffont = NULL;
-	return 2;
+	return RENDERER_STATUS_BACKEND_ERROR;
     }
     /* Get the recommended spacing between lines of text for this font */
     font->linespacing = TTF_FontLineSkip(font->ttffont);
@@ -227,30 +229,80 @@ int FTinit(font_data *font, const char * fontname, int ptsize)
     
     /*TTF_CloseFont(font->ttffont);*/
     /*TTF_Quit();*/
-    return 0;
+    return RENDERER_STATUS_OK;
 }
 
-int fontinit(font_data *ft_font, const char * fname, unsigned int size)
+static bool Font_is_empty(const font_data *font)
 {
-    return FTinit(ft_font,fname,size);
+    size_t index;
+
+    if (font->ttffont != NULL || font->atlas != NULL
+	|| font->list_base != 0 || font->h != 0 || font->linespacing != 0) {
+	return false;
+    }
+    for (index = 0; index < NUMCHARS; index++) {
+	if (font->textures[index] != 0 || font->W[index] != 0)
+	    return false;
+    }
+    return true;
 }
 
-void fontclean(font_data *ft_font)
+static void Release_legacy_font_resources(font_data *font)
 {
+    if (font->list_base != 0) {
+	glDeleteLists(font->list_base, next_p2(NUMCHARS));
+	font->list_base = 0;
+    }
+    glDeleteTextures(NUMCHARS, font->textures);
+    memset(font->textures, 0, sizeof(font->textures));
+
+    if (font->ttffont != NULL) {
+	TTF_CloseFont(font->ttffont);
+	font->ttffont = NULL;
+    }
+}
+
+RendererStatus fontinit(font_data *ft_font, Renderer *renderer,
+			const char *fname, unsigned int size)
+{
+    font_data candidate;
+    RendererStatus status;
+
+    if (ft_font == NULL || renderer == NULL || fname == NULL
+	|| size == 0 || size > INT_MAX || !Font_is_empty(ft_font)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+
+    memset(&candidate, 0, sizeof(candidate));
+    status = Init_legacy_font(&candidate, fname, (int)size);
+    if (status == RENDERER_STATUS_OK) {
+	status = Text_ttf_atlas_create(renderer, candidate.ttffont,
+				       &candidate.atlas);
+    }
+    if (status != RENDERER_STATUS_OK) {
+	Release_legacy_font_resources(&candidate);
+	memset(&candidate, 0, sizeof(candidate));
+	return status;
+    }
+
+    *ft_font = candidate;
+    return RENDERER_STATUS_OK;
+}
+
+RendererStatus fontclean(font_data *ft_font)
+{
+    RendererStatus status;
+
     if (ft_font == NULL)
-	return;
+	return RENDERER_STATUS_INVALID_ARGUMENT;
 
-    if (ft_font->list_base != 0) {
-	glDeleteLists(ft_font->list_base, next_p2(NUMCHARS));
-	ft_font->list_base = 0;
-    }
-    glDeleteTextures(NUMCHARS, ft_font->textures);
-    memset(ft_font->textures, 0, sizeof(ft_font->textures));
+    status = Text_atlas_destroy(&ft_font->atlas);
+    if (status != RENDERER_STATUS_OK)
+	return status;
 
-    if (ft_font->ttffont != NULL) {
-	TTF_CloseFont(ft_font->ttffont);
-	ft_font->ttffont = NULL;
-    }
+    Release_legacy_font_resources(ft_font);
+    memset(ft_font, 0, sizeof(*ft_font));
+    return RENDERER_STATUS_OK;
 }
 
 /* A fairly straight forward function that pushes
