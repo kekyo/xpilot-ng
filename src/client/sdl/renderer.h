@@ -232,16 +232,21 @@ RendererStatus Renderer_fill_rect(Renderer *renderer, float x, float y,
                                   RendererColor color);
 
 /**
- * Queue an explicit triangle list.
+ * Queue an explicit triangle list with an optional texture.
  *
- * The vertex data is copied before this function returns.
+ * The vertex data is copied before this function returns. When a texture is
+ * supplied, sampled RGBA values are multiplied by each vertex color.
  *
  * @param renderer Renderer with an active frame.
+ * @param texture Texture to sample, or NULL for untextured triangles. The
+ *        texture must belong to @p renderer and remains borrowed until the
+ *        command is flushed.
  * @param vertices Vertex array.
  * @param vertex_count Positive number of vertices divisible by three.
  * @return Operation status.
  */
 RendererStatus Renderer_draw_triangles(Renderer *renderer,
+                                       RendererTexture *texture,
                                        const RendererVertex2D *vertices,
                                        size_t vertex_count);
 

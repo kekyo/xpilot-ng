@@ -106,6 +106,7 @@ static const PixelExpectation semantic_pixels[] = {
     {19,  4,   0, 255,   0, 255},
     {16,  4,   8,  16,  24, 255},
     { 4, 10,  18,  36,  54, 255},
+    {25,  4, 128,  64,   0, 128},
     { 9, 13, 255, 128,   0, 255},
     {15, 13, 255, 255,   0, 255},
     {20, 13,   0, 255,   0, 255},
@@ -529,6 +530,11 @@ static int render_scene(RendererFactory factory, TestContext *test_context,
         {30.0f, 20.0f, 0.0f, 0.0f, {0, 255, 255, 255}},
         {22.0f, 20.0f, 0.0f, 0.0f, {0, 255, 255, 255}}
     };
+    static const RendererVertex2D textured_triangle_vertices[] = {
+        {24.0f, 2.0f, 0.0f, 0.0f, {128, 64, 192, 128}},
+        {30.0f, 2.0f, 0.0f, 0.0f, {128, 64, 192, 128}},
+        {24.0f, 10.0f, 0.0f, 0.0f, {128, 64, 192, 128}}
+    };
     const RendererTextureDesc texture_desc = {
         .width = 2,
         .height = 2,
@@ -624,6 +630,9 @@ static int render_scene(RendererFactory factory, TestContext *test_context,
                            (RendererColor){255, 128, 0, 255})
                        == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(Renderer_set_transform_2d(renderer, identity)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_draw_triangles(
+                           renderer, texture, textured_triangle_vertices, 3)
                        == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(Renderer_draw_sprite(
                            renderer, texture,

@@ -298,13 +298,13 @@ static int check_triangle_command_order(void)
     TEST_CHECK(renderer != NULL);
     TEST_CHECK(Renderer_begin_frame(renderer, 100, 80, black)
                == RENDERER_STATUS_OK);
-    TEST_CHECK(Renderer_draw_triangles(renderer, first, 3)
+    TEST_CHECK(Renderer_draw_triangles(renderer, NULL, first, 3)
                == RENDERER_STATUS_OK);
     first[0].x = 99.0f;
     first[0].color.red = 0;
-    TEST_CHECK(Renderer_draw_triangles(renderer, second, 3)
+    TEST_CHECK(Renderer_draw_triangles(renderer, NULL, second, 3)
                == RENDERER_STATUS_OK);
-    TEST_CHECK(Renderer_draw_triangles(renderer, first, 2)
+    TEST_CHECK(Renderer_draw_triangles(renderer, NULL, first, 2)
                == RENDERER_STATUS_INVALID_ARGUMENT);
 
     TEST_CHECK(backend.draw_count == 0);

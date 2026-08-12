@@ -499,6 +499,7 @@ RendererStatus Renderer_fill_rect(Renderer *renderer, float x, float y,
 }
 
 RendererStatus Renderer_draw_triangles(Renderer *renderer,
+                                       RendererTexture *texture,
                                        const RendererVertex2D *vertices,
                                        size_t vertex_count)
 {
@@ -509,10 +510,13 @@ RendererStatus Renderer_draw_triangles(Renderer *renderer,
         return status;
     if (vertices == NULL || !Vertex_count_valid(vertex_count))
         return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (texture != NULL && !Texture_is_owned(renderer, texture))
+        return RENDERER_STATUS_RESOURCE_MISMATCH;
     copy = Copy_vertices(vertices, vertex_count);
     if (copy == NULL)
         return RENDERER_STATUS_OUT_OF_MEMORY;
-    return Queue_command(renderer, copy, vertex_count, NULL, NULL,
+    return Queue_command(renderer, copy, vertex_count,
+                         texture != NULL ? texture->handle : NULL, NULL,
                          renderer->transform);
 }
 
