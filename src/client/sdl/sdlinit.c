@@ -29,6 +29,7 @@
 #include "sdlpaint.h"
 #include "sdlinit.h"
 #include "gl_diagnostics.h"
+#include "sdlrenderer.h"
 
 /* These are only needed for the polygon tessellation */
 /* I'd like to move them to Paint_init/cleanup but because it */
@@ -39,6 +40,7 @@ extern void Gui_cleanup(void);
 
 static SDL_Window *main_window;
 static SDL_GLContext main_gl_context;
+static SdlRenderer *main_renderer;
 static bool sdl_initialized;
 static bool image_initialized;
 static bool ttf_initialized;
@@ -102,6 +104,10 @@ int Init_playing_windows(void)
 
 static void cleanup_window_system(void)
 {
+    if (main_renderer != NULL) {
+	Sdl_renderer_destroy(main_renderer);
+	main_renderer = NULL;
+    }
     if (main_gl_context != NULL) {
 	SDL_GL_DeleteContext(main_gl_context);
 	main_gl_context = NULL;
@@ -137,14 +143,6 @@ static void apply_window_size(int width, int height)
     if (MainWidget != NULL)
 	SetBounds_GLWidget(MainWidget, &bounds);
 
-    glViewport(0, 0, (GLint)draw_width, (GLint)draw_height);
-    if (MainWidget != NULL) {
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluOrtho2D(0, draw_width, 0, draw_height);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-    }
 }
 
 static void cleanup_fonts(void)
@@ -178,6 +176,7 @@ int Init_window(void)
 {
     int value;
     int image_flags;
+    RendererStatus renderer_status;
     char defaultfontname[] = CONF_FONTDIR "FreeSansBoldOblique.ttf";
     bool gf_exists = true,df_exists = true,gf_init = false, mf_init = false;
 
@@ -232,6 +231,12 @@ int Init_window(void)
     }
     Gl_diagnostics_log_context();
     Gl_diagnostics_check("context creation");
+    renderer_status = Sdl_renderer_create(main_window, &main_renderer);
+    if (renderer_status != RENDERER_STATUS_OK) {
+	error("Could not initialize the compatibility OpenGL renderer (%d)",
+	      (int)renderer_status);
+	goto fail;
+    }
     SDL_StopTextInput();
     windowed_width = draw_width;
     windowed_height = draw_height;
@@ -244,14 +249,6 @@ int Init_window(void)
     printf("%d ", value);
     SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &value);
     printf("Bit Depth is %d\n",value);
-
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glViewport(0, 0, draw_width, draw_height);
-    glMatrixMode(GL_PROJECTION);
-    gluOrtho2D(0, draw_width, 0, draw_height);
-    glMatrixMode(GL_MODELVIEW);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     /* this prevents a freetype crash if you pass non existant fonts */
     if (!file_exists(gamefontname)) {
@@ -314,6 +311,11 @@ fail:
     cleanup_fonts();
     cleanup_window_system();
     return -1;
+}
+
+SdlRenderer *Get_sdl_renderer(void)
+{
+    return main_renderer;
 }
 
 /* function to reset our viewport after a window resize */

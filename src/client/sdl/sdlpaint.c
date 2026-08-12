@@ -43,6 +43,8 @@
 #include "glwidgets.h"
 #include "radar.h"
 #include "gl_diagnostics.h"
+#include "paint_transform.h"
+#include "sdlrenderer.h"
 
 #define SCORE_BORDER 5
 
@@ -54,10 +56,50 @@ static const char   *scoreListFontName = CONF_FONTDIR "VeraMoBd.ttf";
 static sdl_window_t scoreListWin;
 static SDL_Rect     scoreEntryRect; /* Bounds for the last painted score entry */
 static bool         scoreListMoving;
+static bool         rendererFramePending;
 
 int paintSetupMode;
 
 GLWidget *MainWidget = NULL;
+
+static void set_renderer_world_transform(int rounded_translation)
+{
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+    RendererTransform2D transform;
+    int drawable_width;
+    int drawable_height;
+
+    if (sdl_renderer == NULL
+	|| Sdl_renderer_get_drawable_size(sdl_renderer, &drawable_width,
+					 &drawable_height) != RENDERER_STATUS_OK
+	|| Paint_transform_world(clData.scale, world.x, world.y,
+				 draw_width, draw_height,
+				 drawable_width, drawable_height,
+				 rounded_translation, &transform) != 0
+	|| Renderer_set_transform_2d(Sdl_renderer_frontend(sdl_renderer),
+				     transform) != RENDERER_STATUS_OK) {
+	warn("Could not update the renderer world transform");
+    }
+}
+
+static void set_renderer_hud_transform(void)
+{
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+    RendererTransform2D transform;
+    int drawable_width;
+    int drawable_height;
+
+    if (sdl_renderer == NULL
+	|| Sdl_renderer_get_drawable_size(sdl_renderer, &drawable_width,
+					 &drawable_height) != RENDERER_STATUS_OK
+	|| Paint_transform_hud(draw_width, draw_height,
+			       drawable_width, drawable_height,
+			       &transform) != 0
+	|| Renderer_set_transform_2d(Sdl_renderer_frontend(sdl_renderer),
+				     transform) != RENDERER_STATUS_OK) {
+	warn("Could not update the renderer HUD transform");
+    }
+}
 
 static void Scorelist_button(Uint8 button, Uint8 state, Uint16 x, Uint16 y, void *data)
 {
@@ -199,6 +241,7 @@ bool Set_altScaleFactor(xp_option_t *opt, double val)
 
 int Paint_init(void)
 {
+    rendererFramePending = false;
     if (Init_wreckage() == -1)
 	return -1;
     
@@ -214,6 +257,8 @@ int Paint_init(void)
 void Paint_cleanup(void)
 {
     int i;
+
+    rendererFramePending = false;
     Images_cleanup();
 
     for (i=0;i<MAX_SCORE_OBJECTS;++i)
@@ -229,6 +274,7 @@ void setupPaint_stationary(void)
 {
     if (paintSetupMode & STATIONARY_MODE) return;
     paintSetupMode = STATIONARY_MODE;
+    set_renderer_world_transform(1);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
@@ -246,6 +292,7 @@ void setupPaint_moving(void)
 {
     if (paintSetupMode & MOVING_MODE) return;
     paintSetupMode = MOVING_MODE;
+    set_renderer_world_transform(0);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
@@ -258,6 +305,7 @@ void setupPaint_HUD(void)
 {
     if (paintSetupMode & HUD_MODE) return;
     paintSetupMode = HUD_MODE;
+    set_renderer_hud_transform();
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -270,24 +318,42 @@ void setupPaint_HUD(void)
 void Paint_frame(void)
 {
     struct timeval tv1, tv2;
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+    RendererStatus renderer_status;
 
     gettimeofday(&tv1, NULL);
 
     Paint_frame_start();
     Gl_diagnostics_check("frame start");
 
+    /* A backend end failure keeps the old frame active so that its cleanup
+     * can be retried without replaying already delivered commands. */
+    if (rendererFramePending) {
+	renderer_status = Sdl_renderer_end_frame(sdl_renderer);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    warn("Could not recover the previous renderer frame (%d)",
+		 (int)renderer_status);
+	    goto timing;
+	}
+	rendererFramePending = false;
+    }
+
     if (damaged <= 0) {
-    	/*glClear(GL_COLOR_BUFFER_BIT);*/
-	/* on my machine this seems about 10 times faster
-	 * with seemingly the same result
-	 */
-	set_alphacolor(blackRGBA);
-	glBegin(GL_QUADS);
-	    glVertex2i(0,0);
-	    glVertex2i(draw_width,0);
-	    glVertex2i(draw_width,draw_height);
-	    glVertex2i(0,draw_height);
-	glEnd();
+	renderer_status = Sdl_renderer_begin_frame(
+	    sdl_renderer, draw_width, draw_height,
+	    Renderer_color_from_rgba32(blackRGBA));
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    warn("Could not begin renderer frame (%d)", (int)renderer_status);
+	    goto timing;
+	}
+	rendererFramePending = true;
+	renderer_status = Sdl_renderer_prepare_legacy(
+	    sdl_renderer, SDL_RENDERER_LEGACY_BOTTOM_LEFT);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    warn("Could not prepare legacy world rendering (%d)",
+		 (int)renderer_status);
+	    goto finish_frame;
+	}
 
 	glEnable(GL_BLEND);
     	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -338,9 +404,20 @@ void Paint_frame(void)
 	glPopMatrix();
     }
 
+finish_frame:
     Gl_diagnostics_check("frame end");
+    if (rendererFramePending) {
+	renderer_status = Sdl_renderer_end_frame(sdl_renderer);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    warn("Could not end renderer frame (%d)", (int)renderer_status);
+	    goto timing;
+	} else {
+	    rendererFramePending = false;
+	}
+    }
     Swap_buffers();
 
+timing:
     if (newSecond) {
 	gettimeofday(&tv2, NULL);
 	clData.clientLag = 1e-3 * timeval_sub(&tv2, &tv1);

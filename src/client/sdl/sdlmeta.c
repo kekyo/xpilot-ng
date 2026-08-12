@@ -994,6 +994,8 @@ int Meta_window(Connect_param_t *conpar)
     GLWidget *btn, *root, *meta, *target = NULL;
     SDL_Event evt;
     server_info_t *server = NULL;
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+    RendererStatus renderer_status;
     
     if (!server_list ||
 	List_size(server_list) < 10 ||
@@ -1069,26 +1071,36 @@ int Meta_window(Connect_param_t *conpar)
 	AppendGLWidgetList(&(root->children), btn);
     }
     
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluOrtho2D(0, draw_width, draw_height, 0);
-    glDisable(GL_BLEND);
-    
     while(1) {
-
-	set_alphacolor(blackRGBA);
-	glBegin(GL_QUADS);
-	glVertex2i(0,0);
-	glVertex2i(draw_width,0);
-	glVertex2i(draw_width,draw_height);
-	glVertex2i(0,draw_height);
-	glEnd();
+	renderer_status = Sdl_renderer_begin_frame(
+	    sdl_renderer, draw_width, draw_height,
+	    Renderer_color_from_rgba32(blackRGBA));
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Could not begin metaserver renderer frame (%d)",
+		  (int)renderer_status);
+	    Close_Widget(&root);
+	    return -1;
+	}
+	renderer_status = Sdl_renderer_prepare_legacy(
+	    sdl_renderer, SDL_RENDERER_LEGACY_TOP_LEFT);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Could not prepare metaserver legacy rendering (%d)",
+		  (int)renderer_status);
+	    Sdl_renderer_end_frame(sdl_renderer);
+	    Close_Widget(&root);
+	    return -1;
+	}
 	glEnable(GL_SCISSOR_TEST);
 	DrawGLWidgetsi(meta, 0, 0, draw_width, draw_height);
 	glDisable(GL_SCISSOR_TEST);
 	Gl_diagnostics_check("meta frame end");
+	renderer_status = Sdl_renderer_end_frame(sdl_renderer);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Could not end metaserver renderer frame (%d)",
+		  (int)renderer_status);
+	    Close_Widget(&root);
+	    return -1;
+	}
 	Swap_buffers();
 	
 	if (SDL_WaitEvent(&evt) == 0) {
@@ -1111,10 +1123,6 @@ int Meta_window(Connect_param_t *conpar)
 		    if (!server) break;
 		    if (join_server(conpar, server)) {
 			Close_Widget(&root);
-			glEnable(GL_BLEND);
-			glMatrixMode(GL_PROJECTION);
-			glLoadIdentity();
-			gluOrtho2D(0, draw_width, 0, draw_height);
 			return 0;
 		    }
 		} else if (evt.user.code == EVENT_REFRESH) {
@@ -1163,24 +1171,10 @@ int Meta_window(Connect_param_t *conpar)
 		    Window_size_changed(evt.window.data1, evt.window.data2);
 		    root->bounds.w = draw_width;
 		    root->bounds.h = draw_height;
-		    glMatrixMode(GL_PROJECTION);
-		    glLoadIdentity();
-		    gluOrtho2D(0, draw_width, draw_height, 0);
-		    glMatrixMode(GL_MODELVIEW);
-		    glLoadIdentity();
 		}
 		if (evt.window.event != SDL_WINDOWEVENT_EXPOSED &&
 		    evt.window.event != SDL_WINDOWEVENT_SIZE_CHANGED)
 		    break;
-		glDisable(GL_SCISSOR_TEST);
-		set_alphacolor(blackRGBA);
-		glBegin(GL_QUADS);
-		glVertex2i(0,0);
-		glVertex2i(draw_width,0);
-		glVertex2i(draw_width,draw_height);
-		glVertex2i(0,draw_height);
-		glEnd();
-		glEnable(GL_SCISSOR_TEST);
 		break;
 	    }
 	} while (SDL_PollEvent(&evt));

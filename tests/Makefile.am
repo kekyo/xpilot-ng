@@ -51,7 +51,8 @@ test_renderer_geometry_SOURCES = test_renderer_geometry.c \
 test_renderer_gl_backends_SOURCES = test_renderer_gl_backends.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
-	$(top_srcdir)/src/client/sdl/renderer_gl_core.c
+	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
+	$(top_srcdir)/src/client/sdl/sdlrenderer.c
 test_renderer_gl_backends_LDADD = @SDL2_LIBS@ @GL_LIBS@
 
 test_paint_transform_SOURCES = test_paint_transform.c \

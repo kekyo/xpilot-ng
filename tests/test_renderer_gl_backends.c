@@ -4,6 +4,7 @@
 #include "renderer_gl.h"
 #include "renderer_gl_core.h"
 #include "renderer_gl_legacy.h"
+#include "sdlrenderer.h"
 
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -714,6 +715,129 @@ static int check_rgba(const GLubyte *pixels, int x, int y,
     return 0;
 }
 
+static void draw_legacy_quad(float left, float bottom,
+                             float right, float top,
+                             GLubyte red, GLubyte green, GLubyte blue)
+{
+    glColor4ub(red, green, blue, 255);
+    glBegin(GL_QUADS);
+    glVertex2f(left, bottom);
+    glVertex2f(right, bottom);
+    glVertex2f(right, top);
+    glVertex2f(left, top);
+    glEnd();
+}
+
+static int check_sdl_renderer_mixed_legacy_scene(TestContext *test_context)
+{
+    const RendererColor clear = {8, 16, 24, 255};
+    const RendererColor green = {0, 255, 0, 255};
+    GLubyte pixels[FRAME_WIDTH * FRAME_HEIGHT * PIXEL_COMPONENTS];
+    SdlRenderer *sdl_renderer = NULL;
+    Renderer *frontend;
+    int drawable_width = 0;
+    int drawable_height = 0;
+    int result = 1;
+
+    TEST_CHECK_CLEANUP(SDL_GL_MakeCurrent(test_context->window,
+                                          test_context->context) == 0);
+    TEST_CHECK_CLEANUP(Sdl_renderer_create(test_context->window,
+                                           &sdl_renderer)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(sdl_renderer != NULL);
+    frontend = Sdl_renderer_frontend(sdl_renderer);
+    TEST_CHECK_CLEANUP(frontend != NULL);
+    TEST_CHECK_CLEANUP(Sdl_renderer_get_drawable_size(
+                           sdl_renderer, &drawable_width, &drawable_height)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(drawable_width == FRAME_WIDTH);
+    TEST_CHECK_CLEANUP(drawable_height == FRAME_HEIGHT);
+
+    test_context->framebuffer_api.bind(GL_FRAMEBUFFER,
+                                       test_context->framebuffer);
+    TEST_CHECK_CLEANUP(Sdl_renderer_begin_frame(
+                           sdl_renderer, FRAME_WIDTH, FRAME_HEIGHT, clear)
+                       == RENDERER_STATUS_OK);
+
+    TEST_CHECK_CLEANUP(Sdl_renderer_prepare_legacy(
+                           sdl_renderer, SDL_RENDERER_LEGACY_BOTTOM_LEFT)
+                       == RENDERER_STATUS_OK);
+    draw_legacy_quad(2.0f, 2.0f, 14.0f, 12.0f, 255, 0, 0);
+
+    /* A semantic draw owns its complete rendering state even when a direct
+     * compatibility draw leaves hostile fixed-function state behind. */
+    glEnable(GL_LIGHTING);
+    glEnable(GL_CULL_FACE);
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    test_context->buffer_api.active_texture(GL_TEXTURE1);
+    glEnable(GL_TEXTURE_2D);
+
+    TEST_CHECK_CLEANUP(Renderer_fill_rect(frontend,
+                                          8.0f, 8.0f, 14.0f, 12.0f,
+                                          green) == RENDERER_STATUS_OK);
+
+    /* Preparing another direct draw is also the semantic/direct order barrier. */
+    glEnable(0);
+    TEST_CHECK_CLEANUP(Sdl_renderer_prepare_legacy(
+                           sdl_renderer, SDL_RENDERER_LEGACY_TOP_LEFT)
+                       == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK_CLEANUP(Sdl_renderer_prepare_legacy(
+                           sdl_renderer, SDL_RENDERER_LEGACY_TOP_LEFT)
+                       == RENDERER_STATUS_OK);
+    draw_legacy_quad(16.0f, 14.0f, 28.0f, 22.0f, 0, 0, 255);
+
+    /* End failure leaves the frame active and retryable without replaying
+     * the already flushed semantic command. */
+    glEnable(0);
+    TEST_CHECK_CLEANUP(Sdl_renderer_end_frame(sdl_renderer)
+                       == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK_CLEANUP(Sdl_renderer_end_frame(sdl_renderer)
+                       == RENDERER_STATUS_OK);
+    glFinish();
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, FRAME_WIDTH, FRAME_HEIGHT,
+                 GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    TEST_CHECK_CLEANUP(glGetError() == GL_NO_ERROR);
+
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 30, 2, 8, 16, 24, 255) == 0);
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 4, 18, 255, 0, 0, 255) == 0);
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 18, 10, 0, 255, 0, 255) == 0);
+    /* The semantic draw was submitted after the bottom-left direct draw. */
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 10, 16, 0, 255, 0, 255) == 0);
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 26, 16, 0, 0, 255, 255) == 0);
+    /* prepare_legacy flushed the semantic draw before this top-left quad. */
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 18, 16, 0, 0, 255, 255) == 0);
+    result = 0;
+
+cleanup:
+    if (sdl_renderer != NULL) {
+        Sdl_renderer_destroy(sdl_renderer);
+        if (SDL_GL_GetCurrentContext() != test_context->context
+            || glGetString(GL_VERSION) == NULL) {
+            fprintf(stderr, "SDL renderer destruction changed or invalidated "
+                    "its borrowed context\n");
+            result = 1;
+        }
+    }
+    return result;
+}
+
+static int check_sdl_renderer_rejects_core_context(
+    TestContext *test_context)
+{
+    SdlRenderer *sdl_renderer = NULL;
+
+    TEST_CHECK(SDL_GL_MakeCurrent(test_context->window,
+                                  test_context->context) == 0);
+    TEST_CHECK(Sdl_renderer_create(test_context->window, &sdl_renderer)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(sdl_renderer == NULL);
+    TEST_CHECK(SDL_GL_GetCurrentContext() == test_context->context);
+    TEST_CHECK(glGetString(GL_VERSION) != NULL);
+    return 0;
+}
+
 static int check_semantic_pixels(const GLubyte *pixels)
 {
     size_t index;
@@ -873,11 +997,15 @@ int main(void)
     if (render_scene(Renderer_gl_legacy_create, &legacy_context,
                      legacy_pixels, 0) != 0)
         goto cleanup;
+    if (check_sdl_renderer_mixed_legacy_scene(&legacy_context) != 0)
+        goto cleanup;
     destroy_context(&legacy_context);
 
     if (create_context(&core_context, 3, 3,
                        SDL_GL_CONTEXT_PROFILE_CORE,
                        "OpenGL 3.3 core renderer") != 0)
+        goto cleanup;
+    if (check_sdl_renderer_rejects_core_context(&core_context) != 0)
         goto cleanup;
     if (check_factory_failure_contract(Renderer_gl_core_create,
                                        &core_context,

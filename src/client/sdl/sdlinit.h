@@ -21,8 +21,18 @@
 #ifndef SDLINIT_H
 #define SDLINIT_H
 
+#include "sdlrenderer.h"
+
 /** Initialize SDL2, the application window, and its OpenGL context. */
 int Init_window(void);
+
+/**
+ * Return the renderer bound to the application OpenGL context.
+ *
+ * @return Borrowed renderer facade, or NULL before initialization and after
+ * cleanup.
+ */
+SdlRenderer *Get_sdl_renderer(void);
 
 /**
  * Request a new application window size.

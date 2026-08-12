@@ -16,7 +16,8 @@ xpilot_ng_sdl_SOURCES = \
 	renderer_gl_core.c renderer_gl_core.h \
 	sdlclipboard.c sdlclipboard.h \
 	sdlcompat.c sdlcompat.h \
-	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h sdlpaint.c \
+	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h \
+	sdlrenderer.c sdlrenderer.h sdlpaint.c \
 	sdlpaint.h sdlwindow.c sdlwindow.h text.c text.h todo.c \
 	sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h
 xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \

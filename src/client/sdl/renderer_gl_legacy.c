@@ -136,7 +136,9 @@ typedef struct LegacyFunctions {
 
 typedef struct LegacyContext {
     LegacyFunctions gl;
+    int frame_width;
     int frame_height;
+    int frame_texture_units;
     int pixel_unpack_buffer_supported;
 } LegacyContext;
 
@@ -405,7 +407,9 @@ static RendererStatus Legacy_begin_frame(void *backend_context,
         gl->disable(GL_TEXTURE_2D);
     }
     gl->active_texture(GL_TEXTURE0);
+    context->frame_width = width;
     context->frame_height = height;
+    context->frame_texture_units = texture_unit_count;
     gl->viewport(0, 0, width, height);
     gl->disable(GL_DEPTH_TEST);
     gl->disable(GL_CULL_FACE);
@@ -484,6 +488,7 @@ static RendererStatus Legacy_draw(void *backend_context,
     const RendererVertex2D *vertices = draw->vertices;
     size_t vertex_count = draw->vertex_count;
     size_t index;
+    int texture_unit;
 
     if (draw->mesh != NULL) {
         const LegacyMesh *mesh = draw->mesh;
@@ -497,7 +502,29 @@ static RendererStatus Legacy_draw(void *backend_context,
     Legacy_discard_errors(context);
     if (gl->use_program != NULL)
         gl->use_program(0);
+    /* Direct compatibility OpenGL may have changed the projection between
+     * queued renderer commands.  Re-establish the renderer's top-left
+     * framebuffer space at every semantic draw boundary. */
+    gl->viewport(0, 0, context->frame_width, context->frame_height);
+    gl->matrix_mode(GL_PROJECTION);
+    gl->load_identity();
+    gl->ortho(0.0, (GLdouble)context->frame_width,
+              (GLdouble)context->frame_height, 0.0, -1.0, 1.0);
+    gl->disable(GL_DEPTH_TEST);
+    gl->disable(GL_CULL_FACE);
+    gl->disable(GL_STENCIL_TEST);
+    gl->disable(GL_ALPHA_TEST);
+    gl->disable(GL_LIGHTING);
+    gl->disable(GL_FOG);
     gl->disable(GL_COLOR_LOGIC_OP);
+    gl->color_mask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    gl->shade_model(GL_SMOOTH);
+    gl->polygon_mode(GL_FRONT_AND_BACK, GL_FILL);
+    for (texture_unit = 0; texture_unit < context->frame_texture_units;
+         texture_unit++) {
+        gl->active_texture((GLenum)(GL_TEXTURE0 + texture_unit));
+        gl->disable(GL_TEXTURE_2D);
+    }
     gl->active_texture(GL_TEXTURE0);
     gl->matrix_mode(GL_TEXTURE);
     gl->load_identity();
@@ -545,8 +572,11 @@ static RendererStatus Legacy_end_frame(void *backend_context)
     LegacyContext *context = backend_context;
     RendererStatus status = Legacy_result(context);
 
-    if (status == RENDERER_STATUS_OK)
+    if (status == RENDERER_STATUS_OK) {
+        context->frame_width = 0;
         context->frame_height = 0;
+        context->frame_texture_units = 0;
+    }
     return status;
 }
 
