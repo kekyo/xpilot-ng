@@ -36,6 +36,11 @@ static int failure_count;
 
 extern int Gui_init(void);
 extern void Gui_cleanup(void);
+#ifdef XPILOT_GL_TEST_HOOKS
+extern void Gui_test_get_display_lists(GLuint *asteroid_list,
+                                       GLuint *polygon_fill_list_base,
+                                       GLuint *polygon_edge_list_base);
+#endif
 
 #define CHECK_CONTINUE(condition)                                           \
     do {                                                                    \
@@ -260,12 +265,58 @@ static void check_known_legacy_draw_paths(void)
     drain_gl_errors();
     Gui_paint_border(0, 0, 1, 1);
     CHECK_CONTINUE(drain_gl_errors() == 0);
+}
 
+static void check_gui_display_list_lifecycle(void)
+{
+    static ipos_t points[] = {
+        {0, 0},
+        {8, 0},
+        {0, 8},
+        {-8, 0},
+    };
+    static xp_polygon_t test_polygons[] = {
+        {
+            points,
+            (int)(sizeof(points) / sizeof(points[0])),
+            {0, 0, 8, 8},
+            NULL,
+            0,
+        },
+    };
+    static polygon_style_t test_polygon_styles[] = {
+        {0, 0, 0, 0, 0},
+    };
+    GLuint asteroid_list = 0;
+    GLuint polygon_fill_list_base = 0;
+    GLuint polygon_edge_list_base = 0;
+
+    polygons = test_polygons;
+    polygon_styles = test_polygon_styles;
+    num_polygons = (int)(sizeof(test_polygons) / sizeof(test_polygons[0]));
+
+    drain_gl_errors();
     CHECK_CONTINUE(Gui_init() == 0);
     CHECK_CONTINUE(drain_gl_errors() == 0);
+#ifdef XPILOT_GL_TEST_HOOKS
+    Gui_test_get_display_lists(&asteroid_list, &polygon_fill_list_base,
+                               &polygon_edge_list_base);
+#endif
+    CHECK_CONTINUE(asteroid_list != 0);
+    CHECK_CONTINUE(polygon_fill_list_base != 0);
+    CHECK_CONTINUE(polygon_edge_list_base != 0);
+    CHECK_CONTINUE(glIsList(asteroid_list) == GL_TRUE);
+    CHECK_CONTINUE(glIsList(polygon_fill_list_base) == GL_TRUE);
+    CHECK_CONTINUE(glIsList(polygon_edge_list_base) == GL_TRUE);
+
     Gui_paint_asteroid(6, 6, 0, 0, 1);
     CHECK_CONTINUE(drain_gl_errors() == 0);
     Gui_cleanup();
+    CHECK_CONTINUE(glIsList(asteroid_list) == GL_FALSE);
+    CHECK_CONTINUE(glIsList(polygon_fill_list_base) == GL_FALSE);
+    CHECK_CONTINUE(glIsList(polygon_edge_list_base) == GL_FALSE);
+    Gui_cleanup();
+    CHECK_CONTINUE(drain_gl_errors() == 0);
 }
 
 static void check_diagnostics(void)
@@ -317,6 +368,7 @@ int main(void)
     CHECK_CONTINUE(glGetString(GL_VERSION) != NULL);
     check_procedural_baseline();
     check_known_legacy_draw_paths();
+    check_gui_display_list_lifecycle();
     check_diagnostics();
 
     SDL_GL_DeleteContext(context);

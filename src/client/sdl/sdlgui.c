@@ -122,6 +122,7 @@ static bool texturedBalls;
 static bool texturedShips;
 static GLuint polyListBase = 0;
 static GLuint polyEdgeListBase = 0;
+static GLsizei polyListCount = 0;
 static GLuint asteroid = 0;
 
 irec_t *select_bounds;
@@ -313,14 +314,16 @@ static int asteroid_init(void)
 
 static void asteroid_cleanup(void)
 {
-    if (asteroid) 
+    if (asteroid) {
 	glDeleteLists(asteroid, 1);
+        asteroid = 0;
+    }
 }
 
 int Gui_init(void)
 {
     int i;
-    GLUtriangulatorObj *tess;
+    GLUtriangulatorObj *tess = NULL;
 
     if (asteroid_init() == -1) {
 	error("failed to initialize asteroids");
@@ -329,17 +332,22 @@ int Gui_init(void)
     
     if (num_polygons == 0) return 0;
 
-    polyListBase = glGenLists(num_polygons);
-    polyEdgeListBase = glGenLists(num_polygons);
-    if ((!polyListBase)||(!polyEdgeListBase)) {
+    polyListCount = num_polygons;
+    polyListBase = glGenLists(polyListCount);
+    if (!polyListBase) {
 	error("failed to generate display lists");
-	return -1;
+	goto fail;
+    }
+    polyEdgeListBase = glGenLists(polyListCount);
+    if (!polyEdgeListBase) {
+	error("failed to generate edge display lists");
+	goto fail;
     }
 
     tess = gluNewTess();
     if (tess == NULL) {
 	error("failed to create tessellation object");
-	return -1;
+	goto fail;
     }
 
     /* TODO: figure out proper casting here do not use _GLUfuncptr */
@@ -360,14 +368,41 @@ int Gui_init(void)
     gluDeleteTess(tess);
 
     return 0;
+
+fail:
+    if (tess != NULL)
+	gluDeleteTess(tess);
+    Gui_cleanup();
+    return -1;
 }
 
 void Gui_cleanup(void)
 {
-    if (polyListBase)
-	glDeleteLists(polyListBase, num_polygons);
+    if (polyListBase) {
+	glDeleteLists(polyListBase, polyListCount);
+        polyListBase = 0;
+    }
+    if (polyEdgeListBase) {
+	glDeleteLists(polyEdgeListBase, polyListCount);
+        polyEdgeListBase = 0;
+    }
+    polyListCount = 0;
     asteroid_cleanup();
 }
+
+#ifdef XPILOT_GL_TEST_HOOKS
+void Gui_test_get_display_lists(GLuint *asteroid_list,
+				GLuint *polygon_fill_list_base,
+				GLuint *polygon_edge_list_base)
+{
+    if (asteroid_list != NULL)
+	*asteroid_list = asteroid;
+    if (polygon_fill_list_base != NULL)
+	*polygon_fill_list_base = polyListBase;
+    if (polygon_edge_list_base != NULL)
+	*polygon_edge_list_base = polyEdgeListBase;
+}
+#endif
 
 /* Map painting */
 

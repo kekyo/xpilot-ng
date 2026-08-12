@@ -32,7 +32,8 @@ test_sdl_event_LDADD = @SDL2_LIBS@
 test_gl_legacy_SOURCES = test_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/gl_diagnostics.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c
-test_gl_legacy_CFLAGS = $(AM_CFLAGS) -ffunction-sections -fdata-sections
+test_gl_legacy_CFLAGS = $(AM_CFLAGS) -DXPILOT_GL_TEST_HOOKS \
+	-ffunction-sections -fdata-sections
 test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_gl_legacy_LDADD = @SDL2_LIBS@ @GLU_LIBS@ @GL_LIBS@
 
