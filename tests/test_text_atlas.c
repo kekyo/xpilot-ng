@@ -382,6 +382,7 @@ static int check_ascii_prewarm_and_top_left_atlas(void)
     texture = Text_atlas_texture(atlas);
     record = fake_texture_from_handle(texture);
     TEST_CHECK(font != NULL);
+    TEST_CHECK(Text_atlas_renderer(atlas) == &fake_renderer);
     TEST_CHECK(texture != NULL && record != NULL);
     TEST_CHECK(font->atlas_width == record->desc.width);
     TEST_CHECK(font->atlas_height == record->desc.height);

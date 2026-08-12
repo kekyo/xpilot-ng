@@ -1532,7 +1532,8 @@ void Paint_HUD_values(void)
 
     x = draw_width - 20;
     /* Better make sure it's below the meters */
-    y = draw_height - 9*(MAX((GLuint)meterHeight,gamefont.h) + 6);
+    y = draw_height
+	- 9 * (MAX((GLuint)meterHeight, gamefont.requested_height) + 6);
 
     HUDprint(&gamefont,hudColorRGBA,RIGHT,DOWN,x,y,"FPS: %.3f",clientFPS);
     HUDprint(&gamefont,hudColorRGBA,RIGHT,DOWN,x,y-20,"CL.LAG : %.1f ms", clData.clientLag);
@@ -1602,7 +1603,7 @@ static void Paint_meter(int xoff, int y, string_tex_t *tex, int val, int max,
 
 void Paint_meters(void)
 {
-    int spacing = MAX((GLuint)meterHeight,gamefont.h) + 6;
+    int spacing = MAX((GLuint)meterHeight, gamefont.requested_height) + 6;
     int y = spacing, color;
 
     (void)Ensure_cached_text(&gamefont, "Fuel", &meter_texs[0]);
@@ -1821,7 +1822,7 @@ static void Paint_HUD_items(int hud_pos_x, int hud_pos_y)
 
     /* Special itemtypes */
     if (vertSpacing < 0)
-	vertSpacing = MAX(ITEM_SIZE, gamefont.h) + 1;
+	vertSpacing = MAX(ITEM_SIZE, gamefont.requested_height) + 1;
     /* find the scaled location, then work in pixels */
     vert_pos = hud_pos_y - hudSize+HUD_OFFSET + BORDER;
     horiz_pos = hud_pos_x - hudSize+HUD_OFFSET - BORDER;

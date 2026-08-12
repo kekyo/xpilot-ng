@@ -101,4 +101,12 @@ const TextGeometryFont *Text_atlas_geometry_font(const TextAtlas *atlas);
  */
 RendererTexture *Text_atlas_texture(const TextAtlas *atlas);
 
+/**
+ * Borrow the renderer that owns an atlas texture.
+ *
+ * @param atlas Atlas instance.
+ * @return Borrowed owning renderer, or NULL for a NULL atlas.
+ */
+Renderer *Text_atlas_renderer(const TextAtlas *atlas);
+
 #endif /* TEXT_ATLAS_H */

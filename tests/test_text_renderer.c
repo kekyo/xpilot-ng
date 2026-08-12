@@ -233,6 +233,11 @@ RendererTexture *Text_atlas_texture(const TextAtlas *atlas)
     return atlas != NULL ? atlas->texture : NULL;
 }
 
+Renderer *Text_atlas_renderer(const TextAtlas *atlas)
+{
+    return atlas != NULL ? atlas->renderer : NULL;
+}
+
 RendererStatus Renderer_set_blend(Renderer *renderer,
                                   RendererBlendMode blend)
 {
@@ -724,9 +729,21 @@ static int check_invalid_arguments_do_not_publish(void)
                                     &occupied)
                == RENDERER_STATUS_INVALID_ARGUMENT);
     TEST_CHECK(occupied == (TextRenderer *)(uintptr_t)1);
+    TEST_CHECK(Text_renderer_create(&first_sdl_renderer, &second_atlas,
+                                    &other_renderer)
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(other_renderer == NULL);
 
     TEST_CHECK(Text_renderer_create(&first_sdl_renderer, &first_atlas,
                                     &renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(Text_renderer_matches(renderer, &first_sdl_renderer,
+                                     &first_atlas));
+    TEST_CHECK(!Text_renderer_matches(renderer, &second_sdl_renderer,
+                                      &first_atlas));
+    TEST_CHECK(!Text_renderer_matches(renderer, &first_sdl_renderer,
+                                      &second_atlas));
+    TEST_CHECK(!Text_renderer_matches(NULL, &first_sdl_renderer,
+                                      &first_atlas));
     begin_fake_frame(&first_sdl_renderer);
     TEST_CHECK(Text_renderer_measure(NULL, text, sizeof(text), &metrics)
                == RENDERER_STATUS_INVALID_ARGUMENT);

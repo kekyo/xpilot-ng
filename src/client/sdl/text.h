@@ -33,22 +33,10 @@
 #define RIGHT 2
 #define UP 2
 
-#define NUMCHARS 256
-
+/** Renderer-backed font resources used by the SDL client. */
 typedef struct {
-    GLfloat MinX;
-    GLfloat MinY;
-    GLfloat MaxX;
-    GLfloat MaxY;
-} texcoord_t;    
-
-typedef struct {
-    GLuint textures[NUMCHARS]; /* texture indexes for the characters */
-    GLuint W[NUMCHARS]; /* holds paint width fr each character */
-    GLuint list_base; /* start of the texture list for this font */
-    GLuint h; /* char height */
-    GLuint linespacing; /* proper line spacing according to FT */
-    TTF_Font *ttffont;
+    /** Requested point height retained for compatibility layout. */
+    unsigned int requested_height;
     /** Immutable renderer-backed glyph atlas for this font. */
     TextAtlas *atlas;
     /** Owned semantic text facade borrowing this font's atlas renderer. */
@@ -71,13 +59,6 @@ typedef struct {
     int font_height;
 } string_tex_t;
 
-extern int renderstyle;
-extern enum rendertype {
-	RENDER_LATIN1,
-	RENDER_UTF8,
-	RENDER_UNICODE
-} rendertype;
-
 /** Logical bounds of a formatted byte string. */
 typedef struct {
     /** Maximum line width in logical pixels. */
@@ -87,7 +68,7 @@ typedef struct {
 } fontbounds;
 
 /**
- * Create a font and its legacy and renderer-backed drawing resources.
+ * Create a font and its renderer-backed drawing resources.
  *
  * @param ft_font Zero-initialized empty destination that receives the font on
  * success.
@@ -97,7 +78,8 @@ typedef struct {
  * @return Operation status.
  *
  * @remarks Creation is atomic and must occur outside an active renderer
- * frame. The renderer must remain alive until fontclean() succeeds.
+ * frame. The SDL_ttf font is used only during this call and is closed before
+ * return. The renderer must remain alive until fontclean() succeeds.
  */
 RendererStatus fontinit(font_data *ft_font, Renderer *renderer,
 			const char *fname, unsigned int size);
@@ -110,9 +92,10 @@ RendererStatus fontinit(font_data *ft_font, Renderer *renderer,
  * @return Operation status.
  *
  * @remarks Reattaching an already attached font is an idempotent operation;
- * every call for that font must pass the same SDL renderer. Failure leaves
- * every existing font resource unchanged. The SDL renderer must outlive the
- * font and all cached strings created from it.
+ * every call for that font must pass the same SDL renderer or the operation
+ * returns RENDERER_STATUS_RESOURCE_MISMATCH. Failure leaves every existing
+ * font resource unchanged. The SDL renderer must outlive the font and all
+ * cached strings created from it.
  */
 RendererStatus font_text_renderer_attach(font_data *ft_font,
 					 SdlRenderer *sdl_renderer);
@@ -128,9 +111,6 @@ RendererStatus font_text_renderer_attach(font_data *ft_font,
  * active frame ends.
  */
 RendererStatus fontclean(font_data *ft_font);
-
-/* loads a SDL surface onto a GL texture */
-GLuint SDL_GL_LoadTexture(SDL_Surface *surface, texcoord_t *texcoord);
 
 /**
  * Measure at most a given number of formatted bytes.

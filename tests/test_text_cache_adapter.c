@@ -498,8 +498,7 @@ static font_data make_font(TextRenderer *text_renderer, GLuint height)
     font_data font;
 
     memset(&font, 0, sizeof(font));
-    font.h = height;
-    font.ttffont = (TTF_Font *)(uintptr_t)1;
+    font.requested_height = height;
     font.text_renderer = text_renderer;
     return font;
 }

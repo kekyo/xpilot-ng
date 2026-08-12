@@ -70,7 +70,6 @@ test_gl_legacy_SOURCES = test_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
-	$(top_srcdir)/src/client/sdl/sdlcompat.c \
 	$(top_srcdir)/src/client/sdl/text.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.h \
@@ -84,7 +83,8 @@ test_gl_legacy_CFLAGS = $(AM_CFLAGS) -DXPILOT_GL_TEST_HOOKS \
 	-ffunction-sections -fdata-sections
 test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=glGetString -Wl,--wrap=glGenLists \
-	-Wl,--wrap=glGenTextures
+	-Wl,--wrap=glGenTextures -Wl,--wrap=TTF_OpenFont \
+	-Wl,--wrap=TTF_CloseFont
 test_gl_legacy_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
 	@GLU_LIBS@ @GL_LIBS@
 
@@ -191,8 +191,7 @@ test_text_cache_adapter_SOURCES = test_text_cache_adapter.c \
 test_text_cache_adapter_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_text_cache_adapter_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_text_cache_adapter_LDADD = $(top_builddir)/src/common/libxpcommon.a \
-	@SDL2_TTF_LIBS@ @SDL2_LIBS@ @GLU_LIBS@ @GL_LIBS@
+test_text_cache_adapter_LDADD = $(top_builddir)/src/common/libxpcommon.a
 
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)

@@ -30,11 +30,13 @@ typedef enum TextRendererSpace {
  * @param text_renderer Empty destination receiving the new facade.
  * @return Operation status.
  *
- * @remarks The SDL renderer and atlas must remain valid while the returned
- * facade is used. Destroying the facade does not dereference either borrowed
- * object, so an owner may first release a fallible atlas resource and then
- * destroy the facade after that release succeeds. CPU caches do not borrow
- * the facade itself. Creation does not allocate GPU resources.
+ * @remarks The SDL renderer's frontend must be the renderer that owns the
+ * atlas; otherwise creation returns RENDERER_STATUS_RESOURCE_MISMATCH. Both
+ * borrowed objects must remain valid while the returned facade is used.
+ * Destroying the facade does not dereference either object, so an owner may
+ * first release a fallible atlas resource and then destroy the facade after
+ * that release succeeds. CPU caches do not borrow the facade itself.
+ * Creation does not allocate GPU resources.
  */
 RendererStatus Text_renderer_create(SdlRenderer *sdl_renderer,
                                     TextAtlas *atlas,
@@ -50,6 +52,19 @@ RendererStatus Text_renderer_create(SdlRenderer *sdl_renderer,
  * its borrowed SDL renderer or atlas.
  */
 void Text_renderer_destroy(TextRenderer **text_renderer);
+
+/**
+ * Check whether a facade is bound to an exact renderer and atlas pair.
+ *
+ * @param text_renderer Text drawing facade.
+ * @param sdl_renderer SDL renderer facade expected by the caller.
+ * @param atlas Glyph atlas expected by the caller.
+ * @return Nonzero only when all three objects form the facade's original
+ *         binding.
+ */
+int Text_renderer_matches(const TextRenderer *text_renderer,
+                          const SdlRenderer *sdl_renderer,
+                          const TextAtlas *atlas);
 
 /**
  * Retain a failure produced by a text adapter before geometry submission.

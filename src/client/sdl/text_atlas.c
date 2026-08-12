@@ -275,3 +275,8 @@ RendererTexture *Text_atlas_texture(const TextAtlas *atlas)
 {
     return atlas != NULL ? atlas->texture : NULL;
 }
+
+Renderer *Text_atlas_renderer(const TextAtlas *atlas)
+{
+    return atlas != NULL ? atlas->renderer : NULL;
+}

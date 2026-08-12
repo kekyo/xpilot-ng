@@ -55,9 +55,10 @@ static int failure_count;
 static int reject_pre_2_glsl_query;
 static unsigned int rejected_pre_2_glsl_queries;
 static int capture_font_resources;
-static GLuint captured_font_list_base;
-static GLuint captured_font_textures[NUMCHARS + 1];
+static size_t captured_font_list_generations;
 static size_t captured_font_texture_count;
+static size_t ttf_open_count;
+static size_t ttf_close_count;
 static RendererStatus text_renderer_create_result = RENDERER_STATUS_OK;
 static int text_renderer_create_calls;
 static int text_renderer_destroy_calls;
@@ -93,9 +94,20 @@ void Text_renderer_destroy(TextRenderer **text_renderer)
     *text_renderer = NULL;
 }
 
+int Text_renderer_matches(const TextRenderer *text_renderer,
+                          const SdlRenderer *sdl_renderer,
+                          const TextAtlas *atlas)
+{
+    return text_renderer != NULL && sdl_renderer != NULL && atlas != NULL
+        && text_renderer->sdl_renderer == sdl_renderer
+        && text_renderer->atlas == atlas;
+}
+
 extern const GLubyte *APIENTRY __real_glGetString(GLenum name);
 extern GLuint APIENTRY __real_glGenLists(GLsizei range);
 extern void APIENTRY __real_glGenTextures(GLsizei count, GLuint *textures);
+extern TTF_Font *__real_TTF_OpenFont(const char *file, int ptsize);
+extern void __real_TTF_CloseFont(TTF_Font *font);
 
 const GLubyte *APIENTRY __wrap_glGetString(GLenum name)
 {
@@ -112,25 +124,31 @@ GLuint APIENTRY __wrap_glGenLists(GLsizei range)
     GLuint list_base = __real_glGenLists(range);
 
     if (capture_font_resources)
-        captured_font_list_base = list_base;
+        captured_font_list_generations++;
     return list_base;
 }
 
 void APIENTRY __wrap_glGenTextures(GLsizei count, GLuint *textures)
 {
-    GLsizei index;
-
     __real_glGenTextures(count, textures);
-    if (!capture_font_resources)
-        return;
-    for (index = 0; index < count; index++) {
-        if (captured_font_texture_count
-            < sizeof(captured_font_textures)
-                / sizeof(captured_font_textures[0])) {
-            captured_font_textures[captured_font_texture_count++]
-                = textures[index];
-        }
-    }
+    if (capture_font_resources && count > 0)
+        captured_font_texture_count += (size_t)count;
+}
+
+TTF_Font *__wrap_TTF_OpenFont(const char *file, int ptsize)
+{
+    TTF_Font *font = __real_TTF_OpenFont(file, ptsize);
+
+    if (font != NULL)
+        ttf_open_count++;
+    return font;
+}
+
+void __wrap_TTF_CloseFont(TTF_Font *font)
+{
+    if (font != NULL)
+        ttf_close_count++;
+    __real_TTF_CloseFont(font);
 }
 
 extern int Gui_init(void);
@@ -187,9 +205,18 @@ image_t *Image_get_texture(int index)
     return NULL;
 }
 
+static void APIENTRY capture_gl_gen_textures(GLsizei count, GLuint *textures)
+{
+    __real_glGenTextures(count, textures);
+    if (capture_font_resources && count > 0)
+        captured_font_texture_count += (size_t)count;
+}
+
 static void *load_current_gl_proc(void *userdata, const char *name)
 {
     (void)userdata;
+    if (strcmp(name, "glGenTextures") == 0)
+        return (void *)capture_gl_gen_textures;
     return SDL_GL_GetProcAddress(name);
 }
 
@@ -501,90 +528,8 @@ static void check_gui_display_list_lifecycle(void)
 
 static int font_state_is_empty(const font_data *font)
 {
-    size_t index;
-
-    if (font->atlas != NULL || font->text_renderer != NULL
-        || font->ttffont != NULL
-        || font->list_base != 0 || font->h != 0 || font->linespacing != 0) {
-        return 0;
-    }
-    for (index = 0; index < NUMCHARS; index++) {
-        if (font->textures[index] != 0 || font->W[index] != 0)
-            return 0;
-    }
-    return 1;
-}
-
-static int legacy_font_draws_visible_glyph(const font_data *font)
-{
-    enum { FONT_FRAME_SIZE = 64 };
-    framebuffer_api_t api;
-    GLuint framebuffer = 0;
-    GLuint color_texture = 0;
-    GLubyte pixels[FONT_FRAME_SIZE * FONT_FRAME_SIZE * PIXEL_COMPONENTS];
-    size_t pixel_index;
-    int visible = 0;
-
-    if (!load_framebuffer_api(&api))
-        return 0;
-    glGenTextures(1, &color_texture);
-    glBindTexture(GL_TEXTURE_2D, color_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                 FONT_FRAME_SIZE, FONT_FRAME_SIZE, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    api.gen(1, &framebuffer);
-    api.bind(GL_FRAMEBUFFER, framebuffer);
-    api.attach_texture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                       color_texture, 0);
-    if (api.check_status(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        goto cleanup;
-
-    glViewport(0, 0, FONT_FRAME_SIZE, FONT_FRAME_SIZE);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0.0, FONT_FRAME_SIZE, 0.0, FONT_FRAME_SIZE, -1.0, 1.0);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glTranslatef(8.0f, 24.0f, 0.0f);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_SCISSOR_TEST);
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    glColor4ub(255, 255, 255, 255);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glCallList(font->list_base + (GLuint)'A');
-    glFinish();
-    memset(pixels, 0, sizeof(pixels));
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glReadPixels(0, 0, FONT_FRAME_SIZE, FONT_FRAME_SIZE,
-                 GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-    if (glGetError() != GL_NO_ERROR)
-        goto cleanup;
-    for (pixel_index = 0;
-         pixel_index < FONT_FRAME_SIZE * FONT_FRAME_SIZE;
-         pixel_index++) {
-        const GLubyte *pixel = pixels + pixel_index * PIXEL_COMPONENTS;
-
-        if (pixel[0] > 16 || pixel[1] > 16 || pixel[2] > 16) {
-            visible = 1;
-            break;
-        }
-    }
-
-cleanup:
-    api.bind(GL_FRAMEBUFFER, 0);
-    if (framebuffer != 0)
-        api.destroy(1, &framebuffer);
-    if (color_texture != 0)
-        glDeleteTextures(1, &color_texture);
-    drain_gl_errors();
-    return visible;
+    return font->requested_height == 0 && font->atlas == NULL
+        && font->text_renderer == NULL;
 }
 
 static void check_font_renderer_lifecycle(Renderer *renderer)
@@ -592,17 +537,21 @@ static void check_font_renderer_lifecycle(Renderer *renderer)
     const RendererColor clear = {0, 0, 0, 255};
     const TextGeometryFont *geometry;
     SdlRenderer sdl_renderer = {1};
+    SdlRenderer other_sdl_renderer = {2};
     font_data font;
     TextAtlas *retained_atlas;
     TextRenderer *retained_text_renderer;
-    TTF_Font *retained_ttf_font;
-    GLuint retained_list_base;
-    GLuint retained_a_texture;
     RendererStatus status;
     int frame_active = 0;
 
     memset(&font, 0, sizeof(font));
+    captured_font_list_generations = 0;
+    captured_font_texture_count = 0;
+    ttf_open_count = 0;
+    ttf_close_count = 0;
+    capture_font_resources = 1;
     status = fontinit(&font, renderer, XPILOT_TEST_FONT_PATH, 17);
+    capture_font_resources = 0;
     CHECK_CONTINUE(status == RENDERER_STATUS_OK);
     if (status != RENDERER_STATUS_OK) {
         CHECK_CONTINUE(font_state_is_empty(&font));
@@ -610,41 +559,30 @@ static void check_font_renderer_lifecycle(Renderer *renderer)
     }
 
     CHECK_CONTINUE(font.atlas != NULL);
-    CHECK_CONTINUE(font.ttffont != NULL);
-    CHECK_CONTINUE(font.list_base != 0);
-    CHECK_CONTINUE(font.textures[(unsigned char)'A'] != 0);
-    CHECK_CONTINUE(font.W[(unsigned char)'A'] > 0);
-    CHECK_CONTINUE(font.h > 0);
-    CHECK_CONTINUE(font.linespacing > 0);
-    CHECK_CONTINUE(glIsList(font.list_base + (GLuint)'A') == GL_TRUE);
-    CHECK_CONTINUE(glIsTexture(font.textures[(unsigned char)'A']) == GL_TRUE);
+    CHECK_CONTINUE(font.requested_height == 17);
+    CHECK_CONTINUE(captured_font_list_generations == 0);
+    CHECK_CONTINUE(captured_font_texture_count == 1);
+    CHECK_CONTINUE(ttf_open_count == 1);
+    CHECK_CONTINUE(ttf_close_count == 1);
     if (font.atlas != NULL) {
         geometry = Text_atlas_geometry_font(font.atlas);
         CHECK_CONTINUE(geometry != NULL);
         CHECK_CONTINUE(Text_atlas_texture(font.atlas) != NULL);
         if (geometry != NULL) {
             CHECK_CONTINUE(geometry->glyphs[(unsigned char)'A'].available);
-            CHECK_CONTINUE(geometry->line_spacing
-                           == (float)font.linespacing);
+            CHECK_CONTINUE(geometry->line_spacing > 0.0f);
         }
     }
-    CHECK_CONTINUE(legacy_font_draws_visible_glyph(&font));
 
     text_renderer_create_calls = 0;
     text_renderer_destroy_calls = 0;
     text_renderer_create_result = RENDERER_STATUS_OUT_OF_MEMORY;
     retained_atlas = font.atlas;
-    retained_ttf_font = font.ttffont;
-    retained_list_base = font.list_base;
-    retained_a_texture = font.textures[(unsigned char)'A'];
     status = font_text_renderer_attach(&font, &sdl_renderer);
     CHECK_CONTINUE(status == RENDERER_STATUS_OUT_OF_MEMORY);
     CHECK_CONTINUE(font.text_renderer == NULL);
     CHECK_CONTINUE(font.atlas == retained_atlas);
-    CHECK_CONTINUE(font.ttffont == retained_ttf_font);
-    CHECK_CONTINUE(font.list_base == retained_list_base);
-    CHECK_CONTINUE(font.textures[(unsigned char)'A']
-                   == retained_a_texture);
+    CHECK_CONTINUE(font.requested_height == 17);
     CHECK_CONTINUE(text_renderer_create_calls == 1);
     CHECK_CONTINUE(text_renderer_destroy_calls == 0);
 
@@ -666,10 +604,15 @@ static void check_font_renderer_lifecycle(Renderer *renderer)
     CHECK_CONTINUE(text_renderer_create_calls == 2);
     CHECK_CONTINUE(text_renderer_destroy_calls == 0);
 
+    status = font_text_renderer_attach(&font, &other_sdl_renderer);
+    CHECK_CONTINUE(status == RENDERER_STATUS_RESOURCE_MISMATCH);
+    CHECK_CONTINUE(font.text_renderer == retained_text_renderer);
+    CHECK_CONTINUE(font.atlas == retained_atlas);
+    CHECK_CONTINUE(font.requested_height == 17);
+    CHECK_CONTINUE(text_renderer_create_calls == 2);
+    CHECK_CONTINUE(text_renderer_destroy_calls == 0);
+
     retained_atlas = font.atlas;
-    retained_ttf_font = font.ttffont;
-    retained_list_base = font.list_base;
-    retained_a_texture = font.textures[(unsigned char)'A'];
     status = Renderer_begin_frame(renderer, 64, 64, clear);
     CHECK_CONTINUE(status == RENDERER_STATUS_OK);
     if (status == RENDERER_STATUS_OK)
@@ -681,13 +624,7 @@ static void check_font_renderer_lifecycle(Renderer *renderer)
         CHECK_CONTINUE(font.atlas == retained_atlas);
         CHECK_CONTINUE(font.text_renderer == retained_text_renderer);
         CHECK_CONTINUE(text_renderer_destroy_calls == 0);
-        CHECK_CONTINUE(font.ttffont == retained_ttf_font);
-        CHECK_CONTINUE(font.list_base == retained_list_base);
-        CHECK_CONTINUE(font.textures[(unsigned char)'A']
-                       == retained_a_texture);
-        CHECK_CONTINUE(glIsList(retained_list_base + (GLuint)'A')
-                       == GL_TRUE);
-        CHECK_CONTINUE(glIsTexture(retained_a_texture) == GL_TRUE);
+        CHECK_CONTINUE(font.requested_height == 17);
 
         status = Renderer_end_frame(renderer);
         CHECK_CONTINUE(status == RENDERER_STATUS_OK);
@@ -700,9 +637,6 @@ static void check_font_renderer_lifecycle(Renderer *renderer)
         CHECK_CONTINUE(status == RENDERER_STATUS_OK);
         CHECK_CONTINUE(font_state_is_empty(&font));
         CHECK_CONTINUE(text_renderer_destroy_calls == 1);
-        CHECK_CONTINUE(glIsList(retained_list_base + (GLuint)'A')
-                       == GL_FALSE);
-        CHECK_CONTINUE(glIsTexture(retained_a_texture) == GL_FALSE);
         CHECK_CONTINUE(fontclean(&font) == RENDERER_STATUS_OK);
     }
 }
@@ -712,13 +646,13 @@ static void check_active_frame_font_init_rolls_back(Renderer *renderer)
     const RendererColor clear = {0, 0, 0, 255};
     font_data candidate;
     RendererStatus status;
-    size_t texture_index;
     int frame_active = 0;
 
     memset(&candidate, 0, sizeof(candidate));
-    captured_font_list_base = 0;
+    captured_font_list_generations = 0;
     captured_font_texture_count = 0;
-    memset(captured_font_textures, 0, sizeof(captured_font_textures));
+    ttf_open_count = 0;
+    ttf_close_count = 0;
 
     status = Renderer_begin_frame(renderer, 64, 64, clear);
     CHECK_CONTINUE(status == RENDERER_STATUS_OK);
@@ -731,20 +665,10 @@ static void check_active_frame_font_init_rolls_back(Renderer *renderer)
     capture_font_resources = 0;
     CHECK_CONTINUE(status == RENDERER_STATUS_INVALID_STATE);
     CHECK_CONTINUE(font_state_is_empty(&candidate));
-    CHECK_CONTINUE(captured_font_list_base != 0);
-    if (captured_font_list_base != 0) {
-        CHECK_CONTINUE(glIsList(captured_font_list_base + (GLuint)'A')
-                       == GL_FALSE);
-    }
-    CHECK_CONTINUE(captured_font_texture_count > 0);
-    for (texture_index = 0;
-         texture_index < captured_font_texture_count;
-         texture_index++) {
-        if (captured_font_textures[texture_index] != 0) {
-            CHECK_CONTINUE(glIsTexture(captured_font_textures[texture_index])
-                           == GL_FALSE);
-        }
-    }
+    CHECK_CONTINUE(captured_font_list_generations == 0);
+    CHECK_CONTINUE(captured_font_texture_count == 0);
+    CHECK_CONTINUE(ttf_open_count == 1);
+    CHECK_CONTINUE(ttf_close_count == 1);
 
     status = Renderer_end_frame(renderer);
     CHECK_CONTINUE(status == RENDERER_STATUS_OK);

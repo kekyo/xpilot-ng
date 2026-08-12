@@ -65,6 +65,8 @@ RendererStatus Text_renderer_create(SdlRenderer *sdl_renderer,
         return RENDERER_STATUS_INVALID_ARGUMENT;
     }
     frontend = Sdl_renderer_frontend(sdl_renderer);
+    if (frontend != Text_atlas_renderer(atlas))
+        return RENDERER_STATUS_RESOURCE_MISMATCH;
     font = Text_atlas_geometry_font(atlas);
     texture = Text_atlas_texture(atlas);
     if (frontend == NULL || font == NULL || texture == NULL)
@@ -88,6 +90,15 @@ void Text_renderer_destroy(TextRenderer **text_renderer)
         return;
     free(*text_renderer);
     *text_renderer = NULL;
+}
+
+int Text_renderer_matches(const TextRenderer *text_renderer,
+                          const SdlRenderer *sdl_renderer,
+                          const TextAtlas *atlas)
+{
+    return text_renderer != NULL && sdl_renderer != NULL && atlas != NULL
+        && text_renderer->sdl_renderer == sdl_renderer
+        && text_renderer->atlas == atlas;
 }
 
 RendererStatus Text_renderer_track_failure(
