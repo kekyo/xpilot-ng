@@ -68,10 +68,20 @@ int Console_init(void)
     return 0;
 }
 
+int Console_prepare(Renderer *renderer)
+{
+    if (console == NULL || renderer == NULL)
+	return -1;
+
+    if (console->Visible != CON_CLOSED && console->Visible != CON_OPEN)
+	Console_refresh();
+
+    return sdl_window_prepare(&console_window, renderer);
+}
+
 void Console_paint(void)
 {
     if (!Console_isVisible()) return;
-    if (console->Visible != CON_OPEN) Console_refresh();
     console_window.x = (draw_width - console_window.w) / 2;
     console_window.y = (draw_height - console_window.h) / 2;
     sdl_window_paint(&console_window);

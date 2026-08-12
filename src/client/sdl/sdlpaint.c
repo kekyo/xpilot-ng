@@ -46,6 +46,8 @@
 #include "paint_transform.h"
 #include "sdlrenderer.h"
 
+#include <limits.h>
+
 #define SCORE_BORDER 5
 
 /*
@@ -55,6 +57,7 @@ static TTF_Font     *scoreListFont;
 static const char   *scoreListFontName = CONF_FONTDIR "VeraMoBd.ttf";
 static sdl_window_t scoreListWin;
 static SDL_Rect     scoreEntryRect; /* Bounds for the last painted score entry */
+static GLWidget     *scoreListWidget;
 static bool         scoreListMoving;
 static bool         rendererFramePending;
 
@@ -138,6 +141,8 @@ static void Scorelist_cleanup( GLWidget *widget )
 	scoreListFont = NULL;
     }
     sdl_window_destroy(&scoreListWin);
+    if (scoreListWidget == widget)
+	scoreListWidget = NULL;
 }
 
 static void SetBounds_ScoreList(GLWidget *widget, SDL_Rect *b )
@@ -146,26 +151,57 @@ static void SetBounds_ScoreList(GLWidget *widget, SDL_Rect *b )
     widget->bounds.y = scoreListWin.y = b->y;
 }
 
-static void Scorelist_paint(GLWidget *widget)
+static int Scorelist_prepare(Renderer *renderer)
 {
+    int result = 0;
+
+    if (renderer == NULL || scoreListWidget == NULL
+	|| scoreListWin.surface == NULL) {
+	return -1;
+    }
+
     if (scoresChanged) {
 	/* This is the easiest way to track if
 	 * the height of the score window should be changed */
 	int y = scoreEntryRect.y;
         Paint_score_table();
 	if (y != scoreEntryRect.y) {
-	    sdl_window_resize(&scoreListWin, scoreListWin.w,
-			      scoreEntryRect.y + scoreEntryRect.h
-			      + 2 * SCORE_BORDER);
-	    /* Unfortunately the resize loses the surface
-	     * so I have to repaint it */
-	    scoresChanged = true;
-	    Paint_score_table();
-	    widget->bounds.w = scoreListWin.w+2;
-	    widget->bounds.h = scoreListWin.h+2;
+	    int height;
+
+	    if (scoreEntryRect.y < 0 || scoreEntryRect.h < 0
+		|| scoreEntryRect.y > INT_MAX - 2 * SCORE_BORDER
+		|| scoreEntryRect.h > INT_MAX - 2 * SCORE_BORDER
+		    - scoreEntryRect.y) {
+		result = -1;
+		scoresChanged = true;
+	    } else {
+		height = scoreEntryRect.y + scoreEntryRect.h
+		    + 2 * SCORE_BORDER;
+		if (sdl_window_resize(&scoreListWin, scoreListWin.w,
+				      height) != 0) {
+		    result = -1;
+		    scoresChanged = true;
+		} else {
+		    /* The first pass may have been clipped by the old surface. */
+		    scoresChanged = true;
+		    Paint_score_table();
+		    scoreListWidget->bounds.w = scoreListWin.w + 2;
+		    scoreListWidget->bounds.h = scoreListWin.h + 2;
+		}
+	    }
 	}
 	sdl_window_refresh(&scoreListWin);
     }
+
+    if (sdl_window_prepare(&scoreListWin, renderer) != 0)
+	return -1;
+    return result;
+}
+
+static void Scorelist_paint(GLWidget *widget)
+{
+    (void)widget;
+
     glColor4ub(0, 0x20, 0, 0x90);
     glEnable(GL_BLEND);
     glBegin(GL_QUADS);
@@ -221,6 +257,8 @@ GLWidget *Init_ScorelistWidget(void)
     tmp->buttondata 	= tmp;
     tmp->motion     	= Scorelist_move;
     tmp->motiondata 	= tmp;
+
+    scoreListWidget = tmp;
 
     return tmp;
 }
@@ -340,6 +378,10 @@ void Paint_frame(void)
 
     if (Images_prepare(Sdl_renderer_frontend(sdl_renderer)) != 0)
 	warn("Could not prepare newly registered images");
+    if (Scorelist_prepare(Sdl_renderer_frontend(sdl_renderer)) != 0)
+	warn("Could not prepare the score list");
+    if (Console_prepare(Sdl_renderer_frontend(sdl_renderer)) != 0)
+	warn("Could not prepare the console");
 
     if (damaged <= 0) {
 	renderer_status = Sdl_renderer_begin_frame(

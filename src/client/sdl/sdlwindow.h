@@ -21,25 +21,99 @@
 #ifndef SDLWINDOW_H
 #define SDLWINDOW_H
 
-#include "xpclient_sdl.h"
+#include "renderer.h"
 
-typedef struct {
-    GLuint tx_id;
+#include <SDL.h>
+
+/** CPU surface and renderer texture backing one off-screen HUD window. */
+typedef struct sdl_window_t {
+    /** Power-of-two RGBA32 surface modified by the window's producer. */
     SDL_Surface *surface;
-    int x, y, w, h;
+    /** Renderer that owns @ref texture after the first successful prepare. */
+    Renderer *renderer;
+    /** Current immutable renderer texture, or NULL before preparation. */
+    RendererTexture *texture;
+    /** Left position in top-left-origin HUD coordinates. */
+    int x;
+    /** Top position in top-left-origin HUD coordinates. */
+    int y;
+    /** Visible width in pixels. */
+    int w;
+    /** Visible height in pixels. */
+    int h;
+    /** Nonzero when surface changes have not yet reached a texture. */
+    int dirty;
 } sdl_window_t;
 
-/** Initialize an off-screen surface and its OpenGL texture. */
+/**
+ * Initialize an off-screen RGBA32 surface without creating GPU resources.
+ *
+ * @param win Window storage to initialize.
+ * @param x Left position in top-left-origin HUD coordinates.
+ * @param y Top position in top-left-origin HUD coordinates.
+ * @param w Positive visible width.
+ * @param h Positive visible height.
+ * @return Zero on success, or -1 on invalid dimensions or allocation failure.
+ */
 int sdl_window_init(sdl_window_t *win, int x, int y, int w, int h);
-/** Move an off-screen window in screen coordinates. */
+
+/**
+ * Create or replace the texture for dirty surface contents.
+ *
+ * @param win Initialized off-screen window.
+ * @param renderer Renderer that owns the resulting texture.
+ * @return Zero on success, or -1 without changing published resources.
+ *
+ * @remarks This function must be called outside an active renderer frame.
+ */
+int sdl_window_prepare(sdl_window_t *win, Renderer *renderer);
+
+/**
+ * Move an off-screen window in screen coordinates.
+ *
+ * @param win Initialized off-screen window.
+ * @param x New left position.
+ * @param y New top position.
+ */
 void sdl_window_move(sdl_window_t *win, int x, int y);
-/** Resize an off-screen window while preserving its old surface on error. */
+
+/**
+ * Resize an off-screen window and preserve overlapping surface contents.
+ *
+ * @param win Initialized off-screen window.
+ * @param w Positive new visible width.
+ * @param h Positive new visible height.
+ * @return Zero on success, or -1 with the old surface and texture preserved.
+ *
+ * @remarks If the window has a texture, this function must be called outside
+ * an active renderer frame.
+ */
 int sdl_window_resize(sdl_window_t *win, int w, int h);
-/** Upload an off-screen window surface to its OpenGL texture. */
+
+/**
+ * Mark surface contents dirty for the next preparation pass.
+ *
+ * @param win Initialized off-screen window.
+ */
 void sdl_window_refresh(sdl_window_t *win);
-/** Draw an off-screen window with OpenGL. */
+
+/**
+ * Draw a prepared off-screen window as an alpha-blended HUD sprite.
+ *
+ * @param win Prepared off-screen window.
+ *
+ * @remarks Drawing requires an active renderer frame and immediately flushes
+ * semantic commands while preserving transitional compatibility state.
+ */
 void sdl_window_paint(sdl_window_t *win);
-/** Release an off-screen window surface and texture. */
+
+/**
+ * Release an off-screen window surface and texture.
+ *
+ * @param win Window to reset, or NULL for no operation.
+ *
+ * @remarks This function is idempotent and must run outside a renderer frame.
+ */
 void sdl_window_destroy(sdl_window_t *win);
 
-#endif
+#endif /* SDLWINDOW_H */

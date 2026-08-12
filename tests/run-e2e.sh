@@ -258,6 +258,12 @@ xdotool keyup --window "$window_id" Shift_L >/dev/null 2>&1 \
     || fail "could not send key-up event"
 xdotool key --window "$window_id" Up Return >/dev/null 2>&1 \
     || fail "could not send gameplay key events"
+xdotool key --window "$window_id" m >/dev/null 2>&1 \
+    || fail "could not open the console"
+xdotool type --window "$window_id" --delay 10 SDL2Smoke >/dev/null 2>&1 \
+    || fail "could not enter console text"
+xdotool key --window "$window_id" Return >/dev/null 2>&1 \
+    || fail "could not submit console text"
 if ! kill -0 "$client_pid" 2>/dev/null; then
     fail "client stopped after resize/input events"
 fi

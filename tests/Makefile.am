@@ -5,13 +5,13 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	@GL_CFLAGS@ @GLU_CFLAGS@
 
 check_PROGRAMS = test-sdl-keys test-sdl-console test-sdl-surface \
-	test-surface-rgba8 \
+	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-gl-legacy \
 	test-renderer-commands test-renderer-geometry \
 	test-renderer-gl-backends test-paint-transform test-image-geometry \
 	test-gfx2d-picture test-images
 TESTS = test-sdl-keys test-sdl-console test-sdl-surface \
-	test-surface-rgba8 \
+	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
 	test-renderer-geometry test-paint-transform run-gl-legacy.sh \
 	test-image-geometry test-gfx2d-picture \
@@ -33,6 +33,10 @@ test_surface_rgba8_SOURCES = test_surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/sdlcompat.c
 test_surface_rgba8_LDADD = @SDL2_LIBS@
+
+test_sdl_window_SOURCES = test_sdl_window.c \
+	$(top_srcdir)/src/client/sdl/sdlwindow.c
+test_sdl_window_LDADD = @SDL2_LIBS@
 
 test_sdl_clipboard_SOURCES = test_sdl_clipboard.c \
 	$(top_srcdir)/src/client/sdl/sdlclipboard.c
