@@ -382,6 +382,12 @@ void Paint_frame(void)
 	warn("Could not prepare the score list");
     if (Console_prepare(Sdl_renderer_frontend(sdl_renderer)) != 0)
 	warn("Could not prepare the console");
+    if (UpdateRadar) {
+	Radar_update();
+	UpdateRadar = false;
+    }
+    if (Radar_prepare(Sdl_renderer_frontend(sdl_renderer)) != 0)
+	warn("Could not prepare the radar");
 
     if (damaged <= 0) {
 	renderer_status = Sdl_renderer_begin_frame(
@@ -440,10 +446,6 @@ void Paint_frame(void)
 	Console_paint();
 	Paint_select();
 
-	if (UpdateRadar) {
-	  Radar_update();
-	  UpdateRadar = false;
-	}
     	DrawGLWidgets(MainWidget);
     		
 	glPopMatrix();

@@ -96,7 +96,8 @@ check_PROGRAMS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) \
 	test-renderer-gl-backends$(EXEEXT) \
 	test-paint-transform$(EXEEXT) test-image-geometry$(EXEEXT) \
-	test-gfx2d-picture$(EXEEXT) test-images$(EXEEXT)
+	test-gfx2d-picture$(EXEEXT) test-images$(EXEEXT) \
+	test-radar-renderer$(EXEEXT)
 TESTS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
 	test-sdl-window$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
@@ -104,7 +105,8 @@ TESTS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) test-paint-transform$(EXEEXT) \
 	run-gl-legacy.sh test-image-geometry$(EXEEXT) \
 	test-gfx2d-picture$(EXEEXT) test-images$(EXEEXT) \
-	run-renderer-gl-backends.sh run-e2e.sh
+	test-radar-renderer$(EXEEXT) run-renderer-gl-backends.sh \
+	run-e2e.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -143,6 +145,13 @@ am_test_paint_transform_OBJECTS = test_paint_transform.$(OBJEXT) \
 	paint_transform.$(OBJEXT)
 test_paint_transform_OBJECTS = $(am_test_paint_transform_OBJECTS)
 test_paint_transform_LDADD = $(LDADD)
+am_test_radar_renderer_OBJECTS =  \
+	test_radar_renderer-test_radar_renderer.$(OBJEXT) \
+	test_radar_renderer-radar.$(OBJEXT)
+test_radar_renderer_OBJECTS = $(am_test_radar_renderer_OBJECTS)
+test_radar_renderer_DEPENDENCIES =
+test_radar_renderer_LINK = $(CCLD) $(test_radar_renderer_CFLAGS) \
+	$(CFLAGS) $(test_radar_renderer_LDFLAGS) $(LDFLAGS) -o $@
 am_test_renderer_commands_OBJECTS = test_renderer_commands.$(OBJEXT) \
 	renderer.$(OBJEXT)
 test_renderer_commands_OBJECTS = $(am_test_renderer_commands_OBJECTS)
@@ -217,6 +226,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_images-strdup.Po \
 	./$(DEPDIR)/test_images-test_images.Po \
 	./$(DEPDIR)/test_paint_transform.Po \
+	./$(DEPDIR)/test_radar_renderer-radar.Po \
+	./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po \
 	./$(DEPDIR)/test_renderer_commands.Po \
 	./$(DEPDIR)/test_renderer_geometry.Po \
 	./$(DEPDIR)/test_renderer_gl_backends.Po \
@@ -244,7 +255,7 @@ am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
 SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
-	$(test_paint_transform_SOURCES) \
+	$(test_paint_transform_SOURCES) $(test_radar_renderer_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
@@ -254,7 +265,7 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_surface_rgba8_SOURCES)
 DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
-	$(test_paint_transform_SOURCES) \
+	$(test_paint_transform_SOURCES) $(test_radar_renderer_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
@@ -698,6 +709,15 @@ test_images_SOURCES = test_images.c \
 
 test_images_CPPFLAGS = $(AM_CPPFLAGS) -DXPILOT_IMAGE_TEST_HOOKS
 test_images_LDADD = @SDL2_LIBS@ @GL_LIBS@
+test_radar_renderer_SOURCES = test_radar_renderer.c \
+	$(top_srcdir)/src/client/sdl/radar.c
+
+test_radar_renderer_CPPFLAGS = $(AM_CPPFLAGS) -DXPILOT_RADAR_TEST_HOOKS
+test_radar_renderer_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+
+test_radar_renderer_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_radar_renderer_LDADD = @SDL2_LIBS@
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
 AM_TESTS_ENVIRONMENT = \
@@ -769,6 +789,10 @@ test-paint-transform$(EXEEXT): $(test_paint_transform_OBJECTS) $(test_paint_tran
 	@rm -f test-paint-transform$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_paint_transform_OBJECTS) $(test_paint_transform_LDADD) $(LIBS)
 
+test-radar-renderer$(EXEEXT): $(test_radar_renderer_OBJECTS) $(test_radar_renderer_DEPENDENCIES) $(EXTRA_test_radar_renderer_DEPENDENCIES)
+	@rm -f test-radar-renderer$(EXEEXT)
+	$(AM_V_CCLD)$(test_radar_renderer_LINK) $(test_radar_renderer_OBJECTS) $(test_radar_renderer_LDADD) $(LIBS)
+
 test-renderer-commands$(EXEEXT): $(test_renderer_commands_OBJECTS) $(test_renderer_commands_DEPENDENCIES) $(EXTRA_test_renderer_commands_DEPENDENCIES)
 	@rm -f test-renderer-commands$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_renderer_commands_OBJECTS) $(test_renderer_commands_LDADD) $(LIBS)
@@ -839,6 +863,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-strdup.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-test_images.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paint_transform.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_radar_renderer-radar.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_commands.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_gl_backends.Po@am__quote@ # am--include-marker
@@ -1009,6 +1035,34 @@ paint_transform.obj: $(top_srcdir)/src/client/sdl/paint_transform.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/paint_transform.c' object='paint_transform.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o paint_transform.obj `if test -f '$(top_srcdir)/src/client/sdl/paint_transform.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/paint_transform.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/paint_transform.c'; fi`
+
+test_radar_renderer-test_radar_renderer.o: test_radar_renderer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_radar_renderer_CPPFLAGS) $(CPPFLAGS) $(test_radar_renderer_CFLAGS) $(CFLAGS) -MT test_radar_renderer-test_radar_renderer.o -MD -MP -MF $(DEPDIR)/test_radar_renderer-test_radar_renderer.Tpo -c -o test_radar_renderer-test_radar_renderer.o `test -f 'test_radar_renderer.c' || echo '$(srcdir)/'`test_radar_renderer.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_radar_renderer-test_radar_renderer.Tpo $(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_radar_renderer.c' object='test_radar_renderer-test_radar_renderer.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_radar_renderer_CPPFLAGS) $(CPPFLAGS) $(test_radar_renderer_CFLAGS) $(CFLAGS) -c -o test_radar_renderer-test_radar_renderer.o `test -f 'test_radar_renderer.c' || echo '$(srcdir)/'`test_radar_renderer.c
+
+test_radar_renderer-test_radar_renderer.obj: test_radar_renderer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_radar_renderer_CPPFLAGS) $(CPPFLAGS) $(test_radar_renderer_CFLAGS) $(CFLAGS) -MT test_radar_renderer-test_radar_renderer.obj -MD -MP -MF $(DEPDIR)/test_radar_renderer-test_radar_renderer.Tpo -c -o test_radar_renderer-test_radar_renderer.obj `if test -f 'test_radar_renderer.c'; then $(CYGPATH_W) 'test_radar_renderer.c'; else $(CYGPATH_W) '$(srcdir)/test_radar_renderer.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_radar_renderer-test_radar_renderer.Tpo $(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_radar_renderer.c' object='test_radar_renderer-test_radar_renderer.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_radar_renderer_CPPFLAGS) $(CPPFLAGS) $(test_radar_renderer_CFLAGS) $(CFLAGS) -c -o test_radar_renderer-test_radar_renderer.obj `if test -f 'test_radar_renderer.c'; then $(CYGPATH_W) 'test_radar_renderer.c'; else $(CYGPATH_W) '$(srcdir)/test_radar_renderer.c'; fi`
+
+test_radar_renderer-radar.o: $(top_srcdir)/src/client/sdl/radar.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_radar_renderer_CPPFLAGS) $(CPPFLAGS) $(test_radar_renderer_CFLAGS) $(CFLAGS) -MT test_radar_renderer-radar.o -MD -MP -MF $(DEPDIR)/test_radar_renderer-radar.Tpo -c -o test_radar_renderer-radar.o `test -f '$(top_srcdir)/src/client/sdl/radar.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/radar.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_radar_renderer-radar.Tpo $(DEPDIR)/test_radar_renderer-radar.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/radar.c' object='test_radar_renderer-radar.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_radar_renderer_CPPFLAGS) $(CPPFLAGS) $(test_radar_renderer_CFLAGS) $(CFLAGS) -c -o test_radar_renderer-radar.o `test -f '$(top_srcdir)/src/client/sdl/radar.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/radar.c
+
+test_radar_renderer-radar.obj: $(top_srcdir)/src/client/sdl/radar.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_radar_renderer_CPPFLAGS) $(CPPFLAGS) $(test_radar_renderer_CFLAGS) $(CFLAGS) -MT test_radar_renderer-radar.obj -MD -MP -MF $(DEPDIR)/test_radar_renderer-radar.Tpo -c -o test_radar_renderer-radar.obj `if test -f '$(top_srcdir)/src/client/sdl/radar.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/radar.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/radar.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_radar_renderer-radar.Tpo $(DEPDIR)/test_radar_renderer-radar.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/radar.c' object='test_radar_renderer-radar.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_radar_renderer_CPPFLAGS) $(CPPFLAGS) $(test_radar_renderer_CFLAGS) $(CFLAGS) -c -o test_radar_renderer-radar.obj `if test -f '$(top_srcdir)/src/client/sdl/radar.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/radar.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/radar.c'; fi`
 
 renderer.o: $(top_srcdir)/src/client/sdl/renderer.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT renderer.o -MD -MP -MF $(DEPDIR)/renderer.Tpo -c -o renderer.o `test -f '$(top_srcdir)/src/client/sdl/renderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer.c
@@ -1448,6 +1502,13 @@ test-images.log: test-images$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-radar-renderer.log: test-radar-renderer$(EXEEXT)
+	@p='test-radar-renderer$(EXEEXT)'; \
+	b='test-radar-renderer'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 .sh.log:
 	@p='$<'; \
 	$(am__set_b); \
@@ -1563,6 +1624,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_images-strdup.Po
 	-rm -f ./$(DEPDIR)/test_images-test_images.Po
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
+	-rm -f ./$(DEPDIR)/test_radar_renderer-radar.Po
+	-rm -f ./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
 	-rm -f ./$(DEPDIR)/test_renderer_geometry.Po
 	-rm -f ./$(DEPDIR)/test_renderer_gl_backends.Po
@@ -1642,6 +1705,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_images-strdup.Po
 	-rm -f ./$(DEPDIR)/test_images-test_images.Po
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
+	-rm -f ./$(DEPDIR)/test_radar_renderer-radar.Po
+	-rm -f ./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
 	-rm -f ./$(DEPDIR)/test_renderer_geometry.Po
 	-rm -f ./$(DEPDIR)/test_renderer_gl_backends.Po

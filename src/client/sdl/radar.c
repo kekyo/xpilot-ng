@@ -25,6 +25,11 @@
 #include "SDL_gfxPrimitives.h"
 #include "radar.h"
 #include "glwidgets.h"
+#include "sdlinit.h"
+#include "sdlrenderer.h"
+
+#include <limits.h>
+#include <stddef.h>
 
 /* kps - had to add prefix so that these would not conflict with options */
 color_t wallRadarColorValue = 0xa0;
@@ -33,25 +38,68 @@ color_t decorRadarColorValue = 0xff0000;
 color_t bgRadarColorValue = 0xa00000ff;
 
 static SDL_Surface *radar_surface;     /* offscreen image with walls */
-static GLuint      radar_texture;     /* above as an OpenGL texture */
-static SDL_Rect    radar_bounds;
-static GLWidget    *radar_widget;
+static Renderer *radar_renderer;      /* owner of the semantic texture */
+static RendererTexture *radar_texture;/* above as a renderer texture */
+static SDL_Rect radar_bounds;
+static SDL_Rect pending_radar_bounds;
+static GLWidget *radar_widget;
+static int radar_dirty;
+static int radar_bounds_pending;
 
 static void Radar_cleanup( GLWidget *widget );
 static void Radar_paint( GLWidget *widget );
 static void move(Sint16 xrel,Sint16 yrel,Uint16 x,Uint16 y, void *data);
 
-#define RGBA(RGB) \
-    ((RGB) & 0xff000000 ? (RGB) & 0xff000000 : 0xff000000 \
-     | ((RGB) & 0xff0000) >> 16 \
-     | ((RGB) & 0x00ff00) \
-     | ((RGB) & 0x0000ff) << 16)
-
-static int pow2_ceil(int t)
+static int pow2_ceil(int value, int *result)
 {
-    int r;
-    for (r = 1; r < t; r <<= 1);
-    return r;
+    int power = 1;
+
+    if (value <= 0 || result == NULL)
+	return -1;
+    while (power < value) {
+	if (power > INT_MAX / 2)
+	    return -1;
+	power <<= 1;
+    }
+    *result = power;
+    return 0;
+}
+
+static Uint32 Radar_surface_color(SDL_Surface *surface, color_t color)
+{
+    Uint8 red = (Uint8)(color >> 16);
+    Uint8 green = (Uint8)(color >> 8);
+    Uint8 blue = (Uint8)color;
+    Uint8 alpha = SDL_ALPHA_OPAQUE;
+
+    /* Preserve the old RGBA macro's overloaded color representation: a
+     * nonzero high byte meant an alpha-only black radar background. */
+    if ((color & 0xff000000) != 0) {
+	red = 0;
+	green = 0;
+	blue = 0;
+	alpha = (Uint8)(color >> 24);
+    }
+
+    return SDL_MapRGBA(surface->format, red, green, blue, alpha);
+}
+
+static int Radar_scale_bounds(const SDL_Rect *requested, SDL_Rect *scaled)
+{
+    int64_t height;
+
+    if (requested == NULL || scaled == NULL
+	|| requested->w <= 0 || requested->h <= 0
+	|| RadarWidth == 0 || RadarHeight == 0) {
+	return -1;
+    }
+    height = (int64_t)requested->h * (int64_t)RadarHeight
+	/ (int64_t)RadarWidth;
+    if (height <= 0 || height > INT_MAX)
+	return -1;
+    *scaled = *requested;
+    scaled->h = (int)height;
+    return 0;
 }
 
 /*
@@ -114,7 +162,7 @@ static void Radar_paint_block(GLWidget *radar, SDL_Surface *s, int xi, int yi, c
     block.w = (xi + 1) * radar->bounds.w / Setup->x - block.x;
     block.h = radar->bounds.h - yi * radar->bounds.h / Setup->y - block.y;
 
-    SDL_FillRect(s, &block, RGBA(color));
+    SDL_FillRect(s, &block, Radar_surface_color(s, color));
 }
 
 /*
@@ -152,7 +200,7 @@ static void Radar_paint_world_blocks(GLWidget *radar, SDL_Surface *s)
     }
 
     if (SDL_MUSTLOCK(s)) SDL_LockSurface(s);
-    SDL_FillRect(s, NULL, RGBA(bgRadarColorValue));
+    SDL_FillRect(s, NULL, Radar_surface_color(s, bgRadarColorValue));
 
     /* Scan the map and paint the blocks */
     for (xi = 0; xi < Setup->x; xi++) {
@@ -199,7 +247,7 @@ static void Radar_paint_world_polygons(GLWidget *radar, SDL_Surface *s)
     color_t color;
 
     if (SDL_MUSTLOCK(s)) SDL_LockSurface(s);
-    SDL_FillRect(s, NULL, RGBA(bgRadarColorValue));
+    SDL_FillRect(s, NULL, Radar_surface_color(s, bgRadarColorValue));
 
     for (i = 0; i < num_polygons; i++) {
 
@@ -324,16 +372,19 @@ static void Radar_paint_checkpoint(GLWidget *radar)
 static void move(Sint16 xrel,Sint16 yrel,Uint16 x,Uint16 y, void *data)
 {
     char buf[40];
-    SDL_Rect *b;
-    
-    b = &(((GLWidget *)data)->bounds);
-    b->x += xrel;
-    b->y += yrel;
+    SDL_Rect bounds = radar_bounds_pending
+	? pending_radar_bounds : radar_bounds;
+
+    (void)x;
+    (void)y;
+    (void)data;
+    bounds.x += xrel;
+    bounds.y += yrel;
     sprintf(buf, "%dx%d+%d+%d", 
-	    radar_bounds.w, 
-	    radar_bounds.h,
-	    b->x,
-	    b->y);
+	    bounds.w,
+	    bounds.h,
+	    bounds.x,
+	    bounds.y);
     Set_string_option(Find_option("radarGeometry"), buf, xp_option_origin_config);
 }
 
@@ -352,82 +403,144 @@ static void button( Uint8 button, Uint8 state , Uint16 x , Uint16 y, void *data 
     }
 }
 
-static GLuint Radar_create_texture(GLWidget *widget, SDL_Surface *surface)
+static void Radar_paint_surface(SDL_Surface *surface,
+				const SDL_Rect *bounds)
 {
-    GLuint texture;
+    GLWidget painting_widget;
 
-    if (oldServer) Radar_paint_world_blocks(widget, surface);
-    else Radar_paint_world_polygons(widget, surface);
-
-    while (glGetError() != GL_NO_ERROR)
-	;
-    glGenTextures(1, &texture);
-    if (texture == 0)
-	return 0;
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-		 surface->w, surface->h,
-                 0, GL_RGBA, GL_UNSIGNED_BYTE,
-		 surface->pixels);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                    GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                    GL_NEAREST);
-    if (glGetError() != GL_NO_ERROR) {
-	glDeleteTextures(1, &texture);
-	return 0;
-    }
-    return texture;
+    memset(&painting_widget, 0, sizeof(painting_widget));
+    painting_widget.bounds = *bounds;
+    if (oldServer)
+	Radar_paint_world_blocks(&painting_widget, surface);
+    else
+	Radar_paint_world_polygons(&painting_widget, surface);
 }
 
-static int Radar_init(GLWidget *widget)
+static SDL_Surface *Radar_create_surface(const SDL_Rect *bounds)
 {
     SDL_Surface *surface;
-    GLuint texture;
+    int texture_width;
+    int texture_height;
 
-    surface =
-	SDL_CreateRGBSurface(0,
-                             pow2_ceil(widget->bounds.w-1),
-			     pow2_ceil(widget->bounds.h-1), 32,
-                             RMASK, GMASK, BMASK, AMASK);
-    if (!surface) {
-        error("Could not create radar surface: %s", SDL_GetError());
-        return -1;
+    if (bounds == NULL
+	|| pow2_ceil(bounds->w, &texture_width) != 0
+	|| pow2_ceil(bounds->h, &texture_height) != 0) {
+	error("Radar dimensions are invalid or too large");
+	return NULL;
     }
-    if (SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_BLEND) < 0
+
+    surface = SDL_CreateRGBSurfaceWithFormat(
+	0, texture_width, texture_height, 32, SDL_PIXELFORMAT_RGBA32);
+    if (surface == NULL) {
+	error("Could not create radar surface: %s", SDL_GetError());
+	return NULL;
+    }
+    if (SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE) < 0
 	|| SDL_SetSurfaceAlphaMod(surface, SDL_ALPHA_OPAQUE) < 0) {
-	error("Could not enable radar surface alpha blending: %s",
-	      SDL_GetError());
+	error("Could not configure radar surface: %s", SDL_GetError());
 	SDL_FreeSurface(surface);
+	return NULL;
+    }
+    Radar_paint_surface(surface, bounds);
+    return surface;
+}
+
+static int Radar_create_texture(Renderer *renderer, SDL_Surface *surface,
+				RendererTexture **texture)
+{
+    RendererTextureDesc desc;
+
+    if (renderer == NULL || surface == NULL || surface->pixels == NULL
+	|| surface->pitch <= 0 || texture == NULL) {
 	return -1;
     }
-    texture = Radar_create_texture(widget, surface);
-    if (texture == 0) {
-	error("Could not create radar texture");
-	SDL_FreeSurface(surface);
+
+    desc.width = surface->w;
+    desc.height = surface->h;
+    desc.filter = RENDERER_TEXTURE_FILTER_NEAREST;
+    desc.wrap = RENDERER_TEXTURE_WRAP_CLAMP;
+    if (Renderer_texture_create_with_desc(
+	    renderer, &desc, surface->pixels, (size_t)surface->pitch,
+	    texture) != RENDERER_STATUS_OK) {
+	warn("Could not create radar texture");
+	return -1;
+    }
+    return 0;
+}
+
+static int Radar_replace(Renderer *renderer, const SDL_Rect *bounds)
+{
+    SDL_Surface *candidate_surface;
+    RendererTexture *candidate_texture = NULL;
+
+    candidate_surface = Radar_create_surface(bounds);
+    if (candidate_surface == NULL)
+	return -1;
+    if (Radar_create_texture(
+	    renderer, candidate_surface, &candidate_texture) != 0) {
+	SDL_FreeSurface(candidate_surface);
+	return -1;
+    }
+
+    if (radar_texture != NULL
+	&& Renderer_texture_destroy(radar_renderer, radar_texture)
+	   != RENDERER_STATUS_OK) {
+	warn("Could not replace radar texture");
+	if (Renderer_texture_destroy(renderer, candidate_texture)
+	    != RENDERER_STATUS_OK) {
+	    warn("Could not release replacement radar texture");
+	}
+	SDL_FreeSurface(candidate_surface);
 	return -1;
     }
 
     SDL_FreeSurface(radar_surface);
-    if (radar_texture != 0)
-	glDeleteTextures(1, &radar_texture);
-    radar_surface = surface;
-    radar_texture = texture;
+    radar_surface = candidate_surface;
+    radar_renderer = renderer;
+    radar_texture = candidate_texture;
+    radar_bounds = *bounds;
+    radar_widget->bounds.x = bounds->x;
+    radar_widget->bounds.y = bounds->y;
+    radar_widget->bounds.w = bounds->w + 1;
+    radar_widget->bounds.h = bounds->h + 1;
+    radar_dirty = 0;
+    radar_bounds_pending = 0;
     return 0;
 }
 
 void Radar_update(void)
 {
-    GLuint texture;
-
     if (radar_widget == NULL || radar_surface == NULL)
 	return;
-    texture = Radar_create_texture(radar_widget, radar_surface);
-    if (texture == 0)
-	return;
-    if (radar_texture != 0)
-	glDeleteTextures(1, &radar_texture);
+    radar_dirty = 1;
+}
+
+int Radar_prepare(Renderer *renderer)
+{
+    SDL_Rect target_bounds;
+    RendererTexture *texture = NULL;
+
+    if (renderer == NULL || radar_widget == NULL || radar_surface == NULL)
+	return -1;
+    if (radar_texture != NULL && radar_renderer != renderer)
+	return -1;
+    if (!radar_dirty && !radar_bounds_pending)
+	return radar_texture != NULL ? 0 : -1;
+
+    target_bounds = radar_bounds_pending
+	? pending_radar_bounds : radar_bounds;
+    if (radar_texture != NULL || radar_bounds_pending)
+	return Radar_replace(renderer, &target_bounds);
+
+    /* Before the first texture exists, repainting the already-published
+     * surface cannot make an older GPU resource inconsistent. */
+    Radar_paint_surface(radar_surface, &target_bounds);
+    if (Radar_create_texture(renderer, radar_surface, &texture) != 0)
+	return -1;
+    radar_renderer = renderer;
     radar_texture = texture;
+    radar_dirty = 0;
+    return 0;
 }
 
 /*
@@ -439,15 +552,23 @@ void Radar_update(void)
 GLWidget *Init_RadarWidget(void)
 {
     GLWidget *tmp	= Init_EmptyBaseGLWidget();
+    SDL_Surface *surface;
+    SDL_Rect scaled_bounds;
+
     if ( !tmp ) {
         error("Failed to malloc in Init_RadarWidget");
 	return NULL;
     }
+    if (Radar_scale_bounds(&radar_bounds, &scaled_bounds) != 0) {
+	error("Invalid radar geometry");
+	free(tmp);
+	return NULL;
+    }
     tmp->WIDGET     	= RADARWIDGET;
-    tmp->bounds.x   	= radar_bounds.x;
-    tmp->bounds.y   	= radar_bounds.y;
-    tmp->bounds.w   	= radar_bounds.w;
-    tmp->bounds.h   	= radar_bounds.h * RadarHeight / RadarWidth;
+    tmp->bounds.x   	= scaled_bounds.x;
+    tmp->bounds.y   	= scaled_bounds.y;
+    tmp->bounds.w   	= scaled_bounds.w + 1;
+    tmp->bounds.h   	= scaled_bounds.h + 1;
     tmp->Draw	    	= Radar_paint;
     tmp->Close	    	= Radar_cleanup;
     tmp->button     	= button;
@@ -455,72 +576,80 @@ GLWidget *Init_RadarWidget(void)
     tmp->motion     	= move;
     tmp->motiondata 	= tmp;
     
-    if (Radar_init(tmp) != 0) {
+    surface = Radar_create_surface(&scaled_bounds);
+    if (surface == NULL) {
 	free(tmp);
 	return NULL;
     }
 
+    radar_surface = surface;
+    radar_renderer = NULL;
+    radar_texture = NULL;
+    radar_bounds = scaled_bounds;
     radar_widget = tmp;
+    radar_dirty = 1;
+    radar_bounds_pending = 0;
     return tmp;
 }
 
 static void Radar_cleanup( GLWidget *widget )
 {
-    if (radar_texture != 0)
-	glDeleteTextures(1, &radar_texture);
-    radar_texture = 0;
+    (void)widget;
+
+    if (radar_texture != NULL) {
+	if (radar_renderer == NULL
+	    || Renderer_texture_destroy(radar_renderer, radar_texture)
+	       != RENDERER_STATUS_OK) {
+	    warn("Could not destroy radar texture");
+	    return;
+	}
+    }
+    radar_texture = NULL;
+    radar_renderer = NULL;
     SDL_FreeSurface(radar_surface);
     radar_surface = NULL;
     radar_widget = NULL;
+    radar_dirty = 0;
+    radar_bounds_pending = 0;
 }
 
 static void Radar_set_bounds(GLWidget *widget, int x, int y, int w, int h)
 {
-    SDL_Rect old_radar_bounds = radar_bounds;
-    SDL_Rect old_widget_bounds;
+    SDL_Rect requested = {x, y, w, h};
+    SDL_Rect scaled;
 
-    radar_bounds.x = x;
-    radar_bounds.y = y;
-    radar_bounds.w = w;
-    radar_bounds.h = h;
-    if (widget != NULL) {
-	old_widget_bounds = widget->bounds;
-	widget->bounds.x = x;
-	widget->bounds.y = y;
-	widget->bounds.w = w + 1;
-	widget->bounds.h = h * RadarHeight / RadarWidth + 1;
-	if (Radar_init(widget) != 0) {
-	    radar_bounds = old_radar_bounds;
-	    widget->bounds = old_widget_bounds;
-	    warn("Could not resize radar");
-	}
+    if (widget == NULL) {
+	radar_bounds = requested;
+	return;
     }
+    if (Radar_scale_bounds(&requested, &scaled) != 0)
+	return;
+    pending_radar_bounds = scaled;
+    radar_bounds_pending = 1;
+    radar_dirty = 1;
 }
 
-static void Radar_blit_world(SDL_Rect *sr, SDL_Rect *dr)
+static RendererStatus Radar_blit_world(Renderer *renderer,
+				       const SDL_Rect *sr,
+				       const SDL_Rect *dr,
+				       int *submitted)
 {
     float tx1, ty1, tx2, ty2;
 
+    if (sr->w <= 0 || sr->h <= 0 || dr->w <= 0 || dr->h <= 0)
+	return RENDERER_STATUS_OK;
     tx1 = (float)sr->x / radar_surface->w;
     ty1 = (float)sr->y / radar_surface->h;
     tx2 = ((float)sr->x + sr->w) / radar_surface->w;
     ty2 = ((float)sr->y + sr->h) / radar_surface->h;
 
-    glBindTexture(GL_TEXTURE_2D, radar_texture);
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glColor4ub(255, 255, 255, 255);
-
-    glBegin(GL_QUADS);
-    glTexCoord2f(tx1, ty1); glVertex2i(dr->x, dr->y);
-    glTexCoord2f(tx2, ty1); glVertex2i(dr->x + dr->w, dr->y);
-    glTexCoord2f(tx2, ty2); glVertex2i(dr->x + dr->w, dr->y + dr->h);
-    glTexCoord2f(tx1, ty2); glVertex2i(dr->x, dr->y + dr->h);
-    glEnd();
-
-    glDisable(GL_BLEND);
-    glDisable(GL_TEXTURE_2D);
+    (*submitted)++;
+    return Renderer_draw_sprite(
+	renderer, radar_texture,
+	(float)dr->x, (float)dr->y,
+	(float)(dr->x + dr->w), (float)(dr->y + dr->h),
+	tx1, ty1, tx2, ty2,
+	(RendererColor){255, 255, 255, 255});
 }
 
 /*
@@ -528,17 +657,18 @@ static void Radar_blit_world(SDL_Rect *sr, SDL_Rect *dr)
  */
 static void Radar_paint( GLWidget *widget )
 {
-    float xf, yf;
-    
-    radar_bounds.x = ((GLWidget *)widget)->bounds.x;
-    radar_bounds.y = ((GLWidget *)widget)->bounds.y;
-    radar_bounds.w = ((GLWidget *)widget)->bounds.w-1;
-    radar_bounds.h = ((GLWidget *)widget)->bounds.h-1;
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+    Renderer *renderer = sdl_renderer != NULL
+	? Sdl_renderer_frontend(sdl_renderer) : NULL;
+    RendererStatus status = RENDERER_STATUS_INVALID_STATE;
+    int submitted = 0;
 
-    xf = (float)radar_bounds.w / (float)Setup->width;
-    yf = (float)radar_bounds.h / (float)Setup->height;
+    if (renderer != NULL && renderer == radar_renderer
+	&& radar_texture != NULL) {
+	status = Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA);
+    }
 
-    if (instruments.slidingRadar) {
+    if (status == RENDERER_STATUS_OK && instruments.slidingRadar) {
 
         int x, y, w, h;
         float xp, yp, xo, yo;
@@ -564,28 +694,42 @@ static void Radar_paint( GLWidget *widget )
         sr.x = 0; sr.y = 0; sr.w = x; sr.h = y;
         dr.x = w + radar_bounds.x; dr.y = h + radar_bounds.y;
         dr.w = x; dr.h = y;
-        Radar_blit_world(&sr, &dr);
+        status = Radar_blit_world(renderer, &sr, &dr, &submitted);
 
         sr.x = x; sr.y = 0; sr.w = w; sr.h = y;
         dr.x = 0 + radar_bounds.x; dr.y = h + radar_bounds.y;
         dr.w = w; dr.h = y;
-        Radar_blit_world(&sr, &dr);
+        if (status == RENDERER_STATUS_OK)
+	    status = Radar_blit_world(renderer, &sr, &dr, &submitted);
 
         sr.x = 0; sr.y = y; sr.w = x; sr.h = h;
         dr.x = w + radar_bounds.x; dr.y = 0 + radar_bounds.y;
         dr.w = x; dr.h = h;
-        Radar_blit_world(&sr, &dr);
+        if (status == RENDERER_STATUS_OK)
+	    status = Radar_blit_world(renderer, &sr, &dr, &submitted);
 
         sr.x = x; sr.y = y; sr.w = w; sr.h = h;
         dr.x = 0 + radar_bounds.x; dr.y = 0 + radar_bounds.y;
         dr.w = w; dr.h = h;
-        Radar_blit_world(&sr, &dr);
-    } else {
+        if (status == RENDERER_STATUS_OK)
+	    status = Radar_blit_world(renderer, &sr, &dr, &submitted);
+    } else if (status == RENDERER_STATUS_OK) {
 	SDL_Rect sr;
 	sr.x = sr.y = 0;
 	sr.w = radar_bounds.w; sr.h = radar_bounds.h;
-	Radar_blit_world(&sr, &radar_bounds);
+	status = Radar_blit_world(
+	    renderer, &sr, &radar_bounds, &submitted);
     }
+
+    if (submitted > 0) {
+	RendererStatus flush_status =
+	    Sdl_renderer_flush_preserving_legacy(sdl_renderer);
+
+	if (status == RENDERER_STATUS_OK)
+	    status = flush_status;
+    }
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw radar texture");
 
     Radar_paint_checkpoint( widget );
     Radar_paint_self( widget );
@@ -625,11 +769,14 @@ static bool Set_geometry(xp_option_t *opt, const char *s)
 static const char* Get_geometry(xp_option_t *opt)
 {
     static char buf[40];
+    SDL_Rect bounds = radar_bounds_pending
+	? pending_radar_bounds : radar_bounds;
+
     sprintf(buf, "%dx%d+%d+%d", 
-	    radar_bounds.w, 
-	    radar_bounds.h,
-	    radar_bounds.x,
-	    radar_bounds.y);
+	    bounds.w,
+	    bounds.h,
+	    bounds.x,
+	    bounds.y);
     return buf;
 }
 
@@ -649,3 +796,20 @@ void Store_radar_options(void)
 {
     STORE_OPTIONS(radar_options);
 }
+
+#ifdef XPILOT_RADAR_TEST_HOOKS
+SDL_Surface *Radar_test_surface(void)
+{
+    return radar_surface;
+}
+
+RendererTexture *Radar_test_texture(void)
+{
+    return radar_texture;
+}
+
+SDL_Rect Radar_test_bounds(void)
+{
+    return radar_bounds;
+}
+#endif
