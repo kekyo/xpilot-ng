@@ -26,6 +26,9 @@
 #include "sdlmeta.h"
 #include "sdlinit.h"
 #include "sdlwindow.h"
+#include "sdlmetaframe.h"
+#include "sdluiimage.h"
+#include "paint_transform.h"
 #include "text.h"
 #include "glwidgets.h"
 #include "gl_diagnostics.h"
@@ -70,8 +73,9 @@ typedef struct {
     GLWidget   *table;
     GLWidget   *status;
     GLWidget   *players;
-    GLuint     texture;
-    texcoord_t txc;
+    SdlRenderer *sdl_renderer;
+    SdlUiDrawState *draw_state;
+    SdlUiImage background;
 } MetaWidget;
 
 typedef struct {
@@ -820,32 +824,26 @@ static GLWidget *Init_MetaTableWidget(GLWidget *meta, list_t servers)
 static void Paint_MetaWidget(GLWidget *widget)
 {
     MetaWidget *info;
-    SDL_Rect *b;
+    RendererRect bounds;
+    RendererStatus status;
 
     if (widget->WIDGET != METAWIDGET) {
 	error("expected METAWIDGET got [%d]", widget->WIDGET);
 	return;
     }
     info = (MetaWidget*)widget->wid_info;
-    if (info->texture == 0) return;
-    
-    b = &(widget->bounds);
-    glColor4ub(255, 255, 255, 255);
-    glBindTexture(GL_TEXTURE_2D, info->texture);
-    glEnable(GL_TEXTURE_2D);
+    if (info->background.texture == NULL)
+	return;
 
-    glBegin(GL_QUADS);
-    glTexCoord2f(info->txc.MinX, info->txc.MinY); 
-    glVertex2i(b->x, b->y);
-    glTexCoord2f(info->txc.MaxX, info->txc.MinY); 
-    glVertex2i(b->x + b->w , b->y);
-    glTexCoord2f(info->txc.MaxX, info->txc.MaxY); 
-    glVertex2i(b->x + b->w , b->y + b->h);
-    glTexCoord2f(info->txc.MinY, info->txc.MaxY); 
-    glVertex2i(b->x, b->y + b->h);
-    glEnd();
-
-    glDisable(GL_TEXTURE_2D);
+    bounds.x = widget->bounds.x;
+    bounds.y = widget->bounds.y;
+    bounds.width = widget->bounds.w;
+    bounds.height = widget->bounds.h;
+    status = Sdl_ui_image_draw_tracked(
+	info->draw_state, info->sdl_renderer, &info->background, &bounds,
+	Renderer_color_from_rgba32(whiteRGBA));
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw the metaserver background (%d)", (int)status);
 }
 
 static void Close_MetaWidget(GLWidget *widget)
@@ -857,7 +855,8 @@ static void Close_MetaWidget(GLWidget *widget)
 	return;
     }
     info = (MetaWidget*)widget->wid_info;
-    if (info->texture) glDeleteTextures(1, &(info->texture));
+    if (Sdl_ui_image_cleanup(&info->background) != RENDERER_STATUS_OK)
+	warn("Could not release the metaserver background");
 }
 
 static void OnClick_Join(GLWidget *widget)
@@ -885,7 +884,8 @@ static void OnClick_Quit(GLWidget *widget)
     SDL_PushEvent(&evt);
 }
 
-static GLWidget *Init_MetaWidget(list_t servers)
+static GLWidget *Init_MetaWidget(SdlRenderer *sdl_renderer,
+				 SdlUiDrawState *draw_state, list_t servers)
 {
     GLWidget *tmp;
     MetaWidget *info;
@@ -902,10 +902,9 @@ static GLWidget *Init_MetaWidget(list_t servers)
 	free(tmp);
 	return NULL;
     }
-    info->table         = NULL;
-    info->status        = NULL;
-    info->players       = NULL;
-    info->texture       = 0;
+    memset(info, 0, sizeof(*info));
+    info->sdl_renderer  = sdl_renderer;
+    info->draw_state    = draw_state;
     tmp->WIDGET     	= METAWIDGET;
     tmp->bounds.x       = (draw_width - META_WIDTH) / 2;
     tmp->bounds.y       = (draw_height - META_HEIGHT) / 2;
@@ -916,6 +915,7 @@ static GLWidget *Init_MetaWidget(list_t servers)
     tmp->Close          = Close_MetaWidget;
 
     if (!(info->table = Init_MetaTableWidget(tmp, servers))) {
+	free(info);
 	free(tmp);
 	return NULL;
     }
@@ -930,7 +930,11 @@ static GLWidget *Init_MetaWidget(list_t servers)
 #ifdef HAVE_SDL_IMAGE
     surface = IMG_Load(CONF_TEXTUREDIR "sdlmetabg.png");
     if (surface) {
-	info->texture = SDL_GL_LoadTexture(surface, &(info->txc));
+	RendererStatus status = Sdl_ui_image_init(
+	    &info->background, Sdl_renderer_frontend(sdl_renderer), surface);
+	if (status != RENDERER_STATUS_OK)
+	    warn("Could not create the metaserver background (%d)",
+		 (int)status);
 	SDL_FreeSurface(surface);
     }
 #endif
@@ -986,16 +990,104 @@ static void handleKeyPress(GLWidget *meta, SDL_Keysym *keysym)
     return;
 }
 
+typedef struct {
+    SdlRenderer *sdl_renderer;
+    SdlUiDrawState *draw_state;
+    GLWidget *widgets;
+} MetaFrameContext;
+
+static RendererStatus Begin_meta_frame(void *context)
+{
+    MetaFrameContext *frame = context;
+
+    return Sdl_renderer_begin_frame(
+	frame->sdl_renderer, draw_width, draw_height,
+	Renderer_color_from_rgba32(blackRGBA));
+}
+
+static RendererStatus Draw_meta_frame(void *context)
+{
+    MetaFrameContext *frame = context;
+    Renderer *renderer = Sdl_renderer_frontend(frame->sdl_renderer);
+    RendererTransform2D transform;
+    RendererStatus status;
+    int drawable_width;
+    int drawable_height;
+
+    Sdl_ui_draw_state_init(frame->draw_state);
+    status = Sdl_renderer_get_drawable_size(
+	frame->sdl_renderer, &drawable_width, &drawable_height);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    if (Paint_transform_hud(draw_width, draw_height,
+			    drawable_width, drawable_height,
+			    &transform) != 0) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    status = Renderer_set_transform_2d(renderer, transform);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    status = Sdl_renderer_prepare_legacy(
+	frame->sdl_renderer, SDL_RENDERER_LEGACY_TOP_LEFT);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+
+    glEnable(GL_SCISSOR_TEST);
+    status = DrawGLWidgetsi_checked(
+	frame->widgets, 0, 0, draw_width, draw_height,
+	frame->sdl_renderer, frame->draw_state);
+    glDisable(GL_SCISSOR_TEST);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    if (Gl_diagnostics_check("meta frame end") != 0)
+	return RENDERER_STATUS_BACKEND_ERROR;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus End_meta_frame(void *context)
+{
+    MetaFrameContext *frame = context;
+
+    return Sdl_renderer_end_frame(frame->sdl_renderer);
+}
+
+static void Swap_meta_frame(void *context)
+{
+    (void)context;
+    Swap_buffers();
+}
+
+static const SdlMetaFrameOps meta_frame_ops = {
+    Begin_meta_frame,
+    Draw_meta_frame,
+    End_meta_frame,
+    Swap_meta_frame
+};
+
 int Meta_window(Connect_param_t *conpar)
 {
     static char err[MSG_LEN] = {0};
     int num_serv = 0;
     int btn_x, btn_y, btn_h;
+    int semantic_button_count = 0;
+    int ui_ready_reported = 0;
+    int exit_requested = 0;
+    int result = -1;
     GLWidget *btn, *root, *meta, *target = NULL;
     SDL_Event evt;
     server_info_t *server = NULL;
     SdlRenderer *sdl_renderer = Get_sdl_renderer();
+    SdlUiDrawState ui_draw_state;
+    SdlMetaFrameState frame_state;
+    MetaFrameContext frame_context;
     RendererStatus renderer_status;
+
+    if (sdl_renderer == NULL
+	|| Sdl_renderer_frontend(sdl_renderer) == NULL) {
+	error("Metaserver renderer is not available");
+	return -1;
+    }
+    Sdl_ui_draw_state_init(&ui_draw_state);
     
     if (!server_list ||
 	List_size(server_list) < 10 ||
@@ -1023,7 +1115,8 @@ int Meta_window(Connect_param_t *conpar)
     root->bounds.w = draw_width;
     root->bounds.h = draw_height;
 
-    if (!(meta = Init_MetaWidget(server_list))) {
+    if (!(meta = Init_MetaWidget(
+	      sdl_renderer, &ui_draw_state, server_list))) {
 	free(root);
 	return -1;
     }
@@ -1031,39 +1124,45 @@ int Meta_window(Connect_param_t *conpar)
 
     btn_x = (draw_width - META_WIDTH) / 2 - 80;
     btn_y = (draw_height - META_HEIGHT) / 2 + 60;
-    btn = Init_ImageButtonWidget("Join", 
+    btn = Init_ImageButtonWidget(sdl_renderer, &ui_draw_state, "Join",
 				 "metabtnup.png", 
 				 "metabtndown.png",
 				 BUTTON_BG,
 				 BUTTON_FG,
 				 OnClick_Join);
     if (btn) {
+	if (ImageButtonWidget_has_semantic_images(btn))
+	    semantic_button_count++;
 	btn->bounds.x = btn_x;
 	btn->bounds.y = btn_y;
 	btn_h = btn->bounds.h;
 	btn_y += btn_h + 5;
 	AppendGLWidgetList(&(root->children), btn);
     }
-    btn = Init_ImageButtonWidget("Refresh", 
+    btn = Init_ImageButtonWidget(sdl_renderer, &ui_draw_state, "Refresh",
 				 "metabtnup.png", 
 				 "metabtndown.png",
 				 BUTTON_BG,
 				 BUTTON_FG,
 				 OnClick_Refresh);
     if (btn) {
+	if (ImageButtonWidget_has_semantic_images(btn))
+	    semantic_button_count++;
 	btn->bounds.x = btn_x;
 	btn->bounds.y = btn_y;
 	btn_h = btn->bounds.h;
 	btn_y += btn_h + 5;
 	AppendGLWidgetList(&(root->children), btn);
     }
-    btn = Init_ImageButtonWidget("Quit", 
+    btn = Init_ImageButtonWidget(sdl_renderer, &ui_draw_state, "Quit",
 				 "metabtnup.png", 
 				 "metabtndown.png",
 				 BUTTON_BG,
 				 BUTTON_FG,
 				 OnClick_Quit);
     if (btn) {
+	if (ImageButtonWidget_has_semantic_images(btn))
+	    semantic_button_count++;
 	btn->bounds.x = btn_x;
 	btn->bounds.y = btn_y;
 	btn_h = btn->bounds.h;
@@ -1071,49 +1170,44 @@ int Meta_window(Connect_param_t *conpar)
 	AppendGLWidgetList(&(root->children), btn);
     }
     
-    while(1) {
-	renderer_status = Sdl_renderer_begin_frame(
-	    sdl_renderer, draw_width, draw_height,
-	    Renderer_color_from_rgba32(blackRGBA));
+    Sdl_meta_frame_state_init(&frame_state);
+    frame_context.sdl_renderer = sdl_renderer;
+    frame_context.draw_state = &ui_draw_state;
+    frame_context.widgets = meta;
+    while (!exit_requested) {
+	renderer_status = Sdl_meta_frame_tick(
+	    &frame_state, &meta_frame_ops, &frame_context);
 	if (renderer_status != RENDERER_STATUS_OK) {
-	    error("Could not begin metaserver renderer frame (%d)",
+	    error("Could not render the metaserver frame (%d)",
 		  (int)renderer_status);
-	    Close_Widget(&root);
-	    return -1;
+	    if (!Sdl_meta_frame_cleanup_allowed(&frame_state)) {
+		SDL_Delay(1);
+		continue;
+	    }
+	    break;
 	}
-	renderer_status = Sdl_renderer_prepare_legacy(
-	    sdl_renderer, SDL_RENDERER_LEGACY_TOP_LEFT);
-	if (renderer_status != RENDERER_STATUS_OK) {
-	    error("Could not prepare metaserver legacy rendering (%d)",
-		  (int)renderer_status);
-	    Sdl_renderer_end_frame(sdl_renderer);
-	    Close_Widget(&root);
-	    return -1;
+	if (!ui_ready_reported) {
+	    xpprintf("Metaserver UI ready: background=%s, buttons=%d/3, "
+		     "draws=%lu\n",
+		     ((MetaWidget *)meta->wid_info)->background.texture != NULL
+		     ? "semantic" : "fallback", semantic_button_count,
+		     (unsigned long)Sdl_ui_draw_state_successful_draws(
+			 &ui_draw_state));
+	    fflush(stdout);
+	    ui_ready_reported = 1;
 	}
-	glEnable(GL_SCISSOR_TEST);
-	DrawGLWidgetsi(meta, 0, 0, draw_width, draw_height);
-	glDisable(GL_SCISSOR_TEST);
-	Gl_diagnostics_check("meta frame end");
-	renderer_status = Sdl_renderer_end_frame(sdl_renderer);
-	if (renderer_status != RENDERER_STATUS_OK) {
-	    error("Could not end metaserver renderer frame (%d)",
-		  (int)renderer_status);
-	    Close_Widget(&root);
-	    return -1;
-	}
-	Swap_buffers();
 	
 	if (SDL_WaitEvent(&evt) == 0) {
 	    error("Could not wait for an SDL event: %s", SDL_GetError());
-	    Close_Widget(&root);
-	    return -1;
+	    break;
 	}
 	do {
 	    
 	    switch(evt.type) {
 	    case SDL_QUIT:
-		Close_Widget(&root);
-		return -1;
+		exit_requested = 1;
+		result = -1;
+		break;
 		
 	    case SDL_USEREVENT:
 		if (evt.user.code == EVENT_JOIN) {
@@ -1122,12 +1216,12 @@ int Meta_window(Connect_param_t *conpar)
 			server = GetSelectedServer_MetaWidget(meta);
 		    if (!server) break;
 		    if (join_server(conpar, server)) {
-			Close_Widget(&root);
-			return 0;
+			exit_requested = 1;
+			result = 0;
 		    }
 		} else if (evt.user.code == EVENT_REFRESH) {
-		    Close_Widget(&root);
-		    return 1;
+		    exit_requested = 1;
+		    result = 1;
 		}
 		break;
 
@@ -1177,6 +1271,13 @@ int Meta_window(Connect_param_t *conpar)
 		    break;
 		break;
 	    }
-	} while (SDL_PollEvent(&evt));
-    }	
+	} while (!exit_requested && SDL_PollEvent(&evt));
+    }
+
+    if (!Sdl_meta_frame_cleanup_allowed(&frame_state)) {
+	error("Metaserver frame remained active during cleanup");
+        return -1;
+    }
+    Close_Widget(&root);
+    return result;
 }

@@ -7,6 +7,7 @@
 #include <SDL_opengl.h>
 #include <SDL_opengl_glext.h>
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -157,6 +158,95 @@ RendererStatus Sdl_renderer_begin_frame(SdlRenderer *renderer,
     renderer->drawable_height = drawable_height;
     renderer->frame_active = 1;
     return RENDERER_STATUS_OK;
+}
+
+static int64_t Sdl_renderer_clamp_logical_edge(int64_t edge, int limit)
+{
+    if (edge < 0)
+        return 0;
+    if (edge > limit)
+        return limit;
+    return edge;
+}
+
+static int Sdl_renderer_scale_edge_floor(int64_t logical_edge,
+                                         int logical_size,
+                                         int drawable_size)
+{
+    return (int)((logical_edge * (int64_t)drawable_size)
+                 / logical_size);
+}
+
+static int Sdl_renderer_scale_edge_ceil(int64_t logical_edge,
+                                        int logical_size,
+                                        int drawable_size)
+{
+    int64_t numerator = logical_edge * (int64_t)drawable_size;
+
+    return (int)((numerator + logical_size - 1) / logical_size);
+}
+
+RendererStatus Sdl_renderer_set_logical_scissor(
+    SdlRenderer *renderer, const RendererRect *scissor)
+{
+    RendererRect drawable_scissor;
+    int64_t logical_left;
+    int64_t logical_top;
+    int64_t logical_right;
+    int64_t logical_bottom;
+    int drawable_left;
+    int drawable_top;
+    int drawable_right;
+    int drawable_bottom;
+
+    if (renderer == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!renderer->frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (scissor == NULL)
+        return Renderer_set_scissor(renderer->frontend, NULL);
+    if (scissor->width <= 0 || scissor->height <= 0)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+
+    logical_left = Sdl_renderer_clamp_logical_edge(
+        scissor->x, renderer->logical_width);
+    logical_top = Sdl_renderer_clamp_logical_edge(
+        scissor->y, renderer->logical_height);
+    logical_right = Sdl_renderer_clamp_logical_edge(
+        (int64_t)scissor->x + scissor->width,
+        renderer->logical_width);
+    logical_bottom = Sdl_renderer_clamp_logical_edge(
+        (int64_t)scissor->y + scissor->height,
+        renderer->logical_height);
+
+    if (logical_right <= logical_left || logical_bottom <= logical_top) {
+        drawable_scissor.x = renderer->drawable_width;
+        drawable_scissor.y = renderer->drawable_height;
+        drawable_scissor.width = 1;
+        drawable_scissor.height = 1;
+        return Renderer_set_scissor(renderer->frontend,
+                                    &drawable_scissor);
+    }
+
+    /* Clamping bounds every factor by INT_MAX, so the int64_t products and
+     * the ceil adjustment cannot overflow. */
+    drawable_left = Sdl_renderer_scale_edge_floor(
+        logical_left, renderer->logical_width,
+        renderer->drawable_width);
+    drawable_top = Sdl_renderer_scale_edge_floor(
+        logical_top, renderer->logical_height,
+        renderer->drawable_height);
+    drawable_right = Sdl_renderer_scale_edge_ceil(
+        logical_right, renderer->logical_width,
+        renderer->drawable_width);
+    drawable_bottom = Sdl_renderer_scale_edge_ceil(
+        logical_bottom, renderer->logical_height,
+        renderer->drawable_height);
+    drawable_scissor.x = drawable_left;
+    drawable_scissor.y = drawable_top;
+    drawable_scissor.width = drawable_right - drawable_left;
+    drawable_scissor.height = drawable_bottom - drawable_top;
+    return Renderer_set_scissor(renderer->frontend, &drawable_scissor);
 }
 
 RendererStatus Sdl_renderer_prepare_legacy(

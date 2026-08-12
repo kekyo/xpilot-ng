@@ -21,7 +21,6 @@
 #include "xpclient_sdl.h"
 
 #include "sdlpaint.h"
-#include "images.h"
 #include "text.h"
 #include "glwidgets.h"
 #include "sdlclipboard.h"
@@ -367,31 +366,85 @@ bool DelGLWidgetListItem( GLWidget **list, GLWidget *widget )
  * the order is widget then its children (first to last)
  * then it moves onto the next widget in the list
  */
-void DrawGLWidgetsi( GLWidget *list, int x, int y, int w, int h)
+static RendererStatus DrawGLWidgetsi_internal(
+    GLWidget *list, int x, int y, int w, int h,
+    SdlRenderer *sdl_renderer,
+    const SdlUiDrawState *draw_state)
 {
     int x2,y2,w2,h2;
     GLWidget *curr;
+    RendererStatus status;
     
     curr = list;
     
     while (curr) {
-    	x2 = MAX(x,curr->bounds.x);
+	status = draw_state != NULL
+	    ? Sdl_ui_draw_state_status(draw_state) : RENDERER_STATUS_OK;
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+	x2 = MAX(x,curr->bounds.x);
     	y2 = MAX(y,curr->bounds.y);
     	w2 = MIN(x+w,curr->bounds.x+curr->bounds.w) - x2;
     	h2 = MIN(y+h,curr->bounds.y+curr->bounds.h) - y2;
 	if ( (w2 > 0) && (h2 > 0) ) {
+	    if (sdl_renderer != NULL) {
+		RendererRect semantic_clip = {x2, y2, w2 + 1, h2 + 1};
+
+		status = Sdl_renderer_set_logical_scissor(
+		    sdl_renderer, &semantic_clip);
+		if (status != RENDERER_STATUS_OK)
+		    return status;
+	    }
     	    glEnable(GL_BLEND);
     	    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	    glScissor(x2, draw_height - y2 - h2, w2+1, h2+1);
 	    if (curr->Draw) curr->Draw(curr);
 	    glDisable(GL_BLEND);
-	
-	    DrawGLWidgetsi(curr->children,x2, y2, w2, h2);
+	    status = draw_state != NULL
+		? Sdl_ui_draw_state_status(draw_state) : RENDERER_STATUS_OK;
+	    if (status != RENDERER_STATUS_OK) {
+		glScissor(x, draw_height - y - h, w, h);
+		return status;
+	    }
+
+	    status = DrawGLWidgetsi_internal(
+		curr->children, x2, y2, w2, h2,
+		sdl_renderer, draw_state);
+	    if (status == RENDERER_STATUS_OK && sdl_renderer != NULL) {
+		RendererRect inherited_clip = {x, y, w, h};
+
+		status = Sdl_renderer_set_logical_scissor(
+		    sdl_renderer, &inherited_clip);
+	    }
 	    glScissor(x, draw_height - y - h, w, h);
+	    if (status != RENDERER_STATUS_OK)
+		return status;
 	}
 	
 	curr = curr->next;
     }
+    return RENDERER_STATUS_OK;
+}
+
+void DrawGLWidgetsi(GLWidget *list, int x, int y, int w, int h)
+{
+    (void)DrawGLWidgetsi_internal(list, x, y, w, h, NULL, NULL);
+}
+
+RendererStatus DrawGLWidgetsi_checked(GLWidget *list, int x, int y,
+                                      int w, int h,
+                                      SdlRenderer *sdl_renderer,
+                                      const SdlUiDrawState *draw_state)
+{
+    RendererStatus status;
+
+    if (sdl_renderer == NULL || draw_state == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    status = DrawGLWidgetsi_internal(
+	list, x, y, w, h, sdl_renderer, draw_state);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    return Sdl_renderer_set_logical_scissor(sdl_renderer, NULL);
 }
 void DrawGLWidgets( GLWidget *list )
 {
@@ -3961,6 +4014,8 @@ static void Button_ImageButtonWidget(Uint8 button, Uint8 state, Uint16 x,
 static void Close_ImageButtonWidget(GLWidget *widget)
 {
     ImageButtonWidget *info;
+    RendererStatus status;
+
     if (!widget) return;
     if (widget->WIDGET != IMAGEBUTTONWIDGET) {
     	error("Wrong widget type for Close_ImageButtonWidget [%i]",
@@ -3968,15 +4023,19 @@ static void Close_ImageButtonWidget(GLWidget *widget)
 	return;
     }
     info = (ImageButtonWidget*)widget->wid_info;
+    status = Sdl_ui_image_pair_cleanup(&info->images);
+    if (status != RENDERER_STATUS_OK)
+        error("Failed to release button images [%d]", (int)status);
     free_string_texture(&(info->tex));
-    if (info->imageUp) glDeleteTextures(1, &(info->imageUp));
-    if (info->imageDown) glDeleteTextures(1, &(info->imageDown));
 }
 
 static void Paint_ImageButtonWidget(GLWidget *widget)
 {
     SDL_Rect *b;
     ImageButtonWidget *info;
+    const SdlUiImage *image;
+    RendererRect image_bounds;
+    RendererStatus status;
     int x, y, c;
 
     if (!widget) return;
@@ -3984,38 +4043,24 @@ static void Paint_ImageButtonWidget(GLWidget *widget)
     b = &(widget->bounds);
     info = (ImageButtonWidget*)(widget->wid_info);
 
-    if (info->state != SDL_PRESSED) {
-	if (info->imageUp) {
-	    set_alphacolor(info->bg);
-	    glBindTexture(GL_TEXTURE_2D, info->imageUp);
-	    glEnable(GL_TEXTURE_2D);
-	    glBegin(GL_QUADS);
-	    glTexCoord2f(info->txcUp.MinX, info->txcUp.MinY); 
-	    glVertex2i(b->x, b->y);
-	    glTexCoord2f(info->txcUp.MaxX, info->txcUp.MinY); 
-	    glVertex2i(b->x + b->w , b->y);
-	    glTexCoord2f(info->txcUp.MaxX, info->txcUp.MaxY); 
-	    glVertex2i(b->x + b->w , b->y + b->h);
-	    glTexCoord2f(info->txcUp.MinY, info->txcUp.MaxY); 
-	    glVertex2i(b->x, b->y + b->h);
-	    glEnd();
-	}
-    } else {
-	if (info->imageDown) {
-	    set_alphacolor(info->bg);
-	    glBindTexture(GL_TEXTURE_2D, info->imageDown);
-	    glEnable(GL_TEXTURE_2D);
-	    glBegin(GL_QUADS);
-	    glTexCoord2f(info->txcDown.MinX, info->txcDown.MinY); 
-	    glVertex2i(b->x, b->y);
-	    glTexCoord2f(info->txcDown.MaxX, info->txcDown.MinY); 
-	    glVertex2i(b->x + b->w , b->y);
-	    glTexCoord2f(info->txcDown.MaxX, info->txcDown.MaxY); 
-	    glVertex2i(b->x + b->w , b->y + b->h);
-	    glTexCoord2f(info->txcDown.MinY, info->txcDown.MaxY); 
-	    glVertex2i(b->x, b->y + b->h);
-	    glEnd();
-	}
+    if (Sdl_ui_draw_state_status(info->draw_state) != RENDERER_STATUS_OK)
+        return;
+
+    image = info->state != SDL_PRESSED
+        ? &info->images.first : &info->images.second;
+    if (info->images.first.texture != NULL
+        && info->images.second.texture != NULL) {
+        image_bounds.x = b->x;
+        image_bounds.y = b->y;
+        image_bounds.width = b->w;
+        image_bounds.height = b->h;
+        status = Sdl_ui_image_draw_tracked(
+            info->draw_state, info->sdl_renderer, image, &image_bounds,
+            Renderer_color_from_rgba32(info->bg));
+        if (status != RENDERER_STATUS_OK) {
+            error("Failed to draw button image [%d]", (int)status);
+            return;
+        }
     }
     
     x = widget->bounds.x + widget->bounds.w / 2;
@@ -4031,7 +4076,22 @@ static void Paint_ImageButtonWidget(GLWidget *widget)
 	      true);
 }
 
-GLWidget *Init_ImageButtonWidget(const char *text,
+int ImageButtonWidget_has_semantic_images(const GLWidget *widget)
+{
+    const ImageButtonWidget *info;
+
+    if (widget == NULL || widget->WIDGET != IMAGEBUTTONWIDGET
+        || widget->wid_info == NULL) {
+        return 0;
+    }
+    info = widget->wid_info;
+    return info->images.first.texture != NULL
+        && info->images.second.texture != NULL;
+}
+
+GLWidget *Init_ImageButtonWidget(SdlRenderer *sdl_renderer,
+                                 SdlUiDrawState *draw_state,
+                                 const char *text,
 				 const char *upImage,
 				 const char *downImage,
 				 Uint32 bg, 
@@ -4040,12 +4100,20 @@ GLWidget *Init_ImageButtonWidget(const char *text,
 {
     GLWidget *tmp;
     ImageButtonWidget *info;
-    SDL_Surface *surface;
-    char imagePath[256];
     int width, height;
+#ifdef HAVE_SDL_IMAGE
+    SDL_Surface *up_surface;
+    SDL_Surface *down_surface;
+    Renderer *renderer;
+    RendererStatus status;
+    char up_image_path[256];
+    char down_image_path[256];
+    int up_path_length;
+    int down_path_length;
+#endif
     
-    if (!text) {
-    	error("text missing for Init_ImageButtonWidget.");
+    if (sdl_renderer == NULL || draw_state == NULL || !text) {
+	error("renderer, draw state, or text missing for Init_ImageButtonWidget");
 	return NULL;
     }
     tmp	= Init_EmptyBaseGLWidget();
@@ -4060,12 +4128,13 @@ GLWidget *Init_ImageButtonWidget(const char *text,
 	return NULL;
     }
 
+    memset(info, 0, sizeof(*info));
     info->onClick = onClick;
     info->fg = fg;
     info->bg = bg;
     info->state = SDL_RELEASED;
-    info->imageUp = 0;
-    info->imageDown = 0;
+    info->sdl_renderer = sdl_renderer;
+    info->draw_state = draw_state;
 
     if (!render_text(&gamefont, text, &(info->tex))) {
     	free(info);
@@ -4077,25 +4146,49 @@ GLWidget *Init_ImageButtonWidget(const char *text,
     height = info->tex.height + 1;
 
 #ifdef HAVE_SDL_IMAGE
-    sprintf(imagePath, "%s%s", CONF_TEXTUREDIR, upImage);
-    surface = IMG_Load(imagePath);
-    if (surface) {
-	info->imageUp = SDL_GL_LoadTexture(surface, &(info->txcUp));
-	if (width < surface->w) width = surface->w;
-	if (height < surface->h) height = surface->h;
-	SDL_FreeSurface(surface);
+    up_surface = NULL;
+    down_surface = NULL;
+    renderer = Sdl_renderer_frontend(sdl_renderer);
+    if (upImage == NULL || downImage == NULL) {
+        error("Button image filename missing");
     } else {
-	error("Failed to load button image %s", imagePath);
-    }
-    sprintf(imagePath, "%s%s", CONF_TEXTUREDIR, downImage);
-    surface = IMG_Load(imagePath);
-    if (surface) {
-	info->imageDown = SDL_GL_LoadTexture(surface, &(info->txcDown));
-	if (width < surface->w) width = surface->w;
-	if (height < surface->h) height = surface->h;
-	SDL_FreeSurface(surface);
-    } else {
-	error("Failed to load button image %s", imagePath);
+        up_path_length = snprintf(up_image_path, sizeof(up_image_path),
+                                  "%s%s", CONF_TEXTUREDIR, upImage);
+        down_path_length = snprintf(down_image_path, sizeof(down_image_path),
+                                    "%s%s", CONF_TEXTUREDIR, downImage);
+        if (up_path_length < 0
+            || (size_t)up_path_length >= sizeof(up_image_path)
+            || down_path_length < 0
+            || (size_t)down_path_length >= sizeof(down_image_path)) {
+            error("Button image path is too long");
+        } else {
+            up_surface = IMG_Load(up_image_path);
+            down_surface = IMG_Load(down_image_path);
+            if (up_surface == NULL)
+                error("Failed to load button image %s", up_image_path);
+            if (down_surface == NULL)
+                error("Failed to load button image %s", down_image_path);
+            if (up_surface != NULL && down_surface != NULL) {
+                status = Sdl_ui_image_pair_init(
+                    &info->images, renderer, up_surface, down_surface);
+                if (status == RENDERER_STATUS_OK) {
+                    if (width < info->images.first.content_width)
+                        width = info->images.first.content_width;
+                    if (height < info->images.first.content_height)
+                        height = info->images.first.content_height;
+                    if (width < info->images.second.content_width)
+                        width = info->images.second.content_width;
+                    if (height < info->images.second.content_height)
+                        height = info->images.second.content_height;
+                } else {
+                    error("Failed to create button images [%d]", (int)status);
+                }
+            }
+            if (up_surface != NULL)
+                SDL_FreeSurface(up_surface);
+            if (down_surface != NULL)
+                SDL_FreeSurface(down_surface);
+        }
     }
 #endif
 

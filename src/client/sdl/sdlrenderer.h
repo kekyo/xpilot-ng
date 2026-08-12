@@ -73,6 +73,21 @@ RendererStatus Sdl_renderer_begin_frame(SdlRenderer *renderer,
                                         RendererColor clear_color);
 
 /**
+ * Set or disable semantic clipping in logical window coordinates.
+ *
+ * @param renderer Renderer facade with an active frame.
+ * @param scissor Positive logical top-left-origin rectangle, or NULL to
+ *        disable clipping.
+ * @return Operation status.
+ *
+ * @remarks The rectangle is clamped to the logical frame before its edges
+ * are scaled outward to physical drawable pixels. The resulting
+ * framebuffer-space scissor is independent of the current draw transform.
+ */
+RendererStatus Sdl_renderer_set_logical_scissor(
+    SdlRenderer *renderer, const RendererRect *scissor);
+
+/**
  * Flush semantic commands and restore deterministic fixed-function state.
  *
  * @param renderer Renderer facade with an active frame.

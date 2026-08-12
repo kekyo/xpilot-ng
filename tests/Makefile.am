@@ -4,20 +4,32 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	@SDL2_CFLAGS@ @SDL2_IMAGE_CFLAGS@ @SDL2_TTF_CFLAGS@ \
 	@GL_CFLAGS@ @GLU_CFLAGS@
 
-check_PROGRAMS = test-sdl-keys test-sdl-console test-sdl-surface \
+check_PROGRAMS = test-meta-environment \
+	test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-gl-legacy \
 	test-renderer-commands test-renderer-geometry \
 	test-renderer-gl-backends test-paint-transform test-image-geometry \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
-	test-sdl-meta-frame
-TESTS = test-sdl-keys test-sdl-console test-sdl-surface \
+	test-sdl-meta-frame test-sdl-renderer-scissor test-glwidgets-scissor
+TESTS = test-meta-environment \
+	test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
 	test-renderer-geometry test-paint-transform run-gl-legacy.sh \
 	test-image-geometry test-gfx2d-picture \
 	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
+	test-sdl-renderer-scissor test-glwidgets-scissor \
 	run-renderer-gl-backends.sh run-e2e.sh
+
+test_meta_environment_SOURCES = test_meta_environment.c \
+	$(top_srcdir)/src/client/meta.c \
+	$(top_srcdir)/src/client/meta_test_support.h \
+	$(top_srcdir)/src/common/strlcpy.c
+test_meta_environment_CPPFLAGS = $(AM_CPPFLAGS) -DXPILOT_META_TEST_HOOKS
+test_meta_environment_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_meta_environment_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 
 test_sdl_keys_SOURCES = test_sdl_keys.c \
 	$(top_srcdir)/src/client/sdl/sdlkeys.c
@@ -98,12 +110,32 @@ test_radar_renderer_LDADD = @SDL2_LIBS@
 
 test_sdl_ui_image_SOURCES = test_sdl_ui_image.c \
 	$(top_srcdir)/src/client/sdl/sdluiimage.c \
+	$(top_srcdir)/src/client/sdl/sdlmetaframe.c \
+	$(top_srcdir)/src/client/sdl/glwidgets.c \
 	$(top_srcdir)/src/client/sdl/surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/sdlcompat.c
+test_sdl_ui_image_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_sdl_ui_image_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdl_ui_image_LDADD = @SDL2_LIBS@
 
 test_sdl_meta_frame_SOURCES = test_sdl_meta_frame.c \
 	$(top_srcdir)/src/client/sdl/sdlmetaframe.c
+
+test_sdl_renderer_scissor_SOURCES = test_sdl_renderer_scissor.c \
+	$(top_srcdir)/src/client/sdl/renderer.c \
+	$(top_srcdir)/src/client/sdl/sdlrenderer.c
+test_sdl_renderer_scissor_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_sdl_renderer_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_sdl_renderer_scissor_LDADD = @SDL2_LIBS@ @GL_LIBS@
+
+test_glwidgets_scissor_SOURCES = test_glwidgets_scissor.c \
+	$(top_srcdir)/src/client/sdl/glwidgets.c
+test_glwidgets_scissor_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_glwidgets_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_glwidgets_scissor_LDADD = @SDL2_LIBS@
 
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)

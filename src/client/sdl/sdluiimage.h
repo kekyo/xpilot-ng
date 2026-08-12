@@ -39,6 +39,37 @@ typedef struct SdlUiImagePair {
     SdlUiImage second;
 } SdlUiImagePair;
 
+/** First semantic UI draw failure retained for one renderer frame. */
+typedef struct SdlUiDrawState {
+    /** First draw failure, or RENDERER_STATUS_OK while drawing may continue. */
+    RendererStatus status;
+    /** Number of tracked image draws completed in the current frame. */
+    size_t successful_draws;
+} SdlUiDrawState;
+
+/**
+ * Reset tracked UI drawing for a new renderer frame.
+ *
+ * @param state State to reset. A NULL pointer is ignored.
+ */
+void Sdl_ui_draw_state_init(SdlUiDrawState *state);
+
+/**
+ * Return the first tracked UI draw failure.
+ *
+ * @param state Initialized state.
+ * @return First failure, or RENDERER_STATUS_OK. A NULL state is invalid.
+ */
+RendererStatus Sdl_ui_draw_state_status(const SdlUiDrawState *state);
+
+/**
+ * Return the number of tracked image draws completed in this frame.
+ *
+ * @param state Initialized per-frame draw state.
+ * @return Successful draw count, or zero for a NULL state.
+ */
+size_t Sdl_ui_draw_state_successful_draws(const SdlUiDrawState *state);
+
 /**
  * Create one nearest-filtered, edge-clamped UI texture.
  *
@@ -87,6 +118,25 @@ RendererStatus Sdl_ui_image_draw(SdlRenderer *sdl_renderer,
                                  const SdlUiImage *image,
                                  const RendererRect *bounds,
                                  RendererColor tint);
+
+/**
+ * Draw an image while retaining the first ordering-barrier failure.
+ *
+ * @param state Per-frame draw state reset before traversal begins.
+ * @param sdl_renderer Active SDL renderer facade.
+ * @param image Image owned by the facade's frontend renderer.
+ * @param bounds Positive destination rectangle in current logical coordinates.
+ * @param tint Unpremultiplied color multiplied with sampled pixels.
+ * @return First tracked failure, or RENDERER_STATUS_OK.
+ *
+ * @remarks After the first failure, later tracked draws are skipped until
+ * @p state is reset. The caller must abort presentation of that frame.
+ */
+RendererStatus Sdl_ui_image_draw_tracked(SdlUiDrawState *state,
+                                         SdlRenderer *sdl_renderer,
+                                         const SdlUiImage *image,
+                                         const RendererRect *bounds,
+                                         RendererColor tint);
 
 /**
  * Release one UI texture.

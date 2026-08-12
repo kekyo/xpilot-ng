@@ -37,6 +37,7 @@ done
 
 runtime_dir=$(mktemp -d "${TMPDIR:-/tmp}/xpilot-sdl2-e2e.XXXXXX")
 meta_pid=
+meta_fixture_pid=
 server_pid=
 client_pid=
 window_id=
@@ -45,14 +46,16 @@ window_owner_pid=
 cleanup()
 {
     cleanup_deadline=$(($(date +%s) + 5))
-    for process_id in "$client_pid" "$meta_pid" "$server_pid"; do
+    for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
+        "$server_pid"; do
         if test -n "$process_id" && kill -0 "$process_id" 2>/dev/null; then
             kill -TERM "$process_id" 2>/dev/null || true
         fi
     done
     while :; do
         cleanup_running=0
-        for process_id in "$client_pid" "$meta_pid" "$server_pid"; do
+        for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
+            "$server_pid"; do
             if test -n "$process_id" \
                 && kill -0 "$process_id" 2>/dev/null; then
                 cleanup_running=1
@@ -62,7 +65,8 @@ cleanup()
             break
         fi
         if test "$(date +%s)" -ge "$cleanup_deadline"; then
-            for process_id in "$client_pid" "$meta_pid" "$server_pid"; do
+            for process_id in "$client_pid" "$meta_pid" \
+                "$meta_fixture_pid" "$server_pid"; do
                 if test -n "$process_id" \
                     && kill -0 "$process_id" 2>/dev/null; then
                     kill -KILL "$process_id" 2>/dev/null || true
@@ -72,7 +76,8 @@ cleanup()
         fi
         sleep 0.1
     done
-    for process_id in "$client_pid" "$meta_pid" "$server_pid"; do
+    for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
+        "$server_pid"; do
         if test -n "$process_id"; then
             wait "$process_id" 2>/dev/null || true
         fi
@@ -129,6 +134,28 @@ meta_initialized()
 {
     grep -q "SDL_ttf initialized" "$runtime_dir/meta.log" 2>/dev/null \
         && grep -q '^OpenGL context:' "$runtime_dir/meta.log" 2>/dev/null
+}
+
+meta_ui_ready()
+{
+    if ! kill -0 "$meta_pid" 2>/dev/null; then
+        fail "client stopped before the metaserver UI was drawn"
+    fi
+    grep -q '^Metaserver UI ready: background=semantic, buttons=3/3, draws=4$' \
+        "$runtime_dir/meta.log" 2>/dev/null
+}
+
+meta_fixture_ready()
+{
+    if ! kill -0 "$meta_fixture_pid" 2>/dev/null; then
+        fail "local metaserver fixture stopped before listening"
+    fi
+    test -s "$runtime_dir/meta-fixture.port"
+}
+
+meta_fixture_served()
+{
+    test -s "$runtime_dir/meta-fixture.served"
 }
 
 server_ready()
@@ -193,38 +220,97 @@ window_resized()
 : >"$runtime_dir/xpilotrc"
 export XPILOTRC="$runtime_dir/xpilotrc"
 
-# With no arguments the SDL client takes the graphical metaserver path.  Meta
-# availability is intentionally not asserted: initialization must remain
-# testable when the public metaserver or DNS is offline.
+node -e '
+const fs = require("fs");
+const net = require("net");
+const portFile = process.argv[1];
+const servedFile = process.argv[2];
+const response = Array.from({ length: 12 }, (_, index) => [
+  "4.7.3",
+  `fixture${index}.local`,
+  String(15000 + index),
+  String(index),
+  "fixture-map",
+  "100x100",
+  "test-author",
+  "ok",
+  "10",
+  "20",
+  "-",
+  "no",
+  "100",
+  "0",
+  "0",
+  `127.0.0.${index + 1}`,
+  "10",
+  "0",
+].join(":"))
+  .join("\n") + "\n";
+let responseSent = false;
+const server = net.createServer((socket) => {
+  fs.appendFileSync(servedFile, "served\n");
+  if (responseSent) {
+    socket.end();
+    return;
+  }
+  responseSent = true;
+  socket.end(response);
+});
+server.listen(0, "127.0.0.1", () => {
+  fs.writeFileSync(portFile, String(server.address().port));
+});
+const stop = () => server.close(() => process.exit(0));
+process.on("SIGTERM", stop);
+process.on("SIGINT", stop);
+' "$runtime_dir/meta-fixture.port" "$runtime_dir/meta-fixture.served" \
+    >"$runtime_dir/meta-fixture.log" 2>&1 &
+meta_fixture_pid=$!
+wait_until "local metaserver fixture" 10 meta_fixture_ready
+export XPILOT_META_HOST=127.0.0.1
+export XPILOT_META_HOST_TWO=127.0.0.1
+XPILOT_META_PORT=$(sed -n '1p' "$runtime_dir/meta-fixture.port")
+export XPILOT_META_PORT
+
+# With no arguments the SDL client takes the graphical metaserver path.  This
+# scenario requires a completed metaserver fetch so it exercises the actual
+# semantic background and button draw, presentation, and graceful teardown.
 "$client" >"$runtime_dir/meta.log" 2>&1 &
 meta_pid=$!
 window_owner_pid=$meta_pid
 wait_until "no-argument SDL initialization" 15 meta_initialized
+wait_until "semantic metaserver UI" 20 meta_ui_ready
+wait_until "local metaserver request" 5 meta_fixture_served
+find_game_window || fail "metaserver window was not visible"
+kill -0 "$meta_pid" 2>/dev/null \
+    || fail "metaserver client exited before Escape"
+xdotool key --window "$window_id" Escape >/dev/null 2>&1 \
+    || fail "could not close the metaserver UI"
+meta_deadline=$(($(date +%s) + 20))
+while kill -0 "$meta_pid" 2>/dev/null \
+    && test "$(date +%s)" -lt "$meta_deadline"; do
+    sleep 0.1
+done
 if kill -0 "$meta_pid" 2>/dev/null; then
-    if find_game_window; then
-        xdotool key --window "$window_id" Escape >/dev/null 2>&1 || true
-    fi
-    meta_deadline=$(($(date +%s) + 20))
+    kill -TERM "$meta_pid" 2>/dev/null || true
+    meta_deadline=$(($(date +%s) + 5))
     while kill -0 "$meta_pid" 2>/dev/null \
         && test "$(date +%s)" -lt "$meta_deadline"; do
         sleep 0.1
     done
     if kill -0 "$meta_pid" 2>/dev/null; then
-        kill -TERM "$meta_pid" 2>/dev/null || true
-        meta_deadline=$(($(date +%s) + 5))
-        while kill -0 "$meta_pid" 2>/dev/null \
-            && test "$(date +%s)" -lt "$meta_deadline"; do
-            sleep 0.1
-        done
-        if kill -0 "$meta_pid" 2>/dev/null; then
-            kill -KILL "$meta_pid" 2>/dev/null || true
-        fi
+        kill -KILL "$meta_pid" 2>/dev/null || true
     fi
 fi
 finished_meta_pid=$meta_pid
-wait "$meta_pid" 2>/dev/null || true
+set +e
+wait "$meta_pid"
+meta_status=$?
+set -e
 meta_pid=
 window_id=
+if test "$meta_status" -ne 0; then
+    fail "metaserver client returned status $meta_status"
+fi
 wait_until "metaserver window teardown" 5 process_window_absent \
     "$finished_meta_pid"
 

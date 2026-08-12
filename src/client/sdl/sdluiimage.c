@@ -20,6 +20,24 @@ static int Sdl_ui_image_is_empty(const SdlUiImage *image)
         && image->texture_width == 0 && image->texture_height == 0;
 }
 
+void Sdl_ui_draw_state_init(SdlUiDrawState *state)
+{
+    if (state != NULL) {
+        state->status = RENDERER_STATUS_OK;
+        state->successful_draws = 0;
+    }
+}
+
+RendererStatus Sdl_ui_draw_state_status(const SdlUiDrawState *state)
+{
+    return state != NULL ? state->status : RENDERER_STATUS_INVALID_ARGUMENT;
+}
+
+size_t Sdl_ui_draw_state_successful_draws(const SdlUiDrawState *state)
+{
+    return state != NULL ? state->successful_draws : 0;
+}
+
 static RendererStatus Sdl_ui_image_create(SdlUiImage *candidate,
                                           Renderer *renderer,
                                           SDL_Surface *surface)
@@ -150,6 +168,23 @@ RendererStatus Sdl_ui_image_draw(SdlRenderer *sdl_renderer,
     if (status == RENDERER_STATUS_OK)
         status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
     return status;
+}
+
+RendererStatus Sdl_ui_image_draw_tracked(SdlUiDrawState *state,
+                                         SdlRenderer *sdl_renderer,
+                                         const SdlUiImage *image,
+                                         const RendererRect *bounds,
+                                         RendererColor tint)
+{
+    if (state == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (state->status != RENDERER_STATUS_OK)
+        return state->status;
+
+    state->status = Sdl_ui_image_draw(sdl_renderer, image, bounds, tint);
+    if (state->status == RENDERER_STATUS_OK)
+        state->successful_draws++;
+    return state->status;
 }
 
 RendererStatus Sdl_ui_image_cleanup(SdlUiImage *image)
