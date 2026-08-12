@@ -10,6 +10,7 @@ xpilot_ng_sdl_SOURCES = \
 	SDL_gfxPrimitives_font.h console.c console.h glwidgets.c glwidgets.h \
 	gameloop.c gl_diagnostics.c gl_diagnostics.h \
 	images.c images.h main.c radar.c radar.h \
+	paint_transform.c paint_transform.h \
 	renderer.c renderer.h renderer_backend.h \
 	renderer_gl.h renderer_gl_legacy.c renderer_gl_legacy.h \
 	renderer_gl_core.c renderer_gl_core.h \

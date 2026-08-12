@@ -93,12 +93,13 @@ check_PROGRAMS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-event$(EXEEXT) test-gl-legacy$(EXEEXT) \
 	test-renderer-commands$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) \
-	test-renderer-gl-backends$(EXEEXT)
+	test-renderer-gl-backends$(EXEEXT) \
+	test-paint-transform$(EXEEXT)
 TESTS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-surface$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
 	test-sdl-event$(EXEEXT) test-renderer-commands$(EXEEXT) \
-	test-renderer-geometry$(EXEEXT) run-gl-legacy.sh \
-	run-renderer-gl-backends.sh run-e2e.sh
+	test-renderer-geometry$(EXEEXT) test-paint-transform$(EXEEXT) \
+	run-gl-legacy.sh run-renderer-gl-backends.sh run-e2e.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -116,6 +117,10 @@ test_gl_legacy_OBJECTS = $(am_test_gl_legacy_OBJECTS)
 test_gl_legacy_DEPENDENCIES =
 test_gl_legacy_LINK = $(CCLD) $(test_gl_legacy_CFLAGS) $(CFLAGS) \
 	$(test_gl_legacy_LDFLAGS) $(LDFLAGS) -o $@
+am_test_paint_transform_OBJECTS = test_paint_transform.$(OBJEXT) \
+	paint_transform.$(OBJEXT)
+test_paint_transform_OBJECTS = $(am_test_paint_transform_OBJECTS)
+test_paint_transform_LDADD = $(LDADD)
 am_test_renderer_commands_OBJECTS = test_renderer_commands.$(OBJEXT) \
 	renderer.$(OBJEXT)
 test_renderer_commands_OBJECTS = $(am_test_renderer_commands_OBJECTS)
@@ -165,13 +170,15 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
-	./$(DEPDIR)/renderer.Po ./$(DEPDIR)/renderer_gl_core.Po \
+	./$(DEPDIR)/paint_transform.Po ./$(DEPDIR)/renderer.Po \
+	./$(DEPDIR)/renderer_gl_core.Po \
 	./$(DEPDIR)/renderer_gl_legacy.Po ./$(DEPDIR)/sdlclipboard.Po \
 	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
 	./$(DEPDIR)/sdlkeys.Po \
 	./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po \
 	./$(DEPDIR)/test_gl_legacy-sdlgui.Po \
 	./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po \
+	./$(DEPDIR)/test_paint_transform.Po \
 	./$(DEPDIR)/test_renderer_commands.Po \
 	./$(DEPDIR)/test_renderer_geometry.Po \
 	./$(DEPDIR)/test_renderer_gl_backends.Po \
@@ -195,13 +202,15 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
-SOURCES = $(test_gl_legacy_SOURCES) $(test_renderer_commands_SOURCES) \
+SOURCES = $(test_gl_legacy_SOURCES) $(test_paint_transform_SOURCES) \
+	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
 	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
 	$(test_sdl_event_SOURCES) $(test_sdl_keys_SOURCES) \
 	$(test_sdl_surface_SOURCES)
 DIST_SOURCES = $(test_gl_legacy_SOURCES) \
+	$(test_paint_transform_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
@@ -616,6 +625,9 @@ test_renderer_gl_backends_SOURCES = test_renderer_gl_backends.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_core.c
 
 test_renderer_gl_backends_LDADD = @SDL2_LIBS@ @GL_LIBS@
+test_paint_transform_SOURCES = test_paint_transform.c \
+	$(top_srcdir)/src/client/sdl/paint_transform.c
+
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
 AM_TESTS_ENVIRONMENT = \
@@ -671,6 +683,10 @@ test-gl-legacy$(EXEEXT): $(test_gl_legacy_OBJECTS) $(test_gl_legacy_DEPENDENCIES
 	@rm -f test-gl-legacy$(EXEEXT)
 	$(AM_V_CCLD)$(test_gl_legacy_LINK) $(test_gl_legacy_OBJECTS) $(test_gl_legacy_LDADD) $(LIBS)
 
+test-paint-transform$(EXEEXT): $(test_paint_transform_OBJECTS) $(test_paint_transform_DEPENDENCIES) $(EXTRA_test_paint_transform_DEPENDENCIES)
+	@rm -f test-paint-transform$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_paint_transform_OBJECTS) $(test_paint_transform_LDADD) $(LIBS)
+
 test-renderer-commands$(EXEEXT): $(test_renderer_commands_OBJECTS) $(test_renderer_commands_DEPENDENCIES) $(EXTRA_test_renderer_commands_DEPENDENCIES)
 	@rm -f test-renderer-commands$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_renderer_commands_OBJECTS) $(test_renderer_commands_LDADD) $(LIBS)
@@ -710,6 +726,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SDL_console.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/paint_transform.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer_gl_core.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer_gl_legacy.Po@am__quote@ # am--include-marker
@@ -720,6 +737,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paint_transform.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_commands.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_gl_backends.Po@am__quote@ # am--include-marker
@@ -790,6 +808,20 @@ test_gl_legacy-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_gl_legacy-sdlgui.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+
+paint_transform.o: $(top_srcdir)/src/client/sdl/paint_transform.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT paint_transform.o -MD -MP -MF $(DEPDIR)/paint_transform.Tpo -c -o paint_transform.o `test -f '$(top_srcdir)/src/client/sdl/paint_transform.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/paint_transform.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/paint_transform.Tpo $(DEPDIR)/paint_transform.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/paint_transform.c' object='paint_transform.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o paint_transform.o `test -f '$(top_srcdir)/src/client/sdl/paint_transform.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/paint_transform.c
+
+paint_transform.obj: $(top_srcdir)/src/client/sdl/paint_transform.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT paint_transform.obj -MD -MP -MF $(DEPDIR)/paint_transform.Tpo -c -o paint_transform.obj `if test -f '$(top_srcdir)/src/client/sdl/paint_transform.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/paint_transform.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/paint_transform.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/paint_transform.Tpo $(DEPDIR)/paint_transform.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/paint_transform.c' object='paint_transform.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o paint_transform.obj `if test -f '$(top_srcdir)/src/client/sdl/paint_transform.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/paint_transform.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/paint_transform.c'; fi`
 
 renderer.o: $(top_srcdir)/src/client/sdl/renderer.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT renderer.o -MD -MP -MF $(DEPDIR)/renderer.Tpo -c -o renderer.o `test -f '$(top_srcdir)/src/client/sdl/renderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer.c
@@ -1145,6 +1177,13 @@ test-renderer-geometry.log: test-renderer-geometry$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-paint-transform.log: test-paint-transform$(EXEEXT)
+	@p='test-paint-transform$(EXEEXT)'; \
+	b='test-paint-transform'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 .sh.log:
 	@p='$<'; \
 	$(am__set_b); \
@@ -1237,6 +1276,7 @@ clean-am: clean-checkPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/SDL_console.Po
+	-rm -f ./$(DEPDIR)/paint_transform.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
 	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
 	-rm -f ./$(DEPDIR)/renderer_gl_legacy.Po
@@ -1247,6 +1287,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
+	-rm -f ./$(DEPDIR)/test_paint_transform.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
 	-rm -f ./$(DEPDIR)/test_renderer_geometry.Po
 	-rm -f ./$(DEPDIR)/test_renderer_gl_backends.Po
@@ -1301,6 +1342,7 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/SDL_console.Po
+	-rm -f ./$(DEPDIR)/paint_transform.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
 	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
 	-rm -f ./$(DEPDIR)/renderer_gl_legacy.Po
@@ -1311,6 +1353,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
+	-rm -f ./$(DEPDIR)/test_paint_transform.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
 	-rm -f ./$(DEPDIR)/test_renderer_geometry.Po
 	-rm -f ./$(DEPDIR)/test_renderer_gl_backends.Po

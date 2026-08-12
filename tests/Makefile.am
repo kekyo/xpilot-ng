@@ -7,10 +7,10 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 check_PROGRAMS = test-sdl-keys test-sdl-console test-sdl-surface \
 	test-sdl-clipboard test-sdl-event test-gl-legacy \
 	test-renderer-commands test-renderer-geometry \
-	test-renderer-gl-backends
+	test-renderer-gl-backends test-paint-transform
 TESTS = test-sdl-keys test-sdl-console test-sdl-surface \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
-	test-renderer-geometry run-gl-legacy.sh \
+	test-renderer-geometry test-paint-transform run-gl-legacy.sh \
 	run-renderer-gl-backends.sh run-e2e.sh
 
 test_sdl_keys_SOURCES = test_sdl_keys.c \
@@ -53,6 +53,9 @@ test_renderer_gl_backends_SOURCES = test_renderer_gl_backends.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_core.c
 test_renderer_gl_backends_LDADD = @SDL2_LIBS@ @GL_LIBS@
+
+test_paint_transform_SOURCES = test_paint_transform.c \
+	$(top_srcdir)/src/client/sdl/paint_transform.c
 
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
