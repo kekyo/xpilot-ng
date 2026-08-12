@@ -10,6 +10,7 @@ xpilot_ng_sdl_SOURCES = \
 	SDL_gfxPrimitives_font.h console.c console.h glwidgets.c glwidgets.h \
 	gameloop.c gl_diagnostics.c gl_diagnostics.h \
 	images.c images.h main.c radar.c radar.h \
+	renderer.c renderer.h renderer_test_support.h \
 	sdlclipboard.c sdlclipboard.h \
 	sdlcompat.c sdlcompat.h \
 	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h sdlpaint.c \

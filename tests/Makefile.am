@@ -5,9 +5,11 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	@GL_CFLAGS@ @GLU_CFLAGS@
 
 check_PROGRAMS = test-sdl-keys test-sdl-console test-sdl-surface \
-	test-sdl-clipboard test-sdl-event test-gl-legacy
+	test-sdl-clipboard test-sdl-event test-gl-legacy \
+	test-renderer-commands test-renderer-geometry
 TESTS = test-sdl-keys test-sdl-console test-sdl-surface \
-	test-sdl-clipboard test-sdl-event run-gl-legacy.sh run-e2e.sh
+	test-sdl-clipboard test-sdl-event test-renderer-commands \
+	test-renderer-geometry run-gl-legacy.sh run-e2e.sh
 
 test_sdl_keys_SOURCES = test_sdl_keys.c \
 	$(top_srcdir)/src/client/sdl/sdlkeys.c
@@ -37,6 +39,12 @@ test_gl_legacy_CFLAGS = $(AM_CFLAGS) -DXPILOT_GL_TEST_HOOKS \
 test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=glGetString
 test_gl_legacy_LDADD = @SDL2_LIBS@ @GLU_LIBS@ @GL_LIBS@
+
+test_renderer_commands_SOURCES = test_renderer_commands.c \
+	$(top_srcdir)/src/client/sdl/renderer.c
+
+test_renderer_geometry_SOURCES = test_renderer_geometry.c \
+	$(top_srcdir)/src/client/sdl/renderer.c
 
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
