@@ -30,6 +30,7 @@
 #include "sdlinit.h"
 #include "gl_diagnostics.h"
 #include "sdlrenderer.h"
+#include "images.h"
 
 /* These are only needed for the polygon tessellation */
 /* I'd like to move them to Paint_init/cleanup but because it */
@@ -77,6 +78,14 @@ static bool file_exists(const char *path)
 
 int Init_playing_windows(void)
 {
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+
+    if (sdl_renderer == NULL
+	|| Images_prepare(Sdl_renderer_frontend(sdl_renderer)) != 0) {
+	error("image preparation failed");
+	return -1;
+    }
+
     /*
     sdl_init_colors();
     Init_spark_colors();

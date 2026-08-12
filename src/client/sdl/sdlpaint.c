@@ -338,6 +338,9 @@ void Paint_frame(void)
 	rendererFramePending = false;
     }
 
+    if (Images_prepare(Sdl_renderer_frontend(sdl_renderer)) != 0)
+	warn("Could not prepare newly registered images");
+
     if (damaged <= 0) {
 	renderer_status = Sdl_renderer_begin_frame(
 	    sdl_renderer, draw_width, draw_height,

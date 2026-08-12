@@ -1024,7 +1024,7 @@ void Gui_paint_asteroids_begin(void)
     img = Image_get(IMG_ASTEROID);
     if (img != NULL) {
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, img->name);
+	glBindTexture(GL_TEXTURE_2D, img->legacy_name);
     }
     glColor4ub(255, 255, 255, 255);
     glEnable(GL_LIGHTING);
@@ -1843,7 +1843,7 @@ static void Paint_HUD_items(int hud_pos_x, int hud_pos_y)
 
 	if (num >= 0) {
 
-    	    Image_paint(IMG_HUD_ITEMS, 
+	    Image_paint_hud(IMG_HUD_ITEMS,
 			horiz_pos - ITEM_SIZE, 
 			vert_pos, (u_byte)i, 
 			hudItemsColorRGBA);
