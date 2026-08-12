@@ -354,8 +354,10 @@ void Window_size_changed(int width, int height)
 
 void Swap_buffers(void)
 {
-    if (main_window != NULL)
+    if (main_window != NULL) {
 	SDL_GL_SwapWindow(main_window);
+        Gl_diagnostics_check("buffer swap");
+    }
 }
 
 void Set_window_grab(bool on)

@@ -12,6 +12,8 @@
 
 #define BASELINE_SIZE 12
 #define PIXEL_COMPONENTS 4
+#define TEST_SKIP 77
+#define CONTEXT_LOG_GL_1_5_ARGUMENT "--context-log-gl-1.5"
 
 typedef void (APIENTRYP gen_framebuffers_fn)(GLsizei, GLuint *);
 typedef void (APIENTRYP bind_framebuffer_fn)(GLenum, GLuint);
@@ -33,6 +35,20 @@ polygon_style_t *polygon_styles;
 int num_polygons;
 
 static int failure_count;
+static int reject_pre_2_glsl_query;
+static unsigned int rejected_pre_2_glsl_queries;
+
+extern const GLubyte *APIENTRY __real_glGetString(GLenum name);
+
+const GLubyte *APIENTRY __wrap_glGetString(GLenum name)
+{
+    if (reject_pre_2_glsl_query
+        && name == GL_SHADING_LANGUAGE_VERSION) {
+        rejected_pre_2_glsl_queries++;
+        return __real_glGetString(0);
+    }
+    return __real_glGetString(name);
+}
 
 extern int Gui_init(void);
 extern void Gui_cleanup(void);
@@ -123,6 +139,81 @@ static unsigned int drain_gl_errors(void)
     while (glGetError() != GL_NO_ERROR)
         count++;
     return count;
+}
+
+static int check_context_logging_on_gl_1_5(void)
+{
+    SDL_Window *window = NULL;
+    SDL_GLContext context = NULL;
+    const char *version;
+    int major = 0;
+    int minor = 0;
+    int result = 1;
+
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        fprintf(stderr, "SKIP: SDL video initialization failed for the "
+                "OpenGL 1.5 context: %s\n", SDL_GetError());
+        return TEST_SKIP;
+    }
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1) != 0
+        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5) != 0
+        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0) != 0) {
+        fprintf(stderr, "SKIP: SDL cannot request an OpenGL 1.5 context: %s\n",
+                SDL_GetError());
+        result = TEST_SKIP;
+        goto cleanup;
+    }
+
+    window = SDL_CreateWindow("XPilot OpenGL 1.5 diagnostics test",
+                              SDL_WINDOWPOS_UNDEFINED,
+                              SDL_WINDOWPOS_UNDEFINED,
+                              64, 64,
+                              SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
+    if (window == NULL) {
+        fprintf(stderr, "SKIP: OpenGL 1.5 window creation failed: %s\n",
+                SDL_GetError());
+        result = TEST_SKIP;
+        goto cleanup;
+    }
+    context = SDL_GL_CreateContext(window);
+    if (context == NULL) {
+        fprintf(stderr, "SKIP: OpenGL 1.5 context creation failed: %s\n",
+                SDL_GetError());
+        result = TEST_SKIP;
+        goto cleanup;
+    }
+
+    version = (const char *)glGetString(GL_VERSION);
+    if (version == NULL || sscanf(version, "%d.%d", &major, &minor) != 2) {
+        fprintf(stderr, "Could not read the OpenGL 1.5 context version\n");
+        goto cleanup;
+    }
+    if (major != 1 || minor != 5) {
+        fprintf(stderr, "SKIP: MESA_GL_VERSION_OVERRIDE=1.5 was not "
+                "honored (actual version: %s)\n", version);
+        result = TEST_SKIP;
+        goto cleanup;
+    }
+
+    drain_gl_errors();
+    Gl_diagnostics_reset();
+    rejected_pre_2_glsl_queries = 0;
+    reject_pre_2_glsl_query = 1;
+    Gl_diagnostics_log_context();
+    reject_pre_2_glsl_query = 0;
+    CHECK_CONTINUE(rejected_pre_2_glsl_queries == 0);
+    CHECK_CONTINUE(Gl_diagnostics_check("OpenGL 1.5 context logging") == 0);
+    CHECK_CONTINUE(Gl_diagnostics_total_errors() == 0);
+    CHECK_CONTINUE(glGetError() == GL_NO_ERROR);
+    result = failure_count == 0 ? 0 : 1;
+
+cleanup:
+    if (context != NULL)
+        SDL_GL_DeleteContext(context);
+    if (window != NULL)
+        SDL_DestroyWindow(window);
+    SDL_Quit();
+    return result;
 }
 
 static int component_near(GLubyte actual, int expected, int tolerance)
@@ -335,10 +426,17 @@ static void check_diagnostics(void)
     CHECK_CONTINUE(Gl_diagnostics_total_errors() == 0);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     SDL_Window *window;
     SDL_GLContext context;
+
+    if (argc == 2 && strcmp(argv[1], CONTEXT_LOG_GL_1_5_ARGUMENT) == 0)
+        return check_context_logging_on_gl_1_5();
+    if (argc != 1) {
+        fprintf(stderr, "Unexpected test argument\n");
+        return 2;
+    }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "SDL video initialization failed: %s\n",

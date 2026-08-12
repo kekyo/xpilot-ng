@@ -23,4 +23,19 @@ if test ! -x "$test_binary"; then
     exit 1
 fi
 
-exec "$test_binary"
+"$test_binary"
+
+legacy_context_status=0
+MESA_GL_VERSION_OVERRIDE=1.5 \
+    "$test_binary" --context-log-gl-1.5 || legacy_context_status=$?
+
+case "$legacy_context_status" in
+    0)
+        ;;
+    77)
+        echo "SKIP: Mesa OpenGL 1.5 compatibility context is unavailable"
+        ;;
+    *)
+        exit "$legacy_context_status"
+        ;;
+esac

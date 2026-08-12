@@ -11,6 +11,8 @@
 
 #include "gl_diagnostics.h"
 
+#include <ctype.h>
+
 static unsigned int total_errors;
 
 static const char *Gl_error_name(GLenum error_code)
@@ -66,20 +68,44 @@ static const char *Gl_profile_name(int profile)
     }
 }
 
+static int Gl_version_at_least_2(const char *version)
+{
+    unsigned long major = 0;
+
+    if (version == NULL)
+	return 0;
+    while (*version != '\0' && !isdigit((unsigned char)*version))
+	version++;
+    if (*version == '\0')
+	return 0;
+    while (isdigit((unsigned char)*version)) {
+	major = major * 10 + (unsigned long)(*version - '0');
+	if (major >= 2)
+	    return 1;
+	version++;
+    }
+    return 0;
+}
+
 void Gl_diagnostics_log_context(void)
 {
     int major = 0;
     int minor = 0;
     int profile = 0;
+    const char *version;
+    const char *shading_language = "not available";
 
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major);
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor);
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, &profile);
 
+    version = Gl_context_string(GL_VERSION);
+    if (Gl_version_at_least_2(version))
+	shading_language = Gl_context_string(GL_SHADING_LANGUAGE_VERSION);
+
     xpprintf("OpenGL context: version=%s, GLSL=%s, vendor=%s, "
 	     "renderer=%s, profile=%s, attributes=%d.%d\n",
-	     Gl_context_string(GL_VERSION),
-	     Gl_context_string(GL_SHADING_LANGUAGE_VERSION),
+	     version, shading_language,
 	     Gl_context_string(GL_VENDOR),
 	     Gl_context_string(GL_RENDERER),
 	     Gl_profile_name(profile), major, minor);
