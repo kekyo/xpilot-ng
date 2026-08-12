@@ -89,15 +89,16 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 check_PROGRAMS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
-	test-sdl-surface$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
-	test-sdl-event$(EXEEXT) test-gl-legacy$(EXEEXT) \
-	test-renderer-commands$(EXEEXT) \
+	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
+	test-sdl-clipboard$(EXEEXT) test-sdl-event$(EXEEXT) \
+	test-gl-legacy$(EXEEXT) test-renderer-commands$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) \
 	test-renderer-gl-backends$(EXEEXT) \
 	test-paint-transform$(EXEEXT)
 TESTS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
-	test-sdl-surface$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
-	test-sdl-event$(EXEEXT) test-renderer-commands$(EXEEXT) \
+	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
+	test-sdl-clipboard$(EXEEXT) test-sdl-event$(EXEEXT) \
+	test-renderer-commands$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) test-paint-transform$(EXEEXT) \
 	run-gl-legacy.sh run-renderer-gl-backends.sh run-e2e.sh
 subdir = tests
@@ -155,6 +156,10 @@ am_test_sdl_surface_OBJECTS = test_sdl_surface.$(OBJEXT) \
 	sdlcompat.$(OBJEXT)
 test_sdl_surface_OBJECTS = $(am_test_sdl_surface_OBJECTS)
 test_sdl_surface_DEPENDENCIES =
+am_test_surface_rgba8_OBJECTS = test_surface_rgba8.$(OBJEXT) \
+	surface_rgba8.$(OBJEXT) sdlcompat.$(OBJEXT)
+test_surface_rgba8_OBJECTS = $(am_test_surface_rgba8_OBJECTS)
+test_surface_rgba8_DEPENDENCIES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -176,6 +181,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/renderer_gl_legacy.Po ./$(DEPDIR)/sdlclipboard.Po \
 	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
 	./$(DEPDIR)/sdlkeys.Po ./$(DEPDIR)/sdlrenderer.Po \
+	./$(DEPDIR)/surface_rgba8.Po \
 	./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po \
 	./$(DEPDIR)/test_gl_legacy-sdlgui.Po \
 	./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po \
@@ -185,7 +191,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_renderer_gl_backends.Po \
 	./$(DEPDIR)/test_sdl_clipboard.Po \
 	./$(DEPDIR)/test_sdl_console.Po ./$(DEPDIR)/test_sdl_event.Po \
-	./$(DEPDIR)/test_sdl_keys.Po ./$(DEPDIR)/test_sdl_surface.Po
+	./$(DEPDIR)/test_sdl_keys.Po ./$(DEPDIR)/test_sdl_surface.Po \
+	./$(DEPDIR)/test_surface_rgba8.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -209,7 +216,7 @@ SOURCES = $(test_gl_legacy_SOURCES) $(test_paint_transform_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
 	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
 	$(test_sdl_event_SOURCES) $(test_sdl_keys_SOURCES) \
-	$(test_sdl_surface_SOURCES)
+	$(test_sdl_surface_SOURCES) $(test_surface_rgba8_SOURCES)
 DIST_SOURCES = $(test_gl_legacy_SOURCES) \
 	$(test_paint_transform_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
@@ -217,7 +224,7 @@ DIST_SOURCES = $(test_gl_legacy_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
 	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
 	$(test_sdl_event_SOURCES) $(test_sdl_keys_SOURCES) \
-	$(test_sdl_surface_SOURCES)
+	$(test_sdl_surface_SOURCES) $(test_surface_rgba8_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -595,6 +602,11 @@ test_sdl_surface_SOURCES = test_sdl_surface.c \
 	$(top_srcdir)/src/client/sdl/sdlcompat.c
 
 test_sdl_surface_LDADD = @SDL2_LIBS@
+test_surface_rgba8_SOURCES = test_surface_rgba8.c \
+	$(top_srcdir)/src/client/sdl/surface_rgba8.c \
+	$(top_srcdir)/src/client/sdl/sdlcompat.c
+
+test_surface_rgba8_LDADD = @SDL2_LIBS@
 test_sdl_clipboard_SOURCES = test_sdl_clipboard.c \
 	$(top_srcdir)/src/client/sdl/sdlclipboard.c
 
@@ -721,6 +733,10 @@ test-sdl-surface$(EXEEXT): $(test_sdl_surface_OBJECTS) $(test_sdl_surface_DEPEND
 	@rm -f test-sdl-surface$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_surface_OBJECTS) $(test_sdl_surface_LDADD) $(LIBS)
 
+test-surface-rgba8$(EXEEXT): $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_DEPENDENCIES) $(EXTRA_test_surface_rgba8_DEPENDENCIES)
+	@rm -f test-surface-rgba8$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -737,6 +753,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlevent.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlkeys.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlrenderer.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po@am__quote@ # am--include-marker
@@ -749,6 +766,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_event.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_keys.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_surface.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_rgba8.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -951,6 +969,20 @@ sdlcompat.obj: $(top_srcdir)/src/client/sdl/sdlcompat.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlcompat.c' object='sdlcompat.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdlcompat.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlcompat.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlcompat.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlcompat.c'; fi`
+
+surface_rgba8.o: $(top_srcdir)/src/client/sdl/surface_rgba8.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT surface_rgba8.o -MD -MP -MF $(DEPDIR)/surface_rgba8.Tpo -c -o surface_rgba8.o `test -f '$(top_srcdir)/src/client/sdl/surface_rgba8.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/surface_rgba8.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/surface_rgba8.Tpo $(DEPDIR)/surface_rgba8.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/surface_rgba8.c' object='surface_rgba8.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o surface_rgba8.o `test -f '$(top_srcdir)/src/client/sdl/surface_rgba8.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/surface_rgba8.c
+
+surface_rgba8.obj: $(top_srcdir)/src/client/sdl/surface_rgba8.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT surface_rgba8.obj -MD -MP -MF $(DEPDIR)/surface_rgba8.Tpo -c -o surface_rgba8.obj `if test -f '$(top_srcdir)/src/client/sdl/surface_rgba8.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/surface_rgba8.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/surface_rgba8.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/surface_rgba8.Tpo $(DEPDIR)/surface_rgba8.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/surface_rgba8.c' object='surface_rgba8.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o surface_rgba8.obj `if test -f '$(top_srcdir)/src/client/sdl/surface_rgba8.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/surface_rgba8.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/surface_rgba8.c'; fi`
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -1166,6 +1198,13 @@ test-sdl-surface.log: test-sdl-surface$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-surface-rgba8.log: test-surface-rgba8$(EXEEXT)
+	@p='test-surface-rgba8$(EXEEXT)'; \
+	b='test-surface-rgba8'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdl-clipboard.log: test-sdl-clipboard$(EXEEXT)
 	@p='test-sdl-clipboard$(EXEEXT)'; \
 	b='test-sdl-clipboard'; \
@@ -1302,6 +1341,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sdlevent.Po
 	-rm -f ./$(DEPDIR)/sdlkeys.Po
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
+	-rm -f ./$(DEPDIR)/surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
@@ -1314,6 +1354,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po
 	-rm -f ./$(DEPDIR)/test_sdl_keys.Po
 	-rm -f ./$(DEPDIR)/test_sdl_surface.Po
+	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1369,6 +1410,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sdlevent.Po
 	-rm -f ./$(DEPDIR)/sdlkeys.Po
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
+	-rm -f ./$(DEPDIR)/surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
@@ -1381,6 +1423,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po
 	-rm -f ./$(DEPDIR)/test_sdl_keys.Po
 	-rm -f ./$(DEPDIR)/test_sdl_surface.Po
+	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
