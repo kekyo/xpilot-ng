@@ -127,7 +127,8 @@ process_stopped()
 
 meta_initialized()
 {
-    grep -q "SDL_ttf initialized" "$runtime_dir/meta.log" 2>/dev/null
+    grep -q "SDL_ttf initialized" "$runtime_dir/meta.log" 2>/dev/null \
+        && grep -q '^OpenGL context:' "$runtime_dir/meta.log" 2>/dev/null
 }
 
 server_ready()
@@ -144,6 +145,14 @@ client_accepted()
         fail "client stopped before joining the server"
     fi
     grep -q "Welcome .*SDL2Smoke" "$runtime_dir/server.log" 2>/dev/null
+}
+
+runtime_logs_have_no_gl_errors()
+{
+    if grep -q 'OpenGL error at ' "$runtime_dir"/*.log 2>/dev/null; then
+        return 1
+    fi
+    return 0
 }
 
 find_game_window()
@@ -237,6 +246,8 @@ client_pid=$!
 window_owner_pid=$client_pid
 wait_until "SDL game window" 20 find_game_window
 wait_until "local client acceptance" 20 client_accepted
+wait_until "game OpenGL context diagnostics" 10 \
+    grep -q '^OpenGL context:' "$runtime_dir/client.log"
 
 xdotool windowsize "$window_id" 900 700 >/dev/null 2>&1 \
     || fail "could not request an SDL window resize"
@@ -261,6 +272,9 @@ set -e
 client_pid=
 if test "$client_status" -ne 0; then
     fail "client returned status $client_status"
+fi
+if ! runtime_logs_have_no_gl_errors; then
+    fail "OpenGL diagnostics reported a runtime error"
 fi
 
 kill -TERM "$server_pid" 2>/dev/null || true

@@ -572,7 +572,7 @@ void Gui_paint_decor(int x, int y, int xi, int yi, int type,
 void Gui_paint_border(int x, int y, int xi, int yi)
 {
     set_alphacolor(wallColorRGBA);
-    glBegin(GL_LINE);
+    glBegin(GL_LINES);
     	glVertex2i(x, y);
     	glVertex2i(xi, yi);
     glEnd();
@@ -1032,7 +1032,6 @@ void Gui_paint_asteroid(int x, int y, int type, int rot, int size)
 	   (type & 2) - 1,
 	   (type & 4) - 2);
     glCallList(asteroid);
-    glEnd();
     glPopMatrix();
 }
 

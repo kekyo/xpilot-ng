@@ -28,6 +28,7 @@
 #include "sdlwindow.h"
 #include "text.h"
 #include "glwidgets.h"
+#include "gl_diagnostics.h"
 
 #define EVENT_JOIN 0
 #define EVENT_REFRESH 1
@@ -1087,6 +1088,7 @@ int Meta_window(Connect_param_t *conpar)
 	glEnable(GL_SCISSOR_TEST);
 	DrawGLWidgetsi(meta, 0, 0, draw_width, draw_height);
 	glDisable(GL_SCISSOR_TEST);
+	Gl_diagnostics_check("meta frame end");
 	Swap_buffers();
 	
 	if (SDL_WaitEvent(&evt) == 0) {

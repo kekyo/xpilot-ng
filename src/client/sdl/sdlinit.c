@@ -28,6 +28,7 @@
 #include "glwidgets.h"
 #include "sdlpaint.h"
 #include "sdlinit.h"
+#include "gl_diagnostics.h"
 
 /* These are only needed for the polygon tessellation */
 /* I'd like to move them to Paint_init/cleanup but because it */
@@ -229,6 +230,8 @@ int Init_window(void)
 	error("Could not create an OpenGL context: %s", SDL_GetError());
 	goto fail;
     }
+    Gl_diagnostics_log_context();
+    Gl_diagnostics_check("context creation");
     SDL_StopTextInput();
     windowed_width = draw_width;
     windowed_height = draw_height;

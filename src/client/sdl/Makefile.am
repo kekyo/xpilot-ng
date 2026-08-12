@@ -8,7 +8,8 @@ xpilot_ng_sdl_SOURCES = \
 	asteroid_data.h DT_drawtext.c DT_drawtext.h \
 	SDL_console.c SDL_console.h SDL_gfxPrimitives.c SDL_gfxPrimitives.h \
 	SDL_gfxPrimitives_font.h console.c console.h glwidgets.c glwidgets.h \
-	gameloop.c images.c images.h main.c radar.c radar.h \
+	gameloop.c gl_diagnostics.c gl_diagnostics.h \
+	images.c images.h main.c radar.c radar.h \
 	sdlclipboard.c sdlclipboard.h \
 	sdlcompat.c sdlcompat.h \
 	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h sdlpaint.c \

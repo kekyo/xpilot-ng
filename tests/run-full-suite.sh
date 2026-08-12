@@ -70,7 +70,15 @@ run_configuration()
         cd "$build_dir"
         "$build_source_dir/configure" --prefix="$install_prefix" "$@"
         make -j"$test_jobs"
-        make check
+        if ! make check; then
+            for test_log in tests/*.log; do
+                if test -f "$test_log"; then
+                    echo "===== $test_log =====" >&2
+                    sed -n '1,320p' "$test_log" >&2
+                fi
+            done
+            exit 1
+        fi
     )
 }
 

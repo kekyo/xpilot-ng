@@ -90,7 +90,10 @@ host_triplet = @host@
 target_triplet = @target@
 check_PROGRAMS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-surface$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
-	test-sdl-event$(EXEEXT)
+	test-sdl-event$(EXEEXT) test-gl-legacy$(EXEEXT)
+TESTS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
+	test-sdl-surface$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
+	test-sdl-event$(EXEEXT) run-gl-legacy.sh run-e2e.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -101,6 +104,13 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+am_test_gl_legacy_OBJECTS = test_gl_legacy-test_gl_legacy.$(OBJEXT) \
+	test_gl_legacy-gl_diagnostics.$(OBJEXT) \
+	test_gl_legacy-sdlgui.$(OBJEXT)
+test_gl_legacy_OBJECTS = $(am_test_gl_legacy_OBJECTS)
+test_gl_legacy_DEPENDENCIES =
+test_gl_legacy_LINK = $(CCLD) $(test_gl_legacy_CFLAGS) $(CFLAGS) \
+	$(test_gl_legacy_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdl_clipboard_OBJECTS = test_sdl_clipboard.$(OBJEXT) \
 	sdlclipboard.$(OBJEXT)
 test_sdl_clipboard_OBJECTS = $(am_test_sdl_clipboard_OBJECTS)
@@ -138,6 +148,9 @@ am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/sdlclipboard.Po ./$(DEPDIR)/sdlcompat.Po \
 	./$(DEPDIR)/sdlevent.Po ./$(DEPDIR)/sdlkeys.Po \
+	./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po \
+	./$(DEPDIR)/test_gl_legacy-sdlgui.Po \
+	./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po \
 	./$(DEPDIR)/test_sdl_clipboard.Po \
 	./$(DEPDIR)/test_sdl_console.Po ./$(DEPDIR)/test_sdl_event.Po \
 	./$(DEPDIR)/test_sdl_keys.Po ./$(DEPDIR)/test_sdl_surface.Po
@@ -158,10 +171,10 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
-SOURCES = $(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
-	$(test_sdl_event_SOURCES) $(test_sdl_keys_SOURCES) \
-	$(test_sdl_surface_SOURCES)
-DIST_SOURCES = $(test_sdl_clipboard_SOURCES) \
+SOURCES = $(test_gl_legacy_SOURCES) $(test_sdl_clipboard_SOURCES) \
+	$(test_sdl_console_SOURCES) $(test_sdl_event_SOURCES) \
+	$(test_sdl_keys_SOURCES) $(test_sdl_surface_SOURCES)
+DIST_SOURCES = $(test_gl_legacy_SOURCES) $(test_sdl_clipboard_SOURCES) \
 	$(test_sdl_console_SOURCES) $(test_sdl_event_SOURCES) \
 	$(test_sdl_keys_SOURCES) $(test_sdl_surface_SOURCES)
 am__can_run_installinfo = \
@@ -529,7 +542,6 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	@SDL2_CFLAGS@ @SDL2_IMAGE_CFLAGS@ @SDL2_TTF_CFLAGS@ \
 	@GL_CFLAGS@ @GLU_CFLAGS@
 
-TESTS = $(check_PROGRAMS) run-e2e.sh
 test_sdl_keys_SOURCES = test_sdl_keys.c \
 	$(top_srcdir)/src/client/sdl/sdlkeys.c
 
@@ -550,14 +562,23 @@ test_sdl_event_SOURCES = test_sdl_event.c \
 	$(top_srcdir)/src/client/sdl/sdlevent.c
 
 test_sdl_event_LDADD = @SDL2_LIBS@
+test_gl_legacy_SOURCES = test_gl_legacy.c \
+	$(top_srcdir)/src/client/sdl/gl_diagnostics.c \
+	$(top_srcdir)/src/client/sdl/sdlgui.c
+
+test_gl_legacy_CFLAGS = $(AM_CFLAGS) -ffunction-sections -fdata-sections
+test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_gl_legacy_LDADD = @SDL2_LIBS@ @GLU_LIBS@ @GL_LIBS@
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
 AM_TESTS_ENVIRONMENT = \
 	XPILOT_TEST_PREFIX='$(prefix)'; export XPILOT_TEST_PREFIX; \
 	XPILOT_TEST_BINDIR='$(bindir)'; export XPILOT_TEST_BINDIR; \
-	XPILOT_TEST_PKGDATADIR='$(pkgdatadir)'; export XPILOT_TEST_PKGDATADIR;
+	XPILOT_TEST_PKGDATADIR='$(pkgdatadir)'; export XPILOT_TEST_PKGDATADIR; \
+	XPILOT_GL_TEST_BINARY='$(abs_builddir)/test-gl-legacy'; \
+	export XPILOT_GL_TEST_BINARY;
 
-EXTRA_DIST = run-e2e.sh run-full-suite.sh test_helpers.h
+EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-legacy.sh test_helpers.h
 all: all-am
 
 .SUFFIXES:
@@ -595,6 +616,10 @@ $(am__aclocal_m4_deps):
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
 
+test-gl-legacy$(EXEEXT): $(test_gl_legacy_OBJECTS) $(test_gl_legacy_DEPENDENCIES) $(EXTRA_test_gl_legacy_DEPENDENCIES)
+	@rm -f test-gl-legacy$(EXEEXT)
+	$(AM_V_CCLD)$(test_gl_legacy_LINK) $(test_gl_legacy_OBJECTS) $(test_gl_legacy_LDADD) $(LIBS)
+
 test-sdl-clipboard$(EXEEXT): $(test_sdl_clipboard_OBJECTS) $(test_sdl_clipboard_DEPENDENCIES) $(EXTRA_test_sdl_clipboard_DEPENDENCIES)
 	@rm -f test-sdl-clipboard$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_clipboard_OBJECTS) $(test_sdl_clipboard_LDADD) $(LIBS)
@@ -626,6 +651,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlcompat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlevent.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlkeys.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-sdlgui.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_clipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_console.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_event.Po@am__quote@ # am--include-marker
@@ -651,6 +679,48 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+test_gl_legacy-test_gl_legacy.o: test_gl_legacy.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-test_gl_legacy.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo -c -o test_gl_legacy-test_gl_legacy.o `test -f 'test_gl_legacy.c' || echo '$(srcdir)/'`test_gl_legacy.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo $(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_gl_legacy.c' object='test_gl_legacy-test_gl_legacy.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-test_gl_legacy.o `test -f 'test_gl_legacy.c' || echo '$(srcdir)/'`test_gl_legacy.c
+
+test_gl_legacy-test_gl_legacy.obj: test_gl_legacy.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-test_gl_legacy.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo -c -o test_gl_legacy-test_gl_legacy.obj `if test -f 'test_gl_legacy.c'; then $(CYGPATH_W) 'test_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/test_gl_legacy.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo $(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_gl_legacy.c' object='test_gl_legacy-test_gl_legacy.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-test_gl_legacy.obj `if test -f 'test_gl_legacy.c'; then $(CYGPATH_W) 'test_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/test_gl_legacy.c'; fi`
+
+test_gl_legacy-gl_diagnostics.o: $(top_srcdir)/src/client/sdl/gl_diagnostics.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-gl_diagnostics.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo -c -o test_gl_legacy-gl_diagnostics.o `test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/gl_diagnostics.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo $(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/gl_diagnostics.c' object='test_gl_legacy-gl_diagnostics.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-gl_diagnostics.o `test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/gl_diagnostics.c
+
+test_gl_legacy-gl_diagnostics.obj: $(top_srcdir)/src/client/sdl/gl_diagnostics.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-gl_diagnostics.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo -c -o test_gl_legacy-gl_diagnostics.obj `if test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo $(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/gl_diagnostics.c' object='test_gl_legacy-gl_diagnostics.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-gl_diagnostics.obj `if test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; fi`
+
+test_gl_legacy-sdlgui.o: $(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-sdlgui.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-sdlgui.Tpo -c -o test_gl_legacy-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-sdlgui.Tpo $(DEPDIR)/test_gl_legacy-sdlgui.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_gl_legacy-sdlgui.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+
+test_gl_legacy-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-sdlgui.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-sdlgui.Tpo -c -o test_gl_legacy-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-sdlgui.Tpo $(DEPDIR)/test_gl_legacy-sdlgui.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_gl_legacy-sdlgui.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
 
 sdlclipboard.o: $(top_srcdir)/src/client/sdl/sdlclipboard.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlclipboard.o -MD -MP -MF $(DEPDIR)/sdlclipboard.Tpo -c -o sdlclipboard.o `test -f '$(top_srcdir)/src/client/sdl/sdlclipboard.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlclipboard.c
@@ -1046,6 +1116,9 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
 	-rm -f ./$(DEPDIR)/sdlkeys.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlgui.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
 	-rm -f ./$(DEPDIR)/test_sdl_clipboard.Po
 	-rm -f ./$(DEPDIR)/test_sdl_console.Po
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po
@@ -1101,6 +1174,9 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
 	-rm -f ./$(DEPDIR)/sdlkeys.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlgui.Po
+	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
 	-rm -f ./$(DEPDIR)/test_sdl_clipboard.Po
 	-rm -f ./$(DEPDIR)/test_sdl_console.Po
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po

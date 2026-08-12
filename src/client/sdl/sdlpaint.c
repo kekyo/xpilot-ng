@@ -42,6 +42,7 @@
 #include "text.h"
 #include "glwidgets.h"
 #include "radar.h"
+#include "gl_diagnostics.h"
 
 #define SCORE_BORDER 5
 
@@ -273,6 +274,7 @@ void Paint_frame(void)
     gettimeofday(&tv1, NULL);
 
     Paint_frame_start();
+    Gl_diagnostics_check("frame start");
 
     if (damaged <= 0) {
     	/*glClear(GL_COLOR_BUFFER_BIT);*/
@@ -298,6 +300,7 @@ void Paint_frame(void)
     	setupPaint_stationary();
 	
     	Paint_world();
+	Gl_diagnostics_check("world");
 
 	if (oldServer) {
 	    Paint_vfuel();
@@ -313,12 +316,14 @@ void Paint_frame(void)
 
 	setupPaint_moving();
 	Paint_ships();
+	Gl_diagnostics_check("objects");
 
 	setupPaint_HUD();
 
     	Paint_meters();
     	Paint_HUD();
     	Paint_HUD_values();
+	Gl_diagnostics_check("HUD");
 
 	Paint_messages();       
 	Console_paint();
@@ -332,7 +337,8 @@ void Paint_frame(void)
     		
 	glPopMatrix();
     }
-    
+
+    Gl_diagnostics_check("frame end");
     Swap_buffers();
 
     if (newSecond) {
