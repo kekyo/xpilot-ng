@@ -107,22 +107,23 @@ am__xpilot_ng_sdl_SOURCES_DIST = asteroid_data.h DT_drawtext.c \
 	DT_drawtext.h SDL_console.c SDL_console.h SDL_gfxPrimitives.c \
 	SDL_gfxPrimitives.h SDL_gfxPrimitives_font.h console.c \
 	console.h glwidgets.c glwidgets.h gameloop.c gl_diagnostics.c \
-	gl_diagnostics.h images.c images.h main.c radar.c radar.h \
-	paint_transform.c paint_transform.h renderer.c renderer.h \
-	renderer_backend.h renderer_gl.h renderer_gl_legacy.c \
-	renderer_gl_legacy.h renderer_gl_core.c renderer_gl_core.h \
-	sdlclipboard.c sdlclipboard.h sdlcompat.c sdlcompat.h \
-	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h \
-	sdlrenderer.c sdlrenderer.h sdlpaint.c surface_rgba8.c \
-	surface_rgba8.h sdlpaint.h sdlwindow.c sdlwindow.h text.c \
-	text.h todo.c sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h \
-	win32hacks.c
+	gl_diagnostics.h image_geometry.c image_geometry.h images.c \
+	images.h main.c radar.c radar.h paint_transform.c \
+	paint_transform.h renderer.c renderer.h renderer_backend.h \
+	renderer_gl.h renderer_gl_legacy.c renderer_gl_legacy.h \
+	renderer_gl_core.c renderer_gl_core.h sdlclipboard.c \
+	sdlclipboard.h sdlcompat.c sdlcompat.h sdlevent.c sdlevent.h \
+	sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h sdlrenderer.c \
+	sdlrenderer.h sdlpaint.c surface_rgba8.c surface_rgba8.h \
+	sdlpaint.h sdlwindow.c sdlwindow.h text.c text.h todo.c \
+	sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h win32hacks.c
 @COND_WINDOWS_TRUE@am__objects_1 = win32hacks.$(OBJEXT)
 am_xpilot_ng_sdl_OBJECTS = DT_drawtext.$(OBJEXT) SDL_console.$(OBJEXT) \
 	SDL_gfxPrimitives.$(OBJEXT) console.$(OBJEXT) \
 	glwidgets.$(OBJEXT) gameloop.$(OBJEXT) \
-	gl_diagnostics.$(OBJEXT) images.$(OBJEXT) main.$(OBJEXT) \
-	radar.$(OBJEXT) paint_transform.$(OBJEXT) renderer.$(OBJEXT) \
+	gl_diagnostics.$(OBJEXT) image_geometry.$(OBJEXT) \
+	images.$(OBJEXT) main.$(OBJEXT) radar.$(OBJEXT) \
+	paint_transform.$(OBJEXT) renderer.$(OBJEXT) \
 	renderer_gl_legacy.$(OBJEXT) renderer_gl_core.$(OBJEXT) \
 	sdlclipboard.$(OBJEXT) sdlcompat.$(OBJEXT) sdlevent.$(OBJEXT) \
 	sdlgui.$(OBJEXT) sdlinit.$(OBJEXT) sdlkeys.$(OBJEXT) \
@@ -151,9 +152,10 @@ am__depfiles_remade = ./$(DEPDIR)/DT_drawtext.Po \
 	./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/SDL_gfxPrimitives.Po \
 	./$(DEPDIR)/console.Po ./$(DEPDIR)/gameloop.Po \
 	./$(DEPDIR)/gl_diagnostics.Po ./$(DEPDIR)/glwidgets.Po \
-	./$(DEPDIR)/images.Po ./$(DEPDIR)/main.Po \
-	./$(DEPDIR)/paint_transform.Po ./$(DEPDIR)/radar.Po \
-	./$(DEPDIR)/renderer.Po ./$(DEPDIR)/renderer_gl_core.Po \
+	./$(DEPDIR)/image_geometry.Po ./$(DEPDIR)/images.Po \
+	./$(DEPDIR)/main.Po ./$(DEPDIR)/paint_transform.Po \
+	./$(DEPDIR)/radar.Po ./$(DEPDIR)/renderer.Po \
+	./$(DEPDIR)/renderer_gl_core.Po \
 	./$(DEPDIR)/renderer_gl_legacy.Po ./$(DEPDIR)/sdlclipboard.Po \
 	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
 	./$(DEPDIR)/sdlgui.Po ./$(DEPDIR)/sdlinit.Po \
@@ -341,16 +343,16 @@ xpilot_ng_sdl_SOURCES = asteroid_data.h DT_drawtext.c DT_drawtext.h \
 	SDL_console.c SDL_console.h SDL_gfxPrimitives.c \
 	SDL_gfxPrimitives.h SDL_gfxPrimitives_font.h console.c \
 	console.h glwidgets.c glwidgets.h gameloop.c gl_diagnostics.c \
-	gl_diagnostics.h images.c images.h main.c radar.c radar.h \
-	paint_transform.c paint_transform.h renderer.c renderer.h \
-	renderer_backend.h renderer_gl.h renderer_gl_legacy.c \
-	renderer_gl_legacy.h renderer_gl_core.c renderer_gl_core.h \
-	sdlclipboard.c sdlclipboard.h sdlcompat.c sdlcompat.h \
-	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h \
-	sdlrenderer.c sdlrenderer.h sdlpaint.c surface_rgba8.c \
-	surface_rgba8.h sdlpaint.h sdlwindow.c sdlwindow.h text.c \
-	text.h todo.c sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h \
-	$(am__append_1)
+	gl_diagnostics.h image_geometry.c image_geometry.h images.c \
+	images.h main.c radar.c radar.h paint_transform.c \
+	paint_transform.h renderer.c renderer.h renderer_backend.h \
+	renderer_gl.h renderer_gl_legacy.c renderer_gl_legacy.h \
+	renderer_gl_core.c renderer_gl_core.h sdlclipboard.c \
+	sdlclipboard.h sdlcompat.c sdlcompat.h sdlevent.c sdlevent.h \
+	sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h sdlrenderer.c \
+	sdlrenderer.h sdlpaint.c surface_rgba8.c surface_rgba8.h \
+	sdlpaint.h sdlwindow.c sdlwindow.h text.c text.h todo.c \
+	sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h $(am__append_1)
 xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	@SDL2_IMAGE_LIBS@ @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
@@ -450,6 +452,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gameloop.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gl_diagnostics.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/glwidgets.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/image_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/images.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/paint_transform.Po@am__quote@ # am--include-marker
@@ -625,6 +628,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/gameloop.Po
 	-rm -f ./$(DEPDIR)/gl_diagnostics.Po
 	-rm -f ./$(DEPDIR)/glwidgets.Po
+	-rm -f ./$(DEPDIR)/image_geometry.Po
 	-rm -f ./$(DEPDIR)/images.Po
 	-rm -f ./$(DEPDIR)/main.Po
 	-rm -f ./$(DEPDIR)/paint_transform.Po
@@ -698,6 +702,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/gameloop.Po
 	-rm -f ./$(DEPDIR)/gl_diagnostics.Po
 	-rm -f ./$(DEPDIR)/glwidgets.Po
+	-rm -f ./$(DEPDIR)/image_geometry.Po
 	-rm -f ./$(DEPDIR)/images.Po
 	-rm -f ./$(DEPDIR)/main.Po
 	-rm -f ./$(DEPDIR)/paint_transform.Po
