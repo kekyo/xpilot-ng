@@ -100,7 +100,8 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
-	test-glwidgets-scissor$(EXEEXT) test-text-geometry$(EXEEXT)
+	test-glwidgets-scissor$(EXEEXT) test-text-geometry$(EXEEXT) \
+	test-text-atlas$(EXEEXT)
 TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdl-console$(EXEEXT) test-sdl-surface$(EXEEXT) \
 	test-surface-rgba8$(EXEEXT) test-sdl-window$(EXEEXT) \
@@ -113,7 +114,8 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) test-text-geometry$(EXEEXT) \
-	run-renderer-gl-backends.sh run-e2e.sh
+	test-text-atlas$(EXEEXT) run-renderer-gl-backends.sh \
+	run-e2e.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -241,6 +243,10 @@ am_test_surface_rgba8_OBJECTS = test_surface_rgba8.$(OBJEXT) \
 	surface_rgba8.$(OBJEXT) sdlcompat.$(OBJEXT)
 test_surface_rgba8_OBJECTS = $(am_test_surface_rgba8_OBJECTS)
 test_surface_rgba8_DEPENDENCIES =
+am_test_text_atlas_OBJECTS = test_text_atlas.$(OBJEXT) \
+	text_atlas.$(OBJEXT)
+test_text_atlas_OBJECTS = $(am_test_text_atlas_OBJECTS)
+test_text_atlas_DEPENDENCIES =
 am_test_text_geometry_OBJECTS = test_text_geometry.$(OBJEXT) \
 	text_geometry.$(OBJEXT)
 test_text_geometry_OBJECTS = $(am_test_text_geometry_OBJECTS)
@@ -303,7 +309,9 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_sdl_ui_image-test_sdl_ui_image.Po \
 	./$(DEPDIR)/test_sdl_window.Po \
 	./$(DEPDIR)/test_surface_rgba8.Po \
-	./$(DEPDIR)/test_text_geometry.Po ./$(DEPDIR)/text_geometry.Po
+	./$(DEPDIR)/test_text_atlas.Po \
+	./$(DEPDIR)/test_text_geometry.Po ./$(DEPDIR)/text_atlas.Po \
+	./$(DEPDIR)/text_geometry.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -335,7 +343,7 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_surface_rgba8_SOURCES) \
-	$(test_text_geometry_SOURCES)
+	$(test_text_atlas_SOURCES) $(test_text_geometry_SOURCES)
 DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
@@ -350,7 +358,7 @@ DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_surface_rgba8_SOURCES) \
-	$(test_text_geometry_SOURCES)
+	$(test_text_atlas_SOURCES) $(test_text_geometry_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -842,6 +850,11 @@ test_text_geometry_SOURCES = test_text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.h
 
+test_text_atlas_SOURCES = test_text_atlas.c \
+	$(top_srcdir)/src/client/sdl/text_atlas.c \
+	$(top_srcdir)/src/client/sdl/text_atlas.h
+
+test_text_atlas_LDADD = @SDL2_LIBS@
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
 AM_TESTS_ENVIRONMENT = \
@@ -977,6 +990,10 @@ test-surface-rgba8$(EXEEXT): $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_
 	@rm -f test-surface-rgba8$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_LDADD) $(LIBS)
 
+test-text-atlas$(EXEEXT): $(test_text_atlas_OBJECTS) $(test_text_atlas_DEPENDENCIES) $(EXTRA_test_text_atlas_DEPENDENCIES)
+	@rm -f test-text-atlas$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_text_atlas_OBJECTS) $(test_text_atlas_LDADD) $(LIBS)
+
 test-text-geometry$(EXEEXT): $(test_text_geometry_OBJECTS) $(test_text_geometry_DEPENDENCIES) $(EXTRA_test_text_geometry_DEPENDENCIES)
 	@rm -f test-text-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_text_geometry_OBJECTS) $(test_text_geometry_LDADD) $(LIBS)
@@ -1039,7 +1056,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_ui_image-test_sdl_ui_image.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_window.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_rgba8.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_geometry.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_geometry.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -1594,6 +1613,20 @@ surface_rgba8.obj: $(top_srcdir)/src/client/sdl/surface_rgba8.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o surface_rgba8.obj `if test -f '$(top_srcdir)/src/client/sdl/surface_rgba8.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/surface_rgba8.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/surface_rgba8.c'; fi`
 
+text_atlas.o: $(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT text_atlas.o -MD -MP -MF $(DEPDIR)/text_atlas.Tpo -c -o text_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/text_atlas.Tpo $(DEPDIR)/text_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_atlas.c' object='text_atlas.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o text_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_atlas.c
+
+text_atlas.obj: $(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT text_atlas.obj -MD -MP -MF $(DEPDIR)/text_atlas.Tpo -c -o text_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_atlas.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/text_atlas.Tpo $(DEPDIR)/text_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_atlas.c' object='text_atlas.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o text_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_atlas.c'; fi`
+
 text_geometry.o: $(top_srcdir)/src/client/sdl/text_geometry.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT text_geometry.o -MD -MP -MF $(DEPDIR)/text_geometry.Tpo -c -o text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/text_geometry.Tpo $(DEPDIR)/text_geometry.Po
@@ -1941,6 +1974,13 @@ test-text-geometry.log: test-text-geometry$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-text-atlas.log: test-text-atlas$(EXEEXT)
+	@p='test-text-atlas$(EXEEXT)'; \
+	b='test-text-atlas'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 .sh.log:
 	@p='$<'; \
 	$(am__set_b); \
@@ -2084,7 +2124,9 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-test_sdl_ui_image.Po
 	-rm -f ./$(DEPDIR)/test_sdl_window.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
+	-rm -f ./$(DEPDIR)/test_text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_geometry.Po
+	-rm -f ./$(DEPDIR)/text_atlas.Po
 	-rm -f ./$(DEPDIR)/text_geometry.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -2183,7 +2225,9 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-test_sdl_ui_image.Po
 	-rm -f ./$(DEPDIR)/test_sdl_window.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
+	-rm -f ./$(DEPDIR)/test_text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_geometry.Po
+	-rm -f ./$(DEPDIR)/text_atlas.Po
 	-rm -f ./$(DEPDIR)/text_geometry.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic

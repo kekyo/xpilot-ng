@@ -22,7 +22,7 @@ xpilot_ng_sdl_SOURCES = \
 	sdluiimage.c sdluiimage.h \
 	sdlpaint.c surface_rgba8.c surface_rgba8.h \
 	sdlpaint.h sdlwindow.c sdlwindow.h text.c text.h \
-	text_geometry.c text_geometry.h todo.c \
+	text_atlas.c text_atlas.h text_geometry.c text_geometry.h todo.c \
 	sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h
 xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
