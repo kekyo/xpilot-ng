@@ -9,13 +9,14 @@ check_PROGRAMS = test-sdl-keys test-sdl-console test-sdl-surface \
 	test-sdl-clipboard test-sdl-event test-gl-legacy \
 	test-renderer-commands test-renderer-geometry \
 	test-renderer-gl-backends test-paint-transform test-image-geometry \
-	test-gfx2d-picture test-images test-radar-renderer
+	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image
 TESTS = test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
 	test-renderer-geometry test-paint-transform run-gl-legacy.sh \
 	test-image-geometry test-gfx2d-picture \
-	test-images test-radar-renderer run-renderer-gl-backends.sh run-e2e.sh
+	test-images test-radar-renderer test-sdl-ui-image \
+	run-renderer-gl-backends.sh run-e2e.sh
 
 test_sdl_keys_SOURCES = test_sdl_keys.c \
 	$(top_srcdir)/src/client/sdl/sdlkeys.c
@@ -93,6 +94,12 @@ test_radar_renderer_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_radar_renderer_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_radar_renderer_LDADD = @SDL2_LIBS@
+
+test_sdl_ui_image_SOURCES = test_sdl_ui_image.c \
+	$(top_srcdir)/src/client/sdl/sdluiimage.c \
+	$(top_srcdir)/src/client/sdl/surface_rgba8.c \
+	$(top_srcdir)/src/client/sdl/sdlcompat.c
+test_sdl_ui_image_LDADD = @SDL2_LIBS@
 
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
