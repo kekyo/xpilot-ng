@@ -11,7 +11,8 @@ check_PROGRAMS = test-meta-environment \
 	test-renderer-commands test-renderer-geometry \
 	test-renderer-gl-backends test-paint-transform test-image-geometry \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
-	test-sdl-meta-frame test-sdl-renderer-scissor test-glwidgets-scissor
+	test-sdl-meta-frame test-sdl-renderer-scissor \
+	test-glwidgets-scissor test-text-geometry
 TESTS = test-meta-environment \
 	test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
@@ -19,7 +20,7 @@ TESTS = test-meta-environment \
 	test-renderer-geometry test-paint-transform run-gl-legacy.sh \
 	test-image-geometry test-gfx2d-picture \
 	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
-	test-sdl-renderer-scissor test-glwidgets-scissor \
+	test-sdl-renderer-scissor test-glwidgets-scissor test-text-geometry \
 	run-renderer-gl-backends.sh run-e2e.sh
 
 test_meta_environment_SOURCES = test_meta_environment.c \
@@ -136,6 +137,10 @@ test_glwidgets_scissor_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_glwidgets_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_glwidgets_scissor_LDADD = @SDL2_LIBS@
+
+test_text_geometry_SOURCES = test_text_geometry.c \
+	$(top_srcdir)/src/client/sdl/text_geometry.c \
+	$(top_srcdir)/src/client/sdl/text_geometry.h
 
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
