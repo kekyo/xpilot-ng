@@ -18,6 +18,7 @@ xpilot_ng_sdl_SOURCES = \
 	sdlclipboard.c sdlclipboard.h \
 	sdlcompat.c sdlcompat.h \
 	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h \
+	sdlgameframe.c sdlgameframe.h \
 	sdlmetaframe.c sdlmetaframe.h sdlrenderer.c sdlrenderer.h \
 	sdluiimage.c sdluiimage.h \
 	sdlpaint.c surface_rgba8.c surface_rgba8.h \

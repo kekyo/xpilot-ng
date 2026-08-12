@@ -98,11 +98,11 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-paint-transform$(EXEEXT) test-image-geometry$(EXEEXT) \
 	test-gfx2d-picture$(EXEEXT) test-images$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
-	test-sdl-meta-frame$(EXEEXT) \
+	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
-	test-text-renderer$(EXEEXT)
+	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT)
 TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdl-console$(EXEEXT) test-sdl-surface$(EXEEXT) \
 	test-surface-rgba8$(EXEEXT) test-sdl-window$(EXEEXT) \
@@ -112,11 +112,12 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	run-gl-legacy.sh test-image-geometry$(EXEEXT) \
 	test-gfx2d-picture$(EXEEXT) test-images$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
-	test-sdl-meta-frame$(EXEEXT) \
+	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
-	test-text-renderer$(EXEEXT) run-renderer-gl-backends.sh run-e2e.sh
+	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT) \
+	run-renderer-gl-backends.sh run-e2e.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -211,6 +212,10 @@ am_test_sdl_event_OBJECTS = test_sdl_event.$(OBJEXT) \
 	sdlevent.$(OBJEXT)
 test_sdl_event_OBJECTS = $(am_test_sdl_event_OBJECTS)
 test_sdl_event_DEPENDENCIES =
+am_test_sdl_game_frame_OBJECTS = test_sdl_game_frame.$(OBJEXT) \
+	sdlgameframe.$(OBJEXT)
+test_sdl_game_frame_OBJECTS = $(am_test_sdl_game_frame_OBJECTS)
+test_sdl_game_frame_LDADD = $(LDADD)
 am_test_sdl_keys_OBJECTS = test_sdl_keys.$(OBJEXT) sdlkeys.$(OBJEXT)
 test_sdl_keys_OBJECTS = $(am_test_sdl_keys_OBJECTS)
 test_sdl_keys_DEPENDENCIES =
@@ -255,6 +260,16 @@ am_test_text_atlas_OBJECTS = test_text_atlas.$(OBJEXT) \
 	text_atlas.$(OBJEXT)
 test_text_atlas_OBJECTS = $(am_test_text_atlas_OBJECTS)
 test_text_atlas_DEPENDENCIES =
+am_test_text_cache_adapter_OBJECTS =  \
+	test_text_cache_adapter-test_text_cache_adapter.$(OBJEXT) \
+	test_text_cache_adapter-text.$(OBJEXT)
+test_text_cache_adapter_OBJECTS =  \
+	$(am_test_text_cache_adapter_OBJECTS)
+test_text_cache_adapter_DEPENDENCIES =  \
+	$(top_builddir)/src/common/libxpcommon.a
+test_text_cache_adapter_LINK = $(CCLD) \
+	$(test_text_cache_adapter_CFLAGS) $(CFLAGS) \
+	$(test_text_cache_adapter_LDFLAGS) $(LDFLAGS) -o $@
 am_test_text_geometry_OBJECTS = test_text_geometry.$(OBJEXT) \
 	text_geometry.$(OBJEXT)
 test_text_geometry_OBJECTS = $(am_test_text_geometry_OBJECTS)
@@ -263,6 +278,8 @@ am_test_text_renderer_OBJECTS = test_text_renderer.$(OBJEXT) \
 	text_renderer.$(OBJEXT) text_geometry.$(OBJEXT)
 test_text_renderer_OBJECTS = $(am_test_text_renderer_OBJECTS)
 test_text_renderer_LDADD = $(LDADD)
+test_text_renderer_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(test_text_renderer_LDFLAGS) $(LDFLAGS) -o $@
 am_test_text_ttf_atlas_OBJECTS =  \
 	test_text_ttf_atlas-test_text_ttf_atlas.$(OBJEXT) \
 	test_text_ttf_atlas-text_ttf_atlas.$(OBJEXT) \
@@ -290,9 +307,10 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/renderer.Po ./$(DEPDIR)/renderer_gl_core.Po \
 	./$(DEPDIR)/renderer_gl_legacy.Po ./$(DEPDIR)/sdlclipboard.Po \
 	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
-	./$(DEPDIR)/sdlkeys.Po ./$(DEPDIR)/sdlmetaframe.Po \
-	./$(DEPDIR)/sdlrenderer.Po ./$(DEPDIR)/sdlwindow.Po \
-	./$(DEPDIR)/surface_rgba8.Po ./$(DEPDIR)/test_gfx2d_picture.Po \
+	./$(DEPDIR)/sdlgameframe.Po ./$(DEPDIR)/sdlkeys.Po \
+	./$(DEPDIR)/sdlmetaframe.Po ./$(DEPDIR)/sdlrenderer.Po \
+	./$(DEPDIR)/sdlwindow.Po ./$(DEPDIR)/surface_rgba8.Po \
+	./$(DEPDIR)/test_gfx2d_picture.Po \
 	./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po \
 	./$(DEPDIR)/test_gl_legacy-renderer.Po \
 	./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po \
@@ -321,6 +339,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_renderer_gl_backends.Po \
 	./$(DEPDIR)/test_sdl_clipboard.Po \
 	./$(DEPDIR)/test_sdl_console.Po ./$(DEPDIR)/test_sdl_event.Po \
+	./$(DEPDIR)/test_sdl_game_frame.Po \
 	./$(DEPDIR)/test_sdl_keys.Po \
 	./$(DEPDIR)/test_sdl_meta_frame.Po \
 	./$(DEPDIR)/test_sdl_renderer_scissor-renderer.Po \
@@ -336,6 +355,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_sdl_window.Po \
 	./$(DEPDIR)/test_surface_rgba8.Po \
 	./$(DEPDIR)/test_text_atlas.Po \
+	./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po \
+	./$(DEPDIR)/test_text_cache_adapter-text.Po \
 	./$(DEPDIR)/test_text_geometry.Po \
 	./$(DEPDIR)/test_text_renderer.Po \
 	./$(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Po \
@@ -370,13 +391,14 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
 	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
-	$(test_sdl_event_SOURCES) $(test_sdl_keys_SOURCES) \
-	$(test_sdl_meta_frame_SOURCES) \
+	$(test_sdl_event_SOURCES) $(test_sdl_game_frame_SOURCES) \
+	$(test_sdl_keys_SOURCES) $(test_sdl_meta_frame_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_surface_rgba8_SOURCES) \
-	$(test_text_atlas_SOURCES) $(test_text_geometry_SOURCES) \
-	$(test_text_renderer_SOURCES) $(test_text_ttf_atlas_SOURCES)
+	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
+	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
+	$(test_text_ttf_atlas_SOURCES)
 DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
@@ -386,13 +408,14 @@ DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
 	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
-	$(test_sdl_event_SOURCES) $(test_sdl_keys_SOURCES) \
-	$(test_sdl_meta_frame_SOURCES) \
+	$(test_sdl_event_SOURCES) $(test_sdl_game_frame_SOURCES) \
+	$(test_sdl_keys_SOURCES) $(test_sdl_meta_frame_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_surface_rgba8_SOURCES) \
-	$(test_text_atlas_SOURCES) $(test_text_geometry_SOURCES) \
-	$(test_text_renderer_SOURCES) $(test_text_ttf_atlas_SOURCES)
+	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
+	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
+	$(test_text_ttf_atlas_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -879,6 +902,9 @@ test_sdl_ui_image_LDADD = @SDL2_LIBS@
 test_sdl_meta_frame_SOURCES = test_sdl_meta_frame.c \
 	$(top_srcdir)/src/client/sdl/sdlmetaframe.c
 
+test_sdl_game_frame_SOURCES = test_sdl_game_frame.c \
+	$(top_srcdir)/src/client/sdl/sdlgameframe.c
+
 test_sdl_renderer_scissor_SOURCES = test_sdl_renderer_scissor.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
 	$(top_srcdir)/src/client/sdl/sdlrenderer.c
@@ -922,6 +948,18 @@ test_text_renderer_SOURCES = test_text_renderer.c \
 	$(top_srcdir)/src/client/sdl/text_renderer.h \
 	$(top_srcdir)/src/client/sdl/text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.h
+
+test_text_renderer_LDFLAGS = $(AM_LDFLAGS) -Wl,--wrap=malloc
+test_text_cache_adapter_SOURCES = test_text_cache_adapter.c \
+	$(top_srcdir)/src/client/sdl/text.c
+
+test_text_cache_adapter_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+
+test_text_cache_adapter_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_text_cache_adapter_LDADD = $(top_builddir)/src/common/libxpcommon.a \
+	@SDL2_TTF_LIBS@ @SDL2_LIBS@ @GLU_LIBS@ @GL_LIBS@
+
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
 AM_TESTS_ENVIRONMENT = \
@@ -1029,6 +1067,10 @@ test-sdl-event$(EXEEXT): $(test_sdl_event_OBJECTS) $(test_sdl_event_DEPENDENCIES
 	@rm -f test-sdl-event$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_event_OBJECTS) $(test_sdl_event_LDADD) $(LIBS)
 
+test-sdl-game-frame$(EXEEXT): $(test_sdl_game_frame_OBJECTS) $(test_sdl_game_frame_DEPENDENCIES) $(EXTRA_test_sdl_game_frame_DEPENDENCIES)
+	@rm -f test-sdl-game-frame$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_sdl_game_frame_OBJECTS) $(test_sdl_game_frame_LDADD) $(LIBS)
+
 test-sdl-keys$(EXEEXT): $(test_sdl_keys_OBJECTS) $(test_sdl_keys_DEPENDENCIES) $(EXTRA_test_sdl_keys_DEPENDENCIES)
 	@rm -f test-sdl-keys$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_keys_OBJECTS) $(test_sdl_keys_LDADD) $(LIBS)
@@ -1061,13 +1103,17 @@ test-text-atlas$(EXEEXT): $(test_text_atlas_OBJECTS) $(test_text_atlas_DEPENDENC
 	@rm -f test-text-atlas$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_text_atlas_OBJECTS) $(test_text_atlas_LDADD) $(LIBS)
 
+test-text-cache-adapter$(EXEEXT): $(test_text_cache_adapter_OBJECTS) $(test_text_cache_adapter_DEPENDENCIES) $(EXTRA_test_text_cache_adapter_DEPENDENCIES)
+	@rm -f test-text-cache-adapter$(EXEEXT)
+	$(AM_V_CCLD)$(test_text_cache_adapter_LINK) $(test_text_cache_adapter_OBJECTS) $(test_text_cache_adapter_LDADD) $(LIBS)
+
 test-text-geometry$(EXEEXT): $(test_text_geometry_OBJECTS) $(test_text_geometry_DEPENDENCIES) $(EXTRA_test_text_geometry_DEPENDENCIES)
 	@rm -f test-text-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_text_geometry_OBJECTS) $(test_text_geometry_LDADD) $(LIBS)
 
 test-text-renderer$(EXEEXT): $(test_text_renderer_OBJECTS) $(test_text_renderer_DEPENDENCIES) $(EXTRA_test_text_renderer_DEPENDENCIES)
 	@rm -f test-text-renderer$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(test_text_renderer_OBJECTS) $(test_text_renderer_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(test_text_renderer_LINK) $(test_text_renderer_OBJECTS) $(test_text_renderer_LDADD) $(LIBS)
 
 test-text-ttf-atlas$(EXEEXT): $(test_text_ttf_atlas_OBJECTS) $(test_text_ttf_atlas_DEPENDENCIES) $(EXTRA_test_text_ttf_atlas_DEPENDENCIES)
 	@rm -f test-text-ttf-atlas$(EXEEXT)
@@ -1089,6 +1135,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlclipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlcompat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlevent.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlgameframe.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlkeys.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlmetaframe.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlrenderer.Po@am__quote@ # am--include-marker
@@ -1124,6 +1171,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_clipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_console.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_event.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_game_frame.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_keys.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_meta_frame.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_renderer_scissor-renderer.Po@am__quote@ # am--include-marker
@@ -1139,6 +1187,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_window.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_atlas.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_cache_adapter-text.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Po@am__quote@ # am--include-marker
@@ -1603,6 +1653,20 @@ sdlevent.obj: $(top_srcdir)/src/client/sdl/sdlevent.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdlevent.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlevent.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlevent.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlevent.c'; fi`
 
+sdlgameframe.o: $(top_srcdir)/src/client/sdl/sdlgameframe.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlgameframe.o -MD -MP -MF $(DEPDIR)/sdlgameframe.Tpo -c -o sdlgameframe.o `test -f '$(top_srcdir)/src/client/sdl/sdlgameframe.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgameframe.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/sdlgameframe.Tpo $(DEPDIR)/sdlgameframe.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgameframe.c' object='sdlgameframe.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdlgameframe.o `test -f '$(top_srcdir)/src/client/sdl/sdlgameframe.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgameframe.c
+
+sdlgameframe.obj: $(top_srcdir)/src/client/sdl/sdlgameframe.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlgameframe.obj -MD -MP -MF $(DEPDIR)/sdlgameframe.Tpo -c -o sdlgameframe.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgameframe.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgameframe.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgameframe.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/sdlgameframe.Tpo $(DEPDIR)/sdlgameframe.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgameframe.c' object='sdlgameframe.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdlgameframe.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgameframe.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgameframe.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgameframe.c'; fi`
+
 sdlkeys.o: $(top_srcdir)/src/client/sdl/sdlkeys.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlkeys.o -MD -MP -MF $(DEPDIR)/sdlkeys.Tpo -c -o sdlkeys.o `test -f '$(top_srcdir)/src/client/sdl/sdlkeys.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlkeys.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/sdlkeys.Tpo $(DEPDIR)/sdlkeys.Po
@@ -1812,6 +1876,34 @@ text_atlas.obj: $(top_srcdir)/src/client/sdl/text_atlas.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_atlas.c' object='text_atlas.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o text_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_atlas.c'; fi`
+
+test_text_cache_adapter-test_text_cache_adapter.o: test_text_cache_adapter.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_text_cache_adapter_CFLAGS) $(CFLAGS) -MT test_text_cache_adapter-test_text_cache_adapter.o -MD -MP -MF $(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Tpo -c -o test_text_cache_adapter-test_text_cache_adapter.o `test -f 'test_text_cache_adapter.c' || echo '$(srcdir)/'`test_text_cache_adapter.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Tpo $(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_text_cache_adapter.c' object='test_text_cache_adapter-test_text_cache_adapter.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_text_cache_adapter_CFLAGS) $(CFLAGS) -c -o test_text_cache_adapter-test_text_cache_adapter.o `test -f 'test_text_cache_adapter.c' || echo '$(srcdir)/'`test_text_cache_adapter.c
+
+test_text_cache_adapter-test_text_cache_adapter.obj: test_text_cache_adapter.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_text_cache_adapter_CFLAGS) $(CFLAGS) -MT test_text_cache_adapter-test_text_cache_adapter.obj -MD -MP -MF $(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Tpo -c -o test_text_cache_adapter-test_text_cache_adapter.obj `if test -f 'test_text_cache_adapter.c'; then $(CYGPATH_W) 'test_text_cache_adapter.c'; else $(CYGPATH_W) '$(srcdir)/test_text_cache_adapter.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Tpo $(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_text_cache_adapter.c' object='test_text_cache_adapter-test_text_cache_adapter.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_text_cache_adapter_CFLAGS) $(CFLAGS) -c -o test_text_cache_adapter-test_text_cache_adapter.obj `if test -f 'test_text_cache_adapter.c'; then $(CYGPATH_W) 'test_text_cache_adapter.c'; else $(CYGPATH_W) '$(srcdir)/test_text_cache_adapter.c'; fi`
+
+test_text_cache_adapter-text.o: $(top_srcdir)/src/client/sdl/text.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_text_cache_adapter_CFLAGS) $(CFLAGS) -MT test_text_cache_adapter-text.o -MD -MP -MF $(DEPDIR)/test_text_cache_adapter-text.Tpo -c -o test_text_cache_adapter-text.o `test -f '$(top_srcdir)/src/client/sdl/text.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_text_cache_adapter-text.Tpo $(DEPDIR)/test_text_cache_adapter-text.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text.c' object='test_text_cache_adapter-text.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_text_cache_adapter_CFLAGS) $(CFLAGS) -c -o test_text_cache_adapter-text.o `test -f '$(top_srcdir)/src/client/sdl/text.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text.c
+
+test_text_cache_adapter-text.obj: $(top_srcdir)/src/client/sdl/text.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_text_cache_adapter_CFLAGS) $(CFLAGS) -MT test_text_cache_adapter-text.obj -MD -MP -MF $(DEPDIR)/test_text_cache_adapter-text.Tpo -c -o test_text_cache_adapter-text.obj `if test -f '$(top_srcdir)/src/client/sdl/text.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_text_cache_adapter-text.Tpo $(DEPDIR)/test_text_cache_adapter-text.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text.c' object='test_text_cache_adapter-text.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_text_cache_adapter_CFLAGS) $(CFLAGS) -c -o test_text_cache_adapter-text.obj `if test -f '$(top_srcdir)/src/client/sdl/text.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text.c'; fi`
 
 text_geometry.o: $(top_srcdir)/src/client/sdl/text_geometry.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT text_geometry.o -MD -MP -MF $(DEPDIR)/text_geometry.Tpo -c -o text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
@@ -2209,6 +2301,13 @@ test-sdl-meta-frame.log: test-sdl-meta-frame$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-sdl-game-frame.log: test-sdl-game-frame$(EXEEXT)
+	@p='test-sdl-game-frame$(EXEEXT)'; \
+	b='test-sdl-game-frame'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdl-renderer-scissor.log: test-sdl-renderer-scissor$(EXEEXT)
 	@p='test-sdl-renderer-scissor$(EXEEXT)'; \
 	b='test-sdl-renderer-scissor'; \
@@ -2237,6 +2336,13 @@ test-text-atlas.log: test-text-atlas$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-text-ttf-atlas.log: test-text-ttf-atlas$(EXEEXT)
+	@p='test-text-ttf-atlas$(EXEEXT)'; \
+	b='test-text-ttf-atlas'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-text-renderer.log: test-text-renderer$(EXEEXT)
 	@p='test-text-renderer$(EXEEXT)'; \
 	b='test-text-renderer'; \
@@ -2244,9 +2350,9 @@ test-text-renderer.log: test-text-renderer$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-test-text-ttf-atlas.log: test-text-ttf-atlas$(EXEEXT)
-	@p='test-text-ttf-atlas$(EXEEXT)'; \
-	b='test-text-ttf-atlas'; \
+test-text-cache-adapter.log: test-text-cache-adapter$(EXEEXT)
+	@p='test-text-cache-adapter$(EXEEXT)'; \
+	b='test-text-cache-adapter'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -2352,6 +2458,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
+	-rm -f ./$(DEPDIR)/sdlgameframe.Po
 	-rm -f ./$(DEPDIR)/sdlkeys.Po
 	-rm -f ./$(DEPDIR)/sdlmetaframe.Po
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
@@ -2387,6 +2494,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdl_clipboard.Po
 	-rm -f ./$(DEPDIR)/test_sdl_console.Po
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po
+	-rm -f ./$(DEPDIR)/test_sdl_game_frame.Po
 	-rm -f ./$(DEPDIR)/test_sdl_keys.Po
 	-rm -f ./$(DEPDIR)/test_sdl_meta_frame.Po
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-renderer.Po
@@ -2402,6 +2510,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdl_window.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
+	-rm -f ./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po
+	-rm -f ./$(DEPDIR)/test_text_cache_adapter-text.Po
 	-rm -f ./$(DEPDIR)/test_text_geometry.Po
 	-rm -f ./$(DEPDIR)/test_text_renderer.Po
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Po
@@ -2466,6 +2576,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
+	-rm -f ./$(DEPDIR)/sdlgameframe.Po
 	-rm -f ./$(DEPDIR)/sdlkeys.Po
 	-rm -f ./$(DEPDIR)/sdlmetaframe.Po
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
@@ -2501,6 +2612,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdl_clipboard.Po
 	-rm -f ./$(DEPDIR)/test_sdl_console.Po
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po
+	-rm -f ./$(DEPDIR)/test_sdl_game_frame.Po
 	-rm -f ./$(DEPDIR)/test_sdl_keys.Po
 	-rm -f ./$(DEPDIR)/test_sdl_meta_frame.Po
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-renderer.Po
@@ -2516,6 +2628,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdl_window.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
+	-rm -f ./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po
+	-rm -f ./$(DEPDIR)/test_text_cache_adapter-text.Po
 	-rm -f ./$(DEPDIR)/test_text_geometry.Po
 	-rm -f ./$(DEPDIR)/test_text_renderer.Po
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Po

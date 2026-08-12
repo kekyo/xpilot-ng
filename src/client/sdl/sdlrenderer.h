@@ -48,6 +48,28 @@ void Sdl_renderer_destroy(SdlRenderer *renderer);
 Renderer *Sdl_renderer_frontend(SdlRenderer *renderer);
 
 /**
+ * Retain the first semantic rendering failure for the active frame.
+ *
+ * @param renderer Renderer facade with an active frame.
+ * @param status Result of a semantic rendering operation.
+ * @return The first retained failure, or OK when no failure is retained.
+ *
+ * @remarks A successful status never replaces a retained failure. The result
+ * is reset only after a subsequent frame begins successfully.
+ */
+RendererStatus Sdl_renderer_track_frame_result(
+    SdlRenderer *renderer, RendererStatus status);
+
+/**
+ * Return the semantic rendering result retained for the current or most
+ * recently completed frame.
+ *
+ * @param renderer Renderer facade.
+ * @return The retained frame result, or INVALID_ARGUMENT for NULL.
+ */
+RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer);
+
+/**
  * Query the current OpenGL drawable size in physical pixels.
  *
  * @param renderer Renderer facade.

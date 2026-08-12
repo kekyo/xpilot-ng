@@ -143,11 +143,21 @@ static RendererStatus Text_renderer_draw_measured(
     RendererVertex2D *vertices = NULL;
     RendererStatus status;
 
+    if (metrics->vertex_count > 0) {
+        status = Sdl_renderer_frame_result(text_renderer->sdl_renderer);
+        if (status != RENDERER_STATUS_OK)
+            return status;
+    }
     status = Text_renderer_build_vertices(
         text_renderer, text, text_length, metrics, anchor, horizontal,
         vertical, color, space, &vertices);
-    if (status != RENDERER_STATUS_OK)
+    if (status != RENDERER_STATUS_OK) {
+        if (status == RENDERER_STATUS_OUT_OF_MEMORY) {
+            return Sdl_renderer_track_frame_result(
+                text_renderer->sdl_renderer, status);
+        }
         return status;
+    }
     if (metrics->vertex_count == 0) {
         free(vertices);
         return RENDERER_STATUS_OK;
@@ -155,17 +165,23 @@ static RendererStatus Text_renderer_draw_measured(
 
     status = Renderer_set_blend(text_renderer->frontend,
                                 RENDERER_BLEND_ALPHA);
-    if (status == RENDERER_STATUS_OK) {
-        status = Renderer_draw_triangles(
-            text_renderer->frontend, text_renderer->texture, vertices,
-            metrics->vertex_count);
+    if (status != RENDERER_STATUS_OK) {
+        free(vertices);
+        return Sdl_renderer_track_frame_result(
+            text_renderer->sdl_renderer, status);
     }
+    status = Renderer_draw_triangles(
+        text_renderer->frontend, text_renderer->texture, vertices,
+        metrics->vertex_count);
     free(vertices);
-    if (status == RENDERER_STATUS_OK) {
-        status = Sdl_renderer_flush_preserving_legacy(
-            text_renderer->sdl_renderer);
+    if (status != RENDERER_STATUS_OK) {
+        return Sdl_renderer_track_frame_result(
+            text_renderer->sdl_renderer, status);
     }
-    return status;
+    status = Sdl_renderer_flush_preserving_legacy(
+        text_renderer->sdl_renderer);
+    return Sdl_renderer_track_frame_result(
+        text_renderer->sdl_renderer, status);
 }
 
 RendererStatus Text_renderer_draw(

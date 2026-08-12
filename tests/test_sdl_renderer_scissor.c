@@ -17,6 +17,7 @@ typedef struct CapturedDraw {
 } CapturedDraw;
 
 typedef struct FakeBackend {
+    RendererStatus begin_result;
     int begin_count;
     int end_count;
     int destroy_count;
@@ -48,7 +49,7 @@ static RendererStatus fake_begin_frame(void *context, int width, int height,
     fake->begin_count++;
     fake->frame_width = width;
     fake->frame_height = height;
-    return RENDERER_STATUS_OK;
+    return fake->begin_result;
 }
 
 static RendererStatus fake_draw(void *context,
@@ -212,6 +213,7 @@ static int check_logical_scissor_uses_drawable_pixels(void)
     Renderer *renderer;
 
     memset(&backend, 0, sizeof(backend));
+    backend.begin_result = RENDERER_STATUS_OK;
     TEST_CHECK(Sdl_renderer_create(window, &sdl_renderer)
                == RENDERER_STATUS_OK);
     TEST_CHECK(sdl_renderer != NULL);
@@ -265,10 +267,75 @@ static int check_logical_scissor_uses_drawable_pixels(void)
     return 0;
 }
 
+static int check_frame_result_is_sticky_until_successful_begin(void)
+{
+    const RendererColor clear = {0, 0, 0, 255};
+    SDL_Window *window = (SDL_Window *)&fake_window_storage;
+    SdlRenderer *sdl_renderer = NULL;
+
+    memset(&backend, 0, sizeof(backend));
+    backend.begin_result = RENDERER_STATUS_OK;
+    TEST_CHECK(Sdl_renderer_create(window, &sdl_renderer)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(sdl_renderer != NULL);
+    TEST_CHECK(Sdl_renderer_frame_result(sdl_renderer)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Sdl_renderer_track_frame_result(
+                   sdl_renderer, RENDERER_STATUS_BACKEND_ERROR)
+               == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK(Sdl_renderer_frame_result(sdl_renderer)
+               == RENDERER_STATUS_OK);
+
+    TEST_CHECK(Sdl_renderer_begin_frame(sdl_renderer, 100, 80, clear)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Sdl_renderer_track_frame_result(
+                   sdl_renderer, RENDERER_STATUS_OK)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Sdl_renderer_track_frame_result(
+                   sdl_renderer, RENDERER_STATUS_OUT_OF_MEMORY)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(Sdl_renderer_track_frame_result(
+                   sdl_renderer, RENDERER_STATUS_BACKEND_ERROR)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(Sdl_renderer_track_frame_result(
+                   sdl_renderer, RENDERER_STATUS_OK)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(Sdl_renderer_frame_result(sdl_renderer)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(Sdl_renderer_end_frame(sdl_renderer) == RENDERER_STATUS_OK);
+
+    /* Presentation code can inspect the completed frame until the next
+     * frame has actually begun. A failed begin must not erase that result. */
+    TEST_CHECK(Sdl_renderer_frame_result(sdl_renderer)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    backend.begin_result = RENDERER_STATUS_BACKEND_ERROR;
+    TEST_CHECK(Sdl_renderer_begin_frame(sdl_renderer, 100, 80, clear)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(Sdl_renderer_frame_result(sdl_renderer)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+
+    backend.begin_result = RENDERER_STATUS_OK;
+    TEST_CHECK(Sdl_renderer_begin_frame(sdl_renderer, 100, 80, clear)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Sdl_renderer_frame_result(sdl_renderer)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Sdl_renderer_end_frame(sdl_renderer) == RENDERER_STATUS_OK);
+
+    Sdl_renderer_destroy(sdl_renderer);
+    TEST_CHECK(backend.destroy_count == 1);
+    return 0;
+}
+
 int main(void)
 {
+    TEST_CHECK(Sdl_renderer_frame_result(NULL)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Sdl_renderer_track_frame_result(
+                   NULL, RENDERER_STATUS_BACKEND_ERROR)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
     TEST_CHECK(Sdl_renderer_set_logical_scissor(NULL, NULL)
                == RENDERER_STATUS_INVALID_ARGUMENT);
     TEST_CHECK(check_logical_scissor_uses_drawable_pixels() == 0);
+    TEST_CHECK(check_frame_result_is_sticky_until_successful_begin() == 0);
     return 0;
 }

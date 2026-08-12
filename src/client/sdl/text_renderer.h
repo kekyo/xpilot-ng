@@ -30,8 +30,11 @@ typedef enum TextRendererSpace {
  * @param text_renderer Empty destination receiving the new facade.
  * @return Operation status.
  *
- * @remarks The SDL renderer and atlas must outlive the returned facade and
- * every cache created from it. Creation does not allocate GPU resources.
+ * @remarks The SDL renderer and atlas must remain valid while the returned
+ * facade is used. Destroying the facade does not dereference either borrowed
+ * object, so an owner may first release a fallible atlas resource and then
+ * destroy the facade after that release succeeds. CPU caches do not borrow
+ * the facade itself. Creation does not allocate GPU resources.
  */
 RendererStatus Text_renderer_create(SdlRenderer *sdl_renderer,
                                     TextAtlas *atlas,
@@ -42,6 +45,9 @@ RendererStatus Text_renderer_create(SdlRenderer *sdl_renderer,
  *
  * @param text_renderer Address of a facade pointer; an already-NULL value is
  *        valid.
+ *
+ * @remarks Destruction only releases CPU facade storage and does not inspect
+ * its borrowed SDL renderer or atlas.
  */
 void Text_renderer_destroy(TextRenderer **text_renderer);
 
@@ -129,6 +135,9 @@ RendererStatus Text_renderer_cache_metrics(
  * @param color Unpremultiplied glyph tint.
  * @param space Coordinate convention for the generated vertices.
  * @return Operation status.
+ *
+ * @remarks A successful nonempty draw is flushed through the transitional
+ * legacy-state-preserving ordering barrier before this function returns.
  */
 RendererStatus Text_renderer_draw_cached(
     TextRenderer *text_renderer, const TextRendererCache *cache,

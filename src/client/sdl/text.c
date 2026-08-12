@@ -237,6 +237,7 @@ static bool Font_is_empty(const font_data *font)
     size_t index;
 
     if (font->ttffont != NULL || font->atlas != NULL
+	|| font->text_renderer != NULL
 	|| font->list_base != 0 || font->h != 0 || font->linespacing != 0) {
 	return false;
     }
@@ -289,6 +290,17 @@ RendererStatus fontinit(font_data *ft_font, Renderer *renderer,
     return RENDERER_STATUS_OK;
 }
 
+RendererStatus font_text_renderer_attach(font_data *ft_font,
+					 SdlRenderer *sdl_renderer)
+{
+    if (ft_font == NULL || sdl_renderer == NULL || ft_font->atlas == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (ft_font->text_renderer != NULL)
+	return RENDERER_STATUS_OK;
+    return Text_renderer_create(sdl_renderer, ft_font->atlas,
+				&ft_font->text_renderer);
+}
+
 RendererStatus fontclean(font_data *ft_font)
 {
     RendererStatus status;
@@ -300,6 +312,9 @@ RendererStatus fontclean(font_data *ft_font)
     if (status != RENDERER_STATUS_OK)
 	return status;
 
+    /* The facade destroy path is deliberately CPU-only. Keeping it until the
+     * fallible atlas release succeeds preserves all font state for retry. */
+    Text_renderer_destroy(&ft_font->text_renderer);
     Release_legacy_font_resources(ft_font);
     memset(ft_font, 0, sizeof(*ft_font));
     return RENDERER_STATUS_OK;
@@ -411,121 +426,78 @@ fontbounds printsize(font_data *ft_font, const char *fmt, ...)
 
 bool render_text(font_data *ft_font, const char *text, string_tex_t *string_tex)
 {
-    SDL_Color white = { 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE };
-    SDL_Color *forecol;
-    SDL_Surface *string_glyph = NULL;
-    SDL_Surface *glyph = NULL;
-    SDL_Rect src, dest;
-    string_tex_t rendered = { NULL, NULL, 0, 0, 0 };
-    GLenum gl_error;
+    const char *normalized_text;
+    TextRendererCache *candidate_cache = NULL;
+    TextRendererCache *old_cache;
+    TextGeometryMetrics metrics;
+    RendererStatus status;
+    char *candidate_text;
+    char *old_text;
+    size_t text_length;
+    int width;
+    int height;
 
-    if (!(ft_font)) return false;
-    if (!(ft_font->ttffont)) return false;
-    if (!(string_tex)) return false;
-    if (!(text)) return false;
-#if 0
-    if (!strlen(text)) return false; /* something is printing an empty string each frame */
-#else
-    /* kps - fix for empty author field in cannon dodgers */
-    if (!strlen(text))
-	text = " ";
-#endif
-
-    forecol = &white;
-	
-    string_glyph = TTF_RenderText_Blended( ft_font->ttffont, text, *forecol );
-
-    if (string_glyph) {
-	int i, num = (string_glyph->w + 253) / 254;
-
-	rendered.font_height = ft_font->h;
-	rendered.height = string_glyph->h;
-	rendered.tex_list = Arraylist_alloc(sizeof(tex_t));
-	if (rendered.tex_list == NULL)
-	    goto fail;
-	rendered.text = strdup(text);
-	if (rendered.text == NULL)
-	    goto fail;
-	for( i=0 ; i<num ; ++i ) {
-	    tex_t tex;
-	    
-	    tex.texture = 0;
-	    tex.texcoords.MinX = 0.0;
-	    tex.texcoords.MaxX = 0.0;
-	    tex.texcoords.MinY = 0.0;
-	    tex.texcoords.MaxY = 0.0;
-	    tex.width = 0;
-	    
-    	    src.x   = i*254;
-	    dest.x  = 0;
-    	    src.y = dest.y = 0;
-	    if (i==num-1)
-	    	dest.w = src.w = string_glyph->w - i*254;
-	    else
-	    	dest.w = src.w = 254;
-    	    src.h = dest.h = string_glyph->h;
-	    
-	    glyph = SDL_CreateRGBSurface(0,dest.w,dest.h,32,0,0,0,0);
-	    if (glyph == NULL ||
-		SDL_SetColorKey(glyph, SDL_TRUE, 0x00000000) < 0 ||
-		SDL_BlitSurface(string_glyph, &src, glyph, &dest) < 0)
-		goto fail;
-    
-  	    glGetError();
-	    tex.texture = SDL_GL_LoadTexture(glyph,&(tex.texcoords));
-	    gl_error = glGetError();
-	    if (tex.texture == 0 || gl_error != GL_NO_ERROR) {
-		if (tex.texture != 0)
-		    glDeleteTextures(1, &tex.texture);
-		goto fail;
-	    }
-
-	    tex.width = dest.w;
-	    rendered.width += dest.w;
-	    
-	    SDL_FreeSurface(glyph);
-	    glyph = NULL;
-
-	    if (Arraylist_add(rendered.tex_list, &tex) < 0) {
-		glDeleteTextures(1, &tex.texture);
-		goto fail;
-	    }
-	}
-	SDL_FreeSurface(string_glyph);
-	*string_tex = rendered;
-    } else {
-	error("TTF_RenderText_Blended failed for [%s]: %s", text,
-	      TTF_GetError());
+    if (ft_font == NULL || ft_font->text_renderer == NULL
+	|| text == NULL || string_tex == NULL || ft_font->h > INT_MAX) {
 	return false;
     }
+
+    /* Keep the old empty-author compatibility without creating a transient
+     * surface or texture for the replacement string. */
+    normalized_text = text[0] != '\0' ? text : " ";
+    if (string_tex->text_renderer == ft_font->text_renderer
+	&& string_tex->cache != NULL && string_tex->text != NULL
+	&& strcmp(string_tex->text, normalized_text) == 0) {
+	return true;
+    }
+
+    text_length = strlen(normalized_text);
+    status = Text_renderer_cache_replace(
+	&candidate_cache, ft_font->text_renderer,
+	(const unsigned char *)normalized_text, text_length);
+    if (status != RENDERER_STATUS_OK)
+	return false;
+    status = Text_renderer_cache_metrics(candidate_cache, &metrics);
+    if (status != RENDERER_STATUS_OK || metrics.width != metrics.width
+	|| metrics.height != metrics.height || metrics.width < 0.0f
+	|| metrics.height < 0.0f || (double)metrics.width > (double)INT_MAX
+	|| (double)metrics.height > (double)INT_MAX) {
+	Text_renderer_cache_destroy(&candidate_cache);
+	return false;
+    }
+    width = (int)metrics.width;
+    height = (int)metrics.height;
+    candidate_text = xp_strdup(normalized_text);
+    if (candidate_text == NULL) {
+	Text_renderer_cache_destroy(&candidate_cache);
+	return false;
+    }
+
+    old_cache = string_tex->cache;
+    old_text = string_tex->text;
+    string_tex->text_renderer = ft_font->text_renderer;
+    string_tex->cache = candidate_cache;
+    string_tex->text = candidate_text;
+    string_tex->width = width;
+    string_tex->height = height;
+    string_tex->font_height = (int)ft_font->h;
+    Text_renderer_cache_destroy(&old_cache);
+    free(old_text);
     return true;
-
-fail:
-    if (glyph != NULL)
-	SDL_FreeSurface(glyph);
-    SDL_FreeSurface(string_glyph);
-    free_string_texture(&rendered);
-    return false;
 }
 
-bool draw_text(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *text, bool savetex, string_tex_t *string_tex, bool onHUD)
-{
-    return draw_text_fraq(ft_font, color, XALIGN, YALIGN, x, y, text, 0.0f, 1.0f, 0.0f, 1.0f, savetex, string_tex, onHUD);
-}
-
-bool draw_text_fraq(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *text
-    	    	    , float xstart
-    	    	    , float xstop
-    	    	    , float ystart
-    	    	    , float ystop
-		    , bool savetex, string_tex_t *string_tex, bool onHUD)
+bool draw_text(font_data *ft_font, int color, int XALIGN, int YALIGN,
+	       int x, int y, const char *text, bool savetex,
+	       string_tex_t *string_tex, bool onHUD)
 {
     bool remove_tex = false;
     bool rendered;
-    if (!(ft_font)) return false;
-    if (!(ft_font->ttffont)) return false;
+    RendererStatus draw_status = RENDERER_STATUS_INVALID_ARGUMENT;
+
+    if (ft_font == NULL || ft_font->text_renderer == NULL)
+	return false;
         
-    if (!string_tex) {
+    if (string_tex == NULL) {
     	remove_tex = true;
 	string_tex = XCALLOC(string_tex_t, 1);
 	if (string_tex == NULL)
@@ -533,88 +505,96 @@ bool draw_text_fraq(font_data *ft_font, int color, int XALIGN, int YALIGN, int x
     }
 
     rendered = render_text(ft_font, text, string_tex);
-    if (rendered) {
-    	disp_text_fraq(string_tex, color, XALIGN, YALIGN, x, y, xstart, xstop, ystart, ystop, onHUD);
-    }
+    if (rendered)
+	draw_status = disp_text(string_tex, color, XALIGN, YALIGN,
+				x, y, onHUD);
     
     if (!savetex || remove_tex)
     	free_string_texture(string_tex);
     if (remove_tex)
 	XFREE(string_tex);
 
-    return rendered;
+    return rendered && draw_status == RENDERER_STATUS_OK;
 }
 
-void disp_text(string_tex_t *string_tex, int color, int XALIGN, int YALIGN, int x, int y, bool onHUD)
+static RendererStatus Text_horizontal_alignment(
+    int legacy_alignment, TextGeometryHorizontalAlign *alignment)
 {
-    disp_text_fraq(string_tex, color, XALIGN, YALIGN, x, y, 0.0f, 1.0f, 0.0f, 1.0f, onHUD);
-}
-
-void disp_text_fraq(string_tex_t *string_tex, int color, int XALIGN, int YALIGN, int x, int y
-    	    	    , float xstart
-    	    	    , float xstop
-    	    	    , float ystart
-    	    	    , float ystop
-    	    	    , bool onHUD)
-{
-    int i,num,xpos;
-    
-    if (!(string_tex)) return;
-    set_alphacolor(color);
-    
-    x -= (int)(string_tex->width/2.0f*XALIGN);
-    y += (int)(string_tex->height/2.0f*YALIGN - string_tex->height);
-    
-    if (onHUD) pushScreenCoordinateMatrix();
-    
-    xpos=x;
-    num = Arraylist_get_num_elements(string_tex->tex_list);
-    for (i=0;i<num;++i) {
-    	tex_t tex = *((tex_t *)Arraylist_get(string_tex->tex_list,i));
-    	
-	glBindTexture(GL_TEXTURE_2D, tex.texture);
-    	
-	glEnable(GL_TEXTURE_2D);
-    	glEnable(GL_BLEND);
-    	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    	glBegin(GL_TRIANGLE_STRIP);
-    	    glTexCoord2f(   xstart*tex.texcoords.MaxX	, ystop*tex.texcoords.MaxY 	    );
-	    glVertex2f(     xpos + xstart*tex.width	, y  + ystart*string_tex->height    );
-
-     	    glTexCoord2f(   xstop*tex.texcoords.MaxX	, ystop*tex.texcoords.MaxY 	    );
-	    glVertex2f(     xpos + xstop*tex.width 	, y  + ystart*string_tex->height    );
-
-    	    glTexCoord2f(   xstart*tex.texcoords.MaxX	, ystart*tex.texcoords.MaxY	    );
-	    glVertex2f(     xpos + xstart*tex.width	, y + ystop*string_tex->height	    ); 
-
-   	    glTexCoord2f(   xstop*tex.texcoords.MaxX	, ystart*tex.texcoords.MaxY	    );
-	    glVertex2f(     xpos + xstop*tex.width 	, y + ystop*string_tex->height	    ); 
-    	glEnd();
-	
-    	glDisable(GL_TEXTURE_2D);
-	
-	xpos += tex.width;
+    if (alignment == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    switch (legacy_alignment) {
+    case LEFT:
+	*alignment = TEXT_GEOMETRY_ALIGN_LEFT;
+	return RENDERER_STATUS_OK;
+    case CENTER:
+	*alignment = TEXT_GEOMETRY_ALIGN_CENTER;
+	return RENDERER_STATUS_OK;
+    case RIGHT:
+	*alignment = TEXT_GEOMETRY_ALIGN_RIGHT;
+	return RENDERER_STATUS_OK;
+    default:
+	return RENDERER_STATUS_INVALID_ARGUMENT;
     }
-    
-    if (onHUD) pop_projection_matrix();
+}
+
+static RendererStatus Text_vertical_alignment(
+    int legacy_alignment, TextGeometryVerticalAlign *alignment)
+{
+    if (alignment == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    switch (legacy_alignment) {
+    case DOWN:
+	*alignment = TEXT_GEOMETRY_ALIGN_TOP;
+	return RENDERER_STATUS_OK;
+    case CENTER:
+	*alignment = TEXT_GEOMETRY_ALIGN_MIDDLE;
+	return RENDERER_STATUS_OK;
+    case UP:
+	*alignment = TEXT_GEOMETRY_ALIGN_BOTTOM;
+	return RENDERER_STATUS_OK;
+    default:
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+}
+
+RendererStatus disp_text(string_tex_t *string_tex, int color,
+			 int XALIGN, int YALIGN, int x, int y,
+			 bool onHUD)
+{
+    TextGeometryHorizontalAlign horizontal;
+    TextGeometryVerticalAlign vertical;
+    RendererPoint2D anchor;
+    RendererStatus status;
+
+    if (string_tex == NULL || string_tex->text_renderer == NULL
+	|| string_tex->cache == NULL || string_tex->text == NULL) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    status = Text_horizontal_alignment(XALIGN, &horizontal);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    status = Text_vertical_alignment(YALIGN, &vertical);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+
+    anchor.x = (float)x;
+    anchor.y = onHUD ? (float)draw_height - (float)y : (float)y;
+    return Text_renderer_draw_cached(
+	string_tex->text_renderer, string_tex->cache, anchor,
+	horizontal, vertical, Renderer_color_from_rgba32((uint32_t)color),
+	onHUD ? TEXT_RENDERER_SPACE_HUD : TEXT_RENDERER_SPACE_WORLD);
 }
 
 void free_string_texture(string_tex_t *string_tex)
 {
-    if (string_tex) {
-    	if (string_tex->tex_list) {
-	    int i,num = Arraylist_get_num_elements(string_tex->tex_list);
-	    for (i=0;i<num;++i) {
-	    	tex_t tex;
-	    	tex = *((tex_t *)Arraylist_get(string_tex->tex_list,i));
-		glDeleteTextures(1,&(tex.texture));
-	    }
-	    Arraylist_free(string_tex->tex_list);
-	    string_tex->tex_list = NULL;
-	}
-	XFREE(string_tex->text);
-    }
+    if (string_tex == NULL)
+	return;
+    Text_renderer_cache_destroy(&string_tex->cache);
+    XFREE(string_tex->text);
+    string_tex->text_renderer = NULL;
+    string_tex->width = 0;
+    string_tex->height = 0;
+    string_tex->font_height = 0;
 }
 
 void print(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, int length, const char *text, bool onHUD)

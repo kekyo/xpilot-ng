@@ -22,6 +22,7 @@ struct SdlRenderer {
     int drawable_width;
     int drawable_height;
     int frame_active;
+    RendererStatus frame_result;
 };
 
 static void *Sdl_renderer_load_proc(void *userdata, const char *name)
@@ -113,6 +114,27 @@ Renderer *Sdl_renderer_frontend(SdlRenderer *renderer)
     return renderer != NULL ? renderer->frontend : NULL;
 }
 
+RendererStatus Sdl_renderer_track_frame_result(
+    SdlRenderer *renderer, RendererStatus status)
+{
+    if (renderer == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!renderer->frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (renderer->frame_result == RENDERER_STATUS_OK
+        && status != RENDERER_STATUS_OK) {
+        renderer->frame_result = status;
+    }
+    return renderer->frame_result;
+}
+
+RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
+{
+    if (renderer == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    return renderer->frame_result;
+}
+
 RendererStatus Sdl_renderer_get_drawable_size(SdlRenderer *renderer,
                                               int *width, int *height)
 {
@@ -157,6 +179,7 @@ RendererStatus Sdl_renderer_begin_frame(SdlRenderer *renderer,
     renderer->drawable_width = drawable_width;
     renderer->drawable_height = drawable_height;
     renderer->frame_active = 1;
+    renderer->frame_result = RENDERER_STATUS_OK;
     return RENDERER_STATUS_OK;
 }
 

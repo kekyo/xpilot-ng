@@ -289,6 +289,12 @@ RendererStatus Sdl_renderer_set_logical_scissor(
     return RENDERER_STATUS_OK;
 }
 
+RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
+{
+    return renderer == &fake_sdl_renderer ? RENDERER_STATUS_OK
+                                          : RENDERER_STATUS_INVALID_ARGUMENT;
+}
+
 RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
 {
     if (renderer != &fake_sdl_renderer || !fake_renderer.frame_active)
@@ -532,6 +538,12 @@ static RendererStatus integration_draw(void *context)
         &fake_sdl_renderer, integration_draw_state);
 }
 
+static RendererStatus integration_frame_result(void *context)
+{
+    (void)context;
+    return RENDERER_STATUS_OK;
+}
+
 static RendererStatus integration_end(void *context)
 {
     (void)context;
@@ -550,6 +562,7 @@ static int check_widget_failure_aborts_frame(const SdlUiImage *image)
     const SdlMetaFrameOps operations = {
         integration_begin,
         integration_draw,
+        integration_frame_result,
         integration_end,
         integration_swap
     };

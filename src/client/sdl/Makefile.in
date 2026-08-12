@@ -114,13 +114,13 @@ am__xpilot_ng_sdl_SOURCES_DIST = asteroid_data.h DT_drawtext.c \
 	renderer_gl_legacy.h renderer_gl_core.c renderer_gl_core.h \
 	sdlclipboard.c sdlclipboard.h sdlcompat.c sdlcompat.h \
 	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h \
-	sdlmetaframe.c sdlmetaframe.h sdlrenderer.c sdlrenderer.h \
-	sdluiimage.c sdluiimage.h sdlpaint.c surface_rgba8.c \
-	surface_rgba8.h sdlpaint.h sdlwindow.c sdlwindow.h text.c \
-	text.h text_atlas.c text_atlas.h text_geometry.c \
-	text_geometry.h text_renderer.c text_renderer.h \
-	text_ttf_atlas.c text_ttf_atlas.h todo.c sdlmeta.h sdlmeta.c \
-	sdlinit.h xpclient_sdl.h win32hacks.c
+	sdlgameframe.c sdlgameframe.h sdlmetaframe.c sdlmetaframe.h \
+	sdlrenderer.c sdlrenderer.h sdluiimage.c sdluiimage.h \
+	sdlpaint.c surface_rgba8.c surface_rgba8.h sdlpaint.h \
+	sdlwindow.c sdlwindow.h text.c text.h text_atlas.c \
+	text_atlas.h text_geometry.c text_geometry.h text_renderer.c \
+	text_renderer.h text_ttf_atlas.c text_ttf_atlas.h todo.c \
+	sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h win32hacks.c
 @COND_WINDOWS_TRUE@am__objects_1 = win32hacks.$(OBJEXT)
 am_xpilot_ng_sdl_OBJECTS = DT_drawtext.$(OBJEXT) SDL_console.$(OBJEXT) \
 	SDL_gfxPrimitives.$(OBJEXT) console.$(OBJEXT) \
@@ -131,8 +131,8 @@ am_xpilot_ng_sdl_OBJECTS = DT_drawtext.$(OBJEXT) SDL_console.$(OBJEXT) \
 	renderer_gl_legacy.$(OBJEXT) renderer_gl_core.$(OBJEXT) \
 	sdlclipboard.$(OBJEXT) sdlcompat.$(OBJEXT) sdlevent.$(OBJEXT) \
 	sdlgui.$(OBJEXT) sdlinit.$(OBJEXT) sdlkeys.$(OBJEXT) \
-	sdlmetaframe.$(OBJEXT) sdlrenderer.$(OBJEXT) \
-	sdluiimage.$(OBJEXT) sdlpaint.$(OBJEXT) \
+	sdlgameframe.$(OBJEXT) sdlmetaframe.$(OBJEXT) \
+	sdlrenderer.$(OBJEXT) sdluiimage.$(OBJEXT) sdlpaint.$(OBJEXT) \
 	surface_rgba8.$(OBJEXT) sdlwindow.$(OBJEXT) text.$(OBJEXT) \
 	text_atlas.$(OBJEXT) text_geometry.$(OBJEXT) \
 	text_renderer.$(OBJEXT) text_ttf_atlas.$(OBJEXT) \
@@ -165,15 +165,15 @@ am__depfiles_remade = ./$(DEPDIR)/DT_drawtext.Po \
 	./$(DEPDIR)/renderer_gl_core.Po \
 	./$(DEPDIR)/renderer_gl_legacy.Po ./$(DEPDIR)/sdlclipboard.Po \
 	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
-	./$(DEPDIR)/sdlgui.Po ./$(DEPDIR)/sdlinit.Po \
-	./$(DEPDIR)/sdlkeys.Po ./$(DEPDIR)/sdlmeta.Po \
-	./$(DEPDIR)/sdlmetaframe.Po ./$(DEPDIR)/sdlpaint.Po \
-	./$(DEPDIR)/sdlrenderer.Po ./$(DEPDIR)/sdluiimage.Po \
-	./$(DEPDIR)/sdlwindow.Po ./$(DEPDIR)/surface_rgba8.Po \
-	./$(DEPDIR)/text.Po ./$(DEPDIR)/text_atlas.Po \
-	./$(DEPDIR)/text_geometry.Po ./$(DEPDIR)/text_renderer.Po \
-	./$(DEPDIR)/text_ttf_atlas.Po ./$(DEPDIR)/todo.Po \
-	./$(DEPDIR)/win32hacks.Po
+	./$(DEPDIR)/sdlgameframe.Po ./$(DEPDIR)/sdlgui.Po \
+	./$(DEPDIR)/sdlinit.Po ./$(DEPDIR)/sdlkeys.Po \
+	./$(DEPDIR)/sdlmeta.Po ./$(DEPDIR)/sdlmetaframe.Po \
+	./$(DEPDIR)/sdlpaint.Po ./$(DEPDIR)/sdlrenderer.Po \
+	./$(DEPDIR)/sdluiimage.Po ./$(DEPDIR)/sdlwindow.Po \
+	./$(DEPDIR)/surface_rgba8.Po ./$(DEPDIR)/text.Po \
+	./$(DEPDIR)/text_atlas.Po ./$(DEPDIR)/text_geometry.Po \
+	./$(DEPDIR)/text_renderer.Po ./$(DEPDIR)/text_ttf_atlas.Po \
+	./$(DEPDIR)/todo.Po ./$(DEPDIR)/win32hacks.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -360,13 +360,13 @@ xpilot_ng_sdl_SOURCES = asteroid_data.h DT_drawtext.c DT_drawtext.h \
 	renderer_gl_legacy.h renderer_gl_core.c renderer_gl_core.h \
 	sdlclipboard.c sdlclipboard.h sdlcompat.c sdlcompat.h \
 	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h \
-	sdlmetaframe.c sdlmetaframe.h sdlrenderer.c sdlrenderer.h \
-	sdluiimage.c sdluiimage.h sdlpaint.c surface_rgba8.c \
-	surface_rgba8.h sdlpaint.h sdlwindow.c sdlwindow.h text.c \
-	text.h text_atlas.c text_atlas.h text_geometry.c \
-	text_geometry.h text_renderer.c text_renderer.h \
-	text_ttf_atlas.c text_ttf_atlas.h todo.c sdlmeta.h sdlmeta.c \
-	sdlinit.h xpclient_sdl.h $(am__append_1)
+	sdlgameframe.c sdlgameframe.h sdlmetaframe.c sdlmetaframe.h \
+	sdlrenderer.c sdlrenderer.h sdluiimage.c sdluiimage.h \
+	sdlpaint.c surface_rgba8.c surface_rgba8.h sdlpaint.h \
+	sdlwindow.c sdlwindow.h text.c text.h text_atlas.c \
+	text_atlas.h text_geometry.c text_geometry.h text_renderer.c \
+	text_renderer.h text_ttf_atlas.c text_ttf_atlas.h todo.c \
+	sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h $(am__append_1)
 xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	@SDL2_IMAGE_LIBS@ @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
@@ -477,6 +477,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlclipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlcompat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlevent.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlgameframe.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlinit.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlkeys.Po@am__quote@ # am--include-marker
@@ -659,6 +660,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
+	-rm -f ./$(DEPDIR)/sdlgameframe.Po
 	-rm -f ./$(DEPDIR)/sdlgui.Po
 	-rm -f ./$(DEPDIR)/sdlinit.Po
 	-rm -f ./$(DEPDIR)/sdlkeys.Po
@@ -739,6 +741,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
+	-rm -f ./$(DEPDIR)/sdlgameframe.Po
 	-rm -f ./$(DEPDIR)/sdlgui.Po
 	-rm -f ./$(DEPDIR)/sdlinit.Po
 	-rm -f ./$(DEPDIR)/sdlkeys.Po

@@ -342,11 +342,17 @@ int Init_window(void)
     }
     mapfont_initialized = true;
 
-    if (gamefont.atlas == NULL || mapfont.atlas == NULL) {
-	error("Font atlas initialization did not publish both atlases");
+    renderer_status = font_text_renderer_attach(&gamefont, main_renderer);
+    if (renderer_status == RENDERER_STATUS_OK) {
+	renderer_status = font_text_renderer_attach(&mapfont, main_renderer);
+    }
+    if (renderer_status != RENDERER_STATUS_OK
+	|| gamefont.text_renderer == NULL || mapfont.text_renderer == NULL) {
+	error("Font text renderer initialization failed (%d)",
+	      (int)renderer_status);
 	goto fail;
     }
-    printf("Font atlases ready: game=renderer map=renderer\n");
+    printf("Font text renderers ready: game=renderer map=renderer\n");
     fflush(stdout);
 
     return 0;

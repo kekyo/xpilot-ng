@@ -84,6 +84,12 @@ RendererStatus Sdl_renderer_set_logical_scissor(
     return RENDERER_STATUS_OK;
 }
 
+RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
+{
+    return renderer != NULL ? RENDERER_STATUS_OK
+                            : RENDERER_STATUS_INVALID_ARGUMENT;
+}
+
 RendererStatus Sdl_ui_draw_state_status(const SdlUiDrawState *state)
 {
     return state != NULL

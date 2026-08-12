@@ -1051,6 +1051,13 @@ static RendererStatus End_meta_frame(void *context)
     return Sdl_renderer_end_frame(frame->sdl_renderer);
 }
 
+static RendererStatus Meta_frame_result(void *context)
+{
+    MetaFrameContext *frame = context;
+
+    return Sdl_renderer_frame_result(frame->sdl_renderer);
+}
+
 static void Swap_meta_frame(void *context)
 {
     (void)context;
@@ -1060,6 +1067,7 @@ static void Swap_meta_frame(void *context)
 static const SdlMetaFrameOps meta_frame_ops = {
     Begin_meta_frame,
     Draw_meta_frame,
+    Meta_frame_result,
     End_meta_frame,
     Swap_meta_frame
 };

@@ -14,6 +14,7 @@ static int Sdl_meta_frame_ops_valid(const SdlMetaFrameOps *ops)
     return ops != NULL
         && ops->begin != NULL
         && ops->draw != NULL
+        && ops->frame_result != NULL
         && ops->end != NULL
         && ops->swap != NULL;
 }
@@ -71,6 +72,12 @@ RendererStatus Sdl_meta_frame_tick(SdlMetaFrameState *state,
     if (status != RENDERER_STATUS_OK) {
         state->abort_requested = 1;
         state->abort_status = status;
+    } else {
+        status = ops->frame_result(context);
+        if (status != RENDERER_STATUS_OK) {
+            state->abort_requested = 1;
+            state->abort_status = status;
+        }
     }
 
     return Sdl_meta_frame_finish(state, ops, context);

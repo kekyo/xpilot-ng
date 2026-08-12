@@ -18,6 +18,8 @@ typedef struct SdlMetaFrameOps {
     RendererStatus (*begin)(void *context);
     /** Draw the complete metaserver frame. */
     RendererStatus (*draw)(void *context);
+    /** Return the sticky semantic result after drawing succeeds. */
+    RendererStatus (*frame_result)(void *context);
     /** Finish the active renderer frame. */
     RendererStatus (*end)(void *context);
     /** Present a successfully drawn and finished frame. */
@@ -52,8 +54,9 @@ void Sdl_meta_frame_state_init(SdlMetaFrameState *state);
  *         failed, the end failure is returned until ending succeeds; that
  *         successful retry then returns the saved draw failure.
  *
- * @remarks A pending frame is never begun or drawn again. The swap callback
- * runs only after both drawing and ending succeed.
+ * @remarks A pending frame is never begun or drawn again. The frame-result
+ * callback runs only after drawing succeeds. The swap callback runs only
+ * after drawing, the semantic frame result, and ending all succeed.
  */
 RendererStatus Sdl_meta_frame_tick(SdlMetaFrameState *state,
                                    const SdlMetaFrameOps *ops,

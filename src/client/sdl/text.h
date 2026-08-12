@@ -25,6 +25,7 @@
 
 #include "sdlpaint.h"
 #include "text_atlas.h"
+#include "text_renderer.h"
 
 #define LEFT 0
 #define DOWN 0
@@ -50,19 +51,23 @@ typedef struct {
     TTF_Font *ttffont;
     /** Immutable renderer-backed glyph atlas for this font. */
     TextAtlas *atlas;
+    /** Owned semantic text facade borrowing this font's atlas renderer. */
+    TextRenderer *text_renderer;
 } font_data;
 
+/** CPU-side cached text and its semantic renderer identity. */
 typedef struct {
-    GLuint texture;
-    texcoord_t texcoords;
-    int width;
-} tex_t;
-
-typedef struct {
-    arraylist_t *tex_list;
+    /** Borrowed text renderer that owns the cache's font identity. */
+    TextRenderer *text_renderer;
+    /** Owned CPU-side byte-string cache. */
+    TextRendererCache *cache;
+    /** Owned NUL-terminated copy of the normalized byte string. */
     char *text;
+    /** Measured logical width in pixels. */
     int width;
+    /** Measured logical height in pixels. */
     int height;
+    /** Requested font height retained for compatibility layout. */
     int font_height;
 } string_tex_t;
 
@@ -95,13 +100,29 @@ RendererStatus fontinit(font_data *ft_font, Renderer *renderer,
 			const char *fname, unsigned int size);
 
 /**
+ * Attach a semantic text drawing facade to a fully initialized font.
+ *
+ * @param ft_font Font whose immutable atlas is already initialized.
+ * @param sdl_renderer SDL renderer facade owning the atlas renderer.
+ * @return Operation status.
+ *
+ * @remarks Reattaching an already attached font is an idempotent operation;
+ * every call for that font must pass the same SDL renderer. Failure leaves
+ * every existing font resource unchanged. The SDL renderer must outlive the
+ * font and all cached strings created from it.
+ */
+RendererStatus font_text_renderer_attach(font_data *ft_font,
+					 SdlRenderer *sdl_renderer);
+
+/**
  * Free all resources associated with a font.
  *
  * @param ft_font Font to clean; an already-empty font is valid.
  * @return Operation status.
  *
- * @remarks If atlas destruction is rejected, all font resources remain
- * intact so cleanup can be retried after the active frame ends.
+ * @remarks If atlas destruction is rejected, all font resources, including
+ * the semantic text facade, remain intact so cleanup can be retried after the
+ * active frame ends.
  */
 RendererStatus fontclean(font_data *ft_font);
 
@@ -124,21 +145,57 @@ void mapnprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int
 void HUDprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *fmt, ...);
 void mapprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *fmt,...);
 
-bool draw_text(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *text, bool savetex, string_tex_t *string_tex, bool onHUD);
-bool draw_text_fraq(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *text
-    	    	    , float xstart
-    	    	    , float xstop
-    	    	    , float ystart
-    	    	    , float ystop
-		    , bool savetex, string_tex_t *string_tex, bool onHUD);
+/**
+ * Cache and draw one byte string through the semantic text renderer.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param color Unpremultiplied RGBA value.
+ * @param XALIGN Legacy horizontal alignment value.
+ * @param YALIGN Legacy vertical alignment value.
+ * @param x Legacy horizontal anchor.
+ * @param y Legacy vertical anchor.
+ * @param text NUL-terminated byte string.
+ * @param savetex Whether to retain @p string_tex after drawing.
+ * @param string_tex Optional zero-initialized or previously populated cache.
+ * @param onHUD Whether the anchor uses legacy HUD coordinates.
+ * @return True only when caching and drawing both succeed.
+ */
+bool draw_text(font_data *ft_font, int color, int XALIGN, int YALIGN,
+	       int x, int y, const char *text, bool savetex,
+	       string_tex_t *string_tex, bool onHUD);
+
+/**
+ * Atomically replace a cached byte string without allocating GPU resources.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param text NUL-terminated byte string. Empty input is normalized to one
+ *        space for legacy layout compatibility.
+ * @param string_tex Zero-initialized or previously populated destination.
+ * @return True on success. Failure leaves the destination unchanged.
+ */
 bool render_text(font_data *ft_font, const char *text, string_tex_t *string_tex);
-void disp_text(string_tex_t *string_tex, int color, int XALIGN, int YALIGN, int x, int y, bool onHUD);
-void disp_text_fraq(string_tex_t *string_tex, int color, int XALIGN, int YALIGN, int x, int y
-    	    	    , float xstart
-    	    	    , float xstop
-    	    	    , float ystart
-    	    	    , float ystop
-		    , bool onHUD);
+
+/**
+ * Draw a cached string using legacy alignment and coordinate conventions.
+ *
+ * @param string_tex Populated cached string.
+ * @param color Unpremultiplied RGBA value.
+ * @param XALIGN Legacy horizontal alignment value.
+ * @param YALIGN Legacy vertical alignment value.
+ * @param x Legacy horizontal anchor.
+ * @param y Legacy vertical anchor.
+ * @param onHUD Whether to convert the bottom-left HUD anchor to top-left.
+ * @return Operation status.
+ */
+RendererStatus disp_text(string_tex_t *string_tex, int color,
+			 int XALIGN, int YALIGN, int x, int y,
+			 bool onHUD);
+
+/**
+ * Release a cached string without issuing GPU resource operations.
+ *
+ * @param string_tex Cache to clear, or NULL for no operation.
+ */
 void free_string_texture(string_tex_t *string_tex);
 
 extern font_data gamefont;

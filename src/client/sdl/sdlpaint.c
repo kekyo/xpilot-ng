@@ -44,6 +44,7 @@
 #include "radar.h"
 #include "gl_diagnostics.h"
 #include "paint_transform.h"
+#include "sdlgameframe.h"
 #include "sdlrenderer.h"
 
 #include <limits.h>
@@ -59,7 +60,7 @@ static sdl_window_t scoreListWin;
 static SDL_Rect     scoreEntryRect; /* Bounds for the last painted score entry */
 static GLWidget     *scoreListWidget;
 static bool         scoreListMoving;
-static bool         rendererFramePending;
+static SdlGameFrameState rendererFrameState;
 
 int paintSetupMode;
 
@@ -279,7 +280,7 @@ bool Set_altScaleFactor(xp_option_t *opt, double val)
 
 int Paint_init(void)
 {
-    rendererFramePending = false;
+    Sdl_game_frame_state_init(&rendererFrameState);
     if (Init_wreckage() == -1)
 	return -1;
     
@@ -296,13 +297,15 @@ void Paint_cleanup(void)
 {
     int i;
 
-    rendererFramePending = false;
+    Sdl_game_frame_state_init(&rendererFrameState);
     Images_cleanup();
 
-    for (i=0;i<MAX_SCORE_OBJECTS;++i)
-    	if (score_object_texs[i].tex_list) free_string_texture(&score_object_texs[i]);
-    for (i=0;i<MAX_METERS;++i)
-    	if (meter_texs[i].tex_list) free_string_texture(&meter_texs[i]);
+    for (i = 0; i < MAX_SCORE_OBJECTS; ++i)
+	free_string_texture(&score_object_texs[i]);
+    for (i = 0; i < MAX_METERS; ++i)
+	free_string_texture(&meter_texs[i]);
+    for (i = 0; i < MAX_HUD_TEXS + MAX_SCORE_OBJECTS; ++i)
+	free_string_texture(&HUD_texs[i]);
 }
 
 /* This one works best for things that are fixed in position
@@ -353,6 +356,17 @@ void setupPaint_HUD(void)
     gluOrtho2D(0, draw_width, draw_height, 0);
 }
 
+static RendererStatus End_game_frame(void *context)
+{
+    return Sdl_renderer_end_frame(context);
+}
+
+static void Swap_game_frame(void *context)
+{
+    (void)context;
+    Swap_buffers();
+}
+
 void Paint_frame(void)
 {
     struct timeval tv1, tv2;
@@ -361,20 +375,23 @@ void Paint_frame(void)
 
     gettimeofday(&tv1, NULL);
 
-    Paint_frame_start();
-    Gl_diagnostics_check("frame start");
-
     /* A backend end failure keeps the old frame active so that its cleanup
-     * can be retried without replaying already delivered commands. */
-    if (rendererFramePending) {
-	renderer_status = Sdl_renderer_end_frame(sdl_renderer);
+     * can be retried without advancing or redrawing the logical frame. A
+     * successful recovery completes this tick, presenting exactly once only
+     * when no semantic draw failure was retained. */
+    if (Sdl_game_frame_pending(&rendererFrameState)) {
+	renderer_status = Sdl_game_frame_finish(
+	    &rendererFrameState, End_game_frame, Swap_game_frame,
+	    sdl_renderer);
 	if (renderer_status != RENDERER_STATUS_OK) {
 	    warn("Could not recover the previous renderer frame (%d)",
 		 (int)renderer_status);
-	    goto timing;
 	}
-	rendererFramePending = false;
+	goto timing;
     }
+
+    Paint_frame_start();
+    Gl_diagnostics_check("frame start");
 
     if (Images_prepare(Sdl_renderer_frontend(sdl_renderer)) != 0)
 	warn("Could not prepare newly registered images");
@@ -397,10 +414,17 @@ void Paint_frame(void)
 	    warn("Could not begin renderer frame (%d)", (int)renderer_status);
 	    goto timing;
 	}
-	rendererFramePending = true;
+	renderer_status = Sdl_game_frame_activate(&rendererFrameState);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    warn("Could not activate renderer frame state (%d)",
+		 (int)renderer_status);
+	    goto timing;
+	}
 	renderer_status = Sdl_renderer_prepare_legacy(
 	    sdl_renderer, SDL_RENDERER_LEGACY_BOTTOM_LEFT);
 	if (renderer_status != RENDERER_STATUS_OK) {
+	    (void)Sdl_renderer_track_frame_result(
+		sdl_renderer, renderer_status);
 	    warn("Could not prepare legacy world rendering (%d)",
 		 (int)renderer_status);
 	    goto finish_frame;
@@ -453,16 +477,23 @@ void Paint_frame(void)
 
 finish_frame:
     Gl_diagnostics_check("frame end");
-    if (rendererFramePending) {
-	renderer_status = Sdl_renderer_end_frame(sdl_renderer);
+    if (Sdl_game_frame_pending(&rendererFrameState)) {
+	renderer_status = Sdl_renderer_frame_result(sdl_renderer);
+	if (renderer_status != RENDERER_STATUS_OK)
+	    (void)Sdl_game_frame_abort(&rendererFrameState,
+				       renderer_status);
+	renderer_status = Sdl_game_frame_finish(
+	    &rendererFrameState, End_game_frame, Swap_game_frame,
+	    sdl_renderer);
 	if (renderer_status != RENDERER_STATUS_OK) {
 	    warn("Could not end renderer frame (%d)", (int)renderer_status);
-	    goto timing;
-	} else {
-	    rendererFramePending = false;
 	}
+    } else {
+	/* A damaged tick intentionally performs no redraw, but the legacy
+	 * double-buffer cadence still presents the unchanged back buffer. */
+	(void)Sdl_game_frame_present_idle(
+	    &rendererFrameState, Swap_game_frame, sdl_renderer);
     }
-    Swap_buffers();
 
 timing:
     if (newSecond) {

@@ -380,6 +380,8 @@ static RendererStatus DrawGLWidgetsi_internal(
     while (curr) {
 	status = draw_state != NULL
 	    ? Sdl_ui_draw_state_status(draw_state) : RENDERER_STATUS_OK;
+	if (status == RENDERER_STATUS_OK && sdl_renderer != NULL)
+	    status = Sdl_renderer_frame_result(sdl_renderer);
 	if (status != RENDERER_STATUS_OK)
 	    return status;
 	x2 = MAX(x,curr->bounds.x);
@@ -402,6 +404,8 @@ static RendererStatus DrawGLWidgetsi_internal(
 	    glDisable(GL_BLEND);
 	    status = draw_state != NULL
 		? Sdl_ui_draw_state_status(draw_state) : RENDERER_STATUS_OK;
+	    if (status == RENDERER_STATUS_OK && sdl_renderer != NULL)
+		status = Sdl_renderer_frame_result(sdl_renderer);
 	    if (status != RENDERER_STATUS_OK) {
 		glScissor(x, draw_height - y - h, w, h);
 		return status;
@@ -1155,6 +1159,7 @@ GLWidget *Init_LabelWidget( const char *text , Uint32 *fgcolor, Uint32 *bgcolor,
 	return NULL;
     }
     wid_info = (LabelWidget *)tmp->wid_info;
+    memset(wid_info, 0, sizeof(*wid_info));
 
     if ( !render_text(&gamefont, text, &(((LabelWidget *)tmp->wid_info)->tex)) ) {
     	free(tmp->wid_info);
@@ -1245,7 +1250,7 @@ GLWidget *Init_LabeledRadiobuttonWidget( string_tex_t *ontex, string_tex_t *offt
     GLWidget	    	    	*tmp;
     LabeledRadiobuttonWidget	*wid_info;
 
-    if (!ontex || !(ontex->tex_list) || !offtex || !(offtex->tex_list) ) {
+    if (!ontex || !(ontex->cache) || !offtex || !(offtex->cache) ) {
     	error("texure(s) missing for Init_LabeledRadiobuttonWidget.");
 	return NULL;
     }
@@ -1421,8 +1426,8 @@ GLWidget *Init_BoolChooserWidget( const char *name, bool *value, Uint32 *fgcolor
 
     
     if (!BoolChooserWidget_ontex) {
-    	if ((BoolChooserWidget_ontex = XMALLOC(string_tex_t, 1))) {
-	    if (!(BoolChooserWidget_offtex = XMALLOC(string_tex_t, 1))) {
+	if ((BoolChooserWidget_ontex = XCALLOC(string_tex_t, 1))) {
+	    if (!(BoolChooserWidget_offtex = XCALLOC(string_tex_t, 1))) {
 	    	XFREE(BoolChooserWidget_ontex);
 	    	error("Failed to malloc BoolChooserWidget_offtex in Init_BoolChooserWidget");
 	    	return NULL;
@@ -1589,7 +1594,6 @@ static void IntChooserWidget_Add( void *data )
 	    ((ArrowWidget *)tmp->rightarrow->wid_info)->locked = true;
 	tmp->direction = 2;
 	snprintf(valuetext,15,"%i",*(tmp->value));
-	free_string_texture(&(tmp->valuetex));
 	if(!render_text(&gamefont,valuetext,&(tmp->valuetex)))
 	    error("Failed to make value (%s=%i) texture for IntChooserWidget!\n",
 	    	((LabelWidget *)(tmp->name->wid_info))->tex.text,*(tmp->value));
@@ -1627,7 +1631,6 @@ static void IntChooserWidget_Subtract( void *data )
 	    ((ArrowWidget *)tmp->leftarrow->wid_info)->locked = true;
 	tmp->direction = -2;
 	snprintf(valuetext,15,"%i",*(tmp->value));
-	free_string_texture(&(tmp->valuetex));
 	if(!render_text(&gamefont,valuetext,&(tmp->valuetex)))
 	    error("Failed to make value (%s=%i) texture for IntChooserWidget!\n",
 	    ((LabelWidget *)(tmp->name->wid_info))->tex.text,*(tmp->value));
@@ -1677,7 +1680,7 @@ GLWidget *Init_IntChooserWidget( const char *name, int *value, int minval, int m
     GLWidget *tmp;
     IntChooserWidget *wid_info;
     char valuetext[16];
-    string_tex_t tmp_tex;
+    string_tex_t tmp_tex = {0};
     int buttonsize;
 
     if (!value) {
@@ -1700,13 +1703,14 @@ GLWidget *Init_IntChooserWidget( const char *name, int *value, int minval, int m
         error("Failed to malloc in Init_IntChooserWidget");
 	return NULL;
     }
+    memset(tmp->wid_info, 0, sizeof(IntChooserWidget));
 
     /* hehe ugly hack to guess max size of value strings
      * monospace font is preferred
      */
     if (render_text(&gamefont,"555.55",&tmp_tex)) {
-    	free_string_texture(&tmp_tex);
 	valuespace = tmp_tex.width+4;
+	free_string_texture(&tmp_tex);
     } else {
     	valuespace = 50;
     }
@@ -1855,7 +1859,6 @@ static void DoubleChooserWidget_Add( void *data )
 	    ((ArrowWidget *)tmp->rightarrow->wid_info)->locked = true;
 	tmp->direction = 2;
 	snprintf(valuetext,15,"%1.2f",*(tmp->value));
-	free_string_texture(&(tmp->valuetex));
 	if(!render_text(&gamefont,valuetext,&(tmp->valuetex)))
 	    error("Failed to make value (%s=%1.2f) texture for doubleChooserWidget!\n",
 	    	    ((LabelWidget *)(tmp->name->wid_info))->tex.text,*(tmp->value));
@@ -1889,7 +1892,6 @@ static void DoubleChooserWidget_Subtract( void *data )
 	    ((ArrowWidget *)tmp->leftarrow->wid_info)->locked = true;
 	tmp->direction = -2;
 	snprintf(valuetext,15,"%1.2f",*(tmp->value));
-	free_string_texture(&(tmp->valuetex));
 	if(!render_text(&gamefont,valuetext,&(tmp->valuetex)))
 	    error("Failed to make value (%s=%1.2f) texture for doubleChooserWidget!\n",
 	    	    ((LabelWidget *)(tmp->name->wid_info))->tex.text,*(tmp->value));
@@ -1939,7 +1941,7 @@ GLWidget *Init_DoubleChooserWidget( const char *name, double *value, double minv
 {
     int valuespace;
     GLWidget *tmp;
-    string_tex_t tmp_tex;
+    string_tex_t tmp_tex = {0};
     DoubleChooserWidget *wid_info;
     char valuetext[16];
     int buttonsize;
@@ -1964,13 +1966,14 @@ GLWidget *Init_DoubleChooserWidget( const char *name, double *value, double minv
         error("Failed to malloc in Init_DoubleChooserWidget");
 	return NULL;
     }
+    memset(tmp->wid_info, 0, sizeof(DoubleChooserWidget));
     
     /* hehe ugly hack to guess max size of value strings
      * monospace font is preferred
      */
     if (render_text(&gamefont,"555.55",&tmp_tex)) {
-    	free_string_texture(&tmp_tex);
 	valuespace = tmp_tex.width+4;
+	free_string_texture(&tmp_tex);
     } else {
     	valuespace = 50;
     }
