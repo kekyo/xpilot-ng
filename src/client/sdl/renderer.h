@@ -100,6 +100,34 @@ typedef enum RendererBlendMode {
     RENDERER_BLEND_ADDITIVE
 } RendererBlendMode;
 
+/** Texture sampling filter applied when a texture is drawn. */
+typedef enum RendererTextureFilter {
+    /** Select the nearest texel without interpolation. */
+    RENDERER_TEXTURE_FILTER_NEAREST,
+    /** Linearly interpolate adjacent texels. */
+    RENDERER_TEXTURE_FILTER_LINEAR
+} RendererTextureFilter;
+
+/** Texture-coordinate behavior outside the normalized image bounds. */
+typedef enum RendererTextureWrap {
+    /** Clamp coordinates to the texture edge. */
+    RENDERER_TEXTURE_WRAP_CLAMP,
+    /** Repeat the texture for every integer coordinate interval. */
+    RENDERER_TEXTURE_WRAP_REPEAT
+} RendererTextureWrap;
+
+/** Immutable dimensions and sampling behavior of an RGBA8 texture. */
+typedef struct RendererTextureDesc {
+    /** Positive texture width in pixels. */
+    int width;
+    /** Positive texture height in pixels. */
+    int height;
+    /** Minification and magnification filter. */
+    RendererTextureFilter filter;
+    /** Horizontal and vertical texture-coordinate behavior. */
+    RendererTextureWrap wrap;
+} RendererTextureDesc;
+
 /**
  * Convert a packed 0xRRGGBBAA value to explicit components.
  *
@@ -288,18 +316,15 @@ RendererStatus Renderer_draw_mesh(Renderer *renderer, RendererMesh *mesh);
  * Resource changes are only permitted outside a frame.
  *
  * @param renderer Renderer that will own the texture.
- * @param width Positive texture width.
- * @param height Positive texture height.
+ * @param desc Texture dimensions and immutable sampling behavior.
  * @param rgba_pixels Source pixels.
- * @param pitch Source row length in bytes, at least width times four.
+ * @param pitch Source row length in bytes, at least desc width times four.
  * @param texture Receives the created texture on success.
  * @return Operation status.
  */
-RendererStatus Renderer_texture_create(Renderer *renderer, int width,
-                                       int height,
-                                       const uint8_t *rgba_pixels,
-                                       size_t pitch,
-                                       RendererTexture **texture);
+RendererStatus Renderer_texture_create_with_desc(
+    Renderer *renderer, const RendererTextureDesc *desc,
+    const uint8_t *rgba_pixels, size_t pitch, RendererTexture **texture);
 
 /**
  * Update a rectangular portion of an RGBA8 texture.

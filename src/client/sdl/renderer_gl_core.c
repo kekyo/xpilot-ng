@@ -333,7 +333,7 @@ static RendererStatus Core_upload_bound_texture(CoreContext *context,
 }
 
 static RendererStatus Core_configure_and_upload_texture(
-    CoreContext *context, GLuint texture, int width, int height,
+    CoreContext *context, GLuint texture, const RendererTextureDesc *desc,
     const uint8_t *pixels, size_t pitch)
 {
     GLint previous_active_texture;
@@ -343,7 +343,14 @@ static RendererStatus Core_configure_and_upload_texture(
     GLint previous_unpack_row_length;
     GLint previous_unpack_skip_rows;
     GLint previous_unpack_skip_pixels;
+    GLint filter;
+    GLint wrap;
     RendererStatus status = RENDERER_STATUS_BACKEND_ERROR;
+
+    filter = desc->filter == RENDERER_TEXTURE_FILTER_LINEAR
+        ? GL_LINEAR : GL_NEAREST;
+    wrap = desc->wrap == RENDERER_TEXTURE_WRAP_REPEAT
+        ? GL_REPEAT : GL_CLAMP_TO_EDGE;
 
     Core_clear_errors(context);
     context->gl.get_integerv(GL_ACTIVE_TEXTURE, &previous_active_texture);
@@ -369,18 +376,20 @@ static RendererStatus Core_configure_and_upload_texture(
     context->gl.pixel_store_i(GL_UNPACK_SKIP_ROWS, 0);
     context->gl.pixel_store_i(GL_UNPACK_SKIP_PIXELS, 0);
     context->gl.tex_parameter_i(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                                GL_NEAREST);
+                                filter);
     context->gl.tex_parameter_i(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                                GL_NEAREST);
+                                filter);
     context->gl.tex_parameter_i(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                                GL_CLAMP_TO_EDGE);
+                                wrap);
     context->gl.tex_parameter_i(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-                                GL_CLAMP_TO_EDGE);
-    context->gl.tex_image_2d(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
+                                wrap);
+    context->gl.tex_image_2d(GL_TEXTURE_2D, 0, GL_RGBA8,
+                             desc->width, desc->height, 0,
                              GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     if (Core_operation_succeeded(context)) {
         Core_clear_errors(context);
-        status = Core_upload_bound_texture(context, 0, 0, width, height,
+        status = Core_upload_bound_texture(context, 0, 0,
+                                           desc->width, desc->height,
                                            pixels, pitch);
     }
 
@@ -696,7 +705,8 @@ static RendererStatus Core_end_frame(void *opaque)
     return status;
 }
 
-static RendererStatus Core_texture_create(void *opaque, int width, int height,
+static RendererStatus Core_texture_create(void *opaque,
+                                          const RendererTextureDesc *desc,
                                           const uint8_t *rgba_pixels,
                                           size_t pitch, void **handle)
 {
@@ -707,8 +717,10 @@ static RendererStatus Core_texture_create(void *opaque, int width, int height,
     if (handle == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
     *handle = NULL;
-    if (rgba_pixels == NULL || !Core_pixel_data_valid(width, height, pitch))
+    if (desc == NULL || rgba_pixels == NULL
+        || !Core_pixel_data_valid(desc->width, desc->height, pitch)) {
         return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
     texture = calloc(1, sizeof(*texture));
     if (texture == NULL)
         return RENDERER_STATUS_OUT_OF_MEMORY;
@@ -720,16 +732,15 @@ static RendererStatus Core_texture_create(void *opaque, int width, int height,
         return RENDERER_STATUS_BACKEND_ERROR;
     }
     status = Core_configure_and_upload_texture(context, texture->name,
-                                               width, height, rgba_pixels,
-                                               pitch);
+                                               desc, rgba_pixels, pitch);
     if (status != RENDERER_STATUS_OK) {
         context->gl.delete_textures(1, &texture->name);
         Core_clear_errors(context);
         free(texture);
         return status;
     }
-    texture->width = width;
-    texture->height = height;
+    texture->width = desc->width;
+    texture->height = desc->height;
     *handle = texture;
     return RENDERER_STATUS_OK;
 }
@@ -928,6 +939,11 @@ RendererStatus Renderer_gl_core_create(RendererGLProcLoader loader,
                                        Renderer **renderer)
 {
     static const uint8_t white_pixel[] = {255, 255, 255, 255};
+    static const RendererTextureDesc white_texture_desc = {
+        1, 1,
+        RENDERER_TEXTURE_FILTER_NEAREST,
+        RENDERER_TEXTURE_WRAP_CLAMP
+    };
     CoreContext *context;
     Renderer *created;
     GLint major = 0;
@@ -976,7 +992,7 @@ RendererStatus Renderer_gl_core_create(RendererGLProcLoader loader,
         return RENDERER_STATUS_BACKEND_ERROR;
     }
     status = Core_configure_and_upload_texture(
-        context, context->white_texture, 1, 1, white_pixel,
+        context, context->white_texture, &white_texture_desc, white_pixel,
         sizeof(white_pixel));
     if (status != RENDERER_STATUS_OK) {
         Core_release_context_objects(context);

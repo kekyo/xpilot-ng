@@ -38,10 +38,18 @@ typedef struct fake_backend {
     int frame_width;
     int frame_height;
     RendererColor clear_color;
+    RendererTextureDesc texture_desc;
     unsigned char texture_token;
     unsigned char mesh_token;
     captured_draw_t draws[MAX_DRAWS];
 } fake_backend_t;
+
+static const RendererTextureDesc single_pixel_texture_desc = {
+    .width = 1,
+    .height = 1,
+    .filter = RENDERER_TEXTURE_FILTER_NEAREST,
+    .wrap = RENDERER_TEXTURE_WRAP_CLAMP
+};
 
 static int color_equal(RendererColor left, RendererColor right)
 {
@@ -123,18 +131,20 @@ static RendererStatus fake_end_frame(void *context)
     return RENDERER_STATUS_OK;
 }
 
-static RendererStatus fake_texture_create(void *context, int width,
-                                          int height,
+static RendererStatus fake_texture_create(void *context,
+                                          const RendererTextureDesc *desc,
                                           const uint8_t *rgba_pixels,
                                           size_t pitch, void **handle)
 {
     fake_backend_t *backend = context;
 
-    if (width <= 0 || height <= 0 || rgba_pixels == NULL
-            || pitch < (size_t)width * 4 || handle == NULL) {
+    if (desc == NULL || desc->width <= 0 || desc->height <= 0
+            || rgba_pixels == NULL
+            || pitch < (size_t)desc->width * 4 || handle == NULL) {
         return RENDERER_STATUS_INVALID_ARGUMENT;
     }
     backend->texture_create_count++;
+    backend->texture_desc = *desc;
     *handle = &backend->texture_token;
     return RENDERER_STATUS_OK;
 }
@@ -370,6 +380,73 @@ static int check_state_snapshot_and_scissor(void)
     return 0;
 }
 
+static int check_texture_sampling_descriptor_contract(void)
+{
+    const uint8_t pixels[] = {
+        10, 20, 30, 40,
+        50, 60, 70, 80
+    };
+    const RendererTextureDesc desc = {
+        .width = 2,
+        .height = 1,
+        .filter = RENDERER_TEXTURE_FILTER_LINEAR,
+        .wrap = RENDERER_TEXTURE_WRAP_REPEAT
+    };
+    RendererTextureDesc invalid_desc = desc;
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+    RendererTexture *texture = (RendererTexture *)(uintptr_t)1;
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_texture_create_with_desc(
+                   renderer, NULL, pixels, sizeof(pixels), &texture)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(texture == NULL);
+    TEST_CHECK(backend.texture_create_count == 0);
+
+    invalid_desc.filter = (RendererTextureFilter)-1;
+    texture = (RendererTexture *)(uintptr_t)1;
+    TEST_CHECK(Renderer_texture_create_with_desc(
+                   renderer, &invalid_desc, pixels, sizeof(pixels), &texture)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(texture == NULL);
+    TEST_CHECK(backend.texture_create_count == 0);
+
+    invalid_desc = desc;
+    invalid_desc.wrap = (RendererTextureWrap)-1;
+    texture = (RendererTexture *)(uintptr_t)1;
+    TEST_CHECK(Renderer_texture_create_with_desc(
+                   renderer, &invalid_desc, pixels, sizeof(pixels), &texture)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(texture == NULL);
+    TEST_CHECK(backend.texture_create_count == 0);
+
+    invalid_desc = desc;
+    invalid_desc.width = 1;
+    invalid_desc.height = 2;
+    texture = (RendererTexture *)(uintptr_t)1;
+    TEST_CHECK(Renderer_texture_create_with_desc(
+                   renderer, &invalid_desc, pixels, SIZE_MAX, &texture)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(texture == NULL);
+    TEST_CHECK(backend.texture_create_count == 0);
+
+    TEST_CHECK(Renderer_texture_create_with_desc(
+                   renderer, &desc, pixels, sizeof(pixels), &texture)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(texture != NULL);
+    TEST_CHECK(backend.texture_create_count == 1);
+    TEST_CHECK(backend.texture_desc.width == desc.width);
+    TEST_CHECK(backend.texture_desc.height == desc.height);
+    TEST_CHECK(backend.texture_desc.filter == desc.filter);
+    TEST_CHECK(backend.texture_desc.wrap == desc.wrap);
+    TEST_CHECK(Renderer_texture_destroy(renderer, texture)
+               == RENDERER_STATUS_OK);
+
+    Renderer_destroy(renderer);
+    return 0;
+}
+
 static int check_resource_ownership(void)
 {
     const RendererColor white = {255, 255, 255, 255};
@@ -390,8 +467,9 @@ static int check_resource_ownership(void)
 
     TEST_CHECK(first != NULL);
     TEST_CHECK(second != NULL);
-    TEST_CHECK(Renderer_texture_create(first, 1, 1, pixel, sizeof(pixel),
-                                       &texture) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_texture_create_with_desc(
+                   first, &single_pixel_texture_desc, pixel, sizeof(pixel),
+                   &texture) == RENDERER_STATUS_OK);
     TEST_CHECK(texture != NULL);
     TEST_CHECK(Renderer_mesh_create(first, triangle, 3, &mesh)
                == RENDERER_STATUS_OK);
@@ -476,16 +554,18 @@ static int check_active_frame_rejects_resource_changes(void)
     RendererMesh *new_mesh = NULL;
 
     TEST_CHECK(renderer != NULL);
-    TEST_CHECK(Renderer_texture_create(renderer, 1, 1, pixel,
-                                       sizeof(pixel), &texture)
+    TEST_CHECK(Renderer_texture_create_with_desc(
+                   renderer, &single_pixel_texture_desc, pixel,
+                   sizeof(pixel), &texture)
                == RENDERER_STATUS_OK);
     TEST_CHECK(Renderer_mesh_create(renderer, triangle, 3, &mesh)
                == RENDERER_STATUS_OK);
     TEST_CHECK(Renderer_begin_frame(renderer, 32, 32, black)
                == RENDERER_STATUS_OK);
 
-    TEST_CHECK(Renderer_texture_create(renderer, 1, 1, pixel,
-                                       sizeof(pixel), &new_texture)
+    TEST_CHECK(Renderer_texture_create_with_desc(
+                   renderer, &single_pixel_texture_desc, pixel,
+                   sizeof(pixel), &new_texture)
                == RENDERER_STATUS_INVALID_STATE);
     TEST_CHECK(Renderer_texture_update(renderer, texture, pixel_region,
                                        pixel, sizeof(pixel))
@@ -529,8 +609,9 @@ static int check_destroy_discards_active_frame(void)
     RendererMesh *mesh = NULL;
 
     TEST_CHECK(renderer != NULL);
-    TEST_CHECK(Renderer_texture_create(renderer, 1, 1, pixel,
-                                       sizeof(pixel), &texture)
+    TEST_CHECK(Renderer_texture_create_with_desc(
+                   renderer, &single_pixel_texture_desc, pixel,
+                   sizeof(pixel), &texture)
                == RENDERER_STATUS_OK);
     TEST_CHECK(Renderer_mesh_create(renderer, triangle, 3, &mesh)
                == RENDERER_STATUS_OK);
@@ -655,6 +736,7 @@ int main(void)
     TEST_CHECK(check_color_conversion() == 0);
     TEST_CHECK(check_frame_lifecycle_and_default_state() == 0);
     TEST_CHECK(check_state_snapshot_and_scissor() == 0);
+    TEST_CHECK(check_texture_sampling_descriptor_contract() == 0);
     TEST_CHECK(check_resource_ownership() == 0);
     TEST_CHECK(check_active_frame_rejects_resource_changes() == 0);
     TEST_CHECK(check_destroy_discards_active_frame() == 0);

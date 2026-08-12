@@ -23,6 +23,13 @@ typedef struct fake_backend {
     captured_draw_t draws[MAX_DRAWS];
 } fake_backend_t;
 
+static const RendererTextureDesc single_pixel_texture_desc = {
+    .width = 1,
+    .height = 1,
+    .filter = RENDERER_TEXTURE_FILTER_NEAREST,
+    .wrap = RENDERER_TEXTURE_WRAP_CLAMP
+};
+
 static RendererStatus fake_begin_frame(void *context, int width, int height,
                                        RendererColor clear_color)
 {
@@ -66,15 +73,14 @@ static RendererStatus fake_end_frame(void *context)
     return RENDERER_STATUS_OK;
 }
 
-static RendererStatus fake_texture_create(void *context, int width,
-                                          int height,
+static RendererStatus fake_texture_create(void *context,
+                                          const RendererTextureDesc *desc,
                                           const uint8_t *rgba_pixels,
                                           size_t pitch, void **handle)
 {
     fake_backend_t *backend = context;
 
-    (void)width;
-    (void)height;
+    (void)desc;
     (void)rgba_pixels;
     (void)pitch;
     *handle = &backend->texture_token;
@@ -331,8 +337,9 @@ static int check_sprite_geometry(void)
     const captured_draw_t *draw;
 
     TEST_CHECK(renderer != NULL);
-    TEST_CHECK(Renderer_texture_create(renderer, 1, 1, pixel,
-                                       sizeof(pixel), &texture)
+    TEST_CHECK(Renderer_texture_create_with_desc(
+                   renderer, &single_pixel_texture_desc, pixel,
+                   sizeof(pixel), &texture)
                == RENDERER_STATUS_OK);
     TEST_CHECK(Renderer_begin_frame(renderer, 100, 80, black)
                == RENDERER_STATUS_OK);

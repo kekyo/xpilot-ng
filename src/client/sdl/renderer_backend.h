@@ -38,7 +38,8 @@ typedef struct RendererBackendInterface {
     /** Finish the current frame. */
     RendererStatus (*end_frame)(void *context);
     /** Create a backend RGBA8 texture handle. */
-    RendererStatus (*texture_create)(void *context, int width, int height,
+    RendererStatus (*texture_create)(void *context,
+                                     const RendererTextureDesc *desc,
                                      const uint8_t *rgba_pixels,
                                      size_t pitch, void **handle);
     /** Update a backend RGBA8 texture handle. */

@@ -529,6 +529,12 @@ static int render_scene(RendererFactory factory, TestContext *test_context,
         {30.0f, 20.0f, 0.0f, 0.0f, {0, 255, 255, 255}},
         {22.0f, 20.0f, 0.0f, 0.0f, {0, 255, 255, 255}}
     };
+    const RendererTextureDesc texture_desc = {
+        .width = 2,
+        .height = 2,
+        .filter = RENDERER_TEXTURE_FILTER_NEAREST,
+        .wrap = RENDERER_TEXTURE_WRAP_CLAMP
+    };
     const RendererColor clear = {8, 16, 24, 255};
     const RendererRect scissor = {18, 2, 4, 6};
     const RendererTransform2D translation = {
@@ -564,8 +570,9 @@ static int render_scene(RendererFactory factory, TestContext *test_context,
     TEST_CHECK_CLEANUP(renderer != NULL);
     TEST_CHECK_CLEANUP(check_borrowed_upload_state(
                            test_context, unpack_buffer) == 0);
-    TEST_CHECK_CLEANUP(Renderer_texture_create(
-                           renderer, 2, 2, texture_pixels, 12, &texture)
+    TEST_CHECK_CLEANUP(Renderer_texture_create_with_desc(
+                           renderer, &texture_desc, texture_pixels, 12,
+                           &texture)
                        == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(check_borrowed_upload_state(
                            test_context, unpack_buffer) == 0);
@@ -667,6 +674,96 @@ cleanup:
     return result;
 }
 
+static int render_texture_sampling_scene(RendererFactory factory,
+                                         TestContext *test_context,
+                                         GLubyte *pixels)
+{
+    static const uint8_t texture_pixels[] = {
+        255,   0,   0, 255,    0, 255,   0, 255,
+          0,   0, 255, 255,  255, 255, 255, 255
+    };
+    const RendererTextureDesc nearest_clamp_desc = {
+        .width = 2,
+        .height = 2,
+        .filter = RENDERER_TEXTURE_FILTER_NEAREST,
+        .wrap = RENDERER_TEXTURE_WRAP_CLAMP
+    };
+    const RendererTextureDesc linear_clamp_desc = {
+        .width = 2,
+        .height = 2,
+        .filter = RENDERER_TEXTURE_FILTER_LINEAR,
+        .wrap = RENDERER_TEXTURE_WRAP_CLAMP
+    };
+    const RendererTextureDesc nearest_repeat_desc = {
+        .width = 2,
+        .height = 2,
+        .filter = RENDERER_TEXTURE_FILTER_NEAREST,
+        .wrap = RENDERER_TEXTURE_WRAP_REPEAT
+    };
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor white = {255, 255, 255, 255};
+    Renderer *renderer = NULL;
+    RendererTexture *nearest_clamp = NULL;
+    RendererTexture *linear_clamp = NULL;
+    RendererTexture *nearest_repeat = NULL;
+    int result = 1;
+
+    TEST_CHECK_CLEANUP(SDL_GL_MakeCurrent(test_context->window,
+                                          test_context->context) == 0);
+    test_context->framebuffer_api.bind(GL_FRAMEBUFFER,
+                                       test_context->framebuffer);
+    TEST_CHECK_CLEANUP(factory(load_gl_proc, NULL, &renderer)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_texture_create_with_desc(
+                           renderer, &nearest_clamp_desc, texture_pixels, 8,
+                           &nearest_clamp) == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_texture_create_with_desc(
+                           renderer, &linear_clamp_desc, texture_pixels, 8,
+                           &linear_clamp) == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_texture_create_with_desc(
+                           renderer, &nearest_repeat_desc, texture_pixels, 8,
+                           &nearest_repeat) == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_begin_frame(renderer, FRAME_WIDTH,
+                                             FRAME_HEIGHT, black)
+                       == RENDERER_STATUS_OK);
+
+    /* All checks read the center of a six-pixel quad.  Constant UVs keep the
+     * result independent of triangle edges and framebuffer interpolation. */
+    TEST_CHECK_CLEANUP(Renderer_draw_sprite(
+                           renderer, nearest_clamp,
+                           2.0f, 2.0f, 8.0f, 8.0f,
+                           0.375f, 0.25f, 0.375f, 0.25f, white)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_draw_sprite(
+                           renderer, nearest_clamp,
+                           10.0f, 2.0f, 16.0f, 8.0f,
+                           1.25f, 0.25f, 1.25f, 0.25f, white)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_draw_sprite(
+                           renderer, linear_clamp,
+                           18.0f, 2.0f, 24.0f, 8.0f,
+                           0.5f, 0.25f, 0.5f, 0.25f, white)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_draw_sprite(
+                           renderer, nearest_repeat,
+                           2.0f, 10.0f, 8.0f, 16.0f,
+                           1.25f, 0.25f, 1.25f, 0.25f, white)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+
+    glFinish();
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, FRAME_WIDTH, FRAME_HEIGHT,
+                 GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    TEST_CHECK_CLEANUP(glGetError() == GL_NO_ERROR);
+    result = 0;
+
+cleanup:
+    if (renderer != NULL)
+        Renderer_destroy(renderer);
+    return result;
+}
+
 static const GLubyte *pixel_at(const GLubyte *pixels, int x, int y)
 {
     return pixels + (((FRAME_HEIGHT - 1 - y) * FRAME_WIDTH + x)
@@ -712,6 +809,19 @@ static int check_rgba(const GLubyte *pixels, int x, int y,
                 x, y, (unsigned int)pixel[3], alpha);
         return 1;
     }
+    return 0;
+}
+
+static int check_texture_sampling_pixels(const GLubyte *pixels)
+{
+    /* Nearest chooses the red texel instead of blending toward green. */
+    TEST_CHECK(check_rgba(pixels, 5, 5, 255, 0, 0, 255) == 0);
+    /* Clamp keeps an out-of-range horizontal coordinate at the green edge. */
+    TEST_CHECK(check_rgba(pixels, 13, 5, 0, 255, 0, 255) == 0);
+    /* Linear sampling halfway between the top two texels mixes them evenly. */
+    TEST_CHECK(check_rgba(pixels, 21, 5, 128, 128, 0, 255) == 0);
+    /* Repeat maps the same out-of-range coordinate back to the red texel. */
+    TEST_CHECK(check_rgba(pixels, 5, 13, 255, 0, 0, 255) == 0);
     return 0;
 }
 
@@ -975,6 +1085,10 @@ int main(void)
     TestContext core_context;
     GLubyte legacy_pixels[FRAME_WIDTH * FRAME_HEIGHT * PIXEL_COMPONENTS];
     GLubyte core_pixels[FRAME_WIDTH * FRAME_HEIGHT * PIXEL_COMPONENTS];
+    GLubyte legacy_sampling_pixels[
+        FRAME_WIDTH * FRAME_HEIGHT * PIXEL_COMPONENTS];
+    GLubyte core_sampling_pixels[
+        FRAME_WIDTH * FRAME_HEIGHT * PIXEL_COMPONENTS];
     int sdl_initialized = 0;
     int result = 1;
 
@@ -997,6 +1111,12 @@ int main(void)
     if (render_scene(Renderer_gl_legacy_create, &legacy_context,
                      legacy_pixels, 0) != 0)
         goto cleanup;
+    if (render_texture_sampling_scene(Renderer_gl_legacy_create,
+                                      &legacy_context,
+                                      legacy_sampling_pixels) != 0)
+        goto cleanup;
+    TEST_CHECK_CLEANUP(check_texture_sampling_pixels(
+                           legacy_sampling_pixels) == 0);
     if (check_sdl_renderer_mixed_legacy_scene(&legacy_context) != 0)
         goto cleanup;
     destroy_context(&legacy_context);
@@ -1014,6 +1134,12 @@ int main(void)
     if (render_scene(Renderer_gl_core_create, &core_context,
                      core_pixels, 1) != 0)
         goto cleanup;
+    if (render_texture_sampling_scene(Renderer_gl_core_create,
+                                      &core_context,
+                                      core_sampling_pixels) != 0)
+        goto cleanup;
+    TEST_CHECK_CLEANUP(check_texture_sampling_pixels(core_sampling_pixels)
+                       == 0);
     TEST_CHECK_CLEANUP(check_semantic_pixels(legacy_pixels) == 0);
     TEST_CHECK_CLEANUP(check_semantic_pixels(core_pixels) == 0);
     TEST_CHECK_CLEANUP(compare_interior_samples(legacy_pixels,

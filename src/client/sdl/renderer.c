@@ -116,6 +116,18 @@ static int Vertex_count_valid(size_t vertex_count)
         && vertex_count <= SIZE_MAX / sizeof(RendererVertex2D);
 }
 
+static int Pixel_data_valid(int width, int height, size_t pitch)
+{
+    size_t row_bytes;
+
+    if (width <= 0 || height <= 0 || (size_t)width > SIZE_MAX / 4)
+        return 0;
+    row_bytes = (size_t)width * 4;
+    return pitch >= row_bytes
+        && (height == 1
+            || pitch <= (SIZE_MAX - row_bytes) / (size_t)(height - 1));
+}
+
 static void Free_commands(Renderer *renderer)
 {
     RendererCommand *command = renderer->commands;
@@ -655,11 +667,9 @@ RendererStatus Renderer_draw_mesh(Renderer *renderer, RendererMesh *mesh)
                          renderer->transform);
 }
 
-RendererStatus Renderer_texture_create(Renderer *renderer, int width,
-                                       int height,
-                                       const uint8_t *rgba_pixels,
-                                       size_t pitch,
-                                       RendererTexture **texture)
+RendererStatus Renderer_texture_create_with_desc(
+    Renderer *renderer, const RendererTextureDesc *desc,
+    const uint8_t *rgba_pixels, size_t pitch, RendererTexture **texture)
 {
     RendererTexture *created;
     RendererStatus status;
@@ -672,16 +682,21 @@ RendererStatus Renderer_texture_create(Renderer *renderer, int width,
         return RENDERER_STATUS_INVALID_ARGUMENT;
     if (renderer->frame_active)
         return RENDERER_STATUS_INVALID_STATE;
-    if (width <= 0 || height <= 0 || rgba_pixels == NULL
-        || (size_t)width > SIZE_MAX / 4 || pitch < (size_t)width * 4) {
+    if (desc == NULL || desc->width <= 0 || desc->height <= 0
+        || (desc->filter != RENDERER_TEXTURE_FILTER_NEAREST
+            && desc->filter != RENDERER_TEXTURE_FILTER_LINEAR)
+        || (desc->wrap != RENDERER_TEXTURE_WRAP_CLAMP
+            && desc->wrap != RENDERER_TEXTURE_WRAP_REPEAT)
+        || rgba_pixels == NULL
+        || !Pixel_data_valid(desc->width, desc->height, pitch)) {
         return RENDERER_STATUS_INVALID_ARGUMENT;
     }
     created = calloc(1, sizeof(*created));
     if (created == NULL)
         return RENDERER_STATUS_OUT_OF_MEMORY;
     status = renderer->backend->texture_create(renderer->backend_context,
-                                               width, height, rgba_pixels,
-                                               pitch, &handle);
+                                               desc, rgba_pixels, pitch,
+                                               &handle);
     if (status != RENDERER_STATUS_OK || handle == NULL) {
         free(created);
         return status != RENDERER_STATUS_OK ? status
@@ -689,8 +704,8 @@ RendererStatus Renderer_texture_create(Renderer *renderer, int width,
     }
     created->owner = renderer;
     created->handle = handle;
-    created->width = width;
-    created->height = height;
+    created->width = desc->width;
+    created->height = desc->height;
     created->next = renderer->textures;
     renderer->textures = created;
     *texture = created;
@@ -718,8 +733,7 @@ RendererStatus Renderer_texture_update(Renderer *renderer,
         || region.width <= 0 || region.height <= 0
         || right > texture->width || bottom > texture->height
         || rgba_pixels == NULL
-        || (size_t)region.width > SIZE_MAX / 4
-        || pitch < (size_t)region.width * 4) {
+        || !Pixel_data_valid(region.width, region.height, pitch)) {
         return RENDERER_STATUS_INVALID_ARGUMENT;
     }
     return renderer->backend->texture_update(renderer->backend_context,

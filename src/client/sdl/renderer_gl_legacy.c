@@ -682,7 +682,7 @@ static RendererStatus Legacy_begin_texture_upload(
 }
 
 static RendererStatus Legacy_texture_create(void *backend_context,
-                                            int width, int height,
+                                            const RendererTextureDesc *desc,
                                             const uint8_t *rgba_pixels,
                                             size_t pitch, void **handle)
 {
@@ -693,16 +693,22 @@ static RendererStatus Legacy_texture_create(void *backend_context,
     const uint8_t *pixels;
     LegacyUploadState upload_state;
     RendererStatus status;
+    GLint filter;
+    GLint wrap;
 
     if (handle == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
     *handle = NULL;
-    if (rgba_pixels == NULL
-        || !Legacy_pixel_data_valid(width, height, pitch)) {
+    if (desc == NULL || rgba_pixels == NULL
+        || !Legacy_pixel_data_valid(desc->width, desc->height, pitch)) {
         return RENDERER_STATUS_INVALID_ARGUMENT;
     }
-    pixels = Legacy_contiguous_pixels(rgba_pixels, pitch, width, height,
-                                      &allocation);
+    filter = desc->filter == RENDERER_TEXTURE_FILTER_LINEAR
+        ? GL_LINEAR : GL_NEAREST;
+    wrap = desc->wrap == RENDERER_TEXTURE_WRAP_REPEAT
+        ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+    pixels = Legacy_contiguous_pixels(rgba_pixels, pitch, desc->width,
+                                      desc->height, &allocation);
     if (pixels == NULL)
         return RENDERER_STATUS_OUT_OF_MEMORY;
     texture = calloc(1, sizeof(*texture));
@@ -720,14 +726,15 @@ static RendererStatus Legacy_texture_create(void *backend_context,
     }
     if (status == RENDERER_STATUS_OK) {
         gl->texture_parameter(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                              GL_NEAREST);
+                              filter);
         gl->texture_parameter(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                              GL_NEAREST);
+                              filter);
         gl->texture_parameter(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                              GL_CLAMP_TO_EDGE);
+                              wrap);
         gl->texture_parameter(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-                              GL_CLAMP_TO_EDGE);
-        gl->texture_image(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
+                              wrap);
+        gl->texture_image(GL_TEXTURE_2D, 0, GL_RGBA8,
+                          desc->width, desc->height, 0,
                           GL_RGBA, GL_UNSIGNED_BYTE, pixels);
         status = Legacy_result(context);
         status = Legacy_restore_upload_state(context, &upload_state, status);
@@ -739,8 +746,8 @@ static RendererStatus Legacy_texture_create(void *backend_context,
         free(texture);
         return RENDERER_STATUS_BACKEND_ERROR;
     }
-    texture->width = width;
-    texture->height = height;
+    texture->width = desc->width;
+    texture->height = desc->height;
     *handle = texture;
     return RENDERER_STATUS_OK;
 }
