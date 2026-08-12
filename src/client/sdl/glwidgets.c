@@ -24,7 +24,7 @@
 #include "images.h"
 #include "text.h"
 #include "glwidgets.h"
-#include "scrap.h"
+#include "sdlclipboard.h"
 
 /****************************************************/
 /* BEGIN: Main GLWidget stuff	    	    	    */
@@ -35,7 +35,6 @@ static void confmenu_callback( void );
 static void hover_optionWidget( int over, Uint16 x , Uint16 y , void *data );
 static void clear_eventTarget( GLWidget *widget );
 
-static char *scrap = NULL;
 static GLWidget *scraptarget = NULL;
 
 GLWidget *Init_EmptyBaseGLWidget( void )
@@ -439,21 +438,14 @@ GLWidget *FindGLWidget( GLWidget *list, Uint16 x, Uint16 y )
     return FindGLWidgeti( list, x, y );
 }
 
-void load_textscrap(char *text)
+void load_textscrap(const char *text)
 {
-    char *cp;
-    int   i;
-    
-    if (!text) return;
-    
+    if (!text)
+	return;
+
     scraptarget = NULL;
-    scrap = realloc(scrap, strlen(text)+1);
-    strcpy(scrap, text);
-    for ( cp=scrap, i=0; i<(int)strlen(scrap); ++cp, ++i ) {
-    	if ( *cp == '\n' )
-    	    *cp = '\r';
-    }
-    put_scrap(TextScrap('T','E','X','T'), strlen(scrap), scrap);
+    if (Sdl_clipboard_set_text(text) < 0)
+	warn("Could not set clipboard text: %s", SDL_GetError());
 }
 /****************************************************/
 /* END: Main GLWidget stuff 	    	    	    */
@@ -853,7 +845,8 @@ static void motion_ScrollbarWidget( Sint16 xrel, Sint16 yrel, Uint16 x, Uint16 y
     GLWidget *tmp;
     ScrollbarWidget *wid_info;
     GLWidget *slide;
-    Sint16 *coord1, coord2 = 0, min, max, size, move;
+    int *coord1;
+    int coord2 = 0, min, max, size, move;
     GLfloat oldpos;
 
     if (!data) return;
@@ -3287,10 +3280,10 @@ static void SetBounds_MainWidget( GLWidget *widget, SDL_Rect *b )
 }
 
 extern int Console_isVisible(void);
-extern void Paste_String_to_Console(char *text);
+extern void Paste_String_to_Console(const char *text);
 static void button_MainWidget( Uint8 button, Uint8 state , Uint16 x , Uint16 y, void *data )
 {
-    int scraplen;
+    char *clipboard_text;
     
     if (!data) return;
 
@@ -3301,9 +3294,13 @@ static void button_MainWidget( Uint8 button, Uint8 state , Uint16 x , Uint16 y, 
 	if (button == 2) {
     	    if (Console_isVisible()) {
 	    	scraptarget = NULL;
-	    	get_scrap(TextScrap('T','E','X','T'), &scraplen, &scrap);
-		if ( scraplen == 0 ) return;
-		Paste_String_to_Console(scrap);
+		clipboard_text = Sdl_clipboard_get_text();
+		if (clipboard_text == NULL || clipboard_text[0] == '\0') {
+		    Sdl_clipboard_free_text(clipboard_text);
+		    return;
+		}
+		Paste_String_to_Console(clipboard_text);
+		Sdl_clipboard_free_text(clipboard_text);
 	    }
 	}
     }
@@ -3317,7 +3314,6 @@ static void Close_MainWidget ( GLWidget *widget )
 	return;
     }
     
-    if ( scrap ) free(scrap);
 }
 
 GLWidget *Init_MainWidget( font_data *font )
@@ -3454,7 +3450,7 @@ static void confmenu_callback( void )
 
 static void ConfMenuWidget_Quit( void *data )
 {
-    SDL_Event quit;
+    SDL_Event quit = {0};
     quit.type = SDL_QUIT;
     SDL_PushEvent(&quit);
 }

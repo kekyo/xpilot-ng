@@ -1,7 +1,7 @@
 /*
  * XPilotNG/SDL, an SDL/OpenGL XPilot client.
  *
- * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,10 +32,16 @@ static int next_p2(int t)
 
 int sdl_window_init(sdl_window_t *win, int x, int y, int w, int h)
 {
+    memset(win, 0, sizeof(*win));
     glGenTextures(1, &win->tx_id);
-    win->surface = NULL;
+    if (win->tx_id == 0) {
+	warn("failed to create window texture");
+	return -1;
+    }
     if (sdl_window_resize(win, w, h)) {
 	warn("failed to resize window");
+	glDeleteTextures(1, &win->tx_id);
+	win->tx_id = 0;
 	return -1;
     }
     sdl_window_move(win, x, y);
@@ -50,12 +56,22 @@ void sdl_window_move(sdl_window_t *win, int x, int y)
 
 int sdl_window_resize(sdl_window_t *win, int width, int height)
 {
-    SDL_Surface *surface = 
-	SDL_CreateRGBSurface(SDL_SWSURFACE, 
+    SDL_Surface *surface;
+
+    if (win == NULL || width <= 0 || height <= 0)
+	return -1;
+
+    surface =
+	SDL_CreateRGBSurface(0,
 			     next_p2(width), next_p2(height), 
 			     32, RMASK, GMASK, BMASK, AMASK);
     if (!surface) {
 	error("failed to create SDL surface: %s", SDL_GetError());
+	return -1;
+    }
+    if (SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE) < 0) {
+	error("failed to disable SDL surface blending: %s", SDL_GetError());
+	SDL_FreeSurface(surface);
 	return -1;
     }
 
@@ -109,7 +125,9 @@ void sdl_window_paint(sdl_window_t *win)
 void sdl_window_destroy(sdl_window_t *win)
 {
     glDeleteTextures(1, &win->tx_id);
-    if (win->surface != NULL)
+    win->tx_id = 0;
+    if (win->surface != NULL) {
 	SDL_FreeSurface(win->surface);
+        win->surface = NULL;
+    }
 }
-

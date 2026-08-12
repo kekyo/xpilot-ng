@@ -5,7 +5,7 @@
     Feel free to customize this file to suit your needs
 */
 
-#import <SDL/SDL.h>
+#import <SDL2/SDL.h>
 #import "macosx_sdlmain.h"
 #import <sys/param.h> /* for MAXPATHLEN */
 #import <unistd.h>
@@ -38,7 +38,7 @@ static BOOL   gFinderLaunch;
 - (void)terminate:(id)sender
 {
     /* Post a SDL_QUIT event */
-    SDL_Event event;
+    SDL_Event event = {0};
     event.type = SDL_QUIT;
     SDL_PushEvent(&event);
 }

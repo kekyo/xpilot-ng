@@ -1,7 +1,7 @@
 /*
  * XPilotNG/SDL, an SDL/OpenGL XPilot client.
  *
- * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,20 @@
 
 #define NUM_MOUSE_BUTTONS 5
 
-SDLKey Get_key_by_name(const char* name);
-char *Get_name_by_key(SDLKey key);
+/**
+ * Convert an XPilot key name to an SDL2 keycode.
+ *
+ * @param name Key name from the XPilot configuration.
+ * @return The matching keycode, or SDLK_UNKNOWN.
+ */
+SDL_Keycode Get_key_by_name(const char *name);
+
+/**
+ * Find the canonical XPilot name for an SDL2 keycode.
+ *
+ * @param key SDL2 keycode to look up.
+ * @return Static key name, or NULL when the key is unknown.
+ */
+const char *Get_name_by_key(SDL_Keycode key);
 
 #endif

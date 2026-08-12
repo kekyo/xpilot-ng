@@ -45,6 +45,12 @@ extern "C" {
 
 	void	DT_DrawText(const char *string, SDL_Surface *surface, int FontType, int x, int y );
 	int	DT_LoadFont(const char *BitmapName, int flags );
+	/**
+	 * Unloads one bitmap font without affecting other loaded fonts.
+	 * @param FontNumber Font identifier returned by DT_LoadFont().
+	 * @return 0 when the font was unloaded, or -1 if it was not found.
+	 */
+	int	DT_UnloadFont(int FontNumber);
 	int	DT_FontHeight( int FontNumber );
 	int	DT_FontWidth( int FontNumber );
 	BitFont*	DT_FontPointer(int FontNumber );
@@ -56,6 +62,5 @@ extern "C" {
 #endif
 
 #endif
-
 
 

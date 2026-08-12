@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2003-2004 by
  *
- *      Juha Lindström       <juhal@users.sourceforge.net>
+ *      Juha LindstrÃ¶m       <juhal@users.sourceforge.net>
  *      Darel Cullen         <darelcullen@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -24,6 +24,7 @@
 #include "xpclient_sdl.h"
 
 #include "sdlmeta.h"
+#include "sdlinit.h"
 #include "sdlwindow.h"
 #include "text.h"
 #include "glwidgets.h"
@@ -551,7 +552,7 @@ static void Button_MetaRowWidget(Uint8 button, Uint8 state, Uint16 x,
 {
     GLWidget *widget;
     MetaRowWidget *row;
-    SDL_Event evt;
+    SDL_Event evt = {0};
 
     if (state != SDL_PRESSED) return;
     if (button != 1) return;
@@ -860,7 +861,7 @@ static void Close_MetaWidget(GLWidget *widget)
 
 static void OnClick_Join(GLWidget *widget)
 {
-    SDL_Event evt;
+    SDL_Event evt = {0};
     evt.type = SDL_USEREVENT;
     evt.user.code = EVENT_JOIN;
     evt.user.data1 = NULL;
@@ -869,7 +870,7 @@ static void OnClick_Join(GLWidget *widget)
 
 static void OnClick_Refresh(GLWidget *widget)
 {
-    SDL_Event evt;
+    SDL_Event evt = {0};
     evt.type = SDL_USEREVENT;
     evt.user.code = EVENT_REFRESH;
     evt.user.data1 = NULL;
@@ -878,7 +879,7 @@ static void OnClick_Refresh(GLWidget *widget)
 
 static void OnClick_Quit(GLWidget *widget)
 {
-    SDL_Event evt;
+    SDL_Event evt = {0};
     evt.type = SDL_QUIT;
     SDL_PushEvent(&evt);
 }
@@ -956,10 +957,10 @@ static bool join_server(Connect_param_t *conpar, server_info_t *sip)
     return false;
 }
 
-static void handleKeyPress(GLWidget *meta, SDL_keysym *keysym )
+static void handleKeyPress(GLWidget *meta, SDL_Keysym *keysym)
 {
     /*static unsigned int row = 1;*/
-    SDL_Event evt;
+    SDL_Event evt = {0};
     
     switch ( keysym->sym )
     {
@@ -969,13 +970,7 @@ static void handleKeyPress(GLWidget *meta, SDL_keysym *keysym )
 	SDL_PushEvent(&evt);
 	break;
     case SDLK_F11:
-	/* F11 key was pressed
-	 * this toggles fullscreen mode
-	 */
-#ifndef _WINDOWS
-		/* This segfaults */
-		/* SDL_WM_ToggleFullScreen(MainSDLSurface); */
-#endif
+	/* Fullscreen changes are available after joining a game. */
 	break;
     case SDLK_UP: 
 	/* move the cursor up */
@@ -1023,7 +1018,7 @@ int Meta_window(Connect_param_t *conpar)
     }
     root->bounds.x = root->bounds.y = 0;
     root->bounds.w = draw_width;
-    root->bounds.w = draw_height;
+    root->bounds.h = draw_height;
 
     if (!(meta = Init_MetaWidget(server_list))) {
 	free(root);
@@ -1092,13 +1087,18 @@ int Meta_window(Connect_param_t *conpar)
 	glEnable(GL_SCISSOR_TEST);
 	DrawGLWidgetsi(meta, 0, 0, draw_width, draw_height);
 	glDisable(GL_SCISSOR_TEST);
-	SDL_GL_SwapBuffers();
+	Swap_buffers();
 	
-	SDL_WaitEvent(&evt);
+	if (SDL_WaitEvent(&evt) == 0) {
+	    error("Could not wait for an SDL event: %s", SDL_GetError());
+	    Close_Widget(&root);
+	    return -1;
+	}
 	do {
 	    
 	    switch(evt.type) {
-	    case SDL_QUIT: 
+	    case SDL_QUIT:
+		Close_Widget(&root);
 		return -1;
 		
 	    case SDL_USEREVENT:
@@ -1147,16 +1147,29 @@ int Meta_window(Connect_param_t *conpar)
 		}
 		break;
 		
-	    case SDL_MOUSEMOTION:
+	case SDL_MOUSEMOTION:
 		if (target && target->motion)
 		    target->motion(evt.motion.xrel,
 				   evt.motion.yrel,
-				   evt.button.x,
-				   evt.button.y,
+				   evt.motion.x,
+				   evt.motion.y,
 				   target->motiondata);
 		break;
 
-	    case SDL_VIDEOEXPOSE:
+	    case SDL_WINDOWEVENT:
+		if (evt.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+		    Window_size_changed(evt.window.data1, evt.window.data2);
+		    root->bounds.w = draw_width;
+		    root->bounds.h = draw_height;
+		    glMatrixMode(GL_PROJECTION);
+		    glLoadIdentity();
+		    gluOrtho2D(0, draw_width, draw_height, 0);
+		    glMatrixMode(GL_MODELVIEW);
+		    glLoadIdentity();
+		}
+		if (evt.window.event != SDL_WINDOWEVENT_EXPOSED &&
+		    evt.window.event != SDL_WINDOWEVENT_SIZE_CHANGED)
+		    break;
 		glDisable(GL_SCISSOR_TEST);
 		set_alphacolor(blackRGBA);
 		glBegin(GL_QUADS);
