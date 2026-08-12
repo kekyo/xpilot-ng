@@ -63,6 +63,57 @@ typedef struct CoreBorrowedState {
     GLuint sampler;
 } CoreBorrowedState;
 
+typedef struct LegacyInteropApi {
+    PFNGLCREATESHADERPROC create_shader;
+    PFNGLSHADERSOURCEPROC shader_source;
+    PFNGLCOMPILESHADERPROC compile_shader;
+    PFNGLGETSHADERIVPROC get_shader_integer;
+    PFNGLDELETESHADERPROC delete_shader;
+    PFNGLCREATEPROGRAMPROC create_program;
+    PFNGLATTACHSHADERPROC attach_shader;
+    PFNGLLINKPROGRAMPROC link_program;
+    PFNGLGETPROGRAMIVPROC get_program_integer;
+    PFNGLDELETEPROGRAMPROC delete_program;
+    PFNGLUSEPROGRAMPROC use_program;
+    PFNGLBLENDEQUATIONPROC blend_equation;
+} LegacyInteropApi;
+
+typedef struct LegacyTextureUnitState {
+    GLint binding_2d;
+    GLint texture_environment_mode;
+    GLboolean texture_2d_enabled;
+    GLboolean texture_gen_s_enabled;
+    GLboolean texture_gen_t_enabled;
+    GLfloat matrix[16];
+} LegacyTextureUnitState;
+
+#define LEGACY_DRAW_CAPABILITY_COUNT 9
+
+typedef struct LegacyDrawState {
+    GLfloat projection_matrix[16];
+    GLfloat modelview_matrix[16];
+    LegacyTextureUnitState texture_units[2];
+    GLint matrix_mode;
+    GLint viewport[4];
+    GLint active_texture;
+    GLint blend_source;
+    GLint blend_destination;
+    GLint blend_equation;
+    GLint scissor_box[4];
+    GLfloat current_color[4];
+    GLint current_program;
+    GLfloat line_width;
+    GLint polygon_mode[2];
+    GLboolean color_mask[4];
+    GLint shade_model;
+    GLboolean capabilities[LEGACY_DRAW_CAPABILITY_COUNT];
+} LegacyDrawState;
+
+typedef enum LegacyUnrestorableProgramState {
+    LEGACY_PROGRAM_DELETE_PENDING,
+    LEGACY_PROGRAM_RELINK_FAILED
+} LegacyUnrestorableProgramState;
+
 typedef struct FramebufferApi {
     gen_framebuffers_fn gen;
     bind_framebuffer_fn bind;
@@ -113,6 +164,19 @@ static const PixelExpectation semantic_pixels[] = {
     {15, 18, 255,   0, 255, 255},
     {20, 18,   0,   0, 255, 255},
     {26, 17,   0, 255,   0, 255}
+};
+
+static const GLenum legacy_draw_capabilities[
+    LEGACY_DRAW_CAPABILITY_COUNT] = {
+    GL_BLEND,
+    GL_SCISSOR_TEST,
+    GL_DEPTH_TEST,
+    GL_CULL_FACE,
+    GL_STENCIL_TEST,
+    GL_ALPHA_TEST,
+    GL_LIGHTING,
+    GL_FOG,
+    GL_COLOR_LOGIC_OP
 };
 
 static void *load_gl_proc(void *userdata, const char *name)
@@ -847,25 +911,669 @@ static void draw_legacy_quad(float left, float bottom,
     glEnd();
 }
 
-static int check_sdl_renderer_mixed_legacy_scene(TestContext *test_context)
+static int load_legacy_interop_api(LegacyInteropApi *api)
 {
-    const RendererColor clear = {8, 16, 24, 255};
-    const RendererColor green = {0, 255, 0, 255};
+    memset(api, 0, sizeof(*api));
+    api->create_shader = (PFNGLCREATESHADERPROC)SDL_GL_GetProcAddress(
+        "glCreateShader");
+    api->shader_source = (PFNGLSHADERSOURCEPROC)SDL_GL_GetProcAddress(
+        "glShaderSource");
+    api->compile_shader = (PFNGLCOMPILESHADERPROC)SDL_GL_GetProcAddress(
+        "glCompileShader");
+    api->get_shader_integer = (PFNGLGETSHADERIVPROC)SDL_GL_GetProcAddress(
+        "glGetShaderiv");
+    api->delete_shader = (PFNGLDELETESHADERPROC)SDL_GL_GetProcAddress(
+        "glDeleteShader");
+    api->create_program = (PFNGLCREATEPROGRAMPROC)SDL_GL_GetProcAddress(
+        "glCreateProgram");
+    api->attach_shader = (PFNGLATTACHSHADERPROC)SDL_GL_GetProcAddress(
+        "glAttachShader");
+    api->link_program = (PFNGLLINKPROGRAMPROC)SDL_GL_GetProcAddress(
+        "glLinkProgram");
+    api->get_program_integer = (PFNGLGETPROGRAMIVPROC)SDL_GL_GetProcAddress(
+        "glGetProgramiv");
+    api->delete_program = (PFNGLDELETEPROGRAMPROC)SDL_GL_GetProcAddress(
+        "glDeleteProgram");
+    api->use_program = (PFNGLUSEPROGRAMPROC)SDL_GL_GetProcAddress(
+        "glUseProgram");
+    api->blend_equation = (PFNGLBLENDEQUATIONPROC)SDL_GL_GetProcAddress(
+        "glBlendEquation");
+    if (api->blend_equation == NULL) {
+        api->blend_equation = (PFNGLBLENDEQUATIONPROC)
+            SDL_GL_GetProcAddress("glBlendEquationEXT");
+    }
+
+    return api->create_shader != NULL && api->shader_source != NULL
+        && api->compile_shader != NULL && api->get_shader_integer != NULL
+        && api->delete_shader != NULL && api->create_program != NULL
+        && api->attach_shader != NULL && api->link_program != NULL
+        && api->get_program_integer != NULL
+        && api->delete_program != NULL && api->use_program != NULL
+        && api->blend_equation != NULL;
+}
+
+static GLuint compile_legacy_shader(LegacyInteropApi *api, GLenum type,
+                                    const GLchar *source)
+{
+    GLuint shader = api->create_shader(type);
+    GLint compiled = GL_FALSE;
+
+    if (shader == 0)
+        return 0;
+    api->shader_source(shader, 1, &source, NULL);
+    api->compile_shader(shader);
+    api->get_shader_integer(shader, GL_COMPILE_STATUS, &compiled);
+    if (compiled == GL_FALSE) {
+        api->delete_shader(shader);
+        return 0;
+    }
+    return shader;
+}
+
+static int create_legacy_state_program(LegacyInteropApi *api,
+                                       GLuint *program)
+{
+    static const GLchar vertex_source[] =
+        "#version 120\n"
+        "void main(void) { gl_Position = gl_Vertex; }\n";
+    static const GLchar fragment_source[] =
+        "#version 120\n"
+        "void main(void) { gl_FragColor = vec4(1.0); }\n";
+    GLuint vertex_shader = 0;
+    GLuint fragment_shader = 0;
+    GLuint created = 0;
+    GLint linked = GL_FALSE;
+    int failed = 1;
+
+    *program = 0;
+    discard_gl_errors();
+    vertex_shader = compile_legacy_shader(api, GL_VERTEX_SHADER,
+                                          vertex_source);
+    fragment_shader = compile_legacy_shader(api, GL_FRAGMENT_SHADER,
+                                            fragment_source);
+    if (vertex_shader == 0 || fragment_shader == 0)
+        goto cleanup;
+    created = api->create_program();
+    if (created == 0)
+        goto cleanup;
+    api->attach_shader(created, vertex_shader);
+    api->attach_shader(created, fragment_shader);
+    api->link_program(created);
+    api->get_program_integer(created, GL_LINK_STATUS, &linked);
+    if (linked == GL_FALSE || glGetError() != GL_NO_ERROR)
+        goto cleanup;
+
+    *program = created;
+    created = 0;
+    failed = 0;
+
+cleanup:
+    if (created != 0)
+        api->delete_program(created);
+    if (fragment_shader != 0)
+        api->delete_shader(fragment_shader);
+    if (vertex_shader != 0)
+        api->delete_shader(vertex_shader);
+    if (failed)
+        fprintf(stderr, "Could not create legacy state test program\n");
+    discard_gl_errors();
+    return failed;
+}
+
+static int establish_legacy_draw_state(TestContext *test_context,
+                                       LegacyInteropApi *api,
+                                       const GLuint textures[2],
+                                       GLuint program)
+{
+    static const GLfloat projection_matrix[16] = {
+        1.25f, 0.0f,  0.0f, 0.0f,
+        0.0f,  0.75f, 0.0f, 0.0f,
+        0.0f,  0.0f, -1.0f, 0.0f,
+        0.25f, -0.5f, 0.0f, 1.0f
+    };
+    static const GLfloat modelview_matrix[16] = {
+        0.5f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.5f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        2.0f, 3.0f, 0.0f, 1.0f
+    };
+    static const GLfloat texture_matrices[2][16] = {
+        {
+            1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            0.125f, 0.25f, 0.0f, 1.0f
+        },
+        {
+            2.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.5f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            0.375f, 0.625f, 0.0f, 1.0f
+        }
+    };
+    size_t capability_index;
+
+    discard_gl_errors();
+    glViewport(3, 2, FRAME_WIDTH - 7, FRAME_HEIGHT - 5);
+    glMatrixMode(GL_PROJECTION);
+    glLoadMatrixf(projection_matrix);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadMatrixf(modelview_matrix);
+
+    for (capability_index = 0;
+         capability_index < LEGACY_DRAW_CAPABILITY_COUNT;
+         capability_index++) {
+        glEnable(legacy_draw_capabilities[capability_index]);
+    }
+    api->blend_equation(GL_FUNC_REVERSE_SUBTRACT);
+    glBlendFunc(GL_ONE, GL_ZERO);
+    glScissor(4, 3, FRAME_WIDTH - 9, FRAME_HEIGHT - 8);
+    glColorMask(GL_TRUE, GL_FALSE, GL_TRUE, GL_FALSE);
+    glShadeModel(GL_FLAT);
+    glPolygonMode(GL_FRONT, GL_LINE);
+    glPolygonMode(GL_BACK, GL_POINT);
+    glLineWidth(2.0f);
+    glColor4f(0.25f, 0.5f, 0.75f, 0.625f);
+
+    test_context->buffer_api.active_texture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_TEXTURE_GEN_S);
+    glDisable(GL_TEXTURE_GEN_T);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    glMatrixMode(GL_TEXTURE);
+    glLoadMatrixf(texture_matrices[0]);
+
+    test_context->buffer_api.active_texture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, textures[1]);
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_TEXTURE_GEN_S);
+    glEnable(GL_TEXTURE_GEN_T);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+    glMatrixMode(GL_TEXTURE);
+    glLoadMatrixf(texture_matrices[1]);
+    api->use_program(program);
+
+    if (glGetError() != GL_NO_ERROR) {
+        fprintf(stderr, "Could not establish borrowed legacy draw state\n");
+        return 1;
+    }
+    return 0;
+}
+
+static int capture_legacy_draw_state(TestContext *test_context,
+                                     LegacyDrawState *state)
+{
+    size_t capability_index;
+    size_t texture_unit;
+
+    memset(state, 0, sizeof(*state));
+    glGetFloatv(GL_PROJECTION_MATRIX, state->projection_matrix);
+    glGetFloatv(GL_MODELVIEW_MATRIX, state->modelview_matrix);
+    glGetIntegerv(GL_MATRIX_MODE, &state->matrix_mode);
+    glGetIntegerv(GL_VIEWPORT, state->viewport);
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &state->active_texture);
+    glGetIntegerv(GL_BLEND_SRC, &state->blend_source);
+    glGetIntegerv(GL_BLEND_DST, &state->blend_destination);
+    glGetIntegerv(GL_BLEND_EQUATION, &state->blend_equation);
+    glGetIntegerv(GL_SCISSOR_BOX, state->scissor_box);
+    glGetFloatv(GL_CURRENT_COLOR, state->current_color);
+    glGetIntegerv(GL_CURRENT_PROGRAM, &state->current_program);
+    glGetFloatv(GL_LINE_WIDTH, &state->line_width);
+    glGetIntegerv(GL_POLYGON_MODE, state->polygon_mode);
+    glGetBooleanv(GL_COLOR_WRITEMASK, state->color_mask);
+    glGetIntegerv(GL_SHADE_MODEL, &state->shade_model);
+    for (capability_index = 0;
+         capability_index < LEGACY_DRAW_CAPABILITY_COUNT;
+         capability_index++) {
+        state->capabilities[capability_index] = glIsEnabled(
+            legacy_draw_capabilities[capability_index]);
+    }
+
+    for (texture_unit = 0; texture_unit < 2; texture_unit++) {
+        LegacyTextureUnitState *unit = &state->texture_units[texture_unit];
+
+        test_context->buffer_api.active_texture(
+            (GLenum)(GL_TEXTURE0 + texture_unit));
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &unit->binding_2d);
+        glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE,
+                     &unit->texture_environment_mode);
+        unit->texture_2d_enabled = glIsEnabled(GL_TEXTURE_2D);
+        unit->texture_gen_s_enabled = glIsEnabled(GL_TEXTURE_GEN_S);
+        unit->texture_gen_t_enabled = glIsEnabled(GL_TEXTURE_GEN_T);
+        glGetFloatv(GL_TEXTURE_MATRIX, unit->matrix);
+    }
+    test_context->buffer_api.active_texture((GLenum)state->active_texture);
+
+    if (glGetError() != GL_NO_ERROR) {
+        fprintf(stderr, "Could not capture borrowed legacy draw state\n");
+        return 1;
+    }
+    return 0;
+}
+
+static int integer_values_equal(const char *label, const GLint *expected,
+                                const GLint *actual, size_t count)
+{
+    size_t index;
+
+    for (index = 0; index < count; index++) {
+        if (actual[index] != expected[index]) {
+            fprintf(stderr, "%s[%lu] changed: %d != %d\n", label,
+                    (unsigned long)index, actual[index], expected[index]);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int boolean_values_equal(const char *label,
+                                const GLboolean *expected,
+                                const GLboolean *actual, size_t count)
+{
+    size_t index;
+
+    for (index = 0; index < count; index++) {
+        if (actual[index] != expected[index]) {
+            fprintf(stderr, "%s[%lu] changed: %u != %u\n", label,
+                    (unsigned long)index, (unsigned int)actual[index],
+                    (unsigned int)expected[index]);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int float_values_near(const char *label, const GLfloat *expected,
+                             const GLfloat *actual, size_t count)
+{
+    size_t index;
+
+    for (index = 0; index < count; index++) {
+        GLfloat difference = actual[index] - expected[index];
+
+        if (difference < 0.0f)
+            difference = -difference;
+        if (difference > 0.00001f) {
+            fprintf(stderr, "%s[%lu] changed: %.7g != %.7g\n", label,
+                    (unsigned long)index, (double)actual[index],
+                    (double)expected[index]);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int check_legacy_draw_state_preserved(
+    const LegacyDrawState *expected, const LegacyDrawState *actual)
+{
+    static const char *texture_matrix_labels[2] = {
+        "texture unit 0 matrix", "texture unit 1 matrix"
+    };
+    size_t texture_unit;
+
+    TEST_CHECK(float_values_near("projection matrix",
+                                 expected->projection_matrix,
+                                 actual->projection_matrix, 16));
+    TEST_CHECK(float_values_near("modelview matrix",
+                                 expected->modelview_matrix,
+                                 actual->modelview_matrix, 16));
+    TEST_CHECK(integer_values_equal("matrix mode", &expected->matrix_mode,
+                                    &actual->matrix_mode, 1));
+    TEST_CHECK(integer_values_equal("viewport", expected->viewport,
+                                    actual->viewport, 4));
+    TEST_CHECK(integer_values_equal("active texture",
+                                    &expected->active_texture,
+                                    &actual->active_texture, 1));
+    TEST_CHECK(integer_values_equal("blend source",
+                                    &expected->blend_source,
+                                    &actual->blend_source, 1));
+    TEST_CHECK(integer_values_equal("blend destination",
+                                    &expected->blend_destination,
+                                    &actual->blend_destination, 1));
+    TEST_CHECK(integer_values_equal("blend equation",
+                                    &expected->blend_equation,
+                                    &actual->blend_equation, 1));
+    TEST_CHECK(integer_values_equal("scissor box", expected->scissor_box,
+                                    actual->scissor_box, 4));
+    TEST_CHECK(float_values_near("current color", expected->current_color,
+                                 actual->current_color, 4));
+    TEST_CHECK(integer_values_equal("current program",
+                                    &expected->current_program,
+                                    &actual->current_program, 1));
+    TEST_CHECK(float_values_near("line width", &expected->line_width,
+                                 &actual->line_width, 1));
+    TEST_CHECK(integer_values_equal("polygon mode", expected->polygon_mode,
+                                    actual->polygon_mode, 2));
+    TEST_CHECK(boolean_values_equal("color write mask", expected->color_mask,
+                                    actual->color_mask, 4));
+    TEST_CHECK(integer_values_equal("shade model", &expected->shade_model,
+                                    &actual->shade_model, 1));
+    TEST_CHECK(boolean_values_equal("capability enables",
+                                    expected->capabilities,
+                                    actual->capabilities,
+                                    LEGACY_DRAW_CAPABILITY_COUNT));
+
+    for (texture_unit = 0; texture_unit < 2; texture_unit++) {
+        const LegacyTextureUnitState *expected_unit =
+            &expected->texture_units[texture_unit];
+        const LegacyTextureUnitState *actual_unit =
+            &actual->texture_units[texture_unit];
+
+        TEST_CHECK(integer_values_equal(
+                       "texture binding", &expected_unit->binding_2d,
+                       &actual_unit->binding_2d, 1));
+        TEST_CHECK(integer_values_equal(
+                       "texture environment mode",
+                       &expected_unit->texture_environment_mode,
+                       &actual_unit->texture_environment_mode, 1));
+        TEST_CHECK(boolean_values_equal(
+                       "texture 2D enable",
+                       &expected_unit->texture_2d_enabled,
+                       &actual_unit->texture_2d_enabled, 1));
+        TEST_CHECK(boolean_values_equal(
+                       "texture coordinate generation S enable",
+                       &expected_unit->texture_gen_s_enabled,
+                       &actual_unit->texture_gen_s_enabled, 1));
+        TEST_CHECK(boolean_values_equal(
+                       "texture coordinate generation T enable",
+                       &expected_unit->texture_gen_t_enabled,
+                       &actual_unit->texture_gen_t_enabled, 1));
+        TEST_CHECK(float_values_near(texture_matrix_labels[texture_unit],
+                                     expected_unit->matrix,
+                                     actual_unit->matrix, 16));
+    }
+    return 0;
+}
+
+static int establish_top_left_direct_state(TestContext *test_context,
+                                           LegacyInteropApi *api)
+{
+    size_t capability_index;
+    size_t texture_unit;
+
+    discard_gl_errors();
+    api->use_program(0);
+    for (texture_unit = 0; texture_unit < 2; texture_unit++) {
+        test_context->buffer_api.active_texture(
+            (GLenum)(GL_TEXTURE0 + texture_unit));
+        glDisable(GL_TEXTURE_2D);
+        glDisable(GL_TEXTURE_GEN_S);
+        glDisable(GL_TEXTURE_GEN_T);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    test_context->buffer_api.active_texture(GL_TEXTURE0);
+    for (capability_index = 0;
+         capability_index < LEGACY_DRAW_CAPABILITY_COUNT;
+         capability_index++) {
+        glDisable(legacy_draw_capabilities[capability_index]);
+    }
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glShadeModel(GL_SMOOTH);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glLineWidth(1.0f);
+    api->blend_equation(GL_FUNC_ADD);
+    glBlendFunc(GL_ONE, GL_ZERO);
+    glViewport(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+    glMatrixMode(GL_TEXTURE);
+    glLoadIdentity();
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0.0, (GLdouble)FRAME_WIDTH, (GLdouble)FRAME_HEIGHT,
+            0.0, -1.0, 1.0);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    if (glGetError() != GL_NO_ERROR) {
+        fprintf(stderr, "Could not establish top-left direct draw state\n");
+        return 1;
+    }
+    return 0;
+}
+
+static int read_legacy_framebuffer(GLubyte *pixels)
+{
+    glFinish();
+    glReadPixels(0, 0, FRAME_WIDTH, FRAME_HEIGHT,
+                 GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    if (glGetError() != GL_NO_ERROR) {
+        fprintf(stderr, "Could not read legacy framebuffer\n");
+        return 1;
+    }
+    return 0;
+}
+
+static int check_sdl_renderer_rejects_unrestorable_program(
+    TestContext *test_context, LegacyUnrestorableProgramState program_state)
+{
+    const RendererColor clear = {13, 27, 41, 255};
+    const RendererColor queued_color = {193, 71, 29, 255};
+    const char *state_name = program_state == LEGACY_PROGRAM_DELETE_PENDING
+        ? "delete-pending current program"
+        : "failed-relink current program";
     GLubyte pixels[FRAME_WIDTH * FRAME_HEIGHT * PIXEL_COMPONENTS];
+    LegacyInteropApi interop_api;
+    LegacyDrawState state_before_flush;
+    LegacyDrawState state_after_flush;
     SdlRenderer *sdl_renderer = NULL;
-    Renderer *frontend;
-    int drawable_width = 0;
-    int drawable_height = 0;
+    Renderer *frontend = NULL;
+    GLuint borrowed_textures[2] = {0, 0};
+    GLuint borrowed_program = 0;
+    GLuint failed_link_shader = 0;
+    GLint current_program = 0;
+    GLint delete_status = GL_FALSE;
+    GLint link_status = GL_TRUE;
+    RendererStatus flush_status;
+    int delete_requested = 0;
+    int failed = 0;
     int result = 1;
 
+    memset(&interop_api, 0, sizeof(interop_api));
     TEST_CHECK_CLEANUP(SDL_GL_MakeCurrent(test_context->window,
                                           test_context->context) == 0);
+    TEST_CHECK_CLEANUP(load_legacy_interop_api(&interop_api));
     TEST_CHECK_CLEANUP(Sdl_renderer_create(test_context->window,
                                            &sdl_renderer)
                        == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(sdl_renderer != NULL);
     frontend = Sdl_renderer_frontend(sdl_renderer);
     TEST_CHECK_CLEANUP(frontend != NULL);
+    TEST_CHECK_CLEANUP(create_legacy_state_program(
+                           &interop_api, &borrowed_program) == 0);
+    glGenTextures(2, borrowed_textures);
+    TEST_CHECK_CLEANUP(borrowed_textures[0] != 0
+                       && borrowed_textures[1] != 0);
+
+    test_context->framebuffer_api.bind(GL_FRAMEBUFFER,
+                                       test_context->framebuffer);
+    TEST_CHECK_CLEANUP(Sdl_renderer_begin_frame(
+                           sdl_renderer, FRAME_WIDTH, FRAME_HEIGHT, clear)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_fill_rect(
+                           frontend, 6.0f, 5.0f, 12.0f, 9.0f,
+                           queued_color) == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(establish_legacy_draw_state(
+                           test_context, &interop_api, borrowed_textures,
+                           borrowed_program) == 0);
+
+    discard_gl_errors();
+    if (program_state == LEGACY_PROGRAM_DELETE_PENDING) {
+        interop_api.delete_program(borrowed_program);
+        delete_requested = 1;
+        interop_api.get_program_integer(
+            borrowed_program, GL_DELETE_STATUS, &delete_status);
+        TEST_CHECK_CLEANUP(delete_status == GL_TRUE);
+    } else {
+        /* An attached shader that was never compiled makes this relink fail.
+         * OpenGL 2.1 keeps the old executable current until glUseProgram
+         * removes it, even though the program's LINK_STATUS becomes false. */
+        failed_link_shader = interop_api.create_shader(GL_FRAGMENT_SHADER);
+        TEST_CHECK_CLEANUP(failed_link_shader != 0);
+        interop_api.attach_shader(borrowed_program, failed_link_shader);
+        interop_api.link_program(borrowed_program);
+        interop_api.get_program_integer(
+            borrowed_program, GL_LINK_STATUS, &link_status);
+        TEST_CHECK_CLEANUP(link_status == GL_FALSE);
+    }
+    glGetIntegerv(GL_CURRENT_PROGRAM, &current_program);
+    TEST_CHECK_CLEANUP(current_program == (GLint)borrowed_program);
+    TEST_CHECK_CLEANUP(glGetError() == GL_NO_ERROR);
+    TEST_CHECK_CLEANUP(capture_legacy_draw_state(
+                           test_context, &state_before_flush) == 0);
+
+    flush_status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
+    if (flush_status != RENDERER_STATUS_BACKEND_ERROR) {
+        fprintf(stderr, "%s flush returned %d; expected backend error\n",
+                state_name, (int)flush_status);
+        failed = 1;
+    }
+    if (capture_legacy_draw_state(test_context, &state_after_flush) != 0) {
+        failed = 1;
+    } else if (check_legacy_draw_state_preserved(
+                   &state_before_flush, &state_after_flush) != 0) {
+        fprintf(stderr, "%s flush changed borrowed legacy GL state\n",
+                state_name);
+        failed = 1;
+    }
+    if (read_legacy_framebuffer(pixels) != 0) {
+        failed = 1;
+    } else if (check_rgba(pixels, 10, 8,
+                          clear.red, clear.green, clear.blue,
+                          clear.alpha) != 0) {
+        fprintf(stderr, "%s flush executed a queued command\n",
+                state_name);
+        failed = 1;
+    }
+
+    /* Retire the exceptional program according to its OpenGL lifetime, then
+     * erase any accidental draw. A successful end_frame must still submit
+     * the command that the rejected bridge left untouched in the queue. */
+    interop_api.use_program(0);
+    TEST_CHECK_CLEANUP(glGetError() == GL_NO_ERROR);
+    if (delete_requested) {
+        borrowed_program = 0;
+    } else {
+        interop_api.delete_program(borrowed_program);
+        borrowed_program = 0;
+    }
+    if (failed_link_shader != 0) {
+        interop_api.delete_shader(failed_link_shader);
+        failed_link_shader = 0;
+    }
+    TEST_CHECK_CLEANUP(establish_top_left_direct_state(
+                           test_context, &interop_api) == 0);
+    glClearColor((GLclampf)clear.red / 255.0f,
+                 (GLclampf)clear.green / 255.0f,
+                 (GLclampf)clear.blue / 255.0f,
+                 (GLclampf)clear.alpha / 255.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    TEST_CHECK_CLEANUP(glGetError() == GL_NO_ERROR);
+    TEST_CHECK_CLEANUP(Sdl_renderer_end_frame(sdl_renderer)
+                       == RENDERER_STATUS_OK);
+    if (read_legacy_framebuffer(pixels) != 0) {
+        failed = 1;
+    } else {
+        if (check_rgba(pixels, 10, 8,
+                       queued_color.red, queued_color.green,
+                       queued_color.blue, queued_color.alpha) != 0) {
+            fprintf(stderr, "%s flush did not retain its queued command\n",
+                    state_name);
+            failed = 1;
+        }
+        if (check_rgba(pixels, 2, 2,
+                       clear.red, clear.green, clear.blue,
+                       clear.alpha) != 0) {
+            fprintf(stderr, "%s retry changed pixels outside the queue\n",
+                    state_name);
+            failed = 1;
+        }
+    }
+    result = failed;
+
+cleanup:
+    if (SDL_GL_GetCurrentContext() == test_context->context
+        || SDL_GL_MakeCurrent(test_context->window,
+                              test_context->context) == 0) {
+        if (interop_api.use_program != NULL)
+            interop_api.use_program(0);
+        if (borrowed_program != 0
+            && !delete_requested
+            && interop_api.delete_program != NULL) {
+            interop_api.delete_program(borrowed_program);
+        }
+        if (failed_link_shader != 0
+            && interop_api.delete_shader != NULL) {
+            interop_api.delete_shader(failed_link_shader);
+        }
+        if (test_context->buffer_api.active_texture != NULL) {
+            test_context->buffer_api.active_texture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            test_context->buffer_api.active_texture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            test_context->buffer_api.active_texture(GL_TEXTURE0);
+        }
+        if (borrowed_textures[0] != 0 || borrowed_textures[1] != 0)
+            glDeleteTextures(2, borrowed_textures);
+        discard_gl_errors();
+    }
+    if (sdl_renderer != NULL) {
+        Sdl_renderer_destroy(sdl_renderer);
+        if (SDL_GL_GetCurrentContext() != test_context->context
+            || glGetString(GL_VERSION) == NULL) {
+            fprintf(stderr, "SDL renderer destruction after %s changed or "
+                    "invalidated its borrowed context\n", state_name);
+            result = 1;
+        }
+    }
+    return result;
+}
+
+static int check_sdl_renderer_mixed_legacy_scene(TestContext *test_context)
+{
+    static const uint8_t green_pixel[] = {0, 255, 0, 255};
+    const RendererTextureDesc green_texture_desc = {
+        .width = 1,
+        .height = 1,
+        .filter = RENDERER_TEXTURE_FILTER_NEAREST,
+        .wrap = RENDERER_TEXTURE_WRAP_CLAMP
+    };
+    const RendererColor clear = {8, 16, 24, 255};
+    GLubyte pixels[FRAME_WIDTH * FRAME_HEIGHT * PIXEL_COMPONENTS];
+    LegacyInteropApi interop_api;
+    LegacyDrawState state_before_flush;
+    LegacyDrawState state_after_flush;
+    SdlRenderer *sdl_renderer = NULL;
+    Renderer *frontend = NULL;
+    RendererTexture *green_texture = NULL;
+    GLuint borrowed_textures[2] = {0, 0};
+    GLuint borrowed_program = 0;
+    int drawable_width = 0;
+    int drawable_height = 0;
+    int result = 1;
+
+    memset(&interop_api, 0, sizeof(interop_api));
+    TEST_CHECK_CLEANUP(SDL_GL_MakeCurrent(test_context->window,
+                                          test_context->context) == 0);
+    TEST_CHECK_CLEANUP(load_legacy_interop_api(&interop_api));
+    TEST_CHECK_CLEANUP(Sdl_renderer_create(test_context->window,
+                                           &sdl_renderer)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(sdl_renderer != NULL);
+    frontend = Sdl_renderer_frontend(sdl_renderer);
+    TEST_CHECK_CLEANUP(frontend != NULL);
+    TEST_CHECK_CLEANUP(Sdl_renderer_flush_preserving_legacy(NULL)
+                       == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK_CLEANUP(Sdl_renderer_flush_preserving_legacy(sdl_renderer)
+                       == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK_CLEANUP(Renderer_texture_create_with_desc(
+                           frontend, &green_texture_desc, green_pixel, 4,
+                           &green_texture) == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(green_texture != NULL);
+    TEST_CHECK_CLEANUP(create_legacy_state_program(
+                           &interop_api, &borrowed_program) == 0);
+    glGenTextures(2, borrowed_textures);
+    TEST_CHECK_CLEANUP(borrowed_textures[0] != 0
+                       && borrowed_textures[1] != 0);
     TEST_CHECK_CLEANUP(Sdl_renderer_get_drawable_size(
                            sdl_renderer, &drawable_width, &drawable_height)
                        == RENDERER_STATUS_OK);
@@ -879,32 +1587,38 @@ static int check_sdl_renderer_mixed_legacy_scene(TestContext *test_context)
                        == RENDERER_STATUS_OK);
 
     TEST_CHECK_CLEANUP(Sdl_renderer_prepare_legacy(
-                           sdl_renderer, SDL_RENDERER_LEGACY_BOTTOM_LEFT)
-                       == RENDERER_STATUS_OK);
-    draw_legacy_quad(2.0f, 2.0f, 14.0f, 12.0f, 255, 0, 0);
-
-    /* A semantic draw owns its complete rendering state even when a direct
-     * compatibility draw leaves hostile fixed-function state behind. */
-    glEnable(GL_LIGHTING);
-    glEnable(GL_CULL_FACE);
-    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    test_context->buffer_api.active_texture(GL_TEXTURE1);
-    glEnable(GL_TEXTURE_2D);
-
-    TEST_CHECK_CLEANUP(Renderer_fill_rect(frontend,
-                                          8.0f, 8.0f, 14.0f, 12.0f,
-                                          green) == RENDERER_STATUS_OK);
-
-    /* Preparing another direct draw is also the semantic/direct order barrier. */
-    glEnable(0);
-    TEST_CHECK_CLEANUP(Sdl_renderer_prepare_legacy(
-                           sdl_renderer, SDL_RENDERER_LEGACY_TOP_LEFT)
-                       == RENDERER_STATUS_BACKEND_ERROR);
-    TEST_CHECK_CLEANUP(Sdl_renderer_prepare_legacy(
                            sdl_renderer, SDL_RENDERER_LEGACY_TOP_LEFT)
                        == RENDERER_STATUS_OK);
-    draw_legacy_quad(16.0f, 14.0f, 28.0f, 22.0f, 0, 0, 255);
+    draw_legacy_quad(2.0f, 2.0f, 22.0f, 18.0f, 255, 0, 0);
+
+    TEST_CHECK_CLEANUP(Renderer_set_blend(frontend, RENDERER_BLEND_ALPHA)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_draw_sprite(
+                           frontend, green_texture,
+                           8.0f, 6.0f, 26.0f, 20.0f,
+                           0.0f, 0.0f, 1.0f, 1.0f,
+                           (RendererColor){255, 255, 255, 255})
+                       == RENDERER_STATUS_OK);
+
+    /* The bridge is an ordering barrier, but it borrows every direct-GL
+     * state value rather than imposing the semantic backend's state. */
+    TEST_CHECK_CLEANUP(establish_legacy_draw_state(
+                           test_context, &interop_api, borrowed_textures,
+                           borrowed_program) == 0);
+    TEST_CHECK_CLEANUP(capture_legacy_draw_state(
+                           test_context, &state_before_flush) == 0);
+    TEST_CHECK_CLEANUP(Sdl_renderer_flush_preserving_legacy(sdl_renderer)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(capture_legacy_draw_state(
+                           test_context, &state_after_flush) == 0);
+    TEST_CHECK_CLEANUP(check_legacy_draw_state_preserved(
+                           &state_before_flush, &state_after_flush) == 0);
+
+    /* Normalize with direct GL only. If the bridge did not submit the queued
+     * green sprite, end_frame would draw it over this blue quad. */
+    TEST_CHECK_CLEANUP(establish_top_left_direct_state(
+                           test_context, &interop_api) == 0);
+    draw_legacy_quad(14.0f, 10.0f, 30.0f, 22.0f, 0, 0, 255);
 
     /* End failure leaves the frame active and retryable without replaying
      * the already flushed semantic command. */
@@ -919,17 +1633,35 @@ static int check_sdl_renderer_mixed_legacy_scene(TestContext *test_context)
                  GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     TEST_CHECK_CLEANUP(glGetError() == GL_NO_ERROR);
 
-    TEST_CHECK_CLEANUP(check_rgba(pixels, 30, 2, 8, 16, 24, 255) == 0);
-    TEST_CHECK_CLEANUP(check_rgba(pixels, 4, 18, 255, 0, 0, 255) == 0);
-    TEST_CHECK_CLEANUP(check_rgba(pixels, 18, 10, 0, 255, 0, 255) == 0);
-    /* The semantic draw was submitted after the bottom-left direct draw. */
-    TEST_CHECK_CLEANUP(check_rgba(pixels, 10, 16, 0, 255, 0, 255) == 0);
-    TEST_CHECK_CLEANUP(check_rgba(pixels, 26, 16, 0, 0, 255, 255) == 0);
-    /* prepare_legacy flushed the semantic draw before this top-left quad. */
-    TEST_CHECK_CLEANUP(check_rgba(pixels, 18, 16, 0, 0, 255, 255) == 0);
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 31, 2, 8, 16, 24, 255) == 0);
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 4, 4, 255, 0, 0, 255) == 0);
+    /* The semantic sprite was submitted after the first direct quad. */
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 10, 8, 0, 255, 0, 255) == 0);
+    /* The bridge submitted semantic work before the second direct quad. */
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 18, 14, 0, 0, 255, 255) == 0);
     result = 0;
 
 cleanup:
+    if (SDL_GL_GetCurrentContext() == test_context->context
+        || SDL_GL_MakeCurrent(test_context->window,
+                              test_context->context) == 0) {
+        if (interop_api.use_program != NULL)
+            interop_api.use_program(0);
+        if (test_context->buffer_api.active_texture != NULL) {
+            test_context->buffer_api.active_texture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            test_context->buffer_api.active_texture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            test_context->buffer_api.active_texture(GL_TEXTURE0);
+        }
+        if (borrowed_textures[0] != 0 || borrowed_textures[1] != 0)
+            glDeleteTextures(2, borrowed_textures);
+        if (borrowed_program != 0
+            && interop_api.delete_program != NULL) {
+            interop_api.delete_program(borrowed_program);
+        }
+        discard_gl_errors();
+    }
     if (sdl_renderer != NULL) {
         Sdl_renderer_destroy(sdl_renderer);
         if (SDL_GL_GetCurrentContext() != test_context->context
@@ -1099,6 +1831,7 @@ int main(void)
     GLubyte core_sampling_pixels[
         FRAME_WIDTH * FRAME_HEIGHT * PIXEL_COMPONENTS];
     int sdl_initialized = 0;
+    int unrestorable_program_failures;
     int result = 1;
 
     memset(&legacy_context, 0, sizeof(legacy_context));
@@ -1127,6 +1860,14 @@ int main(void)
     TEST_CHECK_CLEANUP(check_texture_sampling_pixels(
                            legacy_sampling_pixels) == 0);
     if (check_sdl_renderer_mixed_legacy_scene(&legacy_context) != 0)
+        goto cleanup;
+    unrestorable_program_failures =
+        check_sdl_renderer_rejects_unrestorable_program(
+            &legacy_context, LEGACY_PROGRAM_DELETE_PENDING);
+    unrestorable_program_failures +=
+        check_sdl_renderer_rejects_unrestorable_program(
+            &legacy_context, LEGACY_PROGRAM_RELINK_FAILED);
+    if (unrestorable_program_failures != 0)
         goto cleanup;
     destroy_context(&legacy_context);
 

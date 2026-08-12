@@ -87,6 +87,21 @@ RendererStatus Sdl_renderer_prepare_legacy(
     SdlRenderer *renderer, SdlRendererLegacyOrigin origin);
 
 /**
+ * Flush semantic commands without changing compatibility OpenGL draw state.
+ *
+ * @param renderer Renderer facade with an active frame.
+ * @return Operation status. On failure, compatibility state is restored and
+ *         pending renderer commands retain their normal retry semantics.
+ *
+ * @remarks This transitional ordering barrier is only available with the
+ * compatibility renderer. It preserves stackable server state, every
+ * fixed-function matrix stack, the active texture unit, and the current
+ * shader program so existing direct OpenGL drawing can continue unchanged.
+ */
+RendererStatus Sdl_renderer_flush_preserving_legacy(
+    SdlRenderer *renderer);
+
+/**
  * Flush pending semantic commands and finish the active frame.
  *
  * @param renderer Renderer facade.

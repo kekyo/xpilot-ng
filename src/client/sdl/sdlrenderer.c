@@ -14,6 +14,7 @@ struct SdlRenderer {
     SDL_Window *window;
     Renderer *frontend;
     PFNGLACTIVETEXTUREPROC active_texture;
+    PFNGLGETPROGRAMIVPROC get_program_iv;
     PFNGLUSEPROGRAMPROC use_program;
     int logical_width;
     int logical_height;
@@ -85,6 +86,9 @@ RendererStatus Sdl_renderer_create(SDL_Window *window,
     }
     Sdl_renderer_copy_proc(&created->use_program,
                            sizeof(created->use_program), "glUseProgram");
+    Sdl_renderer_copy_proc(&created->get_program_iv,
+                           sizeof(created->get_program_iv),
+                           "glGetProgramiv");
     if (created->active_texture == NULL) {
         Renderer_destroy(created->frontend);
         free(created);
@@ -220,6 +224,114 @@ RendererStatus Sdl_renderer_prepare_legacy(
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     return Sdl_renderer_gl_result();
+}
+
+RendererStatus Sdl_renderer_flush_preserving_legacy(
+    SdlRenderer *renderer)
+{
+    RendererStatus flush_status = RENDERER_STATUS_BACKEND_ERROR;
+    RendererStatus restore_status;
+    GLint texture_unit_count = 0;
+    GLint current_program = 0;
+    GLint current_program_delete_pending = GL_FALSE;
+    GLint current_program_linked = GL_TRUE;
+    GLint current_active_texture = GL_TEXTURE0;
+    GLint current_matrix_mode = GL_MODELVIEW;
+    GLint texture_unit;
+    GLint texture_matrices_pushed = 0;
+    int projection_pushed = 0;
+    int modelview_pushed = 0;
+    int attribute_pushed = 0;
+
+    if (renderer == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!renderer->frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+
+    /* Renderer backends intentionally drain GL errors at command boundaries.
+     * Reject an error owned by preceding direct drawing before saving state. */
+    if (Sdl_renderer_gl_result() != RENDERER_STATUS_OK)
+        return RENDERER_STATUS_BACKEND_ERROR;
+    glGetIntegerv(GL_MAX_TEXTURE_UNITS, &texture_unit_count);
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &current_active_texture);
+    glGetIntegerv(GL_MATRIX_MODE, &current_matrix_mode);
+    if (renderer->use_program != NULL)
+        glGetIntegerv(GL_CURRENT_PROGRAM, &current_program);
+    if (texture_unit_count <= 0
+        || Sdl_renderer_gl_result() != RENDERER_STATUS_OK) {
+        return RENDERER_STATUS_BACKEND_ERROR;
+    }
+
+    /* A delete-pending program ceases to exist when it is unbound, and a
+     * failed relink leaves its old executable usable only while it remains
+     * current.  The semantic backend temporarily binds program zero, so
+     * reject either state before changing GL state or delivering commands. */
+    if (current_program != 0) {
+        if (renderer->get_program_iv == NULL)
+            return RENDERER_STATUS_BACKEND_ERROR;
+        renderer->get_program_iv((GLuint)current_program, GL_DELETE_STATUS,
+                                 &current_program_delete_pending);
+        renderer->get_program_iv((GLuint)current_program, GL_LINK_STATUS,
+                                 &current_program_linked);
+        if (Sdl_renderer_gl_result() != RENDERER_STATUS_OK
+            || current_program_delete_pending == GL_TRUE
+            || current_program_linked != GL_TRUE) {
+            return RENDERER_STATUS_BACKEND_ERROR;
+        }
+    }
+
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    if (Sdl_renderer_gl_result() != RENDERER_STATUS_OK)
+        return RENDERER_STATUS_BACKEND_ERROR;
+    attribute_pushed = 1;
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    if (Sdl_renderer_gl_result() != RENDERER_STATUS_OK)
+        goto restore_state;
+    projection_pushed = 1;
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    if (Sdl_renderer_gl_result() != RENDERER_STATUS_OK)
+        goto restore_state;
+    modelview_pushed = 1;
+    for (texture_unit = 0; texture_unit < texture_unit_count;
+         texture_unit++) {
+        renderer->active_texture((GLenum)(GL_TEXTURE0 + texture_unit));
+        glMatrixMode(GL_TEXTURE);
+        glPushMatrix();
+        if (Sdl_renderer_gl_result() != RENDERER_STATUS_OK)
+            goto restore_state;
+        texture_matrices_pushed++;
+    }
+
+    flush_status = Renderer_flush(renderer->frontend);
+
+restore_state:
+    for (texture_unit = texture_matrices_pushed - 1; texture_unit >= 0;
+         texture_unit--) {
+        renderer->active_texture((GLenum)(GL_TEXTURE0 + texture_unit));
+        glMatrixMode(GL_TEXTURE);
+        glPopMatrix();
+    }
+    if (modelview_pushed) {
+        glMatrixMode(GL_MODELVIEW);
+        glPopMatrix();
+    }
+    if (projection_pushed) {
+        glMatrixMode(GL_PROJECTION);
+        glPopMatrix();
+    }
+    if (attribute_pushed)
+        glPopAttrib();
+    if (renderer->use_program != NULL)
+        renderer->use_program((GLuint)current_program);
+    renderer->active_texture((GLenum)current_active_texture);
+    glMatrixMode((GLenum)current_matrix_mode);
+    restore_status = Sdl_renderer_gl_result();
+    if (restore_status != RENDERER_STATUS_OK)
+        return restore_status;
+    return flush_status;
 }
 
 RendererStatus Sdl_renderer_end_frame(SdlRenderer *renderer)
