@@ -101,7 +101,7 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) test-text-geometry$(EXEEXT) \
-	test-text-atlas$(EXEEXT)
+	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT)
 TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdl-console$(EXEEXT) test-sdl-surface$(EXEEXT) \
 	test-surface-rgba8$(EXEEXT) test-sdl-window$(EXEEXT) \
@@ -114,8 +114,8 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) test-text-geometry$(EXEEXT) \
-	test-text-atlas$(EXEEXT) run-renderer-gl-backends.sh \
-	run-e2e.sh
+	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
+	run-renderer-gl-backends.sh run-e2e.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -251,6 +251,13 @@ am_test_text_geometry_OBJECTS = test_text_geometry.$(OBJEXT) \
 	text_geometry.$(OBJEXT)
 test_text_geometry_OBJECTS = $(am_test_text_geometry_OBJECTS)
 test_text_geometry_LDADD = $(LDADD)
+am_test_text_ttf_atlas_OBJECTS =  \
+	test_text_ttf_atlas-test_text_ttf_atlas.$(OBJEXT) \
+	test_text_ttf_atlas-text_ttf_atlas.$(OBJEXT) \
+	test_text_ttf_atlas-text_atlas.$(OBJEXT) \
+	test_text_ttf_atlas-text_geometry.$(OBJEXT)
+test_text_ttf_atlas_OBJECTS = $(am_test_text_ttf_atlas_OBJECTS)
+test_text_ttf_atlas_DEPENDENCIES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -310,8 +317,12 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_sdl_window.Po \
 	./$(DEPDIR)/test_surface_rgba8.Po \
 	./$(DEPDIR)/test_text_atlas.Po \
-	./$(DEPDIR)/test_text_geometry.Po ./$(DEPDIR)/text_atlas.Po \
-	./$(DEPDIR)/text_geometry.Po
+	./$(DEPDIR)/test_text_geometry.Po \
+	./$(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Po \
+	./$(DEPDIR)/test_text_ttf_atlas-text_atlas.Po \
+	./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po \
+	./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po \
+	./$(DEPDIR)/text_atlas.Po ./$(DEPDIR)/text_geometry.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -343,7 +354,8 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_surface_rgba8_SOURCES) \
-	$(test_text_atlas_SOURCES) $(test_text_geometry_SOURCES)
+	$(test_text_atlas_SOURCES) $(test_text_geometry_SOURCES) \
+	$(test_text_ttf_atlas_SOURCES)
 DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
@@ -358,7 +370,8 @@ DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_surface_rgba8_SOURCES) \
-	$(test_text_atlas_SOURCES) $(test_text_geometry_SOURCES)
+	$(test_text_atlas_SOURCES) $(test_text_geometry_SOURCES) \
+	$(test_text_ttf_atlas_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -855,6 +868,18 @@ test_text_atlas_SOURCES = test_text_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.h
 
 test_text_atlas_LDADD = @SDL2_LIBS@
+test_text_ttf_atlas_SOURCES = test_text_ttf_atlas.c \
+	$(top_srcdir)/src/client/sdl/text_ttf_atlas.c \
+	$(top_srcdir)/src/client/sdl/text_ttf_atlas.h \
+	$(top_srcdir)/src/client/sdl/text_atlas.c \
+	$(top_srcdir)/src/client/sdl/text_atlas.h \
+	$(top_srcdir)/src/client/sdl/text_geometry.c \
+	$(top_srcdir)/src/client/sdl/text_geometry.h
+
+test_text_ttf_atlas_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_TEST_FONT_PATH=\"$(top_srcdir)/lib/fonts/FreeSansBoldOblique.ttf\"
+
+test_text_ttf_atlas_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
 AM_TESTS_ENVIRONMENT = \
@@ -998,6 +1023,10 @@ test-text-geometry$(EXEEXT): $(test_text_geometry_OBJECTS) $(test_text_geometry_
 	@rm -f test-text-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_text_geometry_OBJECTS) $(test_text_geometry_LDADD) $(LIBS)
 
+test-text-ttf-atlas$(EXEEXT): $(test_text_ttf_atlas_OBJECTS) $(test_text_ttf_atlas_DEPENDENCIES) $(EXTRA_test_text_ttf_atlas_DEPENDENCIES)
+	@rm -f test-text-ttf-atlas$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_text_ttf_atlas_OBJECTS) $(test_text_ttf_atlas_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -1058,6 +1087,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_geometry.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_ttf_atlas-text_atlas.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_geometry.Po@am__quote@ # am--include-marker
 
@@ -1641,6 +1674,62 @@ text_geometry.obj: $(top_srcdir)/src/client/sdl/text_geometry.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
 
+test_text_ttf_atlas-test_text_ttf_atlas.o: test_text_ttf_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_text_ttf_atlas-test_text_ttf_atlas.o -MD -MP -MF $(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Tpo -c -o test_text_ttf_atlas-test_text_ttf_atlas.o `test -f 'test_text_ttf_atlas.c' || echo '$(srcdir)/'`test_text_ttf_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Tpo $(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_text_ttf_atlas.c' object='test_text_ttf_atlas-test_text_ttf_atlas.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_text_ttf_atlas-test_text_ttf_atlas.o `test -f 'test_text_ttf_atlas.c' || echo '$(srcdir)/'`test_text_ttf_atlas.c
+
+test_text_ttf_atlas-test_text_ttf_atlas.obj: test_text_ttf_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_text_ttf_atlas-test_text_ttf_atlas.obj -MD -MP -MF $(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Tpo -c -o test_text_ttf_atlas-test_text_ttf_atlas.obj `if test -f 'test_text_ttf_atlas.c'; then $(CYGPATH_W) 'test_text_ttf_atlas.c'; else $(CYGPATH_W) '$(srcdir)/test_text_ttf_atlas.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Tpo $(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_text_ttf_atlas.c' object='test_text_ttf_atlas-test_text_ttf_atlas.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_text_ttf_atlas-test_text_ttf_atlas.obj `if test -f 'test_text_ttf_atlas.c'; then $(CYGPATH_W) 'test_text_ttf_atlas.c'; else $(CYGPATH_W) '$(srcdir)/test_text_ttf_atlas.c'; fi`
+
+test_text_ttf_atlas-text_ttf_atlas.o: $(top_srcdir)/src/client/sdl/text_ttf_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_text_ttf_atlas-text_ttf_atlas.o -MD -MP -MF $(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Tpo -c -o test_text_ttf_atlas-text_ttf_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_ttf_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Tpo $(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' object='test_text_ttf_atlas-text_ttf_atlas.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_text_ttf_atlas-text_ttf_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_ttf_atlas.c
+
+test_text_ttf_atlas-text_ttf_atlas.obj: $(top_srcdir)/src/client/sdl/text_ttf_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_text_ttf_atlas-text_ttf_atlas.obj -MD -MP -MF $(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Tpo -c -o test_text_ttf_atlas-text_ttf_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Tpo $(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' object='test_text_ttf_atlas-text_ttf_atlas.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_text_ttf_atlas-text_ttf_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; fi`
+
+test_text_ttf_atlas-text_atlas.o: $(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_text_ttf_atlas-text_atlas.o -MD -MP -MF $(DEPDIR)/test_text_ttf_atlas-text_atlas.Tpo -c -o test_text_ttf_atlas-text_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_text_ttf_atlas-text_atlas.Tpo $(DEPDIR)/test_text_ttf_atlas-text_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_atlas.c' object='test_text_ttf_atlas-text_atlas.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_text_ttf_atlas-text_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_atlas.c
+
+test_text_ttf_atlas-text_atlas.obj: $(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_text_ttf_atlas-text_atlas.obj -MD -MP -MF $(DEPDIR)/test_text_ttf_atlas-text_atlas.Tpo -c -o test_text_ttf_atlas-text_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_atlas.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_text_ttf_atlas-text_atlas.Tpo $(DEPDIR)/test_text_ttf_atlas-text_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_atlas.c' object='test_text_ttf_atlas-text_atlas.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_text_ttf_atlas-text_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_atlas.c'; fi`
+
+test_text_ttf_atlas-text_geometry.o: $(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_text_ttf_atlas-text_geometry.o -MD -MP -MF $(DEPDIR)/test_text_ttf_atlas-text_geometry.Tpo -c -o test_text_ttf_atlas-text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_text_ttf_atlas-text_geometry.Tpo $(DEPDIR)/test_text_ttf_atlas-text_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='test_text_ttf_atlas-text_geometry.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_text_ttf_atlas-text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
+
+test_text_ttf_atlas-text_geometry.obj: $(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_text_ttf_atlas-text_geometry.obj -MD -MP -MF $(DEPDIR)/test_text_ttf_atlas-text_geometry.Tpo -c -o test_text_ttf_atlas-text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_text_ttf_atlas-text_geometry.Tpo $(DEPDIR)/test_text_ttf_atlas-text_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='test_text_ttf_atlas-text_geometry.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_text_ttf_atlas-text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
+
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
 tags: tags-am
@@ -1981,6 +2070,13 @@ test-text-atlas.log: test-text-atlas$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-text-ttf-atlas.log: test-text-ttf-atlas$(EXEEXT)
+	@p='test-text-ttf-atlas$(EXEEXT)'; \
+	b='test-text-ttf-atlas'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 .sh.log:
 	@p='$<'; \
 	$(am__set_b); \
@@ -2126,6 +2222,10 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_geometry.Po
+	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Po
+	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_atlas.Po
+	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po
+	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po
 	-rm -f ./$(DEPDIR)/text_atlas.Po
 	-rm -f ./$(DEPDIR)/text_geometry.Po
 	-rm -f Makefile
@@ -2227,6 +2327,10 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_geometry.Po
+	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-test_text_ttf_atlas.Po
+	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_atlas.Po
+	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po
+	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po
 	-rm -f ./$(DEPDIR)/text_atlas.Po
 	-rm -f ./$(DEPDIR)/text_geometry.Po
 	-rm -f Makefile

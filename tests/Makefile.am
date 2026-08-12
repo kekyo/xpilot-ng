@@ -12,7 +12,8 @@ check_PROGRAMS = test-meta-environment \
 	test-renderer-gl-backends test-paint-transform test-image-geometry \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
 	test-sdl-meta-frame test-sdl-renderer-scissor \
-	test-glwidgets-scissor test-text-geometry test-text-atlas
+	test-glwidgets-scissor test-text-geometry test-text-atlas \
+	test-text-ttf-atlas
 TESTS = test-meta-environment \
 	test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
@@ -21,7 +22,7 @@ TESTS = test-meta-environment \
 	test-image-geometry test-gfx2d-picture \
 	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
 	test-sdl-renderer-scissor test-glwidgets-scissor test-text-geometry \
-	test-text-atlas \
+	test-text-atlas test-text-ttf-atlas \
 	run-renderer-gl-backends.sh run-e2e.sh
 
 test_meta_environment_SOURCES = test_meta_environment.c \
@@ -147,6 +148,17 @@ test_text_atlas_SOURCES = test_text_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.h
 test_text_atlas_LDADD = @SDL2_LIBS@
+
+test_text_ttf_atlas_SOURCES = test_text_ttf_atlas.c \
+	$(top_srcdir)/src/client/sdl/text_ttf_atlas.c \
+	$(top_srcdir)/src/client/sdl/text_ttf_atlas.h \
+	$(top_srcdir)/src/client/sdl/text_atlas.c \
+	$(top_srcdir)/src/client/sdl/text_atlas.h \
+	$(top_srcdir)/src/client/sdl/text_geometry.c \
+	$(top_srcdir)/src/client/sdl/text_geometry.h
+test_text_ttf_atlas_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_TEST_FONT_PATH=\"$(top_srcdir)/lib/fonts/FreeSansBoldOblique.ttf\"
+test_text_ttf_atlas_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@
 
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
