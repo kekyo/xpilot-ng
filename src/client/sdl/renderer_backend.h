@@ -1,7 +1,7 @@
-/* Internal backend seam shared by renderer tests and backend implementations. */
+/* Internal seam shared by the renderer frontend and concrete backends. */
 
-#ifndef RENDERER_TEST_SUPPORT_H
-#define RENDERER_TEST_SUPPORT_H
+#ifndef RENDERER_BACKEND_H
+#define RENDERER_BACKEND_H
 
 #include "renderer.h"
 
@@ -65,14 +65,15 @@ typedef struct RendererBackendInterface {
 /**
  * Construct a renderer around a backend interface.
  *
- * This internal factory exists so command semantics can be tested independently
- * of SDL and OpenGL. Concrete backend factories will wrap it.
+ * This internal factory keeps the semantic frontend independent of SDL and
+ * OpenGL. Concrete backend factories wrap it, while tests supply a fake
+ * backend through the same boundary.
  *
  * @param interface Complete backend interface retained by the renderer.
  * @param context Opaque backend context passed to every callback.
  * @return Renderer instance, or NULL when arguments or allocation fail.
  */
-Renderer *Renderer_test_create(const RendererBackendInterface *interface,
-                               void *context);
+Renderer *Renderer_backend_create(const RendererBackendInterface *interface,
+                                  void *context);
 
-#endif /* RENDERER_TEST_SUPPORT_H */
+#endif /* RENDERER_BACKEND_H */

@@ -1,7 +1,7 @@
 /* OpenGL 3.3 core implementation of the renderer backend interface. */
 
 #include "renderer_gl_core.h"
-#include "renderer_test_support.h"
+#include "renderer_backend.h"
 
 #include <SDL_opengl.h>
 #include <SDL_opengl_glext.h>
@@ -984,7 +984,7 @@ RendererStatus Renderer_gl_core_create(RendererGLProcLoader loader,
         return status;
     }
 
-    created = Renderer_test_create(&core_backend_interface, context);
+    created = Renderer_backend_create(&core_backend_interface, context);
     if (created == NULL) {
         Core_release_context_objects(context);
         free(context);

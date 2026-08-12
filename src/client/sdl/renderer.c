@@ -7,7 +7,7 @@
  */
 
 #include "renderer.h"
-#include "renderer_test_support.h"
+#include "renderer_backend.h"
 
 #include <limits.h>
 #include <math.h>
@@ -252,8 +252,8 @@ static int Mesh_is_owned(const Renderer *renderer, const RendererMesh *mesh)
     return 0;
 }
 
-Renderer *Renderer_test_create(const RendererBackendInterface *interface,
-                               void *context)
+Renderer *Renderer_backend_create(const RendererBackendInterface *interface,
+                                  void *context)
 {
     Renderer *renderer;
 

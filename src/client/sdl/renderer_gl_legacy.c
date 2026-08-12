@@ -1,7 +1,7 @@
 /* Fixed-function OpenGL compatibility renderer backend. */
 
 #include "renderer_gl_legacy.h"
-#include "renderer_test_support.h"
+#include "renderer_backend.h"
 
 #include <SDL_opengl.h>
 #include <SDL_opengl_glext.h>
@@ -856,7 +856,7 @@ RendererStatus Renderer_gl_legacy_create(RendererGLProcLoader loader,
         free(context);
         return RENDERER_STATUS_BACKEND_ERROR;
     }
-    created = Renderer_test_create(&legacy_interface, context);
+    created = Renderer_backend_create(&legacy_interface, context);
     if (created == NULL) {
         free(context);
         return RENDERER_STATUS_OUT_OF_MEMORY;

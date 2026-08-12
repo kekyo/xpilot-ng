@@ -1,7 +1,7 @@
 #include "test_helpers.h"
 
 #include "renderer.h"
-#include "renderer_test_support.h"
+#include "renderer_backend.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -222,7 +222,7 @@ static const RendererBackendInterface fake_backend_interface = {
 static Renderer *create_renderer(fake_backend_t *backend)
 {
     memset(backend, 0, sizeof(*backend));
-    return Renderer_test_create(&fake_backend_interface, backend);
+    return Renderer_backend_create(&fake_backend_interface, backend);
 }
 
 static int check_color_conversion(void)
