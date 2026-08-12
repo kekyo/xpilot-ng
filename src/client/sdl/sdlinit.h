@@ -21,7 +21,34 @@
 #ifndef SDLINIT_H
 #define SDLINIT_H
 
+/** Initialize SDL2, the application window, and its OpenGL context. */
 int Init_window(void);
-int Resize_Window( int width, int height );
+
+/**
+ * Request a new application window size.
+ *
+ * @param width Requested width in screen coordinates.
+ * @param height Requested height in screen coordinates.
+ * @return 0 on success, or -1 when SDL cannot apply the size.
+ */
+int Resize_Window(int width, int height);
+
+/**
+ * Apply a size reported by SDL without requesting another resize.
+ *
+ * @param width Current SDL window width.
+ * @param height Current SDL window height.
+ */
+void Window_size_changed(int width, int height);
+
+/** Swap the OpenGL buffers of the application window. */
+void Swap_buffers(void);
+
+/**
+ * Grab or release the application window for pointer control.
+ *
+ * @param on true to grab the window, false to release it.
+ */
+void Set_window_grab(bool on);
 
 #endif

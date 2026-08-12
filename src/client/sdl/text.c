@@ -55,6 +55,7 @@
 
 #include "xpclient_sdl.h"
 
+#include "sdlcompat.h"
 #include "text.h"
 
 #define BUFSIZE 1024
@@ -82,8 +83,6 @@ GLuint SDL_GL_LoadTexture(SDL_Surface *surface, texcoord_t *texcoord)
     int w, h;
     SDL_Surface *image;
     SDL_Rect area;
-    Uint32 saved_flags;
-    Uint8  saved_alpha;
 
     /* Use the surface width and height expanded to powers of 2 */
     w = next_p2(surface->w);
@@ -94,7 +93,7 @@ GLuint SDL_GL_LoadTexture(SDL_Surface *surface, texcoord_t *texcoord)
     texcoord->MaxY = (GLfloat)surface->h / h;  /* Max Y */
 
     image = SDL_CreateRGBSurface(
-    		    SDL_SWSURFACE,
+		    0,
     		    w, h,
     		    32,
 		    RMASK,
@@ -106,23 +105,15 @@ GLuint SDL_GL_LoadTexture(SDL_Surface *surface, texcoord_t *texcoord)
     	    return 0;
     }
 
-    /* Save the alpha blending attributes */
-    saved_flags = surface->flags&(SDL_SRCALPHA|SDL_RLEACCELOK);
-    saved_alpha = surface->format->alpha;
-    if ( (saved_flags & SDL_SRCALPHA) == SDL_SRCALPHA ) {
-    	    SDL_SetAlpha(surface, 0, 0);
-    }
-
     /* Copy the surface into the GL texture image */
     area.x = 0;
     area.y = 0;
     area.w = surface->w;
     area.h = surface->h;
-    SDL_BlitSurface(surface, &area, image, &area);
-
-    /* Restore the alpha blending attributes */
-    if ( (saved_flags & SDL_SRCALPHA) == SDL_SRCALPHA ) {
-    	    SDL_SetAlpha(surface, saved_flags, saved_alpha);
+    if (Sdl_blit_surface_unblended(surface, &area, image, &area) < 0) {
+	fprintf(stderr, "Couldn't copy font surface: %s\n", SDL_GetError());
+	SDL_FreeSurface(image);
+	return 0;
     }
 
     /* Create an OpenGL texture for the image */
@@ -146,13 +137,16 @@ GLuint SDL_GL_LoadTexture(SDL_Surface *surface, texcoord_t *texcoord)
 int FTinit(font_data *font, const char * fontname, int ptsize)
 {
     int i;
-    SDL_Color white = { 0xFF, 0xFF, 0xFF, 0x00 };
-    SDL_Color black = { 0x00, 0x00, 0x00, 0 };
+    SDL_Color white = { 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE };
     SDL_Color *forecol;
-    SDL_Color *backcol;
     GLenum gl_error;
     texcoord_t texcoords;
     int minx = 0,miny = 0,maxx = 0,maxy = 0;
+
+    if (font == NULL || fontname == NULL || ptsize <= 0)
+	return 2;
+
+    memset(font, 0, sizeof(*font));
 
     /* We might support changing theese later */
     /* Look for special rendering types */
@@ -160,7 +154,6 @@ int FTinit(font_data *font, const char * fontname, int ptsize)
     rendertype = RENDER_LATIN1;
     /* Default is black and white */
     forecol = &white;
-    backcol = &black;
     
     /* Initialize the TTF library */
     /*if ( TTF_Init() < 0 ) {
@@ -174,6 +167,12 @@ int FTinit(font_data *font, const char * fontname, int ptsize)
     }
     TTF_SetFontStyle(font->ttffont, renderstyle);
     font->list_base=glGenLists(next_p2(NUMCHARS));
+    if (font->list_base == 0) {
+	fprintf(stderr, "Couldn't create OpenGL font display lists\n");
+	TTF_CloseFont(font->ttffont);
+	font->ttffont = NULL;
+	return 2;
+    }
     /* Get the recommended spacing between lines of text for this font */
     font->linespacing = TTF_FontLineSkip(font->ttffont);
     font->h = ptsize;
@@ -182,13 +181,17 @@ int FTinit(font_data *font, const char * fontname, int ptsize)
 	SDL_Surface *glyph = NULL;
 	GLuint height = 0; /* kps - added default value */
 
+	memset(&texcoords, 0, sizeof(texcoords));
+	minx = miny = maxx = maxy = 0;
+
 	forecol = &white;
 	
     	glyph = TTF_RenderGlyph_Blended( font->ttffont, i, *forecol );
     	if(glyph) {
 	    glGetError();
     	    font->textures[i] = SDL_GL_LoadTexture(glyph, &texcoords);
-    	    if ( (gl_error = glGetError()) != GL_NO_ERROR )
+	    gl_error = glGetError();
+	    if (font->textures[i] == 0 || gl_error != GL_NO_ERROR)
 	    	printf("Warning: Couldn't create texture: 0x%x\n", gl_error);
 	    
     	    font->W[i] = glyph->w;
@@ -234,10 +237,19 @@ int fontinit(font_data *ft_font, const char * fname, unsigned int size)
 
 void fontclean(font_data *ft_font)
 {
-    if (ft_font == NULL) return;
-    glDeleteLists(ft_font->list_base,next_p2(NUMCHARS));
-    if (ft_font->textures != NULL) {
-    	glDeleteTextures(NUMCHARS,ft_font->textures);
+    if (ft_font == NULL)
+	return;
+
+    if (ft_font->list_base != 0) {
+	glDeleteLists(ft_font->list_base, next_p2(NUMCHARS));
+	ft_font->list_base = 0;
+    }
+    glDeleteTextures(NUMCHARS, ft_font->textures);
+    memset(ft_font->textures, 0, sizeof(ft_font->textures));
+
+    if (ft_font->ttffont != NULL) {
+	TTF_CloseFont(ft_font->ttffont);
+	ft_font->ttffont = NULL;
     }
 }
 
@@ -347,16 +359,18 @@ fontbounds printsize(font_data *ft_font, const char *fmt, ...)
 
 bool render_text(font_data *ft_font, const char *text, string_tex_t *string_tex)
 {
-    SDL_Color white = { 0xFF, 0xFF, 0xFF, 0x00 };
+    SDL_Color white = { 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE };
     SDL_Color *forecol;
     SDL_Surface *string_glyph = NULL;
     SDL_Surface *glyph = NULL;
     SDL_Rect src, dest;
+    string_tex_t rendered = { NULL, NULL, 0, 0, 0 };
     GLenum gl_error;
 
     if (!(ft_font)) return false;
     if (!(ft_font->ttffont)) return false;
     if (!(string_tex)) return false;
+    if (!(text)) return false;
 #if 0
     if (!strlen(text)) return false; /* something is printing an empty string each frame */
 #else
@@ -367,20 +381,20 @@ bool render_text(font_data *ft_font, const char *text, string_tex_t *string_tex)
 
     forecol = &white;
 	
-    string_tex->font_height = ft_font->h;
-    
     string_glyph = TTF_RenderText_Blended( ft_font->ttffont, text, *forecol );
-    
-    string_tex->tex_list = Arraylist_alloc(sizeof(tex_t));
-	
-    string_tex->width = 0;
-    string_tex->height = string_glyph->h;
-    
+
     if (string_glyph) {
-    	int i, num = 1 + string_glyph->w / 254;
- 	string_tex->text = (char *)malloc(sizeof(char)*(strlen(text)+1));
-	sprintf(string_tex->text,"%s",text);
-   	for( i=0 ; i<num ; ++i ) {
+	int i, num = (string_glyph->w + 253) / 254;
+
+	rendered.font_height = ft_font->h;
+	rendered.height = string_glyph->h;
+	rendered.tex_list = Arraylist_alloc(sizeof(tex_t));
+	if (rendered.tex_list == NULL)
+	    goto fail;
+	rendered.text = strdup(text);
+	if (rendered.text == NULL)
+	    goto fail;
+	for( i=0 ; i<num ; ++i ) {
 	    tex_t tex;
 	    
 	    tex.texture = 0;
@@ -399,28 +413,47 @@ bool render_text(font_data *ft_font, const char *text, string_tex_t *string_tex)
 	    	dest.w = src.w = 254;
     	    src.h = dest.h = string_glyph->h;
 	    
-    	    glyph = SDL_CreateRGBSurface(0,dest.w,dest.h,32,0,0,0,0);
-    	    SDL_SetColorKey(glyph, SDL_SRCCOLORKEY, 0x00000000);
-    	    SDL_BlitSurface(string_glyph,&src,glyph,&dest);
+	    glyph = SDL_CreateRGBSurface(0,dest.w,dest.h,32,0,0,0,0);
+	    if (glyph == NULL ||
+		SDL_SetColorKey(glyph, SDL_TRUE, 0x00000000) < 0 ||
+		SDL_BlitSurface(string_glyph, &src, glyph, &dest) < 0)
+		goto fail;
     
   	    glGetError();
 	    tex.texture = SDL_GL_LoadTexture(glyph,&(tex.texcoords));
-    	    if ( (gl_error = glGetError()) != GL_NO_ERROR )
-    	    	printf("Warning: Couldn't create texture: 0x%x\n", gl_error);
+	    gl_error = glGetError();
+	    if (tex.texture == 0 || gl_error != GL_NO_ERROR) {
+		if (tex.texture != 0)
+		    glDeleteTextures(1, &tex.texture);
+		goto fail;
+	    }
 
-    	    tex.width = dest.w;
-	    string_tex->width += dest.w;
+	    tex.width = dest.w;
+	    rendered.width += dest.w;
 	    
-    	    SDL_FreeSurface(glyph);
-	    
-	    Arraylist_add(string_tex->tex_list,&tex);
+	    SDL_FreeSurface(glyph);
+	    glyph = NULL;
+
+	    if (Arraylist_add(rendered.tex_list, &tex) < 0) {
+		glDeleteTextures(1, &tex.texture);
+		goto fail;
+	    }
 	}
 	SDL_FreeSurface(string_glyph);
+	*string_tex = rendered;
     } else {
-    	printf("TTF_RenderText_Blended failed for [%s]\n",text);
+	error("TTF_RenderText_Blended failed for [%s]: %s", text,
+	      TTF_GetError());
 	return false;
     }
     return true;
+
+fail:
+    if (glyph != NULL)
+	SDL_FreeSurface(glyph);
+    SDL_FreeSurface(string_glyph);
+    free_string_texture(&rendered);
+    return false;
 }
 
 bool draw_text(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *text, bool savetex, string_tex_t *string_tex, bool onHUD)
@@ -435,23 +468,29 @@ bool draw_text_fraq(font_data *ft_font, int color, int XALIGN, int YALIGN, int x
     	    	    , float ystop
 		    , bool savetex, string_tex_t *string_tex, bool onHUD)
 {
-    bool remove_tex = false;    	
+    bool remove_tex = false;
+    bool rendered;
     if (!(ft_font)) return false;
     if (!(ft_font->ttffont)) return false;
         
     if (!string_tex) {
     	remove_tex = true;
-    	string_tex = XMALLOC(string_tex_t, 1);
+	string_tex = XCALLOC(string_tex_t, 1);
+	if (string_tex == NULL)
+	    return false;
     }
-    
-    if (render_text(ft_font,text,string_tex)) {
+
+    rendered = render_text(ft_font, text, string_tex);
+    if (rendered) {
     	disp_text_fraq(string_tex, color, XALIGN, YALIGN, x, y, xstart, xstop, ystart, ystop, onHUD);
     }
     
     if (!savetex || remove_tex)
     	free_string_texture(string_tex);
-    
-    return true;
+    if (remove_tex)
+	XFREE(string_tex);
+
+    return rendered;
 }
 
 void disp_text(string_tex_t *string_tex, int color, int XALIGN, int YALIGN, int x, int y, bool onHUD)

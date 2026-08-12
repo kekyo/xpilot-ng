@@ -1,7 +1,7 @@
 /*
  * XPilotNG/SDL, an SDL/OpenGL XPilot client.
  *
- * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,11 +29,17 @@ typedef struct {
     int x, y, w, h;
 } sdl_window_t;
 
+/** Initialize an off-screen surface and its OpenGL texture. */
 int sdl_window_init(sdl_window_t *win, int x, int y, int w, int h);
+/** Move an off-screen window in screen coordinates. */
 void sdl_window_move(sdl_window_t *win, int x, int y);
+/** Resize an off-screen window while preserving its old surface on error. */
 int sdl_window_resize(sdl_window_t *win, int w, int h);
+/** Upload an off-screen window surface to its OpenGL texture. */
 void sdl_window_refresh(sdl_window_t *win);
+/** Draw an off-screen window with OpenGL. */
 void sdl_window_paint(sdl_window_t *win);
+/** Release an off-screen window surface and texture. */
 void sdl_window_destroy(sdl_window_t *win);
 
 #endif

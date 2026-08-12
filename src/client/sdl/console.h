@@ -1,7 +1,7 @@
 /*
  * XPilotNG/SDL, an SDL/OpenGL XPilot client.
  *
- * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,5 +31,6 @@ int Console_isVisible(void);
 int Console_process(SDL_Event *e);
 void Console_cleanup(void);
 void Console_print(const char *str, ...);
-void Paste_String_to_Console(char *text);
+/** Add printable ASCII clipboard text to the active console command. */
+void Paste_String_to_Console(const char *text);
 #endif

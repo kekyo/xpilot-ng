@@ -3,13 +3,13 @@
  *
  * Copyright (C) 2003-2004 by 
  *
- *      Juha Lindström       <juhal@users.sourceforge.net>
+ *      Juha LindstrÃ¶m       <juhal@users.sourceforge.net>
  *      Erik Andersson       <deity_at_home.se>
  *      Darel Cullen         <darelcullen@users.sourceforge.net>
  *
  * Copyright (C) 1991-2002 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -32,6 +32,8 @@
 #include "xpclient_sdl.h"
 
 #include "SDL_gfxPrimitives.h"
+#include "sdlcompat.h"
+#include "sdlinit.h"
 #include "sdlpaint.h"
 #include "images.h"
 #include "console.h"
@@ -88,7 +90,10 @@ static void Scorelist_move(Sint16 xrel, Sint16 yrel, Uint16 x, Uint16 y, void *d
 
 static void Scorelist_cleanup( GLWidget *widget )
 {
-    TTF_CloseFont(scoreListFont);
+    if (scoreListFont != NULL) {
+	TTF_CloseFont(scoreListFont);
+	scoreListFont = NULL;
+    }
     sdl_window_destroy(&scoreListWin);
 }
 
@@ -161,6 +166,8 @@ GLWidget *Init_ScorelistWidget(void)
     }
     if (sdl_window_init(&scoreListWin, tmp->bounds.x, tmp->bounds.y, tmp->bounds.w, tmp->bounds.h)) {
 	error("failed to init scorelist window");
+	TTF_CloseFont(scoreListFont);
+	scoreListFont = NULL;
 	free(tmp);
 	return NULL;
     }
@@ -326,7 +333,7 @@ void Paint_frame(void)
 	glPopMatrix();
     }
     
-    SDL_GL_SwapBuffers();
+    Swap_buffers();
 
     if (newSecond) {
 	gettimeofday(&tv2, NULL);
@@ -358,7 +365,8 @@ void Paint_score_start(void)
     fg.r = (scoreColorRGBA >> 24) & 255;
 	fg.g = (scoreColorRGBA >> 16) & 255;
 	fg.b = (scoreColorRGBA >> 8) & 255;
-	fg.unused = scoreColorRGBA & 255;
+	/* SDL 1.2_ttf ignored SDL_Color's fourth byte for blended text. */
+	fg.a = SDL_ALPHA_OPAQUE;
     SDL_FillRect(scoreListWin.surface, NULL, 0);
     header = TTF_RenderText_Blended(scoreListFont, headingStr, fg);
     if (header == NULL) {
@@ -366,8 +374,9 @@ void Paint_score_start(void)
 	return;
     }
     scoreEntryRect.x = scoreEntryRect.y = SCORE_BORDER;
-    SDL_SetAlpha(header, 0, 0);
-    SDL_BlitSurface(header, NULL, scoreListWin.surface, &scoreEntryRect);
+    if (Sdl_blit_surface_unblended(header, NULL, scoreListWin.surface,
+				   &scoreEntryRect) < 0)
+	warn("Could not draw scorelist header: %s", SDL_GetError());
     lineRGBA(scoreListWin.surface, SCORE_BORDER,
 	     scoreEntryRect.y + header->h + 2,
 	     scoreListWin.w - SCORE_BORDER,
@@ -378,7 +387,7 @@ void Paint_score_start(void)
 
 void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 {
-    static char		raceStr[8], teamStr[4], lifeStr[8], label[MSG_LEN];
+    static char		raceStr[16], teamStr[4], lifeStr[8], label[MSG_LEN];
     static int		lineSpacing = -1, firstLine;
     char		scoreStr[16];
     SDL_Surface         *line;
@@ -424,14 +433,13 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 		other->nick_name, other->user_name, other->host_name);
     else {
 	if (BIT(Setup->mode, TIMING)) {
-	    raceStr[0] = ' ';
-	    raceStr[1] = ' ';
+	    strlcpy(raceStr, "  ", sizeof(raceStr));
 	    if ((other->mychar == ' ' || other->mychar == 'R')
 		&& other->round + other->check > 0) {
 		if (other->round > 99)
-		    sprintf(raceStr, "%3d", other->round);
+		    snprintf(raceStr, sizeof(raceStr), "%3d", other->round);
 		else
-		    sprintf(raceStr, "%d.%c",
+		    snprintf(raceStr, sizeof(raceStr), "%d.%c",
 			    other->round, other->check + 'a');
 	    }
 	}
@@ -491,14 +499,16 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
     fg.r = (color >> 24) & 255;
 	fg.g = (color >> 16) & 255;
 	fg.b = (color >> 8) & 255;
-	fg.unused = color & 255;
+	/* Preserve the opaque glyphs produced by SDL 1.2_ttf. */
+	fg.a = SDL_ALPHA_OPAQUE;
     line = TTF_RenderText_Blended(scoreListFont, label, fg);
     if (line == NULL) {
 	error("scorelist rendering failed: %s", SDL_GetError());
 	return;
     }
-    SDL_SetAlpha(line, 0, 0);
-    SDL_BlitSurface(line, NULL, scoreListWin.surface, &scoreEntryRect);
+    if (Sdl_blit_surface_unblended(line, NULL, scoreListWin.surface,
+				   &scoreEntryRect) < 0)
+	warn("Could not draw scorelist entry: %s", SDL_GetError());
     scoreEntryRect.h = line->h;
 
     /*
@@ -514,4 +524,3 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 
     SDL_FreeSurface(line);
 }
-

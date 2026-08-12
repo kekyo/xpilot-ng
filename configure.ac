@@ -14,13 +14,13 @@ AM_MAINTAINER_MODE
 AM_CONFIG_HEADER(config.h)
 
 dnl  Copyright & stuff.
-XP_AUTHORS="Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha Lindström, Kristian Söderblom and Erik Andersson"
+XP_AUTHORS="BjÃ¸rn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha LindstrÃ¶m, Kristian SÃ¶derblom and Erik Andersson"
 AC_SUBST([XP_AUTHORS])
 
 XP_COPYRIGHTDATE="1991-2005"
 AC_SUBST([XP_COPYRIGHTDATE])
 
-XP_COPYRIGHT="Copyright © $XP_COPYRIGHTDATE by $XP_AUTHORS"
+XP_COPYRIGHT="Copyright Â© $XP_COPYRIGHTDATE by $XP_AUTHORS"
 AC_SUBST([XP_COPYRIGHT])
 
 AC_SUBST([XP_RELEASEDATE],["Sep 16, 2005"])
@@ -63,31 +63,36 @@ AC_ARG_ENABLE(select_sched,
 AC_ARG_ENABLE(replay,
 	AC_HELP_STRING([--disable-replay],
 			[disable building of replay program]),
-[], [enable_replay=yes; need_x=yes])
+[], [enable_replay=yes])
+if test x$enable_replay = xyes; then
+	need_x=yes
+fi
 
 AC_ARG_ENABLE(xp_mapedit,
 	AC_HELP_STRING([--disable-xp-mapedit],
 			[disable building of xp-mapedit program]),
-[], [enable_xp_mapedit=yes; need_x=yes])
+[], [enable_xp_mapedit=yes])
+if test x$enable_xp_mapedit = xyes; then
+	need_x=yes
+fi
 
 AC_ARG_ENABLE(x11_client,
 	AC_HELP_STRING([--disable-x11-client],
 			[disable X11 client]),
-[], [enable_x11_client=yes; need_x=yes; need_libxpclient=yes])
+[], [enable_x11_client=yes])
+if test x$enable_x11_client = xyes; then
+	need_x=yes
+	need_libxpclient=yes
+fi
 
 AC_ARG_ENABLE(sdl_client,
 	AC_HELP_STRING([--disable-sdl-client],
 			[disable SDL/OpenGL client]),
-[], [enable_sdl_client=yes; need_x=yes; need_libxpclient=yes])
+[], [enable_sdl_client=yes])
 if test x$enable_sdl_client = xyes; then
+	need_libxpclient=yes
 	AC_DEFINE([SDL_CLIENT], 1, [enable sdl client])
 fi
-
-dnl  Do this if you want to use the gameloop without the X11 hack.
-AC_ARG_ENABLE(sdl_gameloop,
-	AC_HELP_STRING([--enable-sdl-gameloop],
-			[enable sdl gameloop in sdl client
-			 (otherwise use gameloop optimised for X11)]))
 
 AC_ARG_ENABLE(sound,
 	AC_HELP_STRING([--enable-sound],
@@ -106,6 +111,7 @@ dnl AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AC_PROG_INSTALL
+PKG_PROG_PKG_CONFIG
 
 dnl  Checks for libraries.
 dnl kps - these should be cleaned up and not use the autoconf internal
@@ -123,31 +129,9 @@ if test x$ac_cv_lib_expat_XML_ParserCreate != xyes; then
 	AC_MSG_ERROR([*** Required library Expat not found!])
 fi
 
-dnl Figure out which math library to use
-dnl (borrowed from from http://www.libsdl.org/opengl/SDLgears-1.0.2.tar.gz)
 case "$target" in
     *-*-mingw32*)
-	MATHLIB=""
-	SYS_GL_LIBS="-lopengl32 -lglu32"
 	windows_target=yes
-	;;
-    *-*-beos*)
-	MATHLIB=""
-	SYS_GL_LIBS="-lGL"
-	;;
-    *-*-linux*)
-	MATHLIB="-lm"
-	SYS_GL_LIBS="-L/usr/X11R6/lib -lGL -lGLU"
-	;;
-    *-*-freebsd*)
-	MATHLIB="-lm"
-	SYS_GL_LIBS="-L/usr/X11R6/lib -lGL -lGLU"
-	CPPFLAGS="$CPPFLAGS -I/usr/X11R6/include -I/usr/local/include"
-	LDFLAGS="$LDFLAGS -L/usr/local/lib"
-	;;
-    *)
-	MATHLIB="-lm"
-	SYS_GL_LIBS="-lGL -lGLU"
 	;;
 esac
 
@@ -157,7 +141,6 @@ if test x$windows_target = xyes; then
 	AC_DEFINE([_WINDOWS], 1, [compiling for windows target])
 
 	enable_select_sched=yes
-	enable_sdl_gameloop=yes
 	enable_replay=no
 	enable_xp_mapedit=no
 	enable_x11_client=no
@@ -199,10 +182,6 @@ if test x$need_x = xyes; then
 	AC_SUBST(X_EXTENSIONS_LIB)
 fi
 
-if test x$enable_sdl_gameloop = xyes; then
-  AC_DEFINE([SDL_GAMELOOP], 1, [enable sdl gameloop in sdl client])
-fi
-
 if test x$enable_x11_client = xyes; then
 	AC_DEFINE([X11_CLIENT], 1, [enable x11 client])
 fi
@@ -220,87 +199,15 @@ if test x$enable_xp_mapedit = xyes; then
 	AC_DEFINE([XP_MAPEDIT], 1, [enable xp-mapedit program])
 fi
 
-dnl Stuff needed by SDL client.
+dnl Libraries needed by the SDL client.
 if test x$enable_sdl_client = xyes; then
-
-	dnl Check for SDL,
-	dnl from http://www.libsdl.org/opengl/SDLgears-1.0.2.tar.gz
-	SDL_VERSION=1.2.0
-	AM_PATH_SDL($SDL_VERSION,
-		    :,
-		    AC_MSG_ERROR([*** SDL version $SDL_VERSION not found!])
-	)
-	
-	CFLAGS_BAK="$CFLAGS"
-	CXXFLAGS_BAK="$CXXFLAGS"
-	CFLAGS="$CFLAGS $SDL_CFLAGS"
-	CXXFLAGS="$CXXFLAGS $SDL_CFLAGS"
-
-	if test x$no_sdl = xyes; then
-	    AC_MSG_ERROR(SDL client will not be built.)
-	fi
-
-	dnl check for SDL_ttf and OpenGL only if SDL client is built.
-
-	dnl kps - hack to check for SDL_ttf
-	AC_MSG_CHECKING(for SDL_ttf)
-	AC_COMPILE_IFELSE([
-	 #include "SDL.h"
-	 #include "SDL/SDL_ttf.h"
-	 int main(int argc, char** argv) { return 0; }
-	],[
-	have_libsdl_ttf=yes
-	],[
-	have_libsdl_ttf=no])
-	AC_MSG_RESULT($have_libsdl_ttf)
-	if test x$have_libsdl_ttf = xyes; then
-	    SDL_EXTRA_LIBS="$SDL_EXTRA_LIBS -lSDL_ttf"
-	else
-	    AC_MSG_ERROR([*** Unable to find SDL_ttf headers and libraries!])
-	fi
-	AC_SUBST(SDL_EXTRA_LIBS)
-
-	dnl kps - hack to check for SDL_image
-	AC_MSG_CHECKING(for SDL_image)
-	AC_COMPILE_IFELSE([
-	 #include "SDL.h"
-	 #include "SDL/SDL_image.h"
-	 int main(int argc, char** argv) { return 0; }
-	],[
-	have_libsdl_image=yes
-	],[
-	have_libsdl_image=no])
-	AC_MSG_RESULT($have_libsdl_image)
-	if test x$have_libsdl_image = xyes; then
-	    SDL_EXTRA_LIBS="$SDL_EXTRA_LIBS -lSDL_image"
-	    AC_DEFINE([HAVE_SDL_IMAGE], 1,
-			[Define to 1 if you have the SDL_image library.])
-	else
-	    AC_MSG_ERROR([*** Unable to find SDL_image headers and libraries!])
-	fi
-	AC_SUBST(SDL_EXTRA_LIBS)
-
-	dnl Check for OpenGL
-	AC_MSG_CHECKING(for OpenGL support)
-	AC_COMPILE_IFELSE([
-	 #include <GL/gl.h>
-	 #include <GL/glu.h>
-	 int main(int argc, char** argv) { return 0; } 
-	],[
-	have_opengl=yes
-	],[
-	have_opengl=no])
-	AC_MSG_RESULT($have_opengl)
-	if test x$have_opengl = xyes; then
-	    GL_LIBS="$SDL_LIBS $SYS_GL_LIBS"
-	else
-	    AC_MSG_ERROR([*** Unable to find OpenGL headers and libraries!])
-	fi
-	AC_SUBST(GL_LIBS)
-	AC_SUBST(SDL_CFLAGS)
-	
-	CFLAGS="$CFLAGS_BAK"
-	CXXFLAGS="$CXXFLAGS_BAK"
+	PKG_CHECK_MODULES([SDL2], [sdl2 >= 2.0.9])
+	PKG_CHECK_MODULES([SDL2_IMAGE], [SDL2_image >= 2.0.0])
+	PKG_CHECK_MODULES([SDL2_TTF], [SDL2_ttf >= 2.0.12])
+	PKG_CHECK_MODULES([GL], [gl])
+	PKG_CHECK_MODULES([GLU], [glu])
+	AC_DEFINE([HAVE_SDL_IMAGE], 1,
+		  [Define to 1 if you have the SDL_image library.])
 fi
 
 AM_CONDITIONAL([COND_CLIENT], [test x$need_libxpclient = xyes])
@@ -309,7 +216,6 @@ AM_CONDITIONAL([COND_REPLAY], [test x$enable_replay = xyes])
 AM_CONDITIONAL([COND_XP_MAPEDIT], [test x$enable_xp_mapedit = xyes])
 AM_CONDITIONAL([COND_X11_CLIENT], [test x$enable_x11_client = xyes])
 AM_CONDITIONAL([COND_SDL_CLIENT], [test x$enable_sdl_client = xyes])
-AM_CONDITIONAL([COND_SDL_GAMELOOP], [test x$enable_sdl_gameloop = xyes])
 
 dnl OpenAL client sound support.
 if test x$enable_sound = xyes; then
@@ -495,6 +401,6 @@ AC_CONFIG_FILES([ \
 	src/replay/Makefile \
 	src/replay/tools/Makefile \
 	src/mapedit/Makefile \
+	tests/Makefile \
 	])
 AC_OUTPUT
-

@@ -23,7 +23,7 @@
 /*  SDL_console.c
  *  Written By: Garrett Banuk <mongoose@mongeese.org>
  *  Code Cleanup and heavily extended by: Clemens Wacha <reflex-2000@gmx.net>
- *  Modified for XPilotNG/SDL: Juha Lindström <juhal@users.sourceforge.net>
+ *  Modified for XPilotNG/SDL: Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  */
 
 #include "xpclient_sdl.h"
@@ -41,17 +41,78 @@
  * is currently taking keyboard input. */
 static ConsoleInformation *Topmost;
 
+static SDL_Surface *CON_CreateSurface(const SDL_PixelFormat *format,
+				      int width, int height)
+{
+    SDL_Surface *surface;
+
+    if (format == NULL || width <= 0 || height <= 0) {
+	SDL_SetError("Invalid console surface parameters");
+	return NULL;
+    }
+
+    surface = SDL_CreateRGBSurface(0, width, height,
+				   format->BitsPerPixel,
+				   format->Rmask, format->Gmask,
+				   format->Bmask, format->Amask);
+    if (surface == NULL)
+	return NULL;
+    if (SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE) < 0) {
+	SDL_FreeSurface(surface);
+	return NULL;
+    }
+    return surface;
+}
+
+static int CON_PrepareInputBackground(SDL_Surface *input_background,
+				      SDL_Surface *console_surface,
+				      SDL_Surface *background_image,
+				      int background_x, int background_y,
+				      Uint8 green)
+{
+    SDL_Rect backgroundsrc, backgrounddest;
+
+    if (SDL_FillRect(input_background, NULL,
+		     SDL_MapRGBA(input_background->format, 0, green, 0,
+				 SDL_ALPHA_OPAQUE)) < 0)
+	return -1;
+    if (background_image == NULL)
+	return 0;
+
+    backgroundsrc.x = 0;
+    backgroundsrc.y = console_surface->h - input_background->h -
+	background_y;
+    backgroundsrc.w = background_image->w;
+    backgroundsrc.h = input_background->h;
+
+    backgrounddest.x = background_x;
+    backgrounddest.y = 0;
+    backgrounddest.w = background_image->w;
+    backgrounddest.h = input_background->h;
+
+    return SDL_BlitSurface(background_image, &backgroundsrc,
+			   input_background, &backgrounddest);
+}
+
 /*  Takes keys from the keyboard and inputs them to the console
     If the event was not handled (i.e. WM events or unknown ctrl-shift 
     sequences) the function returns the event for further processing. */
 SDL_Event *CON_Events(SDL_Event * event)
 {
+    const unsigned char *input;
+
     if (Topmost == NULL)
 	return event;
     if (!CON_isVisible(Topmost))
 	return event;
 
+    if (event->type == SDL_KEYUP) {
+	Topmost->TextInputModifiers = event->key.keysym.mod;
+	return event;
+    }
+
     if (event->type == SDL_KEYDOWN) {
+	Topmost->TextInputModifiers = event->key.keysym.mod;
 	if (event->key.keysym.mod & KMOD_CTRL) {
 	    /* CTRL pressed */
 	    /* kps - please modify this to work like in talk.c */
@@ -183,13 +244,21 @@ SDL_Event *CON_Events(SDL_Event * event)
 		
 		return NULL;
 	    default:
-		if (Topmost->InsMode)
-		    Cursor_Add(Topmost, event);
-		else {
-		    Cursor_Add(Topmost, event);
-		    Cursor_Del(Topmost);
-		}
+		return event;
 	    }
+	}
+	return NULL;
+    }
+    if (event->type == SDL_TEXTINPUT) {
+	if (Topmost->TextInputModifiers & (KMOD_CTRL | KMOD_ALT | KMOD_GUI))
+	    return NULL;
+	for (input = (const unsigned char *)event->text.text;
+	     *input != '\0'; input++) {
+	    if (*input < 0x20 || *input > 0x7e)
+		continue;
+	    Cursor_Add(Topmost, (char)*input);
+	    if (!Topmost->InsMode)
+		Cursor_Del(Topmost);
 	}
 	return NULL;
     }
@@ -325,20 +394,24 @@ ConsoleInformation *CON_Init(const char *FontName,
 			     SDL_Rect rect)
 {
     int loop;
-    SDL_Surface *Temp;
     ConsoleInformation *newinfo;
+    bool font_loaded = false;
 
+    if (FontName == NULL || DisplayScreen == NULL ||
+	DisplayScreen->format == NULL || DisplayScreen->w <= 0 ||
+	DisplayScreen->h <= 0 || lines <= 0) {
+	PRINT_ERROR("Invalid console initialization parameters");
+	return NULL;
+    }
 
     /* Create a new console struct and init it. */
-    if ((newinfo =
-	 (ConsoleInformation *) malloc(sizeof(ConsoleInformation))) ==
-	NULL) {
+    newinfo = (ConsoleInformation *)calloc(1, sizeof(ConsoleInformation));
+    if (newinfo == NULL) {
 	PRINT_ERROR
 	    ("Could not allocate the space for a new console info struct.\n");
 	return NULL;
     }
     newinfo->Visible = CON_CLOSED;
-    newinfo->WasUnicode = 0;
     newinfo->RaiseOffset = 0;
     newinfo->ConsoleLines = NULL;
     newinfo->CommandLines = NULL;
@@ -352,7 +425,11 @@ ConsoleInformation *CON_Init(const char *FontName,
     newinfo->CursorPos = 0;
     newinfo->CommandScrollBack = 0;
     newinfo->OutputScreen = DisplayScreen;
-    newinfo->Prompt = (char *)&CON_DEFAULT_PROMPT;
+    newinfo->Prompt = strdup(CON_DEFAULT_PROMPT);
+    if (newinfo->Prompt == NULL) {
+	PRINT_ERROR("Could not allocate the default console prompt");
+	goto fail;
+    }
     newinfo->HideKey = CON_DEFAULT_HIDEKEY;
 
     CON_SetExecuteFunction(newinfo, Default_CmdFunction);
@@ -362,18 +439,28 @@ ConsoleInformation *CON_Init(const char *FontName,
     if (-1 == (newinfo->FontNumber = DT_LoadFont(FontName, TRANS_FONT))) {
 	PRINT_ERROR("Could not load the font ");
 	fprintf(stderr, "\"%s\" for the console!\n", FontName);
-	return NULL;
+	goto fail;
     }
+    font_loaded = true;
 
     newinfo->FontHeight = DT_FontHeight(newinfo->FontNumber);
     newinfo->FontWidth = DT_FontWidth(newinfo->FontNumber);
+    if (newinfo->FontHeight <= 0 || newinfo->FontWidth <= 0) {
+	PRINT_ERROR("The console font has invalid dimensions");
+	goto fail;
+    }
 
     /* make sure that the size of the console is valid */
-    if (rect.w > newinfo->OutputScreen->w
-	|| rect.w < newinfo->FontWidth * 32)
+    if (rect.w <= 0 || rect.w > newinfo->OutputScreen->w
+	|| rect.w / newinfo->FontWidth < 32)
 	rect.w = newinfo->OutputScreen->w;
-    if (rect.h > newinfo->OutputScreen->h || rect.h < newinfo->FontHeight)
+    if (rect.h <= 0 || rect.h > newinfo->OutputScreen->h
+	|| rect.h < newinfo->FontHeight)
 	rect.h = newinfo->OutputScreen->h;
+    if (rect.w <= CON_CHAR_BORDER || rect.h < newinfo->FontHeight) {
+	PRINT_ERROR("The output screen is too small for the console");
+	goto fail;
+    }
     if (rect.x < 0 || rect.x > newinfo->OutputScreen->w - rect.w)
 	newinfo->DispX = 0;
     else
@@ -384,43 +471,40 @@ ConsoleInformation *CON_Init(const char *FontName,
 	newinfo->DispY = rect.y;
 
     /* load the console surface */
-    Temp = SDL_CreateRGBSurface(SDL_SWSURFACE, rect.w, rect.h,
-				newinfo->OutputScreen->format->
-				BitsPerPixel,
-				newinfo->OutputScreen->format->Rmask,
-				newinfo->OutputScreen->format->Gmask,
-				newinfo->OutputScreen->format->Bmask,
-				newinfo->OutputScreen->format->Amask);
-    if (Temp == NULL) {
+    newinfo->ConsoleSurface = CON_CreateSurface(newinfo->OutputScreen->format,
+						 rect.w, rect.h);
+    if (newinfo->ConsoleSurface == NULL) {
 	PRINT_ERROR("Couldn't create the ConsoleSurface\n");
-	return NULL;
+	goto fail;
     }
-    newinfo->ConsoleSurface = Temp;	/* SDL_DisplayFormat(Temp); */
-    /* SDL_FreeSurface(Temp); */
-    SDL_FillRect(newinfo->ConsoleSurface, NULL,
-		 SDL_MapRGBA(newinfo->ConsoleSurface->format, 0, 20, 0,
-			     newinfo->ConsoleAlpha));
+    if (SDL_FillRect(newinfo->ConsoleSurface, NULL,
+		     SDL_MapRGBA(newinfo->ConsoleSurface->format, 0, 20, 0,
+				 newinfo->ConsoleAlpha)) < 0) {
+	PRINT_ERROR(SDL_GetError());
+	goto fail;
+    }
 
     /* Load the dirty rectangle for user input */
-    Temp = SDL_CreateRGBSurface(SDL_SWSURFACE, rect.w, newinfo->FontHeight,
-				newinfo->OutputScreen->format->
-				BitsPerPixel,
-				newinfo->OutputScreen->format->Rmask,
-				newinfo->OutputScreen->format->Gmask,
-				newinfo->OutputScreen->format->Bmask,
-				newinfo->OutputScreen->format->Amask);
-    if (Temp == NULL) {
+    newinfo->InputBackground =
+	CON_CreateSurface(newinfo->OutputScreen->format, rect.w,
+			  newinfo->FontHeight);
+    if (newinfo->InputBackground == NULL) {
 	PRINT_ERROR("Couldn't create the InputBackground\n");
-	return NULL;
+	goto fail;
     }
-    newinfo->InputBackground = Temp;	/* SDL_DisplayFormat(Temp); */
-    /* SDL_FreeSurface(Temp); */
-    SDL_FillRect(newinfo->InputBackground, NULL,
-		 SDL_MapRGBA(newinfo->ConsoleSurface->format, 0, 20, 0,
-			     SDL_ALPHA_OPAQUE));
+    if (CON_PrepareInputBackground(newinfo->InputBackground,
+				   newinfo->ConsoleSurface, NULL, 0, 0,
+				   20) < 0) {
+	PRINT_ERROR(SDL_GetError());
+	goto fail;
+    }
 
     /* calculate the number of visible characters in the command line */
     newinfo->VChars = (rect.w - CON_CHAR_BORDER) / newinfo->FontWidth;
+    if (newinfo->VChars <= 0) {
+	PRINT_ERROR("The console is too narrow for its font");
+	goto fail;
+    }
     if (newinfo->VChars > CON_CHARS_PER_LINE)
 	newinfo->VChars = CON_CHARS_PER_LINE;
 
@@ -434,15 +518,24 @@ ConsoleInformation *CON_Init(const char *FontName,
      */
     newinfo->LineBuffer = lines;
 
-    newinfo->ConsoleLines =
-	(char **) malloc(sizeof(char *) * newinfo->LineBuffer);
-    newinfo->CommandLines =
-	(char **) malloc(sizeof(char *) * newinfo->LineBuffer);
+    newinfo->ConsoleLines = (char **)calloc(newinfo->LineBuffer,
+					    sizeof(*newinfo->ConsoleLines));
+    newinfo->CommandLines = (char **)calloc(newinfo->LineBuffer,
+					    sizeof(*newinfo->CommandLines));
+    if (newinfo->ConsoleLines == NULL || newinfo->CommandLines == NULL) {
+	PRINT_ERROR("Could not allocate the console line buffers");
+	goto fail;
+    }
     for (loop = 0; loop <= newinfo->LineBuffer - 1; loop++) {
 	newinfo->ConsoleLines[loop] =
 	    (char *) calloc(CON_CHARS_PER_LINE + 1, sizeof(char));
 	newinfo->CommandLines[loop] =
 	    (char *) calloc(CON_CHARS_PER_LINE + 1, sizeof(char));
+	if (newinfo->ConsoleLines[loop] == NULL ||
+	    newinfo->CommandLines[loop] == NULL) {
+	    PRINT_ERROR("Could not allocate a console line");
+	    goto fail;
+	}
     }
     memset(newinfo->Command, 0, CON_CHARS_PER_LINE + 1);
     memset(newinfo->LCommand, 0, CON_CHARS_PER_LINE + 1);
@@ -454,6 +547,12 @@ ConsoleInformation *CON_Init(const char *FontName,
     CON_NewLineConsole(newinfo);
 
     return newinfo;
+
+fail:
+    if (font_loaded)
+	DT_UnloadFont(newinfo->FontNumber);
+    CON_Free(newinfo);
+    return NULL;
 }
 
 /* Makes the console visible */
@@ -463,8 +562,6 @@ void CON_Show(ConsoleInformation * console)
 	console->Visible = CON_OPENING;
 	CON_UpdateConsole(console);
 
-	console->WasUnicode = SDL_EnableUNICODE(-1);
-	SDL_EnableUNICODE(1);
     }
 }
 
@@ -473,7 +570,6 @@ void CON_Hide(ConsoleInformation * console)
 {
     if (console) {
 	console->Visible = CON_CLOSING;
-	SDL_EnableUNICODE(console->WasUnicode);
     }
 }
 
@@ -489,8 +585,10 @@ int CON_isVisible(ConsoleInformation * console)
 /* Frees all the memory loaded by the console */
 void CON_Destroy(ConsoleInformation * console)
 {
-    DT_DestroyDrawText();
-    CON_Free(console);
+	if (console == NULL)
+	    return;
+	DT_UnloadFont(console->FontNumber);
+	CON_Free(console);
 }
 
 /* Frees all the memory loaded by the console */
@@ -501,15 +599,29 @@ void CON_Free(ConsoleInformation * console)
     if (!console)
 	return;
 
-    for (i = 0; i <= console->LineBuffer - 1; i++) {
-	free(console->ConsoleLines[i]);
-	free(console->CommandLines[i]);
+    if (Topmost == console)
+	Topmost = NULL;
+
+    if (console->ConsoleLines != NULL) {
+	for (i = 0; i < console->LineBuffer; i++)
+	    free(console->ConsoleLines[i]);
+    }
+    if (console->CommandLines != NULL) {
+	for (i = 0; i < console->LineBuffer; i++)
+	    free(console->CommandLines[i]);
     }
     free(console->ConsoleLines);
     free(console->CommandLines);
     free(console->Prompt);
+    SDL_FreeSurface(console->BackgroundImage);
+    SDL_FreeSurface(console->InputBackground);
+    SDL_FreeSurface(console->ConsoleSurface);
     console->ConsoleLines = NULL;
     console->CommandLines = NULL;
+    console->Prompt = NULL;
+    console->BackgroundImage = NULL;
+    console->InputBackground = NULL;
+    console->ConsoleSurface = NULL;
     free(console);
 }
 
@@ -696,57 +808,73 @@ void CON_Alpha(ConsoleInformation * console, unsigned char alpha)
 
 /* Adds  background image to the console, x and y based on consoles x and y */
 int CON_Background(ConsoleInformation * console, const char *image, int x,
-		   int y)
+			   int y)
 {
-    SDL_Surface *temp;
-    SDL_Rect backgroundsrc, backgrounddest;
+    SDL_Surface *temp = NULL;
+    SDL_Surface *new_background = NULL;
+    SDL_Surface *new_input_background = NULL;
+    SDL_Surface *old_background;
+    SDL_Surface *old_input_background;
 
-    if (!console)
+    if (console == NULL || console->OutputScreen == NULL ||
+	console->OutputScreen->format == NULL ||
+	console->ConsoleSurface == NULL || console->InputBackground == NULL)
 	return 1;
-
-    /* Free the background from the console */
-    if (image == NULL) {
-	if (console->BackgroundImage == NULL)
-	    SDL_FreeSurface(console->BackgroundImage);
-	console->BackgroundImage = NULL;
-	SDL_FillRect(console->InputBackground, NULL,
-		     SDL_MapRGBA(console->ConsoleSurface->format, 0, 0, 0,
-				 SDL_ALPHA_OPAQUE));
-	return 0;
-    }
 
     /* Load a new background */
-#ifdef HAVE_SDLIMAGE
-    temp = IMG_Load(image);
+    if (image != NULL) {
+#ifdef HAVE_SDL_IMAGE
+	temp = IMG_Load(image);
 #else
-    temp = SDL_LoadBMP(image);
+	temp = SDL_LoadBMP(image);
 #endif
-    if (!temp) {
-	CON_Out(console, "Cannot load background %s.", image);
+	if (temp == NULL) {
+	    fprintf(stderr, "Cannot load background %s: %s\n", image,
+		    SDL_GetError());
+	    return 1;
+	}
+
+	new_background =
+	    SDL_ConvertSurface(temp, console->OutputScreen->format, 0);
+	SDL_FreeSurface(temp);
+	temp = NULL;
+	if (new_background == NULL) {
+	    fprintf(stderr, "Cannot convert background %s: %s\n", image,
+		    SDL_GetError());
+	    return 1;
+	}
+	if (SDL_SetSurfaceBlendMode(new_background, SDL_BLENDMODE_NONE) < 0) {
+	    fprintf(stderr, "Cannot prepare background %s: %s\n", image,
+		    SDL_GetError());
+	    SDL_FreeSurface(new_background);
+	    return 1;
+	}
+    }
+
+    new_input_background =
+	CON_CreateSurface(console->ConsoleSurface->format,
+			  console->InputBackground->w,
+			  console->InputBackground->h);
+    if (new_input_background == NULL ||
+	CON_PrepareInputBackground(new_input_background,
+				   console->ConsoleSurface, new_background,
+				   x, y, 0) < 0) {
+	PRINT_ERROR(SDL_GetError());
+	SDL_FreeSurface(new_input_background);
+	SDL_FreeSurface(new_background);
 	return 1;
     }
 
-    console->BackgroundImage = SDL_DisplayFormat(temp);
-    SDL_FreeSurface(temp);
-    console->BackX = x;
-    console->BackY = y;
-
-    backgroundsrc.x = 0;
-    backgroundsrc.y =
-	console->ConsoleSurface->h - console->FontHeight - console->BackY;
-    backgroundsrc.w = console->BackgroundImage->w;
-    backgroundsrc.h = console->InputBackground->h;
-
-    backgrounddest.x = console->BackX;
-    backgrounddest.y = 0;
-    backgrounddest.w = console->BackgroundImage->w;
-    backgrounddest.h = console->FontHeight;
-
-    SDL_FillRect(console->InputBackground, NULL,
-		 SDL_MapRGBA(console->ConsoleSurface->format, 0, 0, 0,
-			     SDL_ALPHA_OPAQUE));
-    SDL_BlitSurface(console->BackgroundImage, &backgroundsrc,
-		    console->InputBackground, &backgrounddest);
+    old_background = console->BackgroundImage;
+    old_input_background = console->InputBackground;
+    console->BackgroundImage = new_background;
+    console->InputBackground = new_input_background;
+    if (image != NULL) {
+	console->BackX = x;
+	console->BackY = y;
+    }
+    SDL_FreeSurface(old_input_background);
+    SDL_FreeSurface(old_background);
 
     CON_UpdateConsole(console);
     return 0;
@@ -771,101 +899,115 @@ void CON_Position(ConsoleInformation * console, int x, int y)
 
 /* resizes the console, has to reset alot of stuff
  * returns 1 on error */
-int CON_Resize(ConsoleInformation * console, SDL_Rect rect)
+static int CON_ResizeForOutput(ConsoleInformation *console,
+			       SDL_Surface *output_screen, SDL_Rect rect)
 {
-    SDL_Surface *Temp;
-    SDL_Rect backgroundsrc, backgrounddest;
+    SDL_Surface *new_console_surface = NULL;
+    SDL_Surface *new_input_background = NULL;
+    SDL_Surface *old_console_surface;
+    SDL_Surface *old_input_background;
+    int new_disp_x, new_disp_y, new_visible_characters;
 
-    if (!console)
+    if (console == NULL || output_screen == NULL ||
+	output_screen->format == NULL || output_screen->w <= 0 ||
+	output_screen->h <= 0 || console->FontWidth <= 0 ||
+	console->FontHeight <= 0 || output_screen == console->ConsoleSurface ||
+	output_screen == console->InputBackground ||
+	output_screen == console->BackgroundImage)
 	return 1;
 
     /* make sure that the size of the console is valid */
-    if (rect.w > console->OutputScreen->w
-	|| rect.w < console->FontWidth * 32)
-	rect.w = console->OutputScreen->w;
-    if (rect.h > console->OutputScreen->h || rect.h < console->FontHeight)
-	rect.h = console->OutputScreen->h;
-    if (rect.x < 0 || rect.x > console->OutputScreen->w - rect.w)
-	console->DispX = 0;
+    if (rect.w > output_screen->w || rect.w <= 0 ||
+	rect.w / console->FontWidth < 32)
+	rect.w = output_screen->w;
+    if (rect.h > output_screen->h || rect.h <= 0 ||
+	rect.h < console->FontHeight)
+	rect.h = output_screen->h;
+    if (rect.w <= CON_CHAR_BORDER || rect.h < console->FontHeight)
+	return 1;
+    if (rect.x < 0 || rect.x > output_screen->w - rect.w)
+	new_disp_x = 0;
     else
-	console->DispX = rect.x;
-    if (rect.y < 0 || rect.y > console->OutputScreen->h - rect.h)
-	console->DispY = 0;
+	new_disp_x = rect.x;
+    if (rect.y < 0 || rect.y > output_screen->h - rect.h)
+	new_disp_y = 0;
     else
-	console->DispY = rect.y;
+	new_disp_y = rect.y;
 
     /* load the console surface */
-    SDL_FreeSurface(console->ConsoleSurface);
-    Temp =
-	SDL_CreateRGBSurface(SDL_SWSURFACE, rect.w, rect.h,
-			     console->OutputScreen->format->BitsPerPixel,
-			     0, 0, 0, 0);
-    if (Temp == NULL) {
+    new_console_surface = CON_CreateSurface(output_screen->format,
+					     rect.w, rect.h);
+    if (new_console_surface == NULL) {
 	PRINT_ERROR("Couldn't create the console->ConsoleSurface\n");
 	return 1;
     }
-    console->ConsoleSurface = SDL_DisplayFormat(Temp);
-    SDL_FreeSurface(Temp);
-
-    /* Load the dirty rectangle for user input */
-    SDL_FreeSurface(console->InputBackground);
-    Temp =
-	SDL_CreateRGBSurface(SDL_SWSURFACE, rect.w, console->FontHeight,
-			     console->OutputScreen->format->BitsPerPixel,
-			     0, 0, 0, 0);
-    if (Temp == NULL) {
-	PRINT_ERROR("Couldn't create the input background\n");
+    if (SDL_FillRect(new_console_surface, NULL,
+		     SDL_MapRGBA(new_console_surface->format, 0, 20, 0,
+				 console->ConsoleAlpha)) < 0) {
+	PRINT_ERROR(SDL_GetError());
+	SDL_FreeSurface(new_console_surface);
 	return 1;
     }
-    console->InputBackground = SDL_DisplayFormat(Temp);
-    SDL_FreeSurface(Temp);
+
+    /* Load the dirty rectangle for user input */
+    new_input_background = CON_CreateSurface(output_screen->format, rect.w,
+					      console->FontHeight);
+    if (new_input_background == NULL) {
+	PRINT_ERROR("Couldn't create the input background\n");
+	SDL_FreeSurface(new_console_surface);
+	return 1;
+    }
+    if (CON_PrepareInputBackground(new_input_background,
+				   new_console_surface,
+				   console->BackgroundImage,
+				   console->BackX, console->BackY,
+				   console->BackgroundImage == NULL ? 20 : 0) < 0) {
+	PRINT_ERROR(SDL_GetError());
+	SDL_FreeSurface(new_input_background);
+	SDL_FreeSurface(new_console_surface);
+	return 1;
+    }
+
+    new_visible_characters =
+	(rect.w - CON_CHAR_BORDER) / console->FontWidth;
+    if (new_visible_characters <= 0) {
+	SDL_FreeSurface(new_input_background);
+	SDL_FreeSurface(new_console_surface);
+	return 1;
+    }
+    if (new_visible_characters > CON_CHARS_PER_LINE)
+	new_visible_characters = CON_CHARS_PER_LINE;
+
+    old_console_surface = console->ConsoleSurface;
+    old_input_background = console->InputBackground;
+    console->OutputScreen = output_screen;
+    console->ConsoleSurface = new_console_surface;
+    console->InputBackground = new_input_background;
+    console->DispX = new_disp_x;
+    console->DispY = new_disp_y;
+    console->VChars = new_visible_characters;
 
     /* Now reset some stuff dependent on the previous size */
     console->ConsoleScrollBack = 0;
-
-    /* Reload the background image (for the input text area) in the console */
-    if (console->BackgroundImage) {
-	backgroundsrc.x = 0;
-	backgroundsrc.y =
-	    console->ConsoleSurface->h - console->FontHeight -
-	    console->BackY;
-	backgroundsrc.w = console->BackgroundImage->w;
-	backgroundsrc.h = console->InputBackground->h;
-
-	backgrounddest.x = console->BackX;
-	backgrounddest.y = 0;
-	backgrounddest.w = console->BackgroundImage->w;
-	backgrounddest.h = console->FontHeight;
-
-	SDL_FillRect(console->InputBackground, NULL,
-		     SDL_MapRGBA(console->ConsoleSurface->format, 0, 0, 0,
-				 SDL_ALPHA_OPAQUE));
-	SDL_BlitSurface(console->BackgroundImage, &backgroundsrc,
-			console->InputBackground, &backgrounddest);
-    }
-
-    /* restore the alpha level */
-    CON_Alpha(console, console->ConsoleAlpha);
-
-    /* re-calculate the number of visible characters in the command line */
-    console->VChars = (rect.w - CON_CHAR_BORDER) / console->FontWidth;
-    if (console->VChars > CON_CHARS_PER_LINE)
-	console->VChars = CON_CHARS_PER_LINE;
+    SDL_FreeSurface(old_input_background);
+    SDL_FreeSurface(old_console_surface);
 
     CON_UpdateConsole(console);
     return 0;
+}
+
+int CON_Resize(ConsoleInformation * console, SDL_Rect rect)
+{
+    if (console == NULL)
+	return 1;
+    return CON_ResizeForOutput(console, console->OutputScreen, rect);
 }
 
 /* Transfers the console to another screen surface, and adjusts size */
 int CON_Transfer(ConsoleInformation * console,
 		 SDL_Surface * new_outputscreen, SDL_Rect rect)
 {
-    if (!console)
-	return 1;
-
-    console->OutputScreen = new_outputscreen;
-
-    return (CON_Resize(console, rect));
+    return CON_ResizeForOutput(console, new_outputscreen, rect);
 }
 
 /* Sets the topmost console for input */
@@ -894,15 +1036,24 @@ void CON_Topmost(ConsoleInformation * console)
 /* Sets the Prompt for console */
 void CON_SetPrompt(ConsoleInformation * console, const char *newprompt)
 {
-    if (!console)
+    char *prompt;
+
+    if (console == NULL || newprompt == NULL)
 	return;
 
     /* check length so we can still see at least 1 char :-) */
-    if ((int)strlen(newprompt) < console->VChars)
-	console->Prompt = strdup(newprompt);
-    else
+    if ((int)strlen(newprompt) < console->VChars) {
+	prompt = strdup(newprompt);
+	if (prompt == NULL) {
+	    PRINT_ERROR("Could not allocate the console prompt");
+	    return;
+	}
+	free(console->Prompt);
+	console->Prompt = prompt;
+    } else {
 	CON_Out(console, "prompt too long. (max. %i chars)",
 		console->VChars - 1);
+    }
 }
 
 /* Sets the key that deactivates (hides) the console. */
@@ -1058,29 +1209,32 @@ void Cursor_BSpace(ConsoleInformation * console)
     }
 }
 
-void Cursor_Add(ConsoleInformation * console, SDL_Event * event)
+void Cursor_Add(ConsoleInformation *console, char character)
 {
     int len = 0;
 
     /* Again: the commandline has to hold the command and the cursor (+1) */
-    if (strlen(Topmost->Command) + 1 < CON_CHARS_PER_LINE
-	&& event->key.keysym.unicode) {
+    if (character >= 0x20 && character <= 0x7e &&
+	strlen(Topmost->Command) + 1 < CON_CHARS_PER_LINE) {
 	Topmost->CursorPos++;
 	len = strlen(Topmost->LCommand);
-	Topmost->LCommand[len] = (char) event->key.keysym.unicode;
+	Topmost->LCommand[len] = character;
 	Topmost->LCommand[len + sizeof(char)] = '\0';
 	Assemble_Command(console);
     }
 }
 
-void Add_String_to_Console(char *text)
+void Add_String_to_Console(const char *text)
 {
 
     int len = 0, textlen, i;
     
     textlen = (int)strlen(text);
     
-    for ( i = 0 ; i < textlen; ++i) {
+    for (i = 0; i < textlen; ++i) {
+	if ((unsigned char)text[i] < 0x20 ||
+	    (unsigned char)text[i] > 0x7e)
+	    continue;
     	/* Again: the commandline has to hold the command and the cursor (+1) */
     	if (strlen(Topmost->Command) + 1 < CON_CHARS_PER_LINE) {
 	    Topmost->CursorPos++;

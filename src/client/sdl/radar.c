@@ -1,7 +1,7 @@
 /*
  * XPilotNG/SDL, an SDL/OpenGL XPilot client. Copyright (C) 2003-2004 by 
  *
- *     Juha Lindström <juhal@users.sourceforge.net>
+ *     Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *     Erik Andersson <deity_at_home.se>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -352,42 +352,82 @@ static void button( Uint8 button, Uint8 state , Uint16 x , Uint16 y, void *data 
     }
 }
 
-static void Radar_init_texture(GLWidget *widget)
+static GLuint Radar_create_texture(GLWidget *widget, SDL_Surface *surface)
 {
-    if (oldServer) Radar_paint_world_blocks(widget, radar_surface);
-    else Radar_paint_world_polygons(widget, radar_surface);
+    GLuint texture;
 
-    glGenTextures(1, &radar_texture);
-    glBindTexture(GL_TEXTURE_2D, radar_texture);
+    if (oldServer) Radar_paint_world_blocks(widget, surface);
+    else Radar_paint_world_polygons(widget, surface);
+
+    while (glGetError() != GL_NO_ERROR)
+	;
+    glGenTextures(1, &texture);
+    if (texture == 0)
+	return 0;
+    glBindTexture(GL_TEXTURE_2D, texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-		 radar_surface->w, radar_surface->h,
+		 surface->w, surface->h,
                  0, GL_RGBA, GL_UNSIGNED_BYTE,
-		 radar_surface->pixels);
+		 surface->pixels);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
                     GL_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                     GL_NEAREST);
+    if (glGetError() != GL_NO_ERROR) {
+	glDeleteTextures(1, &texture);
+	return 0;
+    }
+    return texture;
 }
 
 static int Radar_init(GLWidget *widget)
 {
-    radar_surface =
-	SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA,
+    SDL_Surface *surface;
+    GLuint texture;
+
+    surface =
+	SDL_CreateRGBSurface(0,
                              pow2_ceil(widget->bounds.w-1),
 			     pow2_ceil(widget->bounds.h-1), 32,
                              RMASK, GMASK, BMASK, AMASK);
-    if (!radar_surface) {
+    if (!surface) {
         error("Could not create radar surface: %s", SDL_GetError());
         return -1;
     }
-    Radar_init_texture(widget);
+    if (SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_BLEND) < 0
+	|| SDL_SetSurfaceAlphaMod(surface, SDL_ALPHA_OPAQUE) < 0) {
+	error("Could not enable radar surface alpha blending: %s",
+	      SDL_GetError());
+	SDL_FreeSurface(surface);
+	return -1;
+    }
+    texture = Radar_create_texture(widget, surface);
+    if (texture == 0) {
+	error("Could not create radar texture");
+	SDL_FreeSurface(surface);
+	return -1;
+    }
+
+    SDL_FreeSurface(radar_surface);
+    if (radar_texture != 0)
+	glDeleteTextures(1, &radar_texture);
+    radar_surface = surface;
+    radar_texture = texture;
     return 0;
 }
 
 void Radar_update(void)
 {
-    glDeleteTextures(1, &radar_texture);
-    Radar_init_texture(radar_widget);
+    GLuint texture;
+
+    if (radar_widget == NULL || radar_surface == NULL)
+	return;
+    texture = Radar_create_texture(radar_widget, radar_surface);
+    if (texture == 0)
+	return;
+    if (radar_texture != 0)
+	glDeleteTextures(1, &radar_texture);
+    radar_texture = texture;
 }
 
 /*
@@ -426,23 +466,34 @@ GLWidget *Init_RadarWidget(void)
 
 static void Radar_cleanup( GLWidget *widget )
 {
-    glDeleteTextures(1, &radar_texture);
+    if (radar_texture != 0)
+	glDeleteTextures(1, &radar_texture);
+    radar_texture = 0;
     SDL_FreeSurface(radar_surface);
+    radar_surface = NULL;
+    radar_widget = NULL;
 }
 
 static void Radar_set_bounds(GLWidget *widget, int x, int y, int w, int h)
 {
+    SDL_Rect old_radar_bounds = radar_bounds;
+    SDL_Rect old_widget_bounds;
+
     radar_bounds.x = x;
     radar_bounds.y = y;
     radar_bounds.w = w;
     radar_bounds.h = h;
     if (widget != NULL) {
+	old_widget_bounds = widget->bounds;
 	widget->bounds.x = x;
 	widget->bounds.y = y;
 	widget->bounds.w = w + 1;
 	widget->bounds.h = h * RadarHeight / RadarWidth + 1;
-	Radar_cleanup(widget);
-	Radar_init(widget);
+	if (Radar_init(widget) != 0) {
+	    radar_bounds = old_radar_bounds;
+	    widget->bounds = old_widget_bounds;
+	    warn("Could not resize radar");
+	}
     }
 }
 
