@@ -577,16 +577,41 @@ static int check_draw_failure_retries_from_undelivered_command(void)
     TEST_CHECK(backend.draws[0].vertices[0].x == 1.0f);
     TEST_CHECK(backend.flush_count == 0);
 
+    TEST_CHECK(Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA)
+               == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK(Renderer_fill_rect(renderer, 4.0f, 0.0f, 1.0f, 1.0f,
+                                  white) == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK(backend.draw_attempt_count == 2);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(backend.flush_count == 0);
+
     TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
     TEST_CHECK(backend.draw_attempt_count == 4);
     TEST_CHECK(backend.draw_count == 3);
     TEST_CHECK(backend.draws[0].vertices[0].x == 1.0f);
     TEST_CHECK(backend.draws[1].vertices[0].x == 2.0f);
     TEST_CHECK(backend.draws[2].vertices[0].x == 3.0f);
+    TEST_CHECK(backend.draws[0].blend == RENDERER_BLEND_OPAQUE);
+    TEST_CHECK(backend.draws[1].blend == RENDERER_BLEND_OPAQUE);
+    TEST_CHECK(backend.draws[2].blend == RENDERER_BLEND_OPAQUE);
     TEST_CHECK(backend.flush_count == 1);
-    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+
+    TEST_CHECK(Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_fill_rect(renderer, 4.0f, 0.0f, 1.0f, 1.0f,
+                                  white) == RENDERER_STATUS_OK);
     TEST_CHECK(backend.draw_attempt_count == 4);
     TEST_CHECK(backend.draw_count == 3);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_attempt_count == 5);
+    TEST_CHECK(backend.draw_count == 4);
+    TEST_CHECK(backend.draws[3].vertices[0].x == 4.0f);
+    TEST_CHECK(backend.draws[3].blend == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(backend.flush_count == 2);
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_attempt_count == 5);
+    TEST_CHECK(backend.draw_count == 4);
 
     Renderer_destroy(renderer);
     return 0;

@@ -11,6 +11,8 @@ xpilot_ng_sdl_SOURCES = \
 	gameloop.c gl_diagnostics.c gl_diagnostics.h \
 	images.c images.h main.c radar.c radar.h \
 	renderer.c renderer.h renderer_test_support.h \
+	renderer_gl.h renderer_gl_legacy.c renderer_gl_legacy.h \
+	renderer_gl_core.c renderer_gl_core.h \
 	sdlclipboard.c sdlclipboard.h \
 	sdlcompat.c sdlcompat.h \
 	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h sdlpaint.c \

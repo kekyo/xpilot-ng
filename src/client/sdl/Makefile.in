@@ -108,21 +108,24 @@ am__xpilot_ng_sdl_SOURCES_DIST = asteroid_data.h DT_drawtext.c \
 	SDL_gfxPrimitives.h SDL_gfxPrimitives_font.h console.c \
 	console.h glwidgets.c glwidgets.h gameloop.c gl_diagnostics.c \
 	gl_diagnostics.h images.c images.h main.c radar.c radar.h \
-	renderer.c renderer.h renderer_test_support.h sdlclipboard.c \
-	sdlclipboard.h sdlcompat.c sdlcompat.h sdlevent.c sdlevent.h \
-	sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h sdlpaint.c sdlpaint.h \
-	sdlwindow.c sdlwindow.h text.c text.h todo.c sdlmeta.h \
-	sdlmeta.c sdlinit.h xpclient_sdl.h win32hacks.c
+	renderer.c renderer.h renderer_test_support.h renderer_gl.h \
+	renderer_gl_legacy.c renderer_gl_legacy.h renderer_gl_core.c \
+	renderer_gl_core.h sdlclipboard.c sdlclipboard.h sdlcompat.c \
+	sdlcompat.h sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c \
+	sdlkeys.h sdlpaint.c sdlpaint.h sdlwindow.c sdlwindow.h text.c \
+	text.h todo.c sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h \
+	win32hacks.c
 @COND_WINDOWS_TRUE@am__objects_1 = win32hacks.$(OBJEXT)
 am_xpilot_ng_sdl_OBJECTS = DT_drawtext.$(OBJEXT) SDL_console.$(OBJEXT) \
 	SDL_gfxPrimitives.$(OBJEXT) console.$(OBJEXT) \
 	glwidgets.$(OBJEXT) gameloop.$(OBJEXT) \
 	gl_diagnostics.$(OBJEXT) images.$(OBJEXT) main.$(OBJEXT) \
-	radar.$(OBJEXT) renderer.$(OBJEXT) sdlclipboard.$(OBJEXT) \
-	sdlcompat.$(OBJEXT) sdlevent.$(OBJEXT) sdlgui.$(OBJEXT) \
-	sdlinit.$(OBJEXT) sdlkeys.$(OBJEXT) sdlpaint.$(OBJEXT) \
-	sdlwindow.$(OBJEXT) text.$(OBJEXT) todo.$(OBJEXT) \
-	sdlmeta.$(OBJEXT) $(am__objects_1)
+	radar.$(OBJEXT) renderer.$(OBJEXT) \
+	renderer_gl_legacy.$(OBJEXT) renderer_gl_core.$(OBJEXT) \
+	sdlclipboard.$(OBJEXT) sdlcompat.$(OBJEXT) sdlevent.$(OBJEXT) \
+	sdlgui.$(OBJEXT) sdlinit.$(OBJEXT) sdlkeys.$(OBJEXT) \
+	sdlpaint.$(OBJEXT) sdlwindow.$(OBJEXT) text.$(OBJEXT) \
+	todo.$(OBJEXT) sdlmeta.$(OBJEXT) $(am__objects_1)
 xpilot_ng_sdl_OBJECTS = $(am_xpilot_ng_sdl_OBJECTS)
 xpilot_ng_sdl_DEPENDENCIES = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a
@@ -146,7 +149,8 @@ am__depfiles_remade = ./$(DEPDIR)/DT_drawtext.Po \
 	./$(DEPDIR)/console.Po ./$(DEPDIR)/gameloop.Po \
 	./$(DEPDIR)/gl_diagnostics.Po ./$(DEPDIR)/glwidgets.Po \
 	./$(DEPDIR)/images.Po ./$(DEPDIR)/main.Po ./$(DEPDIR)/radar.Po \
-	./$(DEPDIR)/renderer.Po ./$(DEPDIR)/sdlclipboard.Po \
+	./$(DEPDIR)/renderer.Po ./$(DEPDIR)/renderer_gl_core.Po \
+	./$(DEPDIR)/renderer_gl_legacy.Po ./$(DEPDIR)/sdlclipboard.Po \
 	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
 	./$(DEPDIR)/sdlgui.Po ./$(DEPDIR)/sdlinit.Po \
 	./$(DEPDIR)/sdlkeys.Po ./$(DEPDIR)/sdlmeta.Po \
@@ -333,11 +337,13 @@ xpilot_ng_sdl_SOURCES = asteroid_data.h DT_drawtext.c DT_drawtext.h \
 	SDL_gfxPrimitives.h SDL_gfxPrimitives_font.h console.c \
 	console.h glwidgets.c glwidgets.h gameloop.c gl_diagnostics.c \
 	gl_diagnostics.h images.c images.h main.c radar.c radar.h \
-	renderer.c renderer.h renderer_test_support.h sdlclipboard.c \
-	sdlclipboard.h sdlcompat.c sdlcompat.h sdlevent.c sdlevent.h \
-	sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h sdlpaint.c sdlpaint.h \
-	sdlwindow.c sdlwindow.h text.c text.h todo.c sdlmeta.h \
-	sdlmeta.c sdlinit.h xpclient_sdl.h $(am__append_1)
+	renderer.c renderer.h renderer_test_support.h renderer_gl.h \
+	renderer_gl_legacy.c renderer_gl_legacy.h renderer_gl_core.c \
+	renderer_gl_core.h sdlclipboard.c sdlclipboard.h sdlcompat.c \
+	sdlcompat.h sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c \
+	sdlkeys.h sdlpaint.c sdlpaint.h sdlwindow.c sdlwindow.h text.c \
+	text.h todo.c sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h \
+	$(am__append_1)
 xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	@SDL2_IMAGE_LIBS@ @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
@@ -441,6 +447,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/radar.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer_gl_core.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer_gl_legacy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlclipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlcompat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlevent.Po@am__quote@ # am--include-marker
@@ -611,6 +619,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/main.Po
 	-rm -f ./$(DEPDIR)/radar.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
+	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
+	-rm -f ./$(DEPDIR)/renderer_gl_legacy.Po
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
@@ -679,6 +689,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/main.Po
 	-rm -f ./$(DEPDIR)/radar.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
+	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
+	-rm -f ./$(DEPDIR)/renderer_gl_legacy.Po
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po

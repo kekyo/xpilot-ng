@@ -358,8 +358,10 @@ RendererStatus Renderer_flush(Renderer *renderer)
 
         status = renderer->backend->draw(renderer->backend_context,
                                          &command->draw);
-        if (status != RENDERER_STATUS_OK)
+        if (status != RENDERER_STATUS_OK) {
+            renderer->flush_pending = 1;
             return status;
+        }
         renderer->next_undelivered = command->next;
     }
 

@@ -6,10 +6,12 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 
 check_PROGRAMS = test-sdl-keys test-sdl-console test-sdl-surface \
 	test-sdl-clipboard test-sdl-event test-gl-legacy \
-	test-renderer-commands test-renderer-geometry
+	test-renderer-commands test-renderer-geometry \
+	test-renderer-gl-backends
 TESTS = test-sdl-keys test-sdl-console test-sdl-surface \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
-	test-renderer-geometry run-gl-legacy.sh run-e2e.sh
+	test-renderer-geometry run-gl-legacy.sh \
+	run-renderer-gl-backends.sh run-e2e.sh
 
 test_sdl_keys_SOURCES = test_sdl_keys.c \
 	$(top_srcdir)/src/client/sdl/sdlkeys.c
@@ -46,6 +48,12 @@ test_renderer_commands_SOURCES = test_renderer_commands.c \
 test_renderer_geometry_SOURCES = test_renderer_geometry.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
 
+test_renderer_gl_backends_SOURCES = test_renderer_gl_backends.c \
+	$(top_srcdir)/src/client/sdl/renderer.c \
+	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
+	$(top_srcdir)/src/client/sdl/renderer_gl_core.c
+test_renderer_gl_backends_LDADD = @SDL2_LIBS@ @GL_LIBS@
+
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
 AM_TESTS_ENVIRONMENT = \
@@ -53,9 +61,12 @@ AM_TESTS_ENVIRONMENT = \
 	XPILOT_TEST_BINDIR='$(bindir)'; export XPILOT_TEST_BINDIR; \
 	XPILOT_TEST_PKGDATADIR='$(pkgdatadir)'; export XPILOT_TEST_PKGDATADIR; \
 	XPILOT_GL_TEST_BINARY='$(abs_builddir)/test-gl-legacy'; \
-	export XPILOT_GL_TEST_BINARY;
+	export XPILOT_GL_TEST_BINARY; \
+	XPILOT_RENDERER_GL_TEST_BINARY='$(abs_builddir)/test-renderer-gl-backends'; \
+	export XPILOT_RENDERER_GL_TEST_BINARY;
 
-EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-legacy.sh test_helpers.h
+EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-legacy.sh \
+	run-renderer-gl-backends.sh test_helpers.h
 
 .PHONY: e2e-install
 run-e2e.log: e2e-install

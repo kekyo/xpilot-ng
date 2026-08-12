@@ -92,11 +92,13 @@ check_PROGRAMS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-surface$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
 	test-sdl-event$(EXEEXT) test-gl-legacy$(EXEEXT) \
 	test-renderer-commands$(EXEEXT) \
-	test-renderer-geometry$(EXEEXT)
+	test-renderer-geometry$(EXEEXT) \
+	test-renderer-gl-backends$(EXEEXT)
 TESTS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-surface$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
 	test-sdl-event$(EXEEXT) test-renderer-commands$(EXEEXT) \
-	test-renderer-geometry$(EXEEXT) run-gl-legacy.sh run-e2e.sh
+	test-renderer-geometry$(EXEEXT) run-gl-legacy.sh \
+	run-renderer-gl-backends.sh run-e2e.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -122,6 +124,12 @@ am_test_renderer_geometry_OBJECTS = test_renderer_geometry.$(OBJEXT) \
 	renderer.$(OBJEXT)
 test_renderer_geometry_OBJECTS = $(am_test_renderer_geometry_OBJECTS)
 test_renderer_geometry_LDADD = $(LDADD)
+am_test_renderer_gl_backends_OBJECTS =  \
+	test_renderer_gl_backends.$(OBJEXT) renderer.$(OBJEXT) \
+	renderer_gl_legacy.$(OBJEXT) renderer_gl_core.$(OBJEXT)
+test_renderer_gl_backends_OBJECTS =  \
+	$(am_test_renderer_gl_backends_OBJECTS)
+test_renderer_gl_backends_DEPENDENCIES =
 am_test_sdl_clipboard_OBJECTS = test_sdl_clipboard.$(OBJEXT) \
 	sdlclipboard.$(OBJEXT)
 test_sdl_clipboard_OBJECTS = $(am_test_sdl_clipboard_OBJECTS)
@@ -157,7 +165,8 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
-	./$(DEPDIR)/renderer.Po ./$(DEPDIR)/sdlclipboard.Po \
+	./$(DEPDIR)/renderer.Po ./$(DEPDIR)/renderer_gl_core.Po \
+	./$(DEPDIR)/renderer_gl_legacy.Po ./$(DEPDIR)/sdlclipboard.Po \
 	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
 	./$(DEPDIR)/sdlkeys.Po \
 	./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po \
@@ -165,6 +174,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po \
 	./$(DEPDIR)/test_renderer_commands.Po \
 	./$(DEPDIR)/test_renderer_geometry.Po \
+	./$(DEPDIR)/test_renderer_gl_backends.Po \
 	./$(DEPDIR)/test_sdl_clipboard.Po \
 	./$(DEPDIR)/test_sdl_console.Po ./$(DEPDIR)/test_sdl_event.Po \
 	./$(DEPDIR)/test_sdl_keys.Po ./$(DEPDIR)/test_sdl_surface.Po
@@ -187,12 +197,14 @@ am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
 SOURCES = $(test_gl_legacy_SOURCES) $(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
+	$(test_renderer_gl_backends_SOURCES) \
 	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
 	$(test_sdl_event_SOURCES) $(test_sdl_keys_SOURCES) \
 	$(test_sdl_surface_SOURCES)
 DIST_SOURCES = $(test_gl_legacy_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
+	$(test_renderer_gl_backends_SOURCES) \
 	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
 	$(test_sdl_event_SOURCES) $(test_sdl_keys_SOURCES) \
 	$(test_sdl_surface_SOURCES)
@@ -598,6 +610,12 @@ test_renderer_commands_SOURCES = test_renderer_commands.c \
 test_renderer_geometry_SOURCES = test_renderer_geometry.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
 
+test_renderer_gl_backends_SOURCES = test_renderer_gl_backends.c \
+	$(top_srcdir)/src/client/sdl/renderer.c \
+	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
+	$(top_srcdir)/src/client/sdl/renderer_gl_core.c
+
+test_renderer_gl_backends_LDADD = @SDL2_LIBS@ @GL_LIBS@
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
 AM_TESTS_ENVIRONMENT = \
@@ -605,9 +623,13 @@ AM_TESTS_ENVIRONMENT = \
 	XPILOT_TEST_BINDIR='$(bindir)'; export XPILOT_TEST_BINDIR; \
 	XPILOT_TEST_PKGDATADIR='$(pkgdatadir)'; export XPILOT_TEST_PKGDATADIR; \
 	XPILOT_GL_TEST_BINARY='$(abs_builddir)/test-gl-legacy'; \
-	export XPILOT_GL_TEST_BINARY;
+	export XPILOT_GL_TEST_BINARY; \
+	XPILOT_RENDERER_GL_TEST_BINARY='$(abs_builddir)/test-renderer-gl-backends'; \
+	export XPILOT_RENDERER_GL_TEST_BINARY;
 
-EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-legacy.sh test_helpers.h
+EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-legacy.sh \
+	run-renderer-gl-backends.sh test_helpers.h
+
 all: all-am
 
 .SUFFIXES:
@@ -657,6 +679,10 @@ test-renderer-geometry$(EXEEXT): $(test_renderer_geometry_OBJECTS) $(test_render
 	@rm -f test-renderer-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_renderer_geometry_OBJECTS) $(test_renderer_geometry_LDADD) $(LIBS)
 
+test-renderer-gl-backends$(EXEEXT): $(test_renderer_gl_backends_OBJECTS) $(test_renderer_gl_backends_DEPENDENCIES) $(EXTRA_test_renderer_gl_backends_DEPENDENCIES)
+	@rm -f test-renderer-gl-backends$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_renderer_gl_backends_OBJECTS) $(test_renderer_gl_backends_LDADD) $(LIBS)
+
 test-sdl-clipboard$(EXEEXT): $(test_sdl_clipboard_OBJECTS) $(test_sdl_clipboard_DEPENDENCIES) $(EXTRA_test_sdl_clipboard_DEPENDENCIES)
 	@rm -f test-sdl-clipboard$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_clipboard_OBJECTS) $(test_sdl_clipboard_LDADD) $(LIBS)
@@ -685,6 +711,8 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SDL_console.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer_gl_core.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer_gl_legacy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlclipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlcompat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlevent.Po@am__quote@ # am--include-marker
@@ -694,6 +722,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_commands.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_geometry.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_gl_backends.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_clipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_console.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_event.Po@am__quote@ # am--include-marker
@@ -775,6 +804,34 @@ renderer.obj: $(top_srcdir)/src/client/sdl/renderer.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer.c' object='renderer.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o renderer.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer.c'; fi`
+
+renderer_gl_legacy.o: $(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT renderer_gl_legacy.o -MD -MP -MF $(DEPDIR)/renderer_gl_legacy.Tpo -c -o renderer_gl_legacy.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/renderer_gl_legacy.Tpo $(DEPDIR)/renderer_gl_legacy.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' object='renderer_gl_legacy.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o renderer_gl_legacy.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
+
+renderer_gl_legacy.obj: $(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT renderer_gl_legacy.obj -MD -MP -MF $(DEPDIR)/renderer_gl_legacy.Tpo -c -o renderer_gl_legacy.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/renderer_gl_legacy.Tpo $(DEPDIR)/renderer_gl_legacy.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' object='renderer_gl_legacy.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o renderer_gl_legacy.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; fi`
+
+renderer_gl_core.o: $(top_srcdir)/src/client/sdl/renderer_gl_core.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT renderer_gl_core.o -MD -MP -MF $(DEPDIR)/renderer_gl_core.Tpo -c -o renderer_gl_core.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_core.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_core.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/renderer_gl_core.Tpo $(DEPDIR)/renderer_gl_core.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer_gl_core.c' object='renderer_gl_core.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o renderer_gl_core.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_core.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_core.c
+
+renderer_gl_core.obj: $(top_srcdir)/src/client/sdl/renderer_gl_core.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT renderer_gl_core.obj -MD -MP -MF $(DEPDIR)/renderer_gl_core.Tpo -c -o renderer_gl_core.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/renderer_gl_core.Tpo $(DEPDIR)/renderer_gl_core.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer_gl_core.c' object='renderer_gl_core.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o renderer_gl_core.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; fi`
 
 sdlclipboard.o: $(top_srcdir)/src/client/sdl/sdlclipboard.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlclipboard.o -MD -MP -MF $(DEPDIR)/sdlclipboard.Tpo -c -o sdlclipboard.o `test -f '$(top_srcdir)/src/client/sdl/sdlclipboard.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlclipboard.c
@@ -1181,6 +1238,8 @@ clean-am: clean-checkPROGRAMS clean-generic mostlyclean-am
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/SDL_console.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
+	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
+	-rm -f ./$(DEPDIR)/renderer_gl_legacy.Po
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
@@ -1190,6 +1249,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
 	-rm -f ./$(DEPDIR)/test_renderer_geometry.Po
+	-rm -f ./$(DEPDIR)/test_renderer_gl_backends.Po
 	-rm -f ./$(DEPDIR)/test_sdl_clipboard.Po
 	-rm -f ./$(DEPDIR)/test_sdl_console.Po
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po
@@ -1242,6 +1302,8 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/SDL_console.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
+	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
+	-rm -f ./$(DEPDIR)/renderer_gl_legacy.Po
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
@@ -1251,6 +1313,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
 	-rm -f ./$(DEPDIR)/test_renderer_geometry.Po
+	-rm -f ./$(DEPDIR)/test_renderer_gl_backends.Po
 	-rm -f ./$(DEPDIR)/test_sdl_clipboard.Po
 	-rm -f ./$(DEPDIR)/test_sdl_console.Po
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po
