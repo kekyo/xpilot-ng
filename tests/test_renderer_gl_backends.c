@@ -112,7 +112,7 @@ static const PixelExpectation semantic_pixels[] = {
     {20, 13,   0, 255,   0, 255},
     {15, 18, 255,   0, 255, 255},
     {20, 18,   0,   0, 255, 255},
-    {26, 17,   0, 255, 255, 255}
+    {26, 17,   0, 255,   0, 255}
 };
 
 static void *load_gl_proc(void *userdata, const char *name)
@@ -640,7 +640,7 @@ static int render_scene(RendererFactory factory, TestContext *test_context,
                            0.0f, 0.0f, 1.0f, 1.0f,
                            (RendererColor){255, 255, 255, 255})
                        == RENDERER_STATUS_OK);
-    TEST_CHECK_CLEANUP(Renderer_draw_mesh(renderer, mesh)
+    TEST_CHECK_CLEANUP(Renderer_draw_mesh(renderer, texture, mesh)
                        == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
 

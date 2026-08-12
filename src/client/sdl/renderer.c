@@ -658,16 +658,22 @@ RendererStatus Renderer_draw_sprite(Renderer *renderer,
                       renderer->transform);
 }
 
-RendererStatus Renderer_draw_mesh(Renderer *renderer, RendererMesh *mesh)
+RendererStatus Renderer_draw_mesh(Renderer *renderer,
+                                  RendererTexture *texture,
+                                  RendererMesh *mesh)
 {
     RendererStatus status = Check_draw_state(renderer);
 
     if (status != RENDERER_STATUS_OK)
         return status;
+    if (texture != NULL && !Texture_is_owned(renderer, texture))
+        return RENDERER_STATUS_RESOURCE_MISMATCH;
     if (!Mesh_is_owned(renderer, mesh))
         return mesh == NULL ? RENDERER_STATUS_INVALID_ARGUMENT
                             : RENDERER_STATUS_RESOURCE_MISMATCH;
-    return Queue_command(renderer, NULL, 0, NULL, mesh->handle,
+    return Queue_command(renderer, NULL, 0,
+                         texture != NULL ? texture->handle : NULL,
+                         mesh->handle,
                          renderer->transform);
 }
 

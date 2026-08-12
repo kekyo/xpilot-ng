@@ -307,13 +307,19 @@ RendererStatus Renderer_draw_sprite(Renderer *renderer,
                                     RendererColor tint);
 
 /**
- * Queue an owned triangle mesh using the current render state.
+ * Queue an owned triangle mesh with an optional texture.
+ *
+ * When a texture is supplied, sampled RGBA values are multiplied by the mesh
+ * vertex colors.
  *
  * @param renderer Renderer with an active frame.
+ * @param texture Texture owned by renderer, or NULL for untextured drawing.
  * @param mesh Mesh owned by renderer.
  * @return Operation status.
  */
-RendererStatus Renderer_draw_mesh(Renderer *renderer, RendererMesh *mesh);
+RendererStatus Renderer_draw_mesh(Renderer *renderer,
+                                  RendererTexture *texture,
+                                  RendererMesh *mesh);
 
 /**
  * Create an RGBA8 texture from top-left-origin unpremultiplied pixels.

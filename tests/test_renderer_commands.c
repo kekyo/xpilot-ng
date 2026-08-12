@@ -464,6 +464,7 @@ static int check_resource_ownership(void)
     Renderer *second = create_renderer(&second_backend);
     RendererTexture *texture = NULL;
     RendererMesh *mesh = NULL;
+    RendererMesh *second_mesh = NULL;
 
     TEST_CHECK(first != NULL);
     TEST_CHECK(second != NULL);
@@ -474,6 +475,9 @@ static int check_resource_ownership(void)
     TEST_CHECK(Renderer_mesh_create(first, triangle, 3, &mesh)
                == RENDERER_STATUS_OK);
     TEST_CHECK(mesh != NULL);
+    TEST_CHECK(Renderer_mesh_create(second, triangle, 3, &second_mesh)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(second_mesh != NULL);
 
     TEST_CHECK(Renderer_begin_frame(second, 32, 32, black)
                == RENDERER_STATUS_OK);
@@ -483,7 +487,9 @@ static int check_resource_ownership(void)
                == RENDERER_STATUS_RESOURCE_MISMATCH);
     TEST_CHECK(Renderer_draw_triangles(second, texture, triangle, 3)
                == RENDERER_STATUS_RESOURCE_MISMATCH);
-    TEST_CHECK(Renderer_draw_mesh(second, mesh)
+    TEST_CHECK(Renderer_draw_mesh(second, texture, second_mesh)
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(Renderer_draw_mesh(second, NULL, mesh)
                == RENDERER_STATUS_RESOURCE_MISMATCH);
     TEST_CHECK(second_backend.draw_count == 0);
     TEST_CHECK(Renderer_end_frame(second) == RENDERER_STATUS_OK);
@@ -516,12 +522,13 @@ static int check_resource_ownership(void)
                                     0.0f, 0.0f, 1.0f, 1.0f,
                                     0.0f, 0.0f, 1.0f, 1.0f, white)
                == RENDERER_STATUS_OK);
-    TEST_CHECK(Renderer_draw_mesh(first, mesh) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_draw_mesh(first, NULL, mesh) == RENDERER_STATUS_OK);
     TEST_CHECK(first_backend.draw_count == 0);
     TEST_CHECK(Renderer_end_frame(first) == RENDERER_STATUS_OK);
     TEST_CHECK(first_backend.draw_count == 2);
     TEST_CHECK(first_backend.draws[0].texture
                == &first_backend.texture_token);
+    TEST_CHECK(first_backend.draws[1].texture == NULL);
     TEST_CHECK(first_backend.draws[1].mesh == &first_backend.mesh_token);
 
     TEST_CHECK(Renderer_texture_destroy(first, texture)
@@ -533,6 +540,8 @@ static int check_resource_ownership(void)
     TEST_CHECK(first_backend.mesh_create_count == 1);
     TEST_CHECK(first_backend.mesh_update_count == 1);
     TEST_CHECK(first_backend.mesh_destroy_count == 1);
+    TEST_CHECK(Renderer_mesh_destroy(second, second_mesh)
+               == RENDERER_STATUS_OK);
 
     Renderer_destroy(second);
     Renderer_destroy(first);
@@ -624,7 +633,8 @@ static int check_destroy_discards_active_frame(void)
                                     0.0f, 0.0f, 1.0f, 1.0f,
                                     0.0f, 0.0f, 1.0f, 1.0f, white)
                == RENDERER_STATUS_OK);
-    TEST_CHECK(Renderer_draw_mesh(renderer, mesh) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_draw_mesh(renderer, texture, mesh)
+               == RENDERER_STATUS_OK);
     TEST_CHECK(backend.draw_count == 0);
 
     Renderer_destroy(renderer);
@@ -782,6 +792,84 @@ static int check_textured_triangle_state_and_retry(void)
     return 0;
 }
 
+static int check_textured_mesh_state_and_retry(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererTransform2D transform = {
+        {2.0f, 0.0f, 0.0f,
+         0.0f, 3.0f, 0.0f,
+         4.0f, 5.0f, 1.0f}
+    };
+    const RendererTransform2D identity = {
+        {1.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f,
+         0.0f, 0.0f, 1.0f}
+    };
+    const RendererRect scissor = {2, 3, 14, 12};
+    const uint8_t pixel[] = {20, 40, 60, 80};
+    const RendererVertex2D vertices[] = {
+        {1.0f, 2.0f, 0.125f, 0.25f, {10, 20, 30, 40}},
+        {8.0f, 2.0f, 0.75f, 0.25f, {50, 60, 70, 80}},
+        {1.0f, 9.0f, 0.125f, 0.875f, {90, 100, 110, 120}}
+    };
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+    RendererTexture *texture = NULL;
+    RendererMesh *mesh = NULL;
+    const captured_draw_t *draw;
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_texture_create_with_desc(
+                   renderer, &single_pixel_texture_desc, pixel,
+                   sizeof(pixel), &texture)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_mesh_create(renderer, vertices, 3, &mesh)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_begin_frame(renderer, 32, 32, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_transform_2d(renderer, transform)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_scissor(renderer, &scissor)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_draw_mesh(renderer, texture, mesh)
+               == RENDERER_STATUS_OK);
+
+    TEST_CHECK(Renderer_set_transform_2d(renderer, identity)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_blend(renderer, RENDERER_BLEND_ADDITIVE)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_scissor(renderer, NULL)
+               == RENDERER_STATUS_OK);
+
+    backend.fail_draw_attempt = 1;
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(backend.draw_attempt_count == 1);
+    TEST_CHECK(backend.draw_count == 0);
+    TEST_CHECK(backend.flush_count == 0);
+
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_attempt_count == 2);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(backend.flush_count == 1);
+    draw = &backend.draws[0];
+    TEST_CHECK(draw->texture == &backend.texture_token);
+    TEST_CHECK(draw->mesh == &backend.mesh_token);
+    TEST_CHECK(draw->vertex_count == 0);
+    TEST_CHECK(transform_equal(draw->transform, transform));
+    TEST_CHECK(draw->blend == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(draw->scissor_enabled);
+    TEST_CHECK(rect_equal(draw->scissor, scissor));
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_texture_destroy(renderer, texture)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_mesh_destroy(renderer, mesh) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
 static int check_flush_failure_does_not_redeliver_draws(void)
 {
     const RendererColor black = {0, 0, 0, 255};
@@ -826,6 +914,7 @@ int main(void)
     TEST_CHECK(check_destroy_discards_active_frame() == 0);
     TEST_CHECK(check_draw_failure_retries_from_undelivered_command() == 0);
     TEST_CHECK(check_textured_triangle_state_and_retry() == 0);
+    TEST_CHECK(check_textured_mesh_state_and_retry() == 0);
     TEST_CHECK(check_flush_failure_does_not_redeliver_draws() == 0);
     return 0;
 }
