@@ -94,14 +94,16 @@ check_PROGRAMS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-gl-legacy$(EXEEXT) test-renderer-commands$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) \
 	test-renderer-gl-backends$(EXEEXT) \
-	test-paint-transform$(EXEEXT) test-image-geometry$(EXEEXT)
+	test-paint-transform$(EXEEXT) test-image-geometry$(EXEEXT) \
+	test-gfx2d-picture$(EXEEXT)
 TESTS = test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
 	test-sdl-clipboard$(EXEEXT) test-sdl-event$(EXEEXT) \
 	test-renderer-commands$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) test-paint-transform$(EXEEXT) \
 	run-gl-legacy.sh test-image-geometry$(EXEEXT) \
-	run-renderer-gl-backends.sh run-e2e.sh
+	test-gfx2d-picture$(EXEEXT) run-renderer-gl-backends.sh \
+	run-e2e.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -112,6 +114,13 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+am_test_gfx2d_picture_OBJECTS = test_gfx2d_picture.$(OBJEXT) \
+	gfx2d.$(OBJEXT)
+test_gfx2d_picture_OBJECTS = $(am_test_gfx2d_picture_OBJECTS)
+test_gfx2d_picture_DEPENDENCIES =  \
+	$(top_builddir)/src/common/libxpcommon.a
+test_gfx2d_picture_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(test_gfx2d_picture_LDFLAGS) $(LDFLAGS) -o $@
 am_test_gl_legacy_OBJECTS = test_gl_legacy-test_gl_legacy.$(OBJEXT) \
 	test_gl_legacy-gl_diagnostics.$(OBJEXT) \
 	test_gl_legacy-sdlgui.$(OBJEXT)
@@ -180,13 +189,13 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
+am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/image_geometry.Po ./$(DEPDIR)/paint_transform.Po \
 	./$(DEPDIR)/renderer.Po ./$(DEPDIR)/renderer_gl_core.Po \
 	./$(DEPDIR)/renderer_gl_legacy.Po ./$(DEPDIR)/sdlclipboard.Po \
 	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
 	./$(DEPDIR)/sdlkeys.Po ./$(DEPDIR)/sdlrenderer.Po \
-	./$(DEPDIR)/surface_rgba8.Po \
+	./$(DEPDIR)/surface_rgba8.Po ./$(DEPDIR)/test_gfx2d_picture.Po \
 	./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po \
 	./$(DEPDIR)/test_gl_legacy-sdlgui.Po \
 	./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po \
@@ -216,15 +225,15 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
-SOURCES = $(test_gl_legacy_SOURCES) $(test_image_geometry_SOURCES) \
-	$(test_paint_transform_SOURCES) \
+SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
+	$(test_image_geometry_SOURCES) $(test_paint_transform_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
 	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
 	$(test_sdl_event_SOURCES) $(test_sdl_keys_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_surface_rgba8_SOURCES)
-DIST_SOURCES = $(test_gl_legacy_SOURCES) \
+DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_paint_transform_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
@@ -652,6 +661,11 @@ test_paint_transform_SOURCES = test_paint_transform.c \
 test_image_geometry_SOURCES = test_image_geometry.c \
 	$(top_srcdir)/src/client/sdl/image_geometry.c
 
+test_gfx2d_picture_SOURCES = test_gfx2d_picture.c \
+	$(top_srcdir)/src/client/gfx2d.c
+
+test_gfx2d_picture_LDFLAGS = $(AM_LDFLAGS) -Wl,--wrap=malloc
+test_gfx2d_picture_LDADD = $(top_builddir)/src/common/libxpcommon.a
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
 AM_TESTS_ENVIRONMENT = \
@@ -702,6 +716,10 @@ $(am__aclocal_m4_deps):
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
+
+test-gfx2d-picture$(EXEEXT): $(test_gfx2d_picture_OBJECTS) $(test_gfx2d_picture_DEPENDENCIES) $(EXTRA_test_gfx2d_picture_DEPENDENCIES)
+	@rm -f test-gfx2d-picture$(EXEEXT)
+	$(AM_V_CCLD)$(test_gfx2d_picture_LINK) $(test_gfx2d_picture_OBJECTS) $(test_gfx2d_picture_LDADD) $(LIBS)
 
 test-gl-legacy$(EXEEXT): $(test_gl_legacy_OBJECTS) $(test_gl_legacy_DEPENDENCIES) $(EXTRA_test_gl_legacy_DEPENDENCIES)
 	@rm -f test-gl-legacy$(EXEEXT)
@@ -758,6 +776,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SDL_console.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gfx2d.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/image_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/paint_transform.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer.Po@am__quote@ # am--include-marker
@@ -769,6 +788,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlkeys.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlrenderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/surface_rgba8.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gfx2d_picture.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po@am__quote@ # am--include-marker
@@ -803,6 +823,20 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+gfx2d.o: $(top_srcdir)/src/client/gfx2d.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT gfx2d.o -MD -MP -MF $(DEPDIR)/gfx2d.Tpo -c -o gfx2d.o `test -f '$(top_srcdir)/src/client/gfx2d.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/gfx2d.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gfx2d.Tpo $(DEPDIR)/gfx2d.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/gfx2d.c' object='gfx2d.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gfx2d.o `test -f '$(top_srcdir)/src/client/gfx2d.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/gfx2d.c
+
+gfx2d.obj: $(top_srcdir)/src/client/gfx2d.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT gfx2d.obj -MD -MP -MF $(DEPDIR)/gfx2d.Tpo -c -o gfx2d.obj `if test -f '$(top_srcdir)/src/client/gfx2d.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/gfx2d.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/gfx2d.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gfx2d.Tpo $(DEPDIR)/gfx2d.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/gfx2d.c' object='gfx2d.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gfx2d.obj `if test -f '$(top_srcdir)/src/client/gfx2d.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/gfx2d.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/gfx2d.c'; fi`
 
 test_gl_legacy-test_gl_legacy.o: test_gl_legacy.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-test_gl_legacy.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo -c -o test_gl_legacy-test_gl_legacy.o `test -f 'test_gl_legacy.c' || echo '$(srcdir)/'`test_gl_legacy.c
@@ -1277,6 +1311,13 @@ test-image-geometry.log: test-image-geometry$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-gfx2d-picture.log: test-gfx2d-picture$(EXEEXT)
+	@p='test-gfx2d-picture$(EXEEXT)'; \
+	b='test-gfx2d-picture'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 .sh.log:
 	@p='$<'; \
 	$(am__set_b); \
@@ -1369,6 +1410,7 @@ clean-am: clean-checkPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/SDL_console.Po
+	-rm -f ./$(DEPDIR)/gfx2d.Po
 	-rm -f ./$(DEPDIR)/image_geometry.Po
 	-rm -f ./$(DEPDIR)/paint_transform.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
@@ -1380,6 +1422,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sdlkeys.Po
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
+	-rm -f ./$(DEPDIR)/test_gfx2d_picture.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
@@ -1440,6 +1483,7 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/SDL_console.Po
+	-rm -f ./$(DEPDIR)/gfx2d.Po
 	-rm -f ./$(DEPDIR)/image_geometry.Po
 	-rm -f ./$(DEPDIR)/paint_transform.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
@@ -1451,6 +1495,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sdlkeys.Po
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
+	-rm -f ./$(DEPDIR)/test_gfx2d_picture.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po

@@ -8,12 +8,14 @@ check_PROGRAMS = test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 \
 	test-sdl-clipboard test-sdl-event test-gl-legacy \
 	test-renderer-commands test-renderer-geometry \
-	test-renderer-gl-backends test-paint-transform test-image-geometry
+	test-renderer-gl-backends test-paint-transform test-image-geometry \
+	test-gfx2d-picture
 TESTS = test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
 	test-renderer-geometry test-paint-transform run-gl-legacy.sh \
-	test-image-geometry run-renderer-gl-backends.sh run-e2e.sh
+	test-image-geometry test-gfx2d-picture \
+	run-renderer-gl-backends.sh run-e2e.sh
 
 test_sdl_keys_SOURCES = test_sdl_keys.c \
 	$(top_srcdir)/src/client/sdl/sdlkeys.c
@@ -67,6 +69,11 @@ test_paint_transform_SOURCES = test_paint_transform.c \
 
 test_image_geometry_SOURCES = test_image_geometry.c \
 	$(top_srcdir)/src/client/sdl/image_geometry.c
+
+test_gfx2d_picture_SOURCES = test_gfx2d_picture.c \
+	$(top_srcdir)/src/client/gfx2d.c
+test_gfx2d_picture_LDFLAGS = $(AM_LDFLAGS) -Wl,--wrap=malloc
+test_gfx2d_picture_LDADD = $(top_builddir)/src/common/libxpcommon.a
 
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
