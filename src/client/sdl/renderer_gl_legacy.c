@@ -339,6 +339,11 @@ static int Legacy_context_is_compatible(LegacyContext *context)
     }
     if (!Legacy_version_at_least(major, minor, 1, 4))
         return 0;
+    if (!Legacy_version_at_least(major, minor, 2, 0)
+        && !Legacy_extension_supported(
+            context, major, "GL_ARB_texture_non_power_of_two")) {
+        return 0;
+    }
 
     /* Fixed-function entry points are unavailable in a 3.0 forward context,
      * in 3.1 without ARB_compatibility, and in 3.2+ core profiles. */

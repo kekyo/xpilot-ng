@@ -17,13 +17,13 @@ typedef enum ImageGeometrySpace {
 
 /** Dimensions describing a horizontal frame atlas in one RGBA8 texture. */
 typedef struct ImageGeometryAtlas {
-    /** Full texture width, including right-side padding. */
+    /** Full semantic texture width. */
     int texture_width;
-    /** Full texture height, including bottom padding. */
+    /** Full semantic texture height. */
     int texture_height;
-    /** Width of one frame before texture padding. */
+    /** Width of one frame in the semantic texture. */
     int frame_width;
-    /** Height of one frame before texture padding. */
+    /** Height of one frame in the semantic texture. */
     int frame_height;
     /** Number of equally sized frames laid out from left to right. */
     size_t frame_count;

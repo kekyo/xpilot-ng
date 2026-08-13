@@ -292,8 +292,8 @@ static int Image_stage(Renderer *renderer, image_t *image,
         }
     }
 
-    texture_desc.width = candidate->data_width;
-    texture_desc.height = candidate->data_height;
+    texture_desc.width = candidate->width;
+    texture_desc.height = candidate->height;
     texture_desc.filter = image->filter;
     texture_desc.wrap = registration_index >= first_texture
         ? RENDERER_TEXTURE_WRAP_REPEAT : RENDERER_TEXTURE_WRAP_CLAMP;
@@ -498,8 +498,8 @@ static void Image_draw(image_t *image, int frame, RendererRect area,
             sdl_renderer, RENDERER_STATUS_RESOURCE_MISMATCH);
         goto failure;
     }
-    atlas.texture_width = image->data_width;
-    atlas.texture_height = image->data_height;
+    atlas.texture_width = image->width;
+    atlas.texture_height = image->height;
     atlas.frame_width = image->frame_width;
     atlas.frame_height = image->height;
     atlas.frame_count = (size_t)image->num_frames;
@@ -601,8 +601,8 @@ int Images_init(void)
     DEF_IMG("ball_gray.ppm", 1);
     /* Rotated sprites use a single source frame and immutable linear
      * sampling rather than mutating texture state while painting. */
-    DEF_ROTATED_IMG("ship_friend.ppm"); /* 128 fails in some OpenGL drivers */
-    DEF_ROTATED_IMG("ship_friend.ppm"); /* I guess texture gets too wide (4096) */
+    DEF_ROTATED_IMG("ship_friend.ppm");
+    DEF_ROTATED_IMG("ship_friend.ppm");
     DEF_ROTATED_IMG("ship_enemy.ppm");
     DEF_IMG("bullet.ppm", -16);
     DEF_IMG("bullet_blue.ppm", -16);

@@ -38,9 +38,9 @@ typedef enum image_state_e {
  * One image may contain multiple frames that represent the same object in
  * different states. If rotate flag is true, the image will be rotated
  * when it is created to generate num_frames-1 of new frames.
- * Width is the cumulative width of all frames. Frame_width is the width
- * of any single frame. Data_width and data_height include power-of-two atlas
- * padding retained for the compatibility renderer.
+ * Width is the natural semantic atlas width across all frames. Frame_width is
+ * the width of any single frame. Data_width and data_height include
+ * power-of-two atlas padding retained only for the compatibility renderer.
  */
 typedef struct image_t {
     /** Transitional fixed-function OpenGL texture name. */
@@ -61,13 +61,13 @@ typedef struct image_t {
     RendererTextureFilter filter;
     /** Current preparation state. */
     image_state_e state;
-    /** Width of all frames before texture padding. */
+    /** Natural semantic texture width across all frames. */
     int width;
-    /** Height of one frame before texture padding. */
+    /** Natural semantic texture height. */
     int height;
-    /** Width of the padded texture data. */
+    /** Width of the power-of-two compatibility texture data. */
     int data_width;
-    /** Height of the padded texture data. */
+    /** Height of the power-of-two compatibility texture data. */
     int data_height;
     /** Width of one frame. */
     int frame_width;
