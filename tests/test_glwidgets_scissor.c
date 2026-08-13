@@ -7,7 +7,6 @@
 #include <string.h>
 
 #define MAX_EVENTS 16
-#define MAX_GL_SCISSORS 16
 #define MAX_ORDERED_EVENTS 32
 
 typedef enum TraversalEventKind {
@@ -22,20 +21,10 @@ typedef struct TraversalEvent {
     int widget_id;
 } TraversalEvent;
 
-typedef struct GlScissorCall {
-    int x;
-    int y;
-    int width;
-    int height;
-} GlScissorCall;
-
 typedef enum OrderedEventKind {
-    ORDERED_EVENT_GL_SCISSOR,
-    ORDERED_EVENT_ENABLE_SCISSOR,
     ORDERED_EVENT_SET_SEMANTIC_SCISSOR,
     ORDERED_EVENT_DISABLE_SEMANTIC_SCISSOR,
-    ORDERED_EVENT_DRAW,
-    ORDERED_EVENT_DISABLE_SCISSOR
+    ORDERED_EVENT_DRAW
 } OrderedEventKind;
 
 typedef struct OrderedEvent {
@@ -45,18 +34,19 @@ typedef struct OrderedEvent {
 } OrderedEvent;
 
 static TraversalEvent events[MAX_EVENTS];
-static GlScissorCall gl_scissors[MAX_GL_SCISSORS];
 static OrderedEvent ordered_events[MAX_ORDERED_EVENTS];
 static int event_count;
-static int gl_scissor_count;
 static int ordered_event_count;
 static int semantic_scissor_call_count;
 static int failing_semantic_scissor_call;
 static RendererStatus semantic_scissor_failure;
 static RendererStatus fake_frame_result;
-static int scissor_test_enable_count;
-static int scissor_test_disable_count;
-static int scissor_test_enabled;
+static RendererStatus tracked_frame_statuses[MAX_EVENTS];
+static int frame_result_track_count;
+static int legacy_gl_enable_count;
+static int legacy_gl_disable_count;
+static int legacy_gl_blend_func_count;
+static int legacy_gl_scissor_count;
 static SdlUiDrawState *active_draw_state;
 static GLWidget *failing_widget;
 static GLWidget *frame_failing_widget;
@@ -77,18 +67,19 @@ static int rect_equal(RendererRect left, RendererRect right)
 static void reset_capture(void)
 {
     memset(events, 0, sizeof(events));
-    memset(gl_scissors, 0, sizeof(gl_scissors));
     memset(ordered_events, 0, sizeof(ordered_events));
     event_count = 0;
-    gl_scissor_count = 0;
     ordered_event_count = 0;
     semantic_scissor_call_count = 0;
     failing_semantic_scissor_call = 0;
     semantic_scissor_failure = RENDERER_STATUS_OK;
     fake_frame_result = RENDERER_STATUS_OK;
-    scissor_test_enable_count = 0;
-    scissor_test_disable_count = 0;
-    scissor_test_enabled = 0;
+    memset(tracked_frame_statuses, 0, sizeof(tracked_frame_statuses));
+    frame_result_track_count = 0;
+    legacy_gl_enable_count = 0;
+    legacy_gl_disable_count = 0;
+    legacy_gl_blend_func_count = 0;
+    legacy_gl_scissor_count = 0;
     active_draw_state = NULL;
     failing_widget = NULL;
     frame_failing_widget = NULL;
@@ -143,6 +134,22 @@ RendererStatus Sdl_renderer_set_logical_scissor(
     return RENDERER_STATUS_OK;
 }
 
+RendererStatus Sdl_renderer_track_frame_result(
+    SdlRenderer *renderer, RendererStatus status)
+{
+    if (renderer == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (frame_result_track_count < MAX_EVENTS) {
+        tracked_frame_statuses[frame_result_track_count] = status;
+    }
+    frame_result_track_count++;
+    if (fake_frame_result == RENDERER_STATUS_OK
+        && status != RENDERER_STATUS_OK) {
+        fake_frame_result = status;
+    }
+    return fake_frame_result;
+}
+
 RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
 {
     return renderer != NULL ? fake_frame_result
@@ -157,42 +164,30 @@ RendererStatus Sdl_ui_draw_state_status(const SdlUiDrawState *state)
 
 void GLAPIENTRY glEnable(GLenum capability)
 {
-    if (capability == GL_SCISSOR_TEST) {
-        scissor_test_enable_count++;
-        scissor_test_enabled = 1;
-        record_ordered_event(ORDERED_EVENT_ENABLE_SCISSOR, NULL, 0);
-    }
+    (void)capability;
+    legacy_gl_enable_count++;
 }
 
 void GLAPIENTRY glDisable(GLenum capability)
 {
-    if (capability == GL_SCISSOR_TEST) {
-        scissor_test_disable_count++;
-        scissor_test_enabled = 0;
-        record_ordered_event(ORDERED_EVENT_DISABLE_SCISSOR, NULL, 0);
-    }
+    (void)capability;
+    legacy_gl_disable_count++;
 }
 
 void GLAPIENTRY glBlendFunc(GLenum source, GLenum destination)
 {
     (void)source;
     (void)destination;
+    legacy_gl_blend_func_count++;
 }
 
 void GLAPIENTRY glScissor(GLint x, GLint y, GLsizei width, GLsizei height)
 {
-    GlScissorCall *call;
-    RendererRect scissor = {x, y, width, height};
-
-    record_ordered_event(ORDERED_EVENT_GL_SCISSOR, &scissor, 0);
-
-    if (gl_scissor_count >= MAX_GL_SCISSORS)
-        return;
-    call = &gl_scissors[gl_scissor_count++];
-    call->x = x;
-    call->y = y;
-    call->width = width;
-    call->height = height;
+    (void)x;
+    (void)y;
+    (void)width;
+    (void)height;
+    legacy_gl_scissor_count++;
 }
 
 static void draw_widget(GLWidget *widget)
@@ -235,20 +230,6 @@ static int check_draw_event(int index, int expected_id)
     return 0;
 }
 
-static int check_gl_scissor(int index, int x, int y,
-                            int width, int height)
-{
-    const GlScissorCall *call;
-
-    TEST_CHECK(index >= 0 && index < gl_scissor_count);
-    call = &gl_scissors[index];
-    TEST_CHECK(call->x == x);
-    TEST_CHECK(call->y == y);
-    TEST_CHECK(call->width == width);
-    TEST_CHECK(call->height == height);
-    return 0;
-}
-
 static int check_ordered_event(int index, OrderedEventKind expected_kind,
                                RendererRect expected_scissor,
                                int expected_widget_id)
@@ -258,11 +239,42 @@ static int check_ordered_event(int index, OrderedEventKind expected_kind,
     TEST_CHECK(index >= 0 && index < ordered_event_count);
     event = &ordered_events[index];
     TEST_CHECK(event->kind == expected_kind);
-    if (expected_kind == ORDERED_EVENT_GL_SCISSOR
-        || expected_kind == ORDERED_EVENT_SET_SEMANTIC_SCISSOR)
+    if (expected_kind == ORDERED_EVENT_SET_SEMANTIC_SCISSOR)
         TEST_CHECK(rect_equal(event->scissor, expected_scissor));
     if (expected_kind == ORDERED_EVENT_DRAW)
         TEST_CHECK(event->widget_id == expected_widget_id);
+    return 0;
+}
+
+static int check_no_legacy_gl_calls(void)
+{
+    TEST_CHECK(legacy_gl_enable_count == 0);
+    TEST_CHECK(legacy_gl_disable_count == 0);
+    TEST_CHECK(legacy_gl_blend_func_count == 0);
+    TEST_CHECK(legacy_gl_scissor_count == 0);
+    return 0;
+}
+
+static int check_tracked_frame_status(int index,
+                                      RendererStatus expected)
+{
+    TEST_CHECK(index >= 0 && index < frame_result_track_count);
+    TEST_CHECK(index < MAX_EVENTS);
+    TEST_CHECK(tracked_frame_statuses[index] == expected);
+    return 0;
+}
+
+static int check_ok_scissors_were_tracked(int expected_count)
+{
+    int index;
+
+    TEST_CHECK(semantic_scissor_call_count == expected_count);
+    TEST_CHECK(frame_result_track_count == expected_count);
+    for (index = 0; index < expected_count; index++) {
+        TEST_CHECK(check_tracked_frame_status(
+                       index, RENDERER_STATUS_OK)
+                   == 0);
+    }
     return 0;
 }
 
@@ -293,15 +305,9 @@ static int check_nested_clip_sequence(void)
     TEST_CHECK(check_set_event(4, parent_restore_clip) == 0);
     TEST_CHECK(check_set_event(5, root_restore_clip) == 0);
     TEST_CHECK(events[6].kind == TRAVERSAL_EVENT_DISABLE_SCISSOR);
+    TEST_CHECK(check_ok_scissors_were_tracked(5) == 0);
 
-    /* Direct legacy GL keeps its historical one-pixel expansion for a
-     * widget draw, but restores an inherited parent without expansion. */
-    TEST_CHECK(gl_scissor_count == 4);
-    TEST_CHECK(check_gl_scissor(0, 5, 58, 21, 16) == 0);
-    TEST_CHECK(check_gl_scissor(1, 8, 64, 10, 7) == 0);
-    TEST_CHECK(check_gl_scissor(2, 5, 58, 20, 15) == 0);
-    TEST_CHECK(check_gl_scissor(3, 2, 47, 40, 30) == 0);
-    return 0;
+    return check_no_legacy_gl_calls();
 }
 
 static int check_success_restores_nested_parents(void)
@@ -324,7 +330,7 @@ static int check_success_restores_nested_parents(void)
     return 0;
 }
 
-static int check_failure_restores_before_unwinding(void)
+static int check_sticky_failure_stops_unwind_commands(void)
 {
     GLWidget parent;
     GLWidget child;
@@ -344,23 +350,19 @@ static int check_failure_restores_before_unwinding(void)
     TEST_CHECK(DrawGLWidgetsi_checked(
                    &parent, 2, 3, 40, 30, renderer, &state)
                == RENDERER_STATUS_BACKEND_ERROR);
-    /* A failed renderer flush locks semantic state until end-frame retry, so
-     * no further semantic state command is submitted while unwinding. The
-     * direct legacy clip is still restored for the caller. */
+    /* A failed renderer operation locks semantic state until end-frame retry,
+     * so no further state command is submitted while unwinding. */
     TEST_CHECK(event_count == 4);
     TEST_CHECK(check_set_event(0, (RendererRect){5, 7, 21, 16}) == 0);
     TEST_CHECK(check_draw_event(1, parent_id) == 0);
     TEST_CHECK(check_set_event(2, (RendererRect){8, 10, 10, 7}) == 0);
     TEST_CHECK(check_draw_event(3, child_id) == 0);
-    TEST_CHECK(gl_scissor_count == 4);
-    TEST_CHECK(check_gl_scissor(0, 5, 58, 21, 16) == 0);
-    TEST_CHECK(check_gl_scissor(1, 8, 64, 10, 7) == 0);
-    TEST_CHECK(check_gl_scissor(2, 5, 58, 20, 15) == 0);
-    TEST_CHECK(check_gl_scissor(3, 2, 47, 40, 30) == 0);
-    return 0;
+    TEST_CHECK(draw_event_count() == 2);
+    TEST_CHECK(check_ok_scissors_were_tracked(2) == 0);
+    return check_no_legacy_gl_calls();
 }
 
-static int check_checked_requires_renderer_but_legacy_does_not(void)
+static int check_checked_requires_renderer(void)
 {
     GLWidget parent;
     SdlUiDrawState state = {RENDERER_STATUS_OK, 0};
@@ -372,14 +374,8 @@ static int check_checked_requires_renderer_but_legacy_does_not(void)
                    &parent, 2, 3, 40, 30, NULL, &state)
                == RENDERER_STATUS_INVALID_ARGUMENT);
     TEST_CHECK(event_count == 0);
-    TEST_CHECK(gl_scissor_count == 0);
-
-    reset_capture();
-    DrawGLWidgetsi(&parent, 2, 3, 40, 30);
-    TEST_CHECK(event_count == 1);
-    TEST_CHECK(check_draw_event(0, parent_id) == 0);
-    TEST_CHECK(gl_scissor_count == 2);
-    return 0;
+    TEST_CHECK(frame_result_track_count == 0);
+    return check_no_legacy_gl_calls();
 }
 
 static int check_fullscreen_checked_draw_orders_clipping(void)
@@ -394,48 +390,25 @@ static int check_fullscreen_checked_draw_orders_clipping(void)
 
     TEST_CHECK(DrawGLWidgets_checked(&widget, renderer, &state)
                == RENDERER_STATUS_OK);
-    TEST_CHECK(ordered_event_count == 9);
+    TEST_CHECK(ordered_event_count == 4);
     TEST_CHECK(check_ordered_event(
-                   0, ORDERED_EVENT_GL_SCISSOR,
-                   (RendererRect){0, 0, 100, 80}, 0)
-               == 0);
-    TEST_CHECK(check_ordered_event(
-                   1, ORDERED_EVENT_ENABLE_SCISSOR,
-                   (RendererRect){0}, 0)
-               == 0);
-    TEST_CHECK(check_ordered_event(
-                   2, ORDERED_EVENT_SET_SEMANTIC_SCISSOR,
+                   0, ORDERED_EVENT_SET_SEMANTIC_SCISSOR,
                    (RendererRect){5, 7, 21, 16}, 0)
                == 0);
     TEST_CHECK(check_ordered_event(
-                   3, ORDERED_EVENT_GL_SCISSOR,
-                   (RendererRect){5, 58, 21, 16}, 0)
-               == 0);
-    TEST_CHECK(check_ordered_event(
-                   4, ORDERED_EVENT_DRAW,
+                   1, ORDERED_EVENT_DRAW,
                    (RendererRect){0}, parent_id)
                == 0);
     TEST_CHECK(check_ordered_event(
-                   5, ORDERED_EVENT_SET_SEMANTIC_SCISSOR,
+                   2, ORDERED_EVENT_SET_SEMANTIC_SCISSOR,
                    (RendererRect){0, 0, 100, 80}, 0)
                == 0);
     TEST_CHECK(check_ordered_event(
-                   6, ORDERED_EVENT_GL_SCISSOR,
-                   (RendererRect){0, 0, 100, 80}, 0)
-               == 0);
-    TEST_CHECK(check_ordered_event(
-                   7, ORDERED_EVENT_DISABLE_SEMANTIC_SCISSOR,
+                   3, ORDERED_EVENT_DISABLE_SEMANTIC_SCISSOR,
                    (RendererRect){0}, 0)
                == 0);
-    TEST_CHECK(check_ordered_event(
-                   8, ORDERED_EVENT_DISABLE_SCISSOR,
-                   (RendererRect){0}, 0)
-               == 0);
-    TEST_CHECK(scissor_test_enable_count == 1);
-    TEST_CHECK(scissor_test_disable_count == 1);
-    TEST_CHECK(scissor_test_enabled == 0);
-
-    return 0;
+    TEST_CHECK(check_ok_scissors_were_tracked(3) == 0);
+    return check_no_legacy_gl_calls();
 }
 
 static int check_fullscreen_checked_arguments_and_empty_list(void)
@@ -449,6 +422,8 @@ static int check_fullscreen_checked_arguments_and_empty_list(void)
     TEST_CHECK(DrawGLWidgets_checked(NULL, renderer, NULL)
                == RENDERER_STATUS_INVALID_ARGUMENT);
     TEST_CHECK(ordered_event_count == 0);
+    TEST_CHECK(frame_result_track_count == 0);
+    TEST_CHECK(check_no_legacy_gl_calls() == 0);
 
     reset_capture();
     TEST_CHECK(DrawGLWidgets_checked(NULL, renderer, &state)
@@ -457,9 +432,8 @@ static int check_fullscreen_checked_arguments_and_empty_list(void)
     TEST_CHECK(semantic_scissor_call_count == 1);
     TEST_CHECK(event_count == 1);
     TEST_CHECK(events[0].kind == TRAVERSAL_EVENT_DISABLE_SCISSOR);
-    TEST_CHECK(scissor_test_enable_count == 1);
-    TEST_CHECK(scissor_test_disable_count == 1);
-    TEST_CHECK(scissor_test_enabled == 0);
+    TEST_CHECK(check_ok_scissors_were_tracked(1) == 0);
+    TEST_CHECK(check_no_legacy_gl_calls() == 0);
 
     state.status = RENDERER_STATUS_BACKEND_ERROR;
     reset_capture();
@@ -467,9 +441,8 @@ static int check_fullscreen_checked_arguments_and_empty_list(void)
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(draw_event_count() == 0);
     TEST_CHECK(semantic_scissor_call_count == 0);
-    TEST_CHECK(scissor_test_enable_count == 1);
-    TEST_CHECK(scissor_test_disable_count == 1);
-    TEST_CHECK(scissor_test_enabled == 0);
+    TEST_CHECK(frame_result_track_count == 0);
+    TEST_CHECK(check_no_legacy_gl_calls() == 0);
 
     state.status = RENDERER_STATUS_OK;
     reset_capture();
@@ -478,10 +451,8 @@ static int check_fullscreen_checked_arguments_and_empty_list(void)
                == RENDERER_STATUS_RESOURCE_MISMATCH);
     TEST_CHECK(draw_event_count() == 0);
     TEST_CHECK(semantic_scissor_call_count == 0);
-    TEST_CHECK(scissor_test_enable_count == 1);
-    TEST_CHECK(scissor_test_disable_count == 1);
-    TEST_CHECK(scissor_test_enabled == 0);
-    return 0;
+    TEST_CHECK(frame_result_track_count == 0);
+    return check_no_legacy_gl_calls();
 }
 
 static int check_preexisting_failure_skips_fullscreen_widgets(void)
@@ -501,8 +472,8 @@ static int check_preexisting_failure_skips_fullscreen_widgets(void)
                == RENDERER_STATUS_RESOURCE_MISMATCH);
     TEST_CHECK(draw_event_count() == 0);
     TEST_CHECK(semantic_scissor_call_count == 0);
-    TEST_CHECK(scissor_test_enable_count == scissor_test_disable_count);
-    TEST_CHECK(scissor_test_enabled == 0);
+    TEST_CHECK(frame_result_track_count == 0);
+    TEST_CHECK(check_no_legacy_gl_calls() == 0);
 
     state.status = RENDERER_STATUS_OK;
     reset_capture();
@@ -512,9 +483,8 @@ static int check_preexisting_failure_skips_fullscreen_widgets(void)
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(draw_event_count() == 0);
     TEST_CHECK(semantic_scissor_call_count == 0);
-    TEST_CHECK(scissor_test_enable_count == scissor_test_disable_count);
-    TEST_CHECK(scissor_test_enabled == 0);
-    return 0;
+    TEST_CHECK(frame_result_track_count == 0);
+    return check_no_legacy_gl_calls();
 }
 
 static int check_fullscreen_widget_failure_skips_siblings(void)
@@ -535,9 +505,9 @@ static int check_fullscreen_widget_failure_skips_siblings(void)
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(draw_event_count() == 1);
     TEST_CHECK(check_draw_event(1, parent_id) == 0);
-    TEST_CHECK(scissor_test_enable_count == 1);
-    TEST_CHECK(scissor_test_disable_count == 1);
-    TEST_CHECK(scissor_test_enabled == 0);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(check_ok_scissors_were_tracked(1) == 0);
+    TEST_CHECK(check_no_legacy_gl_calls() == 0);
 
     state.status = RENDERER_STATUS_OK;
     reset_capture();
@@ -547,13 +517,12 @@ static int check_fullscreen_widget_failure_skips_siblings(void)
                == RENDERER_STATUS_INVALID_STATE);
     TEST_CHECK(draw_event_count() == 1);
     TEST_CHECK(check_draw_event(1, parent_id) == 0);
-    TEST_CHECK(scissor_test_enable_count == 1);
-    TEST_CHECK(scissor_test_disable_count == 1);
-    TEST_CHECK(scissor_test_enabled == 0);
-    return 0;
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(check_ok_scissors_were_tracked(1) == 0);
+    return check_no_legacy_gl_calls();
 }
 
-static int check_semantic_scissor_failures_disable_legacy_scissor(void)
+static int check_semantic_scissor_failures_are_sticky(void)
 {
     GLWidget widget;
     SdlUiDrawState state = {RENDERER_STATUS_OK, 0};
@@ -569,37 +538,98 @@ static int check_semantic_scissor_failures_disable_legacy_scissor(void)
                == RENDERER_STATUS_OUT_OF_MEMORY);
     TEST_CHECK(draw_event_count() == 0);
     TEST_CHECK(semantic_scissor_call_count == 1);
-    TEST_CHECK(scissor_test_enable_count == 1);
-    TEST_CHECK(scissor_test_disable_count == 1);
-    TEST_CHECK(scissor_test_enabled == 0);
+    TEST_CHECK(ordered_event_count == 1);
+    TEST_CHECK(check_ordered_event(
+                   0, ORDERED_EVENT_SET_SEMANTIC_SCISSOR,
+                   (RendererRect){5, 7, 21, 16}, 0)
+               == 0);
+    TEST_CHECK(frame_result_track_count == 1);
+    TEST_CHECK(check_tracked_frame_status(
+                   0, RENDERER_STATUS_OUT_OF_MEMORY)
+               == 0);
+    TEST_CHECK(fake_frame_result == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(check_no_legacy_gl_calls() == 0);
+
+    /* The retained first failure blocks a same-frame retry before any new
+     * semantic state, draw, or tracking operation is attempted. */
+    TEST_CHECK(DrawGLWidgets_checked(&widget, renderer, &state)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(draw_event_count() == 0);
+    TEST_CHECK(semantic_scissor_call_count == 1);
+    TEST_CHECK(frame_result_track_count == 1);
+    TEST_CHECK(ordered_event_count == 1);
+    TEST_CHECK(fake_frame_result == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(check_no_legacy_gl_calls() == 0);
 
     reset_capture();
     active_draw_state = &state;
-    failing_semantic_scissor_call = 3;
+    failing_semantic_scissor_call = 2;
     semantic_scissor_failure = RENDERER_STATUS_RESOURCE_MISMATCH;
     TEST_CHECK(DrawGLWidgets_checked(&widget, renderer, &state)
                == RENDERER_STATUS_RESOURCE_MISMATCH);
     TEST_CHECK(draw_event_count() == 1);
+    TEST_CHECK(semantic_scissor_call_count == 2);
+    TEST_CHECK(ordered_event_count == 3);
+    TEST_CHECK(check_ordered_event(
+                   0, ORDERED_EVENT_SET_SEMANTIC_SCISSOR,
+                   (RendererRect){5, 7, 21, 16}, 0)
+               == 0);
+    TEST_CHECK(check_ordered_event(
+                   1, ORDERED_EVENT_DRAW,
+                   (RendererRect){0}, parent_id)
+               == 0);
+    TEST_CHECK(check_ordered_event(
+                   2, ORDERED_EVENT_SET_SEMANTIC_SCISSOR,
+                   (RendererRect){0, 0, 100, 80}, 0)
+               == 0);
+    TEST_CHECK(frame_result_track_count == 2);
+    TEST_CHECK(check_tracked_frame_status(
+                   0, RENDERER_STATUS_OK)
+               == 0);
+    TEST_CHECK(check_tracked_frame_status(
+                   1, RENDERER_STATUS_RESOURCE_MISMATCH)
+               == 0);
+    TEST_CHECK(fake_frame_result
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(check_no_legacy_gl_calls() == 0);
+
+    reset_capture();
+    active_draw_state = &state;
+    failing_semantic_scissor_call = 3;
+    semantic_scissor_failure = RENDERER_STATUS_INVALID_STATE;
+    TEST_CHECK(DrawGLWidgets_checked(&widget, renderer, &state)
+               == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK(draw_event_count() == 1);
     TEST_CHECK(semantic_scissor_call_count == 3);
-    TEST_CHECK(scissor_test_enable_count == 1);
-    TEST_CHECK(scissor_test_disable_count == 1);
-    TEST_CHECK(scissor_test_enabled == 0);
-    TEST_CHECK(ordered_event_count > 0);
-    TEST_CHECK(ordered_events[ordered_event_count - 1].kind
-               == ORDERED_EVENT_DISABLE_SCISSOR);
-    return 0;
+    TEST_CHECK(ordered_event_count == 4);
+    TEST_CHECK(check_ordered_event(
+                   3, ORDERED_EVENT_DISABLE_SEMANTIC_SCISSOR,
+                   (RendererRect){0}, 0)
+               == 0);
+    TEST_CHECK(frame_result_track_count == 3);
+    TEST_CHECK(check_tracked_frame_status(
+                   0, RENDERER_STATUS_OK)
+               == 0);
+    TEST_CHECK(check_tracked_frame_status(
+                   1, RENDERER_STATUS_OK)
+               == 0);
+    TEST_CHECK(check_tracked_frame_status(
+                   2, RENDERER_STATUS_INVALID_STATE)
+               == 0);
+    TEST_CHECK(fake_frame_result == RENDERER_STATUS_INVALID_STATE);
+    return check_no_legacy_gl_calls();
 }
 
 int main(void)
 {
     TEST_CHECK(check_success_restores_nested_parents() == 0);
-    TEST_CHECK(check_failure_restores_before_unwinding() == 0);
-    TEST_CHECK(check_checked_requires_renderer_but_legacy_does_not() == 0);
+    TEST_CHECK(check_sticky_failure_stops_unwind_commands() == 0);
+    TEST_CHECK(check_checked_requires_renderer() == 0);
     TEST_CHECK(check_fullscreen_checked_draw_orders_clipping() == 0);
     TEST_CHECK(check_fullscreen_checked_arguments_and_empty_list() == 0);
     TEST_CHECK(check_preexisting_failure_skips_fullscreen_widgets() == 0);
     TEST_CHECK(check_fullscreen_widget_failure_skips_siblings() == 0);
-    TEST_CHECK(check_semantic_scissor_failures_disable_legacy_scissor()
+    TEST_CHECK(check_semantic_scissor_failures_are_sticky()
                == 0);
     return 0;
 }

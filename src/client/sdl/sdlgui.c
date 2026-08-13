@@ -165,17 +165,6 @@ static GLubyte get_alpha(Uint32 color)
     return (color & 255);
 }
 
-int GL_X(int x)
-{
-    return (int)((x - world.x) * clData.scale);
-}
-
-int GL_Y(int y)
-{
-    return (int)((y - world.y) * clData.scale);
-}
-
-
 static int wrap(int *xp, int *yp)
 {
     int			x = *xp, y = *yp;

@@ -26,6 +26,7 @@ struct RendererTexture {
 
 struct SdlRenderer {
     Renderer *frontend;
+    RendererStatus frame_result;
 };
 
 typedef struct FakeTexture {
@@ -50,7 +51,10 @@ typedef struct FakeSprite {
 } FakeSprite;
 
 static Renderer fake_renderer;
-static SdlRenderer fake_sdl_renderer = {&fake_renderer};
+static SdlRenderer fake_sdl_renderer = {
+    &fake_renderer,
+    RENDERER_STATUS_OK
+};
 static FakeTexture fake_textures[MAX_TEXTURES];
 static FakeSprite last_sprite;
 static int texture_create_attempts;
@@ -64,6 +68,7 @@ static int blend_calls;
 static int sprite_calls;
 static int preserving_flush_calls;
 static RendererStatus preserving_flush_result = RENDERER_STATUS_OK;
+static int renderer_track_calls;
 static int legacy_texture_calls;
 static char events[MAX_EVENTS];
 static int event_count;
@@ -289,10 +294,25 @@ RendererStatus Sdl_renderer_set_logical_scissor(
     return RENDERER_STATUS_OK;
 }
 
+RendererStatus Sdl_renderer_track_frame_result(
+    SdlRenderer *renderer, RendererStatus status)
+{
+    if (renderer != &fake_sdl_renderer)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!fake_renderer.frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+    renderer_track_calls++;
+    if (renderer->frame_result == RENDERER_STATUS_OK
+        && status != RENDERER_STATUS_OK) {
+        renderer->frame_result = status;
+    }
+    return renderer->frame_result;
+}
+
 RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
 {
-    return renderer == &fake_sdl_renderer ? RENDERER_STATUS_OK
-                                          : RENDERER_STATUS_INVALID_ARGUMENT;
+    return renderer == &fake_sdl_renderer
+        ? renderer->frame_result : RENDERER_STATUS_INVALID_ARGUMENT;
 }
 
 RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
@@ -525,6 +545,8 @@ static RendererStatus integration_begin(void *context)
 {
     (void)context;
     fake_renderer.frame_active = 1;
+    fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
+    renderer_track_calls = 0;
     return RENDERER_STATUS_OK;
 }
 
@@ -541,7 +563,7 @@ static RendererStatus integration_draw(void *context)
 static RendererStatus integration_frame_result(void *context)
 {
     (void)context;
-    return RENDERER_STATUS_OK;
+    return Sdl_renderer_frame_result(&fake_sdl_renderer);
 }
 
 static RendererStatus integration_end(void *context)
@@ -600,6 +622,8 @@ static int check_widget_failure_aborts_frame(const SdlUiImage *image)
     TEST_CHECK(Sdl_ui_draw_state_status(&draw_state)
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(Sdl_ui_draw_state_successful_draws(&draw_state) == 0);
+    TEST_CHECK(renderer_track_calls == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
     TEST_CHECK(Sdl_meta_frame_cleanup_allowed(&frame_state));
     TEST_CHECK(!fake_renderer.frame_active);
 

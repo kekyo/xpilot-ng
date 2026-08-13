@@ -89,7 +89,6 @@ void PrependGLWidgetList( GLWidget **list, GLWidget *widget );
 bool DelGLWidgetListItem( GLWidget **list, GLWidget *widget );
 
 GLWidget *FindGLWidget( GLWidget *list, Uint16 x,Uint16 y );
-void DrawGLWidgetsi( GLWidget *list, int x, int y, int w, int h);
 /**
  * Draw a clipped widget list until tracked semantic drawing fails.
  *
@@ -98,14 +97,17 @@ void DrawGLWidgetsi( GLWidget *list, int x, int y, int w, int h);
  * @param y Top edge of the inherited clip rectangle.
  * @param w Width of the inherited clip rectangle.
  * @param h Height of the inherited clip rectangle.
- * @param sdl_renderer Renderer facade used to mirror nested widget clips for
+ * @param sdl_renderer Renderer facade used to apply nested widget clips to
  *        semantic draws. It must have an active frame.
  * @param draw_state Per-frame semantic UI draw state.
- * @return First tracked draw failure, or RENDERER_STATUS_OK.
+ * @return First tracked draw or clipping failure, or RENDERER_STATUS_OK.
  *
  * @remarks @p draw_state must be the same object retained by every semantic
  * image widget in @p list. Reset it once before a newly begun frame is drawn,
  * but never while an unfinished frame is only retrying its end operation.
+ * Successful traversal restores each inherited semantic clip and finally
+ * disables clipping. Failure returns without submitting cleanup commands so
+ * the retained frame result remains safe to retry or abort.
  */
 RendererStatus DrawGLWidgetsi_checked(GLWidget *list, int x, int y,
                                       int w, int h,
@@ -119,9 +121,8 @@ RendererStatus DrawGLWidgetsi_checked(GLWidget *list, int x, int y,
  * @param draw_state Per-frame semantic UI draw state.
  * @return First tracked draw or clipping failure, or RENDERER_STATUS_OK.
  *
- * @remarks The function brackets traversal with the legacy full-window
- * scissor state. On failure it restores legacy state but leaves semantic
- * state untouched so pending renderer commands can be retried safely.
+ * @remarks On success the semantic scissor is disabled. On failure no further
+ * drawing or clipping command is submitted for the active frame.
  */
 RendererStatus DrawGLWidgets_checked(
     GLWidget *list, SdlRenderer *sdl_renderer,

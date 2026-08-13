@@ -39,7 +39,7 @@ void setupPaint_stationary(void);
 void setupPaint_moving(void);
 void setupPaint_HUD(void);
 
-/* helper function in sdlgui.c, some may be removed soon */
+/* Shared paint colors and direct-OpenGL color helper from sdlgui.c. */
 extern Uint32 nullRGBA;
 extern Uint32 blackRGBA;
 extern Uint32 whiteRGBA;
@@ -55,8 +55,6 @@ extern Uint32 scoreColorRGBA;
 extern Uint32 scoreOwnTeamColorRGBA;
 extern Uint32 scoreEnemyTeamColorRGBA;
 
-extern int GL_X(int x);
-extern int GL_Y(int y);
 extern void set_alphacolor(Uint32 color);
 
 extern irec_t *select_bounds;

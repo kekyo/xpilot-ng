@@ -1091,16 +1091,9 @@ static RendererStatus Draw_meta_frame(void *context)
     status = Renderer_set_transform_2d(renderer, transform);
     if (status != RENDERER_STATUS_OK)
 	return status;
-    status = Sdl_renderer_prepare_legacy(
-	frame->sdl_renderer, SDL_RENDERER_LEGACY_TOP_LEFT);
-    if (status != RENDERER_STATUS_OK)
-	return status;
-
-    glEnable(GL_SCISSOR_TEST);
     status = DrawGLWidgetsi_checked(
 	frame->widgets, 0, 0, draw_width, draw_height,
 	frame->sdl_renderer, frame->draw_state);
-    glDisable(GL_SCISSOR_TEST);
     if (status != RENDERER_STATUS_OK)
 	return status;
     if (Gl_diagnostics_check("meta frame end") != 0)

@@ -504,9 +504,8 @@ static RendererStatus DrawGLWidgetsi_internal(
     curr = list;
     
     while (curr) {
-	status = draw_state != NULL
-	    ? Sdl_ui_draw_state_status(draw_state) : RENDERER_STATUS_OK;
-	if (status == RENDERER_STATUS_OK && sdl_renderer != NULL)
+	status = Sdl_ui_draw_state_status(draw_state);
+	if (status == RENDERER_STATUS_OK)
 	    status = Sdl_renderer_frame_result(sdl_renderer);
 	if (status != RENDERER_STATUS_OK)
 	    return status;
@@ -515,38 +514,32 @@ static RendererStatus DrawGLWidgetsi_internal(
     	w2 = MIN(x+w,curr->bounds.x+curr->bounds.w) - x2;
     	h2 = MIN(y+h,curr->bounds.y+curr->bounds.h) - y2;
 	if ( (w2 > 0) && (h2 > 0) ) {
-	    if (sdl_renderer != NULL) {
-		RendererRect semantic_clip = {x2, y2, w2 + 1, h2 + 1};
+	    RendererRect semantic_clip = {x2, y2, w2 + 1, h2 + 1};
 
-		status = Sdl_renderer_set_logical_scissor(
-		    sdl_renderer, &semantic_clip);
-		if (status != RENDERER_STATUS_OK)
-		    return status;
-	    }
-    	    glEnable(GL_BLEND);
-    	    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	    glScissor(x2, draw_height - y2 - h2, w2+1, h2+1);
-	    if (curr->Draw) curr->Draw(curr);
-	    glDisable(GL_BLEND);
-	    status = draw_state != NULL
-		? Sdl_ui_draw_state_status(draw_state) : RENDERER_STATUS_OK;
-	    if (status == RENDERER_STATUS_OK && sdl_renderer != NULL)
-		status = Sdl_renderer_frame_result(sdl_renderer);
-	    if (status != RENDERER_STATUS_OK) {
-		glScissor(x, draw_height - y - h, w, h);
+	    status = Sdl_renderer_track_frame_result(
+		sdl_renderer,
+		Sdl_renderer_set_logical_scissor(
+		    sdl_renderer, &semantic_clip));
+	    if (status != RENDERER_STATUS_OK)
 		return status;
-	    }
+	    if (curr->Draw) curr->Draw(curr);
+	    status = Sdl_ui_draw_state_status(draw_state);
+	    if (status == RENDERER_STATUS_OK)
+		status = Sdl_renderer_frame_result(sdl_renderer);
+	    if (status != RENDERER_STATUS_OK)
+		return status;
 
 	    status = DrawGLWidgetsi_internal(
 		curr->children, x2, y2, w2, h2,
 		sdl_renderer, draw_state);
-	    if (status == RENDERER_STATUS_OK && sdl_renderer != NULL) {
+	    if (status == RENDERER_STATUS_OK) {
 		RendererRect inherited_clip = {x, y, w, h};
 
-		status = Sdl_renderer_set_logical_scissor(
-		    sdl_renderer, &inherited_clip);
+		status = Sdl_renderer_track_frame_result(
+		    sdl_renderer,
+		    Sdl_renderer_set_logical_scissor(
+			sdl_renderer, &inherited_clip));
 	    }
-	    glScissor(x, draw_height - y - h, w, h);
 	    if (status != RENDERER_STATUS_OK)
 		return status;
 	}
@@ -554,11 +547,6 @@ static RendererStatus DrawGLWidgetsi_internal(
 	curr = curr->next;
     }
     return RENDERER_STATUS_OK;
-}
-
-void DrawGLWidgetsi(GLWidget *list, int x, int y, int w, int h)
-{
-    (void)DrawGLWidgetsi_internal(list, x, y, w, h, NULL, NULL);
 }
 
 RendererStatus DrawGLWidgetsi_checked(GLWidget *list, int x, int y,
@@ -579,23 +567,17 @@ RendererStatus DrawGLWidgetsi_checked(GLWidget *list, int x, int y,
 	list, x, y, w, h, sdl_renderer, draw_state);
     if (status != RENDERER_STATUS_OK)
 	return status;
-    return Sdl_renderer_set_logical_scissor(sdl_renderer, NULL);
+    return Sdl_renderer_track_frame_result(
+	sdl_renderer,
+	Sdl_renderer_set_logical_scissor(sdl_renderer, NULL));
 }
 RendererStatus DrawGLWidgets_checked(
     GLWidget *list, SdlRenderer *sdl_renderer,
     const SdlUiDrawState *draw_state)
 {
-    RendererStatus status;
-
-    if (sdl_renderer == NULL || draw_state == NULL)
-	return RENDERER_STATUS_INVALID_ARGUMENT;
-    glScissor(0, 0, draw_width, draw_height);
-    glEnable(GL_SCISSOR_TEST);
-    status = DrawGLWidgetsi_checked(
+    return DrawGLWidgetsi_checked(
 	list, 0, 0, draw_width, draw_height,
 	sdl_renderer, draw_state);
-    glDisable(GL_SCISSOR_TEST);
-    return status;
 }
 
 /*
