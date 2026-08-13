@@ -12,10 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_EVENTS 8
-#define MAX_DRAWS 8
+#define MAX_EVENTS 16
+#define MAX_DRAWS 12
 #define MAX_FILLS 8
 #define MAX_TEXT_DRAWS 8
+#define MAX_DRAW_VERTICES 12
 
 struct Renderer {
     int frame_active;
@@ -44,7 +45,7 @@ typedef enum DrawEvent {
 
 typedef struct FakeDraw {
     RendererTexture *texture;
-    RendererVertex2D vertices[6];
+    RendererVertex2D vertices[MAX_DRAW_VERTICES];
     size_t vertex_count;
 } FakeDraw;
 
@@ -99,6 +100,8 @@ static int legacy_color_calls;
 static int legacy_blend_calls;
 static RendererStatus blend_result;
 static RendererStatus draw_result;
+static int draw_failure_attempt;
+static RendererStatus draw_failure_result;
 static RendererStatus fill_result;
 static RendererStatus flush_result;
 static RendererStatus text_result;
@@ -144,6 +147,26 @@ static int vertex_equal(const RendererVertex2D *vertex,
         && color_equal(vertex->color, color);
 }
 
+static int check_recorded_draw(
+    int draw_index, size_t expected_vertex_count,
+    const float expected_points[][2],
+    const RendererColor expected_colors[])
+{
+    size_t index;
+
+    TEST_CHECK(draw_index >= 0);
+    TEST_CHECK(draw_index < successful_draws);
+    TEST_CHECK(draws[draw_index].texture == NULL);
+    TEST_CHECK(draws[draw_index].vertex_count == expected_vertex_count);
+    for (index = 0; index < expected_vertex_count; index++) {
+        TEST_CHECK(vertex_equal(
+            &draws[draw_index].vertices[index],
+            expected_points[index][0], expected_points[index][1],
+            expected_colors[index]));
+    }
+    return 0;
+}
+
 static void record_event(DrawEvent event)
 {
     if (event_count < MAX_EVENTS)
@@ -180,6 +203,8 @@ static void reset_frame(void)
     legacy_blend_calls = 0;
     blend_result = RENDERER_STATUS_OK;
     draw_result = RENDERER_STATUS_OK;
+    draw_failure_attempt = 0;
+    draw_failure_result = RENDERER_STATUS_OK;
     fill_result = RENDERER_STATUS_OK;
     flush_result = RENDERER_STATUS_OK;
     text_result = RENDERER_STATUS_OK;
@@ -261,15 +286,19 @@ RendererStatus Renderer_draw_triangles(Renderer *renderer,
     FakeDraw *draw;
 
     draw_attempts++;
+    call_order++;
     if (draw_order == 0)
-        draw_order = ++call_order;
+        draw_order = call_order;
     operation_result_pending = 1;
     record_event(DRAW_EVENT_TRIANGLES);
     if (renderer != &fake_renderer || !renderer->frame_active
         || texture != NULL || vertices == NULL
-        || (vertex_count != 3 && vertex_count != 6)) {
+        || (vertex_count != 3 && vertex_count != 6
+            && vertex_count != 12)) {
         return RENDERER_STATUS_INVALID_STATE;
     }
+    if (draw_failure_attempt == draw_attempts)
+        return draw_failure_result;
     if (draw_result != RENDERER_STATUS_OK)
         return draw_result;
     if (successful_draws >= MAX_DRAWS)
@@ -1913,6 +1942,287 @@ static int check_color_chooser_parent_paint(void)
     return 0;
 }
 
+static int check_successful_color_mod_parent_paint(
+    int has_background, RendererColor expected_background,
+    RendererColor value_color)
+{
+    const RendererColor black = {0x00, 0x00, 0x00, 0xff};
+    const RendererColor white = {0xff, 0xff, 0xff, 0xff};
+    const float diagonal_points[6][2] = {
+        {76.0f, 19.0f}, {76.0f, 46.0f}, {110.0f, 46.0f},
+        {76.0f, 19.0f}, {110.0f, 46.0f}, {110.0f, 19.0f}
+    };
+    const RendererColor diagonal_colors[6] = {
+        black, black, black, white, white, white
+    };
+    const float fan_points[12][2] = {
+        {106.0f, 46.0f}, {110.0f, 46.0f}, {110.0f, 43.0f},
+        {106.0f, 46.0f}, {110.0f, 43.0f}, {79.0f, 19.0f},
+        {106.0f, 46.0f}, {79.0f, 19.0f}, {76.0f, 19.0f},
+        {106.0f, 46.0f}, {76.0f, 19.0f}, {76.0f, 21.0f}
+    };
+    const RendererColor fan_colors[12] = {
+        white, white, white,
+        white, white, black,
+        white, black, black,
+        white, black, black
+    };
+    const float value_points[6][2] = {
+        {79.0f, 21.0f}, {79.0f, 43.0f}, {106.0f, 43.0f},
+        {79.0f, 21.0f}, {106.0f, 43.0f}, {106.0f, 21.0f}
+    };
+    const RendererColor value_colors[6] = {
+        value_color, value_color, value_color,
+        value_color, value_color, value_color
+    };
+    int expected_event_count = has_background ? 6 : 5;
+    int triangle_event = has_background ? 2 : 1;
+
+    TEST_CHECK(event_count == expected_event_count);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    if (has_background)
+        TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+    TEST_CHECK(events[triangle_event] == DRAW_EVENT_TRIANGLES);
+    TEST_CHECK(events[triangle_event + 1] == DRAW_EVENT_TRIANGLES);
+    TEST_CHECK(events[triangle_event + 2] == DRAW_EVENT_TRIANGLES);
+    TEST_CHECK(events[triangle_event + 3] == DRAW_EVENT_FLUSH);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == (has_background ? 3 : 0));
+    TEST_CHECK(draw_order == (has_background ? 4 : 3));
+    TEST_CHECK(flush_order == (has_background ? 7 : 6));
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == has_background);
+    TEST_CHECK(successful_fills == has_background);
+    TEST_CHECK(draw_attempts == 3);
+    TEST_CHECK(successful_draws == 3);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(text_attempts == 0);
+    if (has_background) {
+        TEST_CHECK(fills[0].x == 11.0f);
+        TEST_CHECK(fills[0].y == 17.0f);
+        TEST_CHECK(fills[0].width == 101.0f);
+        TEST_CHECK(fills[0].height == 31.0f);
+        TEST_CHECK(color_equal(fills[0].color, expected_background));
+    }
+    TEST_CHECK(check_recorded_draw(
+        0, 6, diagonal_points, diagonal_colors) == 0);
+    TEST_CHECK(check_recorded_draw(
+        1, 12, fan_points, fan_colors) == 0);
+    TEST_CHECK(check_recorded_draw(
+        2, 6, value_points, value_colors) == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    TEST_CHECK(legacy_blend_calls == 0);
+    return 0;
+}
+
+static int check_color_mod_later_draw_failure(
+    GLWidget *widget, int failure_attempt)
+{
+    int index;
+    int expected_event_count = failure_attempt + 3;
+    int successful_draws_after_failure = failure_attempt - 1;
+
+    TEST_CHECK(widget != NULL);
+    TEST_CHECK(failure_attempt == 2 || failure_attempt == 3);
+    reset_frame();
+    draw_failure_attempt = failure_attempt;
+    draw_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+    flush_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    widget->Draw(widget);
+    TEST_CHECK(event_count == expected_event_count);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+    for (index = 0; index < failure_attempt; index++)
+        TEST_CHECK(events[index + 2] == DRAW_EVENT_TRIANGLES);
+    TEST_CHECK(events[expected_event_count - 1] == DRAW_EVENT_FLUSH);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == 3);
+    TEST_CHECK(draw_order == 4);
+    TEST_CHECK(flush_order == failure_attempt + 4);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(draw_attempts == failure_attempt);
+    TEST_CHECK(successful_draws == successful_draws_after_failure);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(text_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+
+    draw_failure_attempt = 0;
+    draw_failure_result = RENDERER_STATUS_OK;
+    flush_result = RENDERER_STATUS_OK;
+    widget->Draw(widget);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == expected_event_count);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(draw_attempts == failure_attempt);
+    TEST_CHECK(successful_draws == successful_draws_after_failure);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(text_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    TEST_CHECK(legacy_blend_calls == 0);
+    return 0;
+}
+
+static int check_color_mod_first_draw_failure(GLWidget *widget)
+{
+    TEST_CHECK(widget != NULL);
+    reset_frame();
+    draw_failure_attempt = 1;
+    draw_failure_result = RENDERER_STATUS_INVALID_ARGUMENT;
+    widget->Draw(widget);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(events[1] == DRAW_EVENT_TRIANGLES);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == 0);
+    TEST_CHECK(draw_order == 3);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(successful_draws == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(text_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+
+    draw_failure_attempt = 0;
+    draw_failure_result = RENDERER_STATUS_OK;
+    widget->Draw(widget);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(successful_draws == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(text_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    TEST_CHECK(legacy_blend_calls == 0);
+    return 0;
+}
+
+static int check_color_mod_parent_paint(void)
+{
+    const RendererColor transparent_background = {
+        0x23, 0x45, 0x67, 0x00
+    };
+    const RendererColor value_color = {0x89, 0xab, 0xcd, 0xef};
+    Uint32 value = 0x89abcdef;
+    Uint32 foreground = 0x102030ff;
+    Uint32 background = 0x23456700;
+    Uint32 zero_background = 0;
+    SDL_Rect bounds = {11, 17, 101, 31};
+    SDL_Rect swatch;
+    ChooserUpdateCapture capture = {0, NULL};
+    int allocations_before = live_text_allocations;
+    GLWidget *widget = Init_ColorModWidget(
+        &value, &foreground, &background,
+        capture_chooser_update, &capture);
+    ColorModWidget *info;
+    IntChooserWidget *red_info;
+    IntChooserWidget *green_info;
+    IntChooserWidget *blue_info;
+    IntChooserWidget *alpha_info;
+
+    TEST_CHECK(widget != NULL);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+    TEST_CHECK(widget->children == info->redpick);
+    TEST_CHECK(info->redpick->next == info->greenpick);
+    TEST_CHECK(info->greenpick->next == info->bluepick);
+    TEST_CHECK(info->bluepick->next == info->alphapick);
+    TEST_CHECK(info->alphapick->next == NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    TEST_CHECK(info->redpick->bounds.x == 13);
+    TEST_CHECK(info->redpick->bounds.y == 17);
+    TEST_CHECK(info->redpick->bounds.w == 47);
+    TEST_CHECK(info->redpick->bounds.h == 7);
+    TEST_CHECK(info->greenpick->bounds.y == 24);
+    TEST_CHECK(info->bluepick->bounds.y == 31);
+    TEST_CHECK(info->alphapick->bounds.y == 38);
+
+    swatch.x = info->redpick->bounds.x + info->redpick->bounds.w + 16;
+    swatch.y = widget->bounds.y + 2;
+    swatch.w = widget->bounds.x + widget->bounds.w - 2 - swatch.x;
+    swatch.h = widget->bounds.y + widget->bounds.h - 2 - swatch.y;
+    TEST_CHECK(swatch.x == 76);
+    TEST_CHECK(swatch.y == 19);
+    TEST_CHECK(swatch.w == 34);
+    TEST_CHECK(swatch.h == 27);
+
+    red_info = info->redpick->wid_info;
+    green_info = info->greenpick->wid_info;
+    blue_info = info->bluepick->wid_info;
+    alpha_info = info->alphapick->wid_info;
+    TEST_CHECK(red_info != NULL);
+    TEST_CHECK(green_info != NULL);
+    TEST_CHECK(blue_info != NULL);
+    TEST_CHECK(alpha_info != NULL);
+    TEST_CHECK(info->red == 0x89);
+    TEST_CHECK(info->green == 0xab);
+    TEST_CHECK(info->blue == 0xcd);
+    TEST_CHECK(info->alpha == 0xef);
+
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_color_mod_parent_paint(
+        1, transparent_background, value_color) == 0);
+
+    info->bgcolor = NULL;
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_color_mod_parent_paint(
+        0, transparent_background, value_color) == 0);
+
+    info->bgcolor = &zero_background;
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_color_mod_parent_paint(
+        0, transparent_background, value_color) == 0);
+
+    info->bgcolor = &background;
+    TEST_CHECK(check_color_mod_later_draw_failure(widget, 2) == 0);
+    TEST_CHECK(check_color_mod_later_draw_failure(widget, 3) == 0);
+    info->bgcolor = NULL;
+    TEST_CHECK(check_color_mod_first_draw_failure(widget) == 0);
+
+    TEST_CHECK(red_info->direction == 0);
+    TEST_CHECK(green_info->direction == 0);
+    TEST_CHECK(blue_info->direction == 0);
+    TEST_CHECK(alpha_info->direction == 0);
+    TEST_CHECK(info->red == 0x89);
+    TEST_CHECK(info->green == 0xab);
+    TEST_CHECK(info->blue == 0xcd);
+    TEST_CHECK(info->alpha == 0xef);
+    TEST_CHECK(value == 0x89abcdef);
+    TEST_CHECK(capture.calls == 0);
+
+    destroy_widget(widget);
+    TEST_CHECK(live_text_allocations == allocations_before);
+    return 0;
+}
+
 static int check_tap_is_consumed_when_flush_fails(void)
 {
     GLWidget *widget = Init_ArrowWidget(
@@ -1975,6 +2285,7 @@ int main(void)
     TEST_CHECK(check_int_chooser_parent_paint() == 0);
     TEST_CHECK(check_double_chooser_parent_paint() == 0);
     TEST_CHECK(check_color_chooser_parent_paint() == 0);
+    TEST_CHECK(check_color_mod_parent_paint() == 0);
     TEST_CHECK(check_label_scrap_button() == 0);
     TEST_CHECK(live_text_allocations == 0);
     return 0;

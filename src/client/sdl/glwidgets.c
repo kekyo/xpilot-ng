@@ -2581,6 +2581,15 @@ static void Paint_ColorModWidget( GLWidget *widget )
 {
     ColorModWidget *wid_info;
     SDL_Rect b;
+    SemanticWidgetBatch batch;
+    RendererColor black;
+    RendererColor white;
+    RendererColor value_color;
+    RendererVertex2D diagonal[6];
+    RendererVertex2D fan[12];
+    RendererVertex2D inner[6];
+    RendererPoint2D fan_points[6];
+    int index;
 
     if (!widget) {
     	error("Paint_ColorModWidget: argument is NULL!");
@@ -2598,56 +2607,95 @@ static void Paint_ColorModWidget( GLWidget *widget )
     	error("Paint_ColorModWidget: wid_info missing");
 	return;
     }
-
-    if ( (wid_info->bgcolor) && *(wid_info->bgcolor) ) {
-    	b.x = widget->bounds.x;
-    	b.y = widget->bounds.y;
-    	b.w = widget->bounds.w;
-    	b.h = widget->bounds.h;
-    	set_alphacolor(*(wid_info->bgcolor));
-    	glBegin(GL_QUADS);
-    	    glVertex2i(b.x  	,b.y	    );
-    	    glVertex2i(b.x+b.w	,b.y	    );
-    	    glVertex2i(b.x+b.w	,b.y+b.h    );
-    	    glVertex2i(b.x  	,b.y+b.h    );
-    	glEnd();
-    }
-    
+    if (Begin_semantic_widget_batch(&batch) != RENDERER_STATUS_OK)
+	return;
     b.x = wid_info->redpick->bounds.x + wid_info->redpick->bounds.w + 16;
     b.y = widget->bounds.y + 2;
     b.w = widget->bounds.x + widget->bounds.w - 2 - b.x;
     b.h = widget->bounds.y + widget->bounds.h - 2 - b.y;
-    
-    glBegin(GL_TRIANGLES);
-    	set_alphacolor(blackRGBA);
-    	glVertex2i(b.x	    ,b.y    	);
-    	glVertex2i(b.x	    ,b.y+b.h    );
-    	glVertex2i(b.x+b.w  ,b.y+b.h    );
-    	set_alphacolor(whiteRGBA);
-    	glVertex2i(b.x	    ,b.y    	);
-    	glVertex2i(b.x+b.w  ,b.y+b.h    );
-    	glVertex2i(b.x+b.w  ,b.y    	);
-    glEnd();
-    
-    glBegin(GL_POLYGON);
-    	set_alphacolor(whiteRGBA);
-    	glVertex2i(b.x + (GLint)(0.9*b.w)   ,b.y + b.h	    	    );
-    	glVertex2i(b.x + b.w	    	    ,b.y + b.h	    	    );
-    	glVertex2i(b.x + b.w	    	    ,b.y + (GLint)(0.9*b.h) );
-    	set_alphacolor(blackRGBA);
-    	glVertex2i(b.x + (GLint)(0.1*b.w)   ,b.y    	    	    );
-    	glVertex2i(b.x	    	    	    ,b.y    	    	    );
-    	glVertex2i(b.x	    	    	    ,b.y + (GLint)(0.1*b.h) );
-    glEnd();
-    
-    glBegin(GL_QUADS);
-    	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    	set_alphacolor(*(wid_info->value));
-    	glVertex2i(b.x + (GLint)(0.1*b.w)   ,b.y + (GLint)(0.1*b.h) );
-    	glVertex2i(b.x + (GLint)(0.1*b.w)   ,b.y + (GLint)(0.9*b.h) );
-    	glVertex2i(b.x + (GLint)(0.9*b.w)   ,b.y + (GLint)(0.9*b.h) );
-    	glVertex2i(b.x + (GLint)(0.9*b.w)   ,b.y + (GLint)(0.1*b.h) );
-    glEnd();
+
+    black = Renderer_color_from_rgba32(blackRGBA);
+    white = Renderer_color_from_rgba32(whiteRGBA);
+    value_color = Renderer_color_from_rgba32(*(wid_info->value));
+    diagonal[0] = (RendererVertex2D){b.x, b.y, 0, 0, black};
+    diagonal[1] = (RendererVertex2D){b.x, b.y + b.h, 0, 0, black};
+    diagonal[2] = (RendererVertex2D){
+	b.x + b.w, b.y + b.h, 0, 0, black};
+    diagonal[3] = (RendererVertex2D){b.x, b.y, 0, 0, white};
+    diagonal[4] = (RendererVertex2D){
+	b.x + b.w, b.y + b.h, 0, 0, white};
+    diagonal[5] = (RendererVertex2D){b.x + b.w, b.y, 0, 0, white};
+
+    fan_points[0] = (RendererPoint2D){
+	b.x + (int)(0.9 * b.w), b.y + b.h};
+    fan_points[1] = (RendererPoint2D){b.x + b.w, b.y + b.h};
+    fan_points[2] = (RendererPoint2D){
+	b.x + b.w, b.y + (int)(0.9 * b.h)};
+    fan_points[3] = (RendererPoint2D){
+	b.x + (int)(0.1 * b.w), b.y};
+    fan_points[4] = (RendererPoint2D){b.x, b.y};
+    fan_points[5] = (RendererPoint2D){
+	b.x, b.y + (int)(0.1 * b.h)};
+    for (index = 0; index < 4; index++) {
+	RendererColor second = index + 1 < 3 ? white : black;
+	RendererColor third = index + 2 < 3 ? white : black;
+	int base = index * 3;
+
+	fan[base] = (RendererVertex2D){
+	    fan_points[0].x, fan_points[0].y, 0, 0, white};
+	fan[base + 1] = (RendererVertex2D){
+	    fan_points[index + 1].x, fan_points[index + 1].y,
+	    0, 0, second};
+	fan[base + 2] = (RendererVertex2D){
+	    fan_points[index + 2].x, fan_points[index + 2].y,
+	    0, 0, third};
+    }
+
+    inner[0] = (RendererVertex2D){
+	b.x + (int)(0.1 * b.w), b.y + (int)(0.1 * b.h),
+	0, 0, value_color};
+    inner[1] = (RendererVertex2D){
+	b.x + (int)(0.1 * b.w), b.y + (int)(0.9 * b.h),
+	0, 0, value_color};
+    inner[2] = (RendererVertex2D){
+	b.x + (int)(0.9 * b.w), b.y + (int)(0.9 * b.h),
+	0, 0, value_color};
+    inner[3] = inner[0];
+    inner[4] = inner[2];
+    inner[5] = (RendererVertex2D){
+	b.x + (int)(0.9 * b.w), b.y + (int)(0.1 * b.h),
+	0, 0, value_color};
+
+    (void)Set_semantic_widget_batch_blend(&batch, RENDERER_BLEND_ALPHA);
+    if (batch.status == RENDERER_STATUS_OK
+	&& wid_info->bgcolor != NULL && *(wid_info->bgcolor) != 0
+	&& widget->bounds.w > 0 && widget->bounds.h > 0) {
+	(void)Accept_semantic_widget_command(
+	    &batch,
+	    Renderer_fill_rect(
+		batch.renderer,
+		(float)widget->bounds.x, (float)widget->bounds.y,
+		(float)widget->bounds.w, (float)widget->bounds.h,
+		Renderer_color_from_rgba32(*(wid_info->bgcolor))));
+    }
+    if (batch.status == RENDERER_STATUS_OK) {
+	(void)Accept_semantic_widget_command(
+	    &batch,
+	    Renderer_draw_triangles(batch.renderer, NULL, diagonal, 6));
+    }
+    if (batch.status == RENDERER_STATUS_OK) {
+	(void)Accept_semantic_widget_command(
+	    &batch,
+	    Renderer_draw_triangles(batch.renderer, NULL, fan, 12));
+    }
+    if (batch.status == RENDERER_STATUS_OK) {
+	(void)Accept_semantic_widget_command(
+	    &batch,
+	    Renderer_draw_triangles(batch.renderer, NULL, inner, 6));
+    }
+    (void)Finish_semantic_widget_batch(&batch);
+    if (batch.status != RENDERER_STATUS_OK)
+	warn("Could not draw color modifier widget");
 }
 
 static void Callback_ColorModWidget(void *tmp, const char *value)
