@@ -18,7 +18,7 @@ check_PROGRAMS = test-meta-environment \
 	test-glwidgets-scissor test-glwidgets-primitives \
 	test-sdlmeta-primitives test-sdlgui-appearing \
 	test-sdlgui-hud-primitives test-sdlgui-asteroids \
-	test-sdlgui-sparks test-sdlgui-ships \
+	test-sdlgui-polygons test-sdlgui-sparks test-sdlgui-ships \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
 TESTS = test-meta-environment \
@@ -33,7 +33,7 @@ TESTS = test-meta-environment \
 	test-sdl-renderer-scissor test-glwidgets-scissor \
 	test-glwidgets-primitives test-sdlmeta-primitives \
 	test-sdlgui-appearing test-sdlgui-hud-primitives \
-	test-sdlgui-asteroids test-sdlgui-sparks \
+	test-sdlgui-asteroids test-sdlgui-polygons test-sdlgui-sparks \
 	test-sdlgui-ships \
 	test-text-geometry \
 	test-text-atlas test-text-ttf-atlas test-text-renderer \
@@ -80,7 +80,6 @@ test_sdl_event_LDADD = @SDL2_LIBS@
 
 test_gl_legacy_SOURCES = test_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/gl_diagnostics.c \
-	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/text.c \
@@ -96,7 +95,6 @@ test_gl_legacy_CFLAGS = $(AM_CFLAGS) -DXPILOT_GL_TEST_HOOKS \
 	-ffunction-sections -fdata-sections
 test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=glGetString -Wl,--wrap=glGenLists \
-	-Wl,--wrap=glDeleteLists \
 	-Wl,--wrap=glGenTextures -Wl,--wrap=TTF_OpenFont \
 	-Wl,--wrap=TTF_CloseFont
 test_gl_legacy_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
@@ -271,6 +269,21 @@ test_sdlgui_asteroids_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_lasers_end \
 	-Wl,--wrap=Gui_paint_laser
 test_sdlgui_asteroids_LDADD = @SDL2_LIBS@
+
+test_sdlgui_polygons_SOURCES = test_sdlgui_polygons.c \
+	$(top_srcdir)/src/client/sdl/sdlgui.c \
+	$(top_srcdir)/src/client/sdl/polygon_cache_test_support.h \
+	$(top_srcdir)/src/client/sdl/polygon_geometry.c \
+	$(top_srcdir)/src/client/sdl/polygon_geometry.h
+test_sdlgui_polygons_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_POLYGON_CACHE_TEST_HOOKS
+test_sdlgui_polygons_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_sdlgui_polygons_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc
+test_sdlgui_polygons_LDADD = \
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL2_LIBS@ \
+	@GLU_LIBS@ @GL_LIBS@
 
 test_sdlgui_sparks_SOURCES = test_sdlgui_sparks.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \

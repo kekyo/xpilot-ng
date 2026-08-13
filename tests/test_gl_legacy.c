@@ -1,7 +1,6 @@
 #include "test_helpers.h"
 
 #include "xpclient_sdl.h"
-#include "guimap.h"
 #include "guiobjects.h"
 #include "gl_diagnostics.h"
 #include "images.h"
@@ -50,19 +49,12 @@ struct TextRenderer {
     TextAtlas *atlas;
 };
 
-xp_polygon_t *polygons;
-polygon_style_t *polygon_styles;
-int num_polygons;
-
 static int failure_count;
 static int reject_pre_2_glsl_query;
 static unsigned int rejected_pre_2_glsl_queries;
 static int capture_font_resources;
 static size_t captured_font_list_generations;
 static size_t captured_font_texture_count;
-static int capture_gui_list_resources;
-static size_t captured_gui_list_generations;
-static size_t captured_gui_list_deletions;
 static size_t ttf_open_count;
 static size_t ttf_close_count;
 static RendererStatus text_renderer_create_result = RENDERER_STATUS_OK;
@@ -135,7 +127,6 @@ int Text_renderer_matches(const TextRenderer *text_renderer,
 
 extern const GLubyte *APIENTRY __real_glGetString(GLenum name);
 extern GLuint APIENTRY __real_glGenLists(GLsizei range);
-extern void APIENTRY __real_glDeleteLists(GLuint list, GLsizei range);
 extern void APIENTRY __real_glGenTextures(GLsizei count, GLuint *textures);
 extern TTF_Font *__real_TTF_OpenFont(const char *file, int ptsize);
 extern void __real_TTF_CloseFont(TTF_Font *font);
@@ -156,16 +147,7 @@ GLuint APIENTRY __wrap_glGenLists(GLsizei range)
 
     if (capture_font_resources)
         captured_font_list_generations++;
-    if (capture_gui_list_resources && range > 0)
-        captured_gui_list_generations += (size_t)range;
     return list_base;
-}
-
-void APIENTRY __wrap_glDeleteLists(GLuint list, GLsizei range)
-{
-    if (capture_gui_list_resources && range > 0)
-        captured_gui_list_deletions += (size_t)range;
-    __real_glDeleteLists(list, range);
 }
 
 void APIENTRY __wrap_glGenTextures(GLsizei count, GLuint *textures)
@@ -190,13 +172,6 @@ void __wrap_TTF_CloseFont(TTF_Font *font)
         ttf_close_count++;
     __real_TTF_CloseFont(font);
 }
-
-extern int Gui_init(void);
-extern void Gui_cleanup(void);
-#ifdef XPILOT_GL_TEST_HOOKS
-extern void Gui_test_get_display_lists(GLuint *polygon_fill_list_base,
-                                       GLuint *polygon_edge_list_base);
-#endif
 
 #define CHECK_CONTINUE(condition)                                           \
     do {                                                                    \
@@ -521,60 +496,6 @@ static void check_procedural_baseline(void)
     glDeleteTextures(1, &color_texture);
 }
 
-static void check_gui_display_list_lifecycle(void)
-{
-    static ipos_t points[] = {
-        {0, 0},
-        {8, 0},
-        {0, 8},
-        {-8, 0},
-    };
-    static xp_polygon_t test_polygons[] = {
-        {
-            points,
-            (int)(sizeof(points) / sizeof(points[0])),
-            {0, 0, 8, 8},
-            NULL,
-            0,
-        },
-    };
-    static polygon_style_t test_polygon_styles[] = {
-        {0, 0, 0, 0, 0},
-    };
-    GLuint polygon_fill_list_base = 0;
-    GLuint polygon_edge_list_base = 0;
-
-    polygons = test_polygons;
-    polygon_styles = test_polygon_styles;
-    num_polygons = (int)(sizeof(test_polygons) / sizeof(test_polygons[0]));
-
-    drain_gl_errors();
-    captured_gui_list_generations = 0;
-    captured_gui_list_deletions = 0;
-    capture_gui_list_resources = 1;
-    CHECK_CONTINUE(Gui_init() == 0);
-    capture_gui_list_resources = 0;
-    CHECK_CONTINUE(drain_gl_errors() == 0);
-#ifdef XPILOT_GL_TEST_HOOKS
-    Gui_test_get_display_lists(
-        &polygon_fill_list_base, &polygon_edge_list_base);
-#endif
-    CHECK_CONTINUE(captured_gui_list_generations == 2);
-    CHECK_CONTINUE(polygon_fill_list_base != 0);
-    CHECK_CONTINUE(polygon_edge_list_base != 0);
-    CHECK_CONTINUE(glIsList(polygon_fill_list_base) == GL_TRUE);
-    CHECK_CONTINUE(glIsList(polygon_edge_list_base) == GL_TRUE);
-
-    capture_gui_list_resources = 1;
-    Gui_cleanup();
-    capture_gui_list_resources = 0;
-    CHECK_CONTINUE(captured_gui_list_deletions == 2);
-    CHECK_CONTINUE(glIsList(polygon_fill_list_base) == GL_FALSE);
-    CHECK_CONTINUE(glIsList(polygon_edge_list_base) == GL_FALSE);
-    Gui_cleanup();
-    CHECK_CONTINUE(drain_gl_errors() == 0);
-}
-
 static int font_state_is_empty(const font_data *font)
 {
     return font->requested_height == 0 && font->atlas == NULL
@@ -791,7 +712,6 @@ int main(int argc, char **argv)
 
     CHECK_CONTINUE(glGetString(GL_VERSION) != NULL);
     check_procedural_baseline();
-    check_gui_display_list_lifecycle();
     CHECK_CONTINUE(Renderer_gl_legacy_create(load_current_gl_proc, NULL,
                                              &font_renderer)
                    == RENDERER_STATUS_OK);

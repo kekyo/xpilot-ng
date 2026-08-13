@@ -46,6 +46,9 @@
 #ifdef XPILOT_ASTEROID_BATCH_TEST_HOOKS
 #include "asteroid_batch_test_support.h"
 #endif
+#ifdef XPILOT_POLYGON_CACHE_TEST_HOOKS
+#include "polygon_cache_test_support.h"
+#endif
 
 #include <float.h>
 #include <limits.h>
@@ -367,6 +370,17 @@ void Gui_test_get_display_lists(GLuint *polygon_fill_list_base,
 	*polygon_fill_list_base = polyListBase;
     if (polygon_edge_list_base != NULL)
 	*polygon_edge_list_base = polyEdgeListBase;
+}
+#endif
+
+#ifdef XPILOT_POLYGON_CACHE_TEST_HOOKS
+RendererStatus Sdlgui_test_prepare_polygon_cache(void)
+{
+    return RENDERER_STATUS_INVALID_STATE;
+}
+
+void Sdlgui_test_discard_polygon_cache(void)
+{
 }
 #endif
 

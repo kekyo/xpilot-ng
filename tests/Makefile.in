@@ -107,8 +107,8 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdlmeta-primitives$(EXEEXT) \
 	test-sdlgui-appearing$(EXEEXT) \
 	test-sdlgui-hud-primitives$(EXEEXT) \
-	test-sdlgui-asteroids$(EXEEXT) test-sdlgui-sparks$(EXEEXT) \
-	test-sdlgui-ships$(EXEEXT) \
+	test-sdlgui-asteroids$(EXEEXT) test-sdlgui-polygons$(EXEEXT) \
+	test-sdlgui-sparks$(EXEEXT) test-sdlgui-ships$(EXEEXT) \
 	test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
 	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT)
@@ -130,8 +130,8 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdlmeta-primitives$(EXEEXT) \
 	test-sdlgui-appearing$(EXEEXT) \
 	test-sdlgui-hud-primitives$(EXEEXT) \
-	test-sdlgui-asteroids$(EXEEXT) test-sdlgui-sparks$(EXEEXT) \
-	test-sdlgui-ships$(EXEEXT) \
+	test-sdlgui-asteroids$(EXEEXT) test-sdlgui-polygons$(EXEEXT) \
+	test-sdlgui-sparks$(EXEEXT) test-sdlgui-ships$(EXEEXT) \
 	test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
 	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT) \
@@ -155,7 +155,6 @@ test_gfx2d_picture_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(test_gfx2d_picture_LDFLAGS) $(LDFLAGS) -o $@
 am_test_gl_legacy_OBJECTS = test_gl_legacy-test_gl_legacy.$(OBJEXT) \
 	test_gl_legacy-gl_diagnostics.$(OBJEXT) \
-	test_gl_legacy-sdlgui.$(OBJEXT) \
 	test_gl_legacy-renderer.$(OBJEXT) \
 	test_gl_legacy-renderer_gl_legacy.$(OBJEXT) \
 	test_gl_legacy-text.$(OBJEXT) \
@@ -318,6 +317,15 @@ test_sdlgui_hud_primitives_DEPENDENCIES =
 test_sdlgui_hud_primitives_LINK = $(CCLD) \
 	$(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) \
 	$(test_sdlgui_hud_primitives_LDFLAGS) $(LDFLAGS) -o $@
+am_test_sdlgui_polygons_OBJECTS =  \
+	test_sdlgui_polygons-test_sdlgui_polygons.$(OBJEXT) \
+	test_sdlgui_polygons-sdlgui.$(OBJEXT) \
+	test_sdlgui_polygons-polygon_geometry.$(OBJEXT)
+test_sdlgui_polygons_OBJECTS = $(am_test_sdlgui_polygons_OBJECTS)
+test_sdlgui_polygons_DEPENDENCIES = \
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a
+test_sdlgui_polygons_LINK = $(CCLD) $(test_sdlgui_polygons_CFLAGS) \
+	$(CFLAGS) $(test_sdlgui_polygons_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdlgui_asteroids_OBJECTS =  \
 	test_sdlgui_asteroids-test_sdlgui_asteroids.$(OBJEXT) \
 	test_sdlgui_asteroids-sdlgui.$(OBJEXT) \
@@ -412,7 +420,6 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po \
 	./$(DEPDIR)/test_gl_legacy-renderer.Po \
 	./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po \
-	./$(DEPDIR)/test_gl_legacy-sdlgui.Po \
 	./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po \
 	./$(DEPDIR)/test_gl_legacy-text.Po \
 	./$(DEPDIR)/test_gl_legacy-text_atlas.Po \
@@ -463,6 +470,9 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po \
 	./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po \
+	./$(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Po \
+	./$(DEPDIR)/test_sdlgui_polygons-sdlgui.Po \
+	./$(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po \
 	./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po \
 	./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po \
@@ -523,6 +533,7 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdlgui_appearing_SOURCES) \
 	$(test_sdlgui_hud_primitives_SOURCES) \
 	$(test_sdlgui_asteroids_SOURCES) \
+	$(test_sdlgui_polygons_SOURCES) \
 	$(test_sdlgui_ships_SOURCES) $(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlpaint_stage_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
@@ -549,6 +560,7 @@ DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdlgui_appearing_SOURCES) \
 	$(test_sdlgui_hud_primitives_SOURCES) \
 	$(test_sdlgui_asteroids_SOURCES) \
+	$(test_sdlgui_polygons_SOURCES) \
 	$(test_sdlgui_ships_SOURCES) $(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlpaint_stage_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
@@ -962,7 +974,6 @@ test_sdl_event_SOURCES = test_sdl_event.c \
 test_sdl_event_LDADD = @SDL2_LIBS@
 test_gl_legacy_SOURCES = test_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/gl_diagnostics.c \
-	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/text.c \
@@ -981,7 +992,6 @@ test_gl_legacy_CFLAGS = $(AM_CFLAGS) -DXPILOT_GL_TEST_HOOKS \
 
 test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=glGetString -Wl,--wrap=glGenLists \
-	-Wl,--wrap=glDeleteLists \
 	-Wl,--wrap=glGenTextures -Wl,--wrap=TTF_OpenFont \
 	-Wl,--wrap=TTF_CloseFont
 
@@ -1171,6 +1181,20 @@ test_sdlgui_asteroids_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_laser
 
 test_sdlgui_asteroids_LDADD = @SDL2_LIBS@
+test_sdlgui_polygons_SOURCES = test_sdlgui_polygons.c \
+	$(top_srcdir)/src/client/sdl/sdlgui.c \
+	$(top_srcdir)/src/client/sdl/polygon_cache_test_support.h \
+	$(top_srcdir)/src/client/sdl/polygon_geometry.c \
+	$(top_srcdir)/src/client/sdl/polygon_geometry.h
+test_sdlgui_polygons_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_POLYGON_CACHE_TEST_HOOKS
+test_sdlgui_polygons_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_sdlgui_polygons_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc
+test_sdlgui_polygons_LDADD = \
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL2_LIBS@ \
+	@GLU_LIBS@ @GL_LIBS@
 test_sdlgui_sparks_SOURCES = test_sdlgui_sparks.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/spark_batch_test_support.h \
@@ -1420,6 +1444,10 @@ test-sdlgui-asteroids$(EXEEXT): $(test_sdlgui_asteroids_OBJECTS) $(test_sdlgui_a
 	@rm -f test-sdlgui-asteroids$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_asteroids_LINK) $(test_sdlgui_asteroids_OBJECTS) $(test_sdlgui_asteroids_LDADD) $(LIBS)
 
+test-sdlgui-polygons$(EXEEXT): $(test_sdlgui_polygons_OBJECTS) $(test_sdlgui_polygons_DEPENDENCIES) $(EXTRA_test_sdlgui_polygons_DEPENDENCIES)
+	@rm -f test-sdlgui-polygons$(EXEEXT)
+	$(AM_V_CCLD)$(test_sdlgui_polygons_LINK) $(test_sdlgui_polygons_OBJECTS) $(test_sdlgui_polygons_LDADD) $(LIBS)
+
 test-sdlgui-ships$(EXEEXT): $(test_sdlgui_ships_OBJECTS) $(test_sdlgui_ships_DEPENDENCIES) $(EXTRA_test_sdlgui_ships_DEPENDENCIES)
 	@rm -f test-sdlgui-ships$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_ships_LINK) $(test_sdlgui_ships_OBJECTS) $(test_sdlgui_ships_LDADD) $(LIBS)
@@ -1482,7 +1510,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text_atlas.Po@am__quote@ # am--include-marker
@@ -1534,6 +1561,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_polygons-sdlgui.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po@am__quote@ # am--include-marker
@@ -1620,20 +1650,6 @@ test_gl_legacy-gl_diagnostics.obj: $(top_srcdir)/src/client/sdl/gl_diagnostics.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/gl_diagnostics.c' object='test_gl_legacy-gl_diagnostics.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-gl_diagnostics.obj `if test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; fi`
-
-test_gl_legacy-sdlgui.o: $(top_srcdir)/src/client/sdl/sdlgui.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-sdlgui.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-sdlgui.Tpo -c -o test_gl_legacy-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-sdlgui.Tpo $(DEPDIR)/test_gl_legacy-sdlgui.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_gl_legacy-sdlgui.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
-
-test_gl_legacy-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-sdlgui.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-sdlgui.Tpo -c -o test_gl_legacy-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-sdlgui.Tpo $(DEPDIR)/test_gl_legacy-sdlgui.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_gl_legacy-sdlgui.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
 
 test_gl_legacy-renderer.o: $(top_srcdir)/src/client/sdl/renderer.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-renderer.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-renderer.Tpo -c -o test_gl_legacy-renderer.o `test -f '$(top_srcdir)/src/client/sdl/renderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer.c
@@ -2405,6 +2421,48 @@ test_sdlgui_asteroids-paintobjects.obj: $(top_srcdir)/src/client/paintobjects.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -c -o test_sdlgui_asteroids-paintobjects.obj `if test -f '$(top_srcdir)/src/client/paintobjects.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/paintobjects.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/paintobjects.c'; fi`
 
+test_sdlgui_polygons-test_sdlgui_polygons.o: test_sdlgui_polygons.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -MT test_sdlgui_polygons-test_sdlgui_polygons.o -MD -MP -MF $(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Tpo -c -o test_sdlgui_polygons-test_sdlgui_polygons.o `test -f 'test_sdlgui_polygons.c' || echo '$(srcdir)/'`test_sdlgui_polygons.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Tpo $(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlgui_polygons.c' object='test_sdlgui_polygons-test_sdlgui_polygons.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -c -o test_sdlgui_polygons-test_sdlgui_polygons.o `test -f 'test_sdlgui_polygons.c' || echo '$(srcdir)/'`test_sdlgui_polygons.c
+
+test_sdlgui_polygons-test_sdlgui_polygons.obj: test_sdlgui_polygons.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -MT test_sdlgui_polygons-test_sdlgui_polygons.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Tpo -c -o test_sdlgui_polygons-test_sdlgui_polygons.obj `if test -f 'test_sdlgui_polygons.c'; then $(CYGPATH_W) 'test_sdlgui_polygons.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_polygons.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Tpo $(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlgui_polygons.c' object='test_sdlgui_polygons-test_sdlgui_polygons.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -c -o test_sdlgui_polygons-test_sdlgui_polygons.obj `if test -f 'test_sdlgui_polygons.c'; then $(CYGPATH_W) 'test_sdlgui_polygons.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_polygons.c'; fi`
+
+test_sdlgui_polygons-sdlgui.o: $(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -MT test_sdlgui_polygons-sdlgui.o -MD -MP -MF $(DEPDIR)/test_sdlgui_polygons-sdlgui.Tpo -c -o test_sdlgui_polygons-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_polygons-sdlgui.Tpo $(DEPDIR)/test_sdlgui_polygons-sdlgui.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_polygons-sdlgui.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -c -o test_sdlgui_polygons-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+
+test_sdlgui_polygons-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -MT test_sdlgui_polygons-sdlgui.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_polygons-sdlgui.Tpo -c -o test_sdlgui_polygons-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_polygons-sdlgui.Tpo $(DEPDIR)/test_sdlgui_polygons-sdlgui.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_polygons-sdlgui.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -c -o test_sdlgui_polygons-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+
+test_sdlgui_polygons-polygon_geometry.o: $(top_srcdir)/src/client/sdl/polygon_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -MT test_sdlgui_polygons-polygon_geometry.o -MD -MP -MF $(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Tpo -c -o test_sdlgui_polygons-polygon_geometry.o `test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/polygon_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Tpo $(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/polygon_geometry.c' object='test_sdlgui_polygons-polygon_geometry.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -c -o test_sdlgui_polygons-polygon_geometry.o `test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/polygon_geometry.c
+
+test_sdlgui_polygons-polygon_geometry.obj: $(top_srcdir)/src/client/sdl/polygon_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -MT test_sdlgui_polygons-polygon_geometry.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Tpo -c -o test_sdlgui_polygons-polygon_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/polygon_geometry.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Tpo $(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/polygon_geometry.c' object='test_sdlgui_polygons-polygon_geometry.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -c -o test_sdlgui_polygons-polygon_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/polygon_geometry.c'; fi`
+
 test_sdlgui_ships-test_sdlgui_ships.o: test_sdlgui_ships.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_ships_CFLAGS) $(CFLAGS) -MT test_sdlgui_ships-test_sdlgui_ships.o -MD -MP -MF $(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Tpo -c -o test_sdlgui_ships-test_sdlgui_ships.o `test -f 'test_sdlgui_ships.c' || echo '$(srcdir)/'`test_sdlgui_ships.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Tpo $(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Po
@@ -3039,6 +3097,13 @@ test-sdlgui-ships.log: test-sdlgui-ships$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-sdlgui-polygons.log: test-sdlgui-polygons$(EXEEXT)
+	@p='test-sdlgui-polygons$(EXEEXT)'; \
+	b='test-sdlgui-polygons'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdlgui-sparks.log: test-sdlgui-sparks$(EXEEXT)
 	@p='test-sdlgui-sparks$(EXEEXT)'; \
 	b='test-sdlgui-sparks'; \
@@ -3206,7 +3271,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-renderer.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-text.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-text_atlas.Po
@@ -3258,6 +3322,9 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-sdlgui.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po
@@ -3347,7 +3414,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-renderer.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-text.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-text_atlas.Po
@@ -3399,6 +3465,9 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-sdlgui.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po
