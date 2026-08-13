@@ -8,6 +8,8 @@ Makefile
 /src/replay/xpilot-ng-replay
 /src/server/xpilot-ng-server
 /stamp-h1
+/build-sdl
+/install-sdl
 
 *.o
 *.a
