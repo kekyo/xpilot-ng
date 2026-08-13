@@ -938,6 +938,9 @@ test_glwidgets_scissor_LDADD = @SDL2_LIBS@
 test_glwidgets_primitives_SOURCES = test_glwidgets_primitives.c \
 	$(top_srcdir)/src/client/sdl/glwidgets.c
 
+test_glwidgets_primitives_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_GLWIDGETS_TEST_HOOKS
+
 test_glwidgets_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
@@ -1384,32 +1387,32 @@ test_gl_legacy-text_ttf_atlas.obj: $(top_srcdir)/src/client/sdl/text_ttf_atlas.c
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_ttf_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; fi`
 
 test_glwidgets_primitives-test_glwidgets_primitives.o: test_glwidgets_primitives.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-test_glwidgets_primitives.o -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Tpo -c -o test_glwidgets_primitives-test_glwidgets_primitives.o `test -f 'test_glwidgets_primitives.c' || echo '$(srcdir)/'`test_glwidgets_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_glwidgets_primitives_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-test_glwidgets_primitives.o -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Tpo -c -o test_glwidgets_primitives-test_glwidgets_primitives.o `test -f 'test_glwidgets_primitives.c' || echo '$(srcdir)/'`test_glwidgets_primitives.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Tpo $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_glwidgets_primitives.c' object='test_glwidgets_primitives-test_glwidgets_primitives.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -c -o test_glwidgets_primitives-test_glwidgets_primitives.o `test -f 'test_glwidgets_primitives.c' || echo '$(srcdir)/'`test_glwidgets_primitives.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_glwidgets_primitives_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -c -o test_glwidgets_primitives-test_glwidgets_primitives.o `test -f 'test_glwidgets_primitives.c' || echo '$(srcdir)/'`test_glwidgets_primitives.c
 
 test_glwidgets_primitives-test_glwidgets_primitives.obj: test_glwidgets_primitives.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-test_glwidgets_primitives.obj -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Tpo -c -o test_glwidgets_primitives-test_glwidgets_primitives.obj `if test -f 'test_glwidgets_primitives.c'; then $(CYGPATH_W) 'test_glwidgets_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_glwidgets_primitives.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_glwidgets_primitives_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-test_glwidgets_primitives.obj -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Tpo -c -o test_glwidgets_primitives-test_glwidgets_primitives.obj `if test -f 'test_glwidgets_primitives.c'; then $(CYGPATH_W) 'test_glwidgets_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_glwidgets_primitives.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Tpo $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_glwidgets_primitives.c' object='test_glwidgets_primitives-test_glwidgets_primitives.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -c -o test_glwidgets_primitives-test_glwidgets_primitives.obj `if test -f 'test_glwidgets_primitives.c'; then $(CYGPATH_W) 'test_glwidgets_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_glwidgets_primitives.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_glwidgets_primitives_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -c -o test_glwidgets_primitives-test_glwidgets_primitives.obj `if test -f 'test_glwidgets_primitives.c'; then $(CYGPATH_W) 'test_glwidgets_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_glwidgets_primitives.c'; fi`
 
 test_glwidgets_primitives-glwidgets.o: $(top_srcdir)/src/client/sdl/glwidgets.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-glwidgets.o -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-glwidgets.Tpo -c -o test_glwidgets_primitives-glwidgets.o `test -f '$(top_srcdir)/src/client/sdl/glwidgets.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/glwidgets.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_glwidgets_primitives_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-glwidgets.o -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-glwidgets.Tpo -c -o test_glwidgets_primitives-glwidgets.o `test -f '$(top_srcdir)/src/client/sdl/glwidgets.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/glwidgets.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_glwidgets_primitives-glwidgets.Tpo $(DEPDIR)/test_glwidgets_primitives-glwidgets.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/glwidgets.c' object='test_glwidgets_primitives-glwidgets.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -c -o test_glwidgets_primitives-glwidgets.o `test -f '$(top_srcdir)/src/client/sdl/glwidgets.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/glwidgets.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_glwidgets_primitives_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -c -o test_glwidgets_primitives-glwidgets.o `test -f '$(top_srcdir)/src/client/sdl/glwidgets.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/glwidgets.c
 
 test_glwidgets_primitives-glwidgets.obj: $(top_srcdir)/src/client/sdl/glwidgets.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-glwidgets.obj -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-glwidgets.Tpo -c -o test_glwidgets_primitives-glwidgets.obj `if test -f '$(top_srcdir)/src/client/sdl/glwidgets.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/glwidgets.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/glwidgets.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_glwidgets_primitives_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-glwidgets.obj -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-glwidgets.Tpo -c -o test_glwidgets_primitives-glwidgets.obj `if test -f '$(top_srcdir)/src/client/sdl/glwidgets.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/glwidgets.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/glwidgets.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_glwidgets_primitives-glwidgets.Tpo $(DEPDIR)/test_glwidgets_primitives-glwidgets.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/glwidgets.c' object='test_glwidgets_primitives-glwidgets.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -c -o test_glwidgets_primitives-glwidgets.obj `if test -f '$(top_srcdir)/src/client/sdl/glwidgets.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/glwidgets.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/glwidgets.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_glwidgets_primitives_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -c -o test_glwidgets_primitives-glwidgets.obj `if test -f '$(top_srcdir)/src/client/sdl/glwidgets.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/glwidgets.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/glwidgets.c'; fi`
 
 test_glwidgets_scissor-test_glwidgets_scissor.o: test_glwidgets_scissor.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_scissor_CFLAGS) $(CFLAGS) -MT test_glwidgets_scissor-test_glwidgets_scissor.o -MD -MP -MF $(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Tpo -c -o test_glwidgets_scissor-test_glwidgets_scissor.o `test -f 'test_glwidgets_scissor.c' || echo '$(srcdir)/'`test_glwidgets_scissor.c

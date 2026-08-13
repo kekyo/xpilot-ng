@@ -4126,6 +4126,9 @@ static void Paint_ConfMenuWidget( GLWidget *widget )
     Uint32 edgeColor = 0xff0000ff;
     Uint32 bgColor = 0x0000ff88;
     ConfMenuWidget *wid_info;
+    SemanticWidgetBatch batch;
+    RendererPoint2D edge_points[4];
+    RendererColor edge_colors[4];
 
     if (!widget ) {
     	error("Paint_ConfMenuWidget: tried to paint NULL ConfMenuWidget!");
@@ -4162,27 +4165,55 @@ static void Paint_ConfMenuWidget( GLWidget *widget )
     	    	ListWidget_Append(wid_info->button_list,wid_info->jlb);
 	    	wid_info->paused = false;
 	    }
-    	}
+	}
     }
-    
-    set_alphacolor(bgColor);
-    glBegin(GL_QUADS);
-    	glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y	    	    	);
-    	glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y	    	    	);
-    	glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y+widget->bounds.h	);
-    	glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y+widget->bounds.h	);
-    glEnd();
-    glBegin(GL_LINE_LOOP);
-    	set_alphacolor(edgeColor);
-    	glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y	    	    	);
-    	set_alphacolor(bgColor | 0x000000ff);
-    	glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y	    	    	);
-    	set_alphacolor(edgeColor);
-    	glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y+widget->bounds.h	);
-    	set_alphacolor(bgColor | 0x000000ff);
-    	glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y+widget->bounds.h	);
-    glEnd();
+
+    if (Begin_semantic_widget_batch(&batch) != RENDERER_STATUS_OK)
+	return;
+    if (widget->bounds.w > 0 && widget->bounds.h > 0) {
+	edge_points[0] = (RendererPoint2D){
+	    widget->bounds.x, widget->bounds.y};
+	edge_points[1] = (RendererPoint2D){
+	    widget->bounds.x + widget->bounds.w, widget->bounds.y};
+	edge_points[2] = (RendererPoint2D){
+	    widget->bounds.x + widget->bounds.w,
+	    widget->bounds.y + widget->bounds.h};
+	edge_points[3] = (RendererPoint2D){
+	    widget->bounds.x, widget->bounds.y + widget->bounds.h};
+	edge_colors[0] = Renderer_color_from_rgba32(edgeColor);
+	edge_colors[1] = Renderer_color_from_rgba32(bgColor | 0x000000ff);
+	edge_colors[2] = edge_colors[0];
+	edge_colors[3] = edge_colors[1];
+
+	(void)Set_semantic_widget_batch_blend(
+	    &batch, RENDERER_BLEND_ALPHA);
+	if (batch.status == RENDERER_STATUS_OK) {
+	    (void)Accept_semantic_widget_command(
+		&batch,
+		Renderer_fill_rect(
+		    batch.renderer,
+		    (float)widget->bounds.x, (float)widget->bounds.y,
+		    (float)widget->bounds.w, (float)widget->bounds.h,
+		    Renderer_color_from_rgba32(bgColor)));
+	}
+	if (batch.status == RENDERER_STATUS_OK) {
+	    (void)Accept_semantic_widget_command(
+		&batch,
+		Renderer_stroke_colored_path(
+		    batch.renderer, edge_points, edge_colors, 4, 1.0f, 1));
+	}
+    }
+    (void)Finish_semantic_widget_batch(&batch);
+    if (batch.status != RENDERER_STATUS_OK)
+	warn("Could not draw configuration menu widget");
 }
+
+#ifdef XPILOT_GLWIDGETS_TEST_HOOKS
+void Glwidgets_test_paint_conf_menu(GLWidget *widget)
+{
+    Paint_ConfMenuWidget(widget);
+}
+#endif
 
 GLWidget *Init_ConfMenuWidget( Uint16 x, Uint16 y )
 {

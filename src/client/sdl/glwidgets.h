@@ -506,6 +506,14 @@ typedef struct {
 } ConfMenuWidget;
 
 GLWidget *Init_ConfMenuWidget( Uint16 x, Uint16 y );
+#ifdef XPILOT_GLWIDGETS_TEST_HOOKS
+/**
+ * Paint a configuration-menu fixture through its production painter.
+ *
+ * @param widget Configuration-menu widget fixture to paint.
+ */
+void Glwidgets_test_paint_conf_menu(GLWidget *widget);
+#endif
 /***********************/
 /* End: ConfMenuWidget */
 /***********************/

@@ -15,6 +15,8 @@
 #define MAX_EVENTS 16
 #define MAX_DRAWS 12
 #define MAX_FILLS 8
+#define MAX_STROKES 4
+#define MAX_STROKE_POINTS 4
 #define MAX_TEXT_DRAWS 8
 #define MAX_DRAW_VERTICES 12
 
@@ -39,6 +41,7 @@ typedef enum DrawEvent {
     DRAW_EVENT_BLEND,
     DRAW_EVENT_TRIANGLES,
     DRAW_EVENT_FILL_RECT,
+    DRAW_EVENT_COLORED_STROKE,
     DRAW_EVENT_FLUSH,
     DRAW_EVENT_TEXT
 } DrawEvent;
@@ -56,6 +59,14 @@ typedef struct FakeFill {
     float height;
     RendererColor color;
 } FakeFill;
+
+typedef struct FakeColoredStroke {
+    RendererPoint2D points[MAX_STROKE_POINTS];
+    RendererColor colors[MAX_STROKE_POINTS];
+    size_t point_count;
+    float width;
+    int closed;
+} FakeColoredStroke;
 
 typedef struct FakeTextDraw {
     string_tex_t *texture;
@@ -75,6 +86,7 @@ static SdlRenderer fake_sdl_renderer = {
 static DrawEvent events[MAX_EVENTS];
 static FakeDraw draws[MAX_DRAWS];
 static FakeFill fills[MAX_FILLS];
+static FakeColoredStroke strokes[MAX_STROKES];
 static FakeTextDraw text_draws[MAX_TEXT_DRAWS];
 static int event_count;
 static int call_order;
@@ -83,6 +95,7 @@ static int preflight_order;
 static int blend_order;
 static int draw_order;
 static int fill_order;
+static int stroke_order;
 static int flush_order;
 static int text_order;
 static int operation_result_pending;
@@ -91,6 +104,8 @@ static int draw_attempts;
 static int successful_draws;
 static int fill_attempts;
 static int successful_fills;
+static int stroke_attempts;
+static int successful_strokes;
 static int flush_attempts;
 static int text_attempts;
 static int successful_text_draws;
@@ -105,6 +120,9 @@ static RendererStatus draw_failure_result;
 static RendererStatus fill_result;
 static int fill_failure_attempt;
 static RendererStatus fill_failure_result;
+static RendererStatus stroke_result;
+static int stroke_failure_attempt;
+static RendererStatus stroke_failure_result;
 static RendererStatus flush_result;
 static RendererStatus text_result;
 static int clipboard_attempts;
@@ -131,9 +149,39 @@ Uint32 yellowRGBA = 0xffff00ff;
 Uint32 nullRGBA = 0x00000000;
 font_data gamefont;
 setup_t *Setup = &fake_setup;
+other_t *self;
+homebase_t *bases;
+int num_bases;
 GLWidget *MainWidget;
 GLWidget *clicktarget[NUM_MOUSE_BUTTONS];
 GLWidget *hovertarget;
+
+bool Key_press(keys_t key)
+{
+    (void)key;
+    return false;
+}
+
+bool Key_release(keys_t key)
+{
+    (void)key;
+    return false;
+}
+
+void Net_key_change(void)
+{
+}
+
+int Net_talk(char *message)
+{
+    (void)message;
+    return 0;
+}
+
+void Pointer_control_set_state(bool enabled)
+{
+    (void)enabled;
+}
 
 static int color_equal(RendererColor actual, RendererColor expected)
 {
@@ -180,6 +228,7 @@ static void reset_frame(void)
     memset(events, 0, sizeof(events));
     memset(draws, 0, sizeof(draws));
     memset(fills, 0, sizeof(fills));
+    memset(strokes, 0, sizeof(strokes));
     memset(text_draws, 0, sizeof(text_draws));
     event_count = 0;
     call_order = 0;
@@ -188,6 +237,7 @@ static void reset_frame(void)
     blend_order = 0;
     draw_order = 0;
     fill_order = 0;
+    stroke_order = 0;
     flush_order = 0;
     text_order = 0;
     operation_result_pending = 0;
@@ -196,6 +246,8 @@ static void reset_frame(void)
     successful_draws = 0;
     fill_attempts = 0;
     successful_fills = 0;
+    stroke_attempts = 0;
+    successful_strokes = 0;
     flush_attempts = 0;
     text_attempts = 0;
     successful_text_draws = 0;
@@ -210,6 +262,9 @@ static void reset_frame(void)
     fill_result = RENDERER_STATUS_OK;
     fill_failure_attempt = 0;
     fill_failure_result = RENDERER_STATUS_OK;
+    stroke_result = RENDERER_STATUS_OK;
+    stroke_failure_attempt = 0;
+    stroke_failure_result = RENDERER_STATUS_OK;
     flush_result = RENDERER_STATUS_OK;
     text_result = RENDERER_STATUS_OK;
     clipboard_attempts = 0;
@@ -341,6 +396,39 @@ RendererStatus Renderer_fill_rect(Renderer *renderer,
     fill->width = width;
     fill->height = height;
     fill->color = color;
+    return RENDERER_STATUS_OK;
+}
+
+RendererStatus Renderer_stroke_colored_path(
+    Renderer *renderer, const RendererPoint2D *points,
+    const RendererColor *colors, size_t point_count,
+    float width, int closed)
+{
+    FakeColoredStroke *stroke;
+
+    stroke_attempts++;
+    call_order++;
+    if (stroke_order == 0)
+        stroke_order = call_order;
+    operation_result_pending = 1;
+    record_event(DRAW_EVENT_COLORED_STROKE);
+    if (renderer != &fake_renderer || !renderer->frame_active
+        || points == NULL || colors == NULL
+        || point_count == 0 || point_count > MAX_STROKE_POINTS) {
+        return RENDERER_STATUS_INVALID_STATE;
+    }
+    if (stroke_failure_attempt == stroke_attempts)
+        return stroke_failure_result;
+    if (stroke_result != RENDERER_STATUS_OK)
+        return stroke_result;
+    if (successful_strokes >= MAX_STROKES)
+        return RENDERER_STATUS_OUT_OF_MEMORY;
+    stroke = &strokes[successful_strokes++];
+    memcpy(stroke->points, points, point_count * sizeof(*points));
+    memcpy(stroke->colors, colors, point_count * sizeof(*colors));
+    stroke->point_count = point_count;
+    stroke->width = width;
+    stroke->closed = closed;
     return RENDERER_STATUS_OK;
 }
 
@@ -2414,6 +2502,158 @@ static int check_list_widget_parent_paint(void)
     return 0;
 }
 
+static int check_conf_menu_widget_parent_paint(void)
+{
+    const RendererColor background_color = {0x00, 0x00, 0xff, 0x88};
+    const RendererColor edge_colors[4] = {
+        {0xff, 0x00, 0x00, 0xff},
+        {0x00, 0x00, 0xff, 0xff},
+        {0xff, 0x00, 0x00, 0xff},
+        {0x00, 0x00, 0xff, 0xff}
+    };
+    const RendererPoint2D edge_points[4] = {
+        {11.0f, 17.0f},
+        {112.0f, 17.0f},
+        {112.0f, 48.0f},
+        {11.0f, 48.0f}
+    };
+    ConfMenuWidget info = {0};
+    GLWidget widget = {
+        .WIDGET = CONFMENUWIDGET,
+        .wid_info = &info,
+        .bounds = {11, 17, 101, 31}
+    };
+    ConfMenuWidget info_before = info;
+    GLWidget widget_before = widget;
+    long mode_before = fake_setup.mode;
+    int index;
+
+    fake_setup.mode = TEAM_PLAY;
+    reset_frame();
+    Glwidgets_test_paint_conf_menu(&widget);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+    TEST_CHECK(events[2] == DRAW_EVENT_COLORED_STROKE);
+    TEST_CHECK(events[3] == DRAW_EVENT_FLUSH);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == 3);
+    TEST_CHECK(stroke_order == 4);
+    TEST_CHECK(flush_order == 5);
+    TEST_CHECK(call_order == 5);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(text_attempts == 0);
+    TEST_CHECK(check_list_fill(
+        0, 11.0f, 17.0f, 101.0f, 31.0f,
+        background_color) == 0);
+    TEST_CHECK(strokes[0].point_count == 4);
+    TEST_CHECK(strokes[0].width == 1.0f);
+    TEST_CHECK(strokes[0].closed == 1);
+    for (index = 0; index < 4; index++) {
+        TEST_CHECK(strokes[0].points[index].x == edge_points[index].x);
+        TEST_CHECK(strokes[0].points[index].y == edge_points[index].y);
+        TEST_CHECK(color_equal(
+            strokes[0].colors[index], edge_colors[index]));
+    }
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    TEST_CHECK(legacy_blend_calls == 0);
+    TEST_CHECK(memcmp(&widget, &widget_before, sizeof(widget)) == 0);
+    TEST_CHECK(memcmp(&info, &info_before, sizeof(info)) == 0);
+
+    reset_frame();
+    fill_failure_attempt = 1;
+    fill_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+    Glwidgets_test_paint_conf_menu(&widget);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == 3);
+    TEST_CHECK(stroke_order == 0);
+    TEST_CHECK(flush_order == 0);
+    TEST_CHECK(call_order == 3);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    TEST_CHECK(legacy_blend_calls == 0);
+    TEST_CHECK(memcmp(&widget, &widget_before, sizeof(widget)) == 0);
+    TEST_CHECK(memcmp(&info, &info_before, sizeof(info)) == 0);
+
+    reset_frame();
+    stroke_failure_attempt = 1;
+    stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+    flush_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    Glwidgets_test_paint_conf_menu(&widget);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+    TEST_CHECK(events[2] == DRAW_EVENT_COLORED_STROKE);
+    TEST_CHECK(events[3] == DRAW_EVENT_FLUSH);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == 3);
+    TEST_CHECK(stroke_order == 4);
+    TEST_CHECK(flush_order == 5);
+    TEST_CHECK(call_order == 5);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(memcmp(&widget, &widget_before, sizeof(widget)) == 0);
+    TEST_CHECK(memcmp(&info, &info_before, sizeof(info)) == 0);
+
+    stroke_failure_attempt = 0;
+    stroke_failure_result = RENDERER_STATUS_OK;
+    flush_result = RENDERER_STATUS_OK;
+    Glwidgets_test_paint_conf_menu(&widget);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(call_order == 5);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    TEST_CHECK(legacy_blend_calls == 0);
+    TEST_CHECK(memcmp(&widget, &widget_before, sizeof(widget)) == 0);
+    TEST_CHECK(memcmp(&info, &info_before, sizeof(info)) == 0);
+
+    fake_setup.mode = mode_before;
+    return 0;
+}
+
 static int check_tap_is_consumed_when_flush_fails(void)
 {
     GLWidget *widget = Init_ArrowWidget(
@@ -2478,6 +2718,7 @@ int main(void)
     TEST_CHECK(check_color_chooser_parent_paint() == 0);
     TEST_CHECK(check_color_mod_parent_paint() == 0);
     TEST_CHECK(check_list_widget_parent_paint() == 0);
+    TEST_CHECK(check_conf_menu_widget_parent_paint() == 0);
     TEST_CHECK(check_label_scrap_button() == 0);
     TEST_CHECK(live_text_allocations == 0);
     return 0;

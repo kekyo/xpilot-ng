@@ -163,6 +163,8 @@ test_glwidgets_scissor_LDADD = @SDL2_LIBS@
 
 test_glwidgets_primitives_SOURCES = test_glwidgets_primitives.c \
 	$(top_srcdir)/src/client/sdl/glwidgets.c
+test_glwidgets_primitives_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_GLWIDGETS_TEST_HOOKS
 test_glwidgets_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_glwidgets_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
