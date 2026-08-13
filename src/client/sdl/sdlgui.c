@@ -542,101 +542,501 @@ void Gui_paint_base(int x, int y, int id, int team, int type)
     }
 }
 
+#define SEMANTIC_WORLD_LINE_MAX_PATHS 5
+#define SEMANTIC_WORLD_LINE_MAX_POINTS 4
+#define SEMANTIC_WORLD_DECOR_TYPE_COUNT 256
+
+typedef struct SemanticWorldLinePath {
+    RendererPoint2D points[SEMANTIC_WORLD_LINE_MAX_POINTS];
+    size_t point_count;
+    int closed;
+} SemanticWorldLinePath;
+
+typedef struct SemanticWorldLineGeometry {
+    SemanticWorldLinePath paths[SEMANTIC_WORLD_LINE_MAX_PATHS];
+    size_t path_count;
+} SemanticWorldLineGeometry;
+
+typedef struct SemanticWorldLineBatch {
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    int has_accepted_commands;
+} SemanticWorldLineBatch;
+
+static RendererStatus Begin_semantic_world_line_batch(
+    SemanticWorldLineBatch *batch)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    batch->sdl_renderer = Get_sdl_renderer();
+    batch->renderer = NULL;
+    batch->status = RENDERER_STATUS_INVALID_STATE;
+    batch->has_accepted_commands = 0;
+    if (batch->sdl_renderer == NULL)
+	return batch->status;
+    batch->status = Sdl_renderer_track_frame_result(
+	batch->sdl_renderer, RENDERER_STATUS_OK);
+    if (batch->status != RENDERER_STATUS_OK)
+	return batch->status;
+    batch->renderer = Sdl_renderer_frontend(batch->sdl_renderer);
+    if (batch->renderer == NULL) {
+	batch->status = Sdl_renderer_track_frame_result(
+	    batch->sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    }
+    return batch->status;
+}
+
+static RendererStatus Track_semantic_world_line_batch(
+    SemanticWorldLineBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (batch->sdl_renderer == NULL) {
+	batch->status = status;
+	return batch->status;
+    }
+    batch->status = Sdl_renderer_track_frame_result(
+	batch->sdl_renderer, status);
+    return batch->status;
+}
+
+static RendererStatus Accept_semantic_world_line_command(
+    SemanticWorldLineBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (status == RENDERER_STATUS_OK)
+	batch->has_accepted_commands = 1;
+    return Track_semantic_world_line_batch(batch, status);
+}
+
+static RendererStatus Finish_semantic_world_line_batch(
+    SemanticWorldLineBatch *batch)
+{
+    RendererStatus flush_status;
+
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!batch->has_accepted_commands || batch->sdl_renderer == NULL)
+	return batch->status;
+    flush_status = Sdl_renderer_flush_preserving_legacy(
+	batch->sdl_renderer);
+    batch->has_accepted_commands = 0;
+    return Track_semantic_world_line_batch(batch, flush_status);
+}
+
+static RendererStatus Set_semantic_world_line_point(
+    RendererPoint2D *point, int64_t x, int64_t y)
+{
+    if (point == NULL
+	|| x < INT_MIN || x > INT_MAX
+	|| y < INT_MIN || y > INT_MAX) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    point->x = (float)x;
+    point->y = (float)y;
+    if (!isfinite(point->x) || !isfinite(point->y))
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    return RENDERER_STATUS_OK;
+}
+
+static int Semantic_world_line_extent_preserved(
+    int64_t first, int64_t second, float first_float, float second_float)
+{
+    /* Equal integer coordinates are valid; only conversion collapse is bad. */
+    return first == second || first_float != second_float;
+}
+
+static RendererStatus Append_semantic_world_line_path(
+    SemanticWorldLineGeometry *geometry,
+    int64_t x_0, int64_t y_0, int64_t x_1, int64_t y_1)
+{
+    SemanticWorldLinePath *path;
+    RendererStatus status;
+
+    if (geometry == NULL
+	|| geometry->path_count >= NELEM(geometry->paths)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    path = &geometry->paths[geometry->path_count];
+    status = Set_semantic_world_line_point(
+	&path->points[0], x_0, y_0);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    status = Set_semantic_world_line_point(
+	&path->points[1], x_1, y_1);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    if (!Semantic_world_line_extent_preserved(
+	    x_0, x_1, path->points[0].x, path->points[1].x)
+	|| !Semantic_world_line_extent_preserved(
+	    y_0, y_1, path->points[0].y, path->points[1].y)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    path->point_count = 2;
+    path->closed = 0;
+    geometry->path_count++;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Build_semantic_world_segment_geometry(
+    int x_0, int y_0, int x_1, int y_1,
+    SemanticWorldLineGeometry *geometry)
+{
+    if (geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    geometry->path_count = 0;
+    /* A legacy zero-length line has no coverage or state worth flushing. */
+    if (x_0 == x_1 && y_0 == y_1)
+	return RENDERER_STATUS_OK;
+    return Append_semantic_world_line_path(
+	geometry, (int64_t)x_0, (int64_t)y_0,
+	(int64_t)x_1, (int64_t)y_1);
+}
+
+static RendererStatus Build_semantic_world_rectangle_geometry(
+    int x, int y, int xi, int yi,
+    SemanticWorldLineGeometry *geometry)
+{
+    SemanticWorldLinePath *path;
+    RendererStatus status;
+
+    if (geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    geometry->path_count = 0;
+    if (x == xi && y == yi)
+	return RENDERER_STATUS_OK;
+    path = &geometry->paths[0];
+    status = Set_semantic_world_line_point(
+	&path->points[0], (int64_t)x, (int64_t)y);
+    if (status == RENDERER_STATUS_OK) {
+	status = Set_semantic_world_line_point(
+	    &path->points[1], (int64_t)x, (int64_t)yi);
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Set_semantic_world_line_point(
+	    &path->points[2], (int64_t)xi, (int64_t)yi);
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Set_semantic_world_line_point(
+	    &path->points[3], (int64_t)xi, (int64_t)y);
+    }
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    if (!Semantic_world_line_extent_preserved(
+	    (int64_t)x, (int64_t)xi,
+	    path->points[0].x, path->points[2].x)
+	|| !Semantic_world_line_extent_preserved(
+	    (int64_t)y, (int64_t)yi,
+	    path->points[0].y, path->points[2].y)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    path->point_count = 4;
+    path->closed = 1;
+    geometry->path_count = 1;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Semantic_world_decor_mask(int type, int *mask)
+{
+    if (mask == NULL || type < 0
+	|| type >= SEMANTIC_WORLD_DECOR_TYPE_COUNT) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    *mask = 0;
+    switch (type) {
+    case SETUP_DECOR_FILLED:
+	*mask = DECOR_UP | DECOR_LEFT | DECOR_DOWN | DECOR_RIGHT;
+	break;
+    case SETUP_DECOR_RU:
+	*mask = DECOR_UP | DECOR_RIGHT | DECOR_CLOSED;
+	break;
+    case SETUP_DECOR_RD:
+	*mask = DECOR_DOWN | DECOR_RIGHT | DECOR_OPEN | DECOR_BELOW;
+	break;
+    case SETUP_DECOR_LU:
+	*mask = DECOR_UP | DECOR_LEFT | DECOR_OPEN;
+	break;
+    case SETUP_DECOR_LD:
+	*mask = DECOR_LEFT | DECOR_DOWN | DECOR_CLOSED | DECOR_BELOW;
+	break;
+    default:
+	break;
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Build_semantic_world_decor_geometry(
+    int x, int y, int type, SemanticWorldLineGeometry *geometry)
+{
+    int mask;
+    int64_t left;
+    int64_t right;
+    int64_t bottom;
+    int64_t top;
+    RendererStatus status;
+
+    if (geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    geometry->path_count = 0;
+    status = Semantic_world_decor_mask(type, &mask);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    left = (int64_t)x;
+    right = left + (int64_t)BLOCK_SZ;
+    bottom = (int64_t)y;
+    top = bottom + (int64_t)BLOCK_SZ;
+
+#define APPEND_DECOR_PATH(x0, y0, x1, y1) \
+    do { \
+	status = Append_semantic_world_line_path( \
+	    geometry, (x0), (y0), (x1), (y1)); \
+	if (status != RENDERER_STATUS_OK) \
+	    return status; \
+    } while (0)
+
+    if (mask & DECOR_LEFT)
+	APPEND_DECOR_PATH(left, bottom, left, top);
+    if (mask & DECOR_DOWN)
+	APPEND_DECOR_PATH(left, bottom, right, bottom);
+    if (mask & DECOR_RIGHT)
+	APPEND_DECOR_PATH(right, bottom, right, top);
+    if (mask & DECOR_UP)
+	APPEND_DECOR_PATH(left, top, right, top);
+    if (mask & DECOR_OPEN) {
+	APPEND_DECOR_PATH(left, bottom, right, top);
+    } else if (mask & DECOR_CLOSED) {
+	APPEND_DECOR_PATH(left, top, right, bottom);
+    }
+#undef APPEND_DECOR_PATH
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Build_semantic_world_wall_geometry(
+    int x, int y, int type, SemanticWorldLineGeometry *geometry)
+{
+    int64_t left;
+    int64_t right;
+    int64_t bottom;
+    int64_t top;
+    RendererStatus status;
+
+    if (geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    geometry->path_count = 0;
+    left = (int64_t)x;
+    right = left + (int64_t)BLOCK_SZ;
+    bottom = (int64_t)y;
+    top = bottom + (int64_t)BLOCK_SZ;
+
+#define APPEND_WALL_PATH(x0, y0, x1, y1) \
+    do { \
+	status = Append_semantic_world_line_path( \
+	    geometry, (x0), (y0), (x1), (y1)); \
+	if (status != RENDERER_STATUS_OK) \
+	    return status; \
+    } while (0)
+
+    if (type & BLUE_LEFT)
+	APPEND_WALL_PATH(left, bottom, left, top);
+    if (type & BLUE_DOWN)
+	APPEND_WALL_PATH(left, bottom, right, bottom);
+    if (type & BLUE_RIGHT)
+	APPEND_WALL_PATH(right, bottom, right, top);
+    if (type & BLUE_UP)
+	APPEND_WALL_PATH(left, top, right, top);
+    if ((type & BLUE_FUEL) == BLUE_FUEL) {
+	/* Fuel stations deliberately have no diagonal. */
+    } else if (type & BLUE_OPEN) {
+	APPEND_WALL_PATH(left, bottom, right, top);
+    } else if (type & BLUE_CLOSED) {
+	APPEND_WALL_PATH(left, top, right, bottom);
+    }
+#undef APPEND_WALL_PATH
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Paint_semantic_world_line_geometry(
+    SemanticWorldLineBatch *batch,
+    const SemanticWorldLineGeometry *geometry, Uint32 packed_color)
+{
+    RendererColor color;
+    RendererStatus operation_status;
+    size_t path_index;
+
+    if (batch == NULL || geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (batch->status != RENDERER_STATUS_OK)
+	return batch->status;
+    if (geometry->path_count == 0)
+	return batch->status;
+
+    operation_status = Renderer_set_blend(
+	batch->renderer, RENDERER_BLEND_ALPHA);
+    if (Track_semantic_world_line_batch(batch, operation_status)
+	!= RENDERER_STATUS_OK) {
+	return batch->status;
+    }
+
+    color = Renderer_color_from_rgba32(packed_color);
+    for (path_index = 0;
+	 batch->status == RENDERER_STATUS_OK
+	     && path_index < geometry->path_count;
+	 path_index++) {
+	const SemanticWorldLinePath *path = &geometry->paths[path_index];
+
+	operation_status = Renderer_stroke_path(
+	    batch->renderer, path->points, path->point_count, 1.0f,
+	    color, path->closed);
+	(void)Accept_semantic_world_line_command(batch, operation_status);
+    }
+    return Finish_semantic_world_line_batch(batch);
+}
+
+static RendererStatus Paint_semantic_world_stippled_geometry(
+    SemanticWorldLineBatch *batch,
+    const SemanticWorldLineGeometry *geometry, Uint32 packed_color,
+    unsigned int factor)
+{
+    const SemanticWorldLinePath *path;
+    RendererStatus operation_status;
+
+    if (batch == NULL || geometry == NULL || factor == 0
+	|| geometry->path_count > 1) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    if (batch->status != RENDERER_STATUS_OK)
+	return batch->status;
+    if (geometry->path_count == 0)
+	return batch->status;
+
+    operation_status = Renderer_set_blend(
+	batch->renderer, RENDERER_BLEND_ADDITIVE);
+    if (Track_semantic_world_line_batch(batch, operation_status)
+	!= RENDERER_STATUS_OK) {
+	return batch->status;
+    }
+
+    /* Semantic line coverage intentionally does not mirror GL_LINE_SMOOTH. */
+    path = &geometry->paths[0];
+    operation_status = Renderer_stroke_stippled_path(
+	batch->renderer, path->points, path->point_count, 1.0f,
+	Renderer_color_from_rgba32(packed_color), path->closed,
+	factor, UINT16_C(0xAAAA));
+    (void)Accept_semantic_world_line_command(batch, operation_status);
+    return Finish_semantic_world_line_batch(batch);
+}
+
 void Gui_paint_decor(int x, int y, int xi, int yi, int type,
 		     bool last, bool more_y)
 {
-	int mask;
-    static unsigned char    decor[256];
-    static int		    decorReady = 0;
+    SemanticWorldLineBatch batch;
+    SemanticWorldLineGeometry geometry;
+    RendererStatus status;
 
-    if (!decorReady) {
-		memset(decor, 0, sizeof decor);
-		decor[SETUP_DECOR_FILLED]
-			= DECOR_UP | DECOR_LEFT | DECOR_DOWN | DECOR_RIGHT;
-		decor[SETUP_DECOR_RU] = DECOR_UP | DECOR_RIGHT | DECOR_CLOSED;
-		decor[SETUP_DECOR_RD]
-			= DECOR_DOWN | DECOR_RIGHT | DECOR_OPEN | DECOR_BELOW;
-		decor[SETUP_DECOR_LU] = DECOR_UP | DECOR_LEFT | DECOR_OPEN;
-		decor[SETUP_DECOR_LD]
-			= DECOR_LEFT | DECOR_DOWN | DECOR_CLOSED | DECOR_BELOW;
-    }
-
-    mask = decor[type];
-
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+    (void)xi;
+    (void)yi;
+    (void)last;
+    (void)more_y;
+    if (Begin_semantic_world_line_batch(&batch) != RENDERER_STATUS_OK)
 	return;
-
-    set_alphacolor(decorColorRGBA);
-    glBegin(GL_LINES);
-
-    if (mask & DECOR_LEFT) {
-		glVertex2i(x, y);
-		glVertex2i(x, y + BLOCK_SZ);
+    status = Build_semantic_world_decor_geometry(x, y, type, &geometry);
+    if (status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_world_line_batch(&batch, status);
+	return;
     }
-    if (mask & DECOR_DOWN) {
-		glVertex2i(x, y);
-		glVertex2i(x + BLOCK_SZ, y);
-    }
-    if (mask & DECOR_RIGHT) {
-		glVertex2i(x + BLOCK_SZ, y);
-		glVertex2i(x + BLOCK_SZ, y + BLOCK_SZ);
-    }
-    if (mask & DECOR_UP) {
-		glVertex2i(x, y + BLOCK_SZ);
-		glVertex2i(x + BLOCK_SZ, y + BLOCK_SZ);
-    }
-	if (mask & DECOR_OPEN) {
-		glVertex2i(x, y);
-		glVertex2i(x + BLOCK_SZ, y + BLOCK_SZ);
-    } else if (mask & DECOR_CLOSED) {
-		glVertex2i(x, y + BLOCK_SZ);
-		glVertex2i(x + BLOCK_SZ, y);
-    }
-    glEnd();
+    (void)Paint_semantic_world_line_geometry(
+	&batch, &geometry, decorColorRGBA);
 }
 
 void Gui_paint_border(int x, int y, int xi, int yi)
 {
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
-	return;
+    SemanticWorldLineBatch batch;
+    SemanticWorldLineGeometry geometry;
+    RendererStatus status;
 
-    set_alphacolor(wallColorRGBA);
-    glBegin(GL_LINES);
-    	glVertex2i(x, y);
-    	glVertex2i(xi, yi);
-    glEnd();
+    if (Begin_semantic_world_line_batch(&batch) != RENDERER_STATUS_OK)
+	return;
+    status = Build_semantic_world_segment_geometry(
+	x, y, xi, yi, &geometry);
+    if (status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_world_line_batch(&batch, status);
+	return;
+    }
+    (void)Paint_semantic_world_line_geometry(
+	&batch, &geometry, wallColorRGBA);
 }
 
 void Gui_paint_visible_border(int x, int y, int xi, int yi)
 {
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
-	return;
-    if (setupPaint_moving() != RENDERER_STATUS_OK)
-	return;
+    SemanticWorldLineBatch batch;
+    SemanticWorldLineGeometry geometry;
+    const SemanticWorldLinePath *path;
+    RendererStatus status;
+    RendererStatus blend_status;
+    RendererStatus stroke_status = RENDERER_STATUS_OK;
+    RendererStatus stationary_status;
+    int stroke_attempted = 0;
 
-    set_alphacolor(hudColorRGBA);
-    glBegin(GL_LINE_LOOP);
-    	glVertex2i(x, y);
-    	glVertex2i(x, yi);
-    	glVertex2i(xi, yi);
-    	glVertex2i(xi, y);
-    glEnd();
-    if (setupPaint_stationary() != RENDERER_STATUS_OK)
+    if (Begin_semantic_world_line_batch(&batch) != RENDERER_STATUS_OK)
 	return;
+    status = Build_semantic_world_rectangle_geometry(
+	x, y, xi, yi, &geometry);
+    if (status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_world_line_batch(&batch, status);
+	return;
+    }
+    if (geometry.path_count == 0)
+	return;
+    status = setupPaint_moving();
+    if (status != RENDERER_STATUS_OK) {
+	if (Sdl_renderer_frame_result(batch.sdl_renderer)
+	    == RENDERER_STATUS_OK) {
+	    (void)Track_semantic_world_line_batch(&batch, status);
+	}
+	return;
+    }
+
+    path = &geometry.paths[0];
+    blend_status = Renderer_set_blend(
+	batch.renderer, RENDERER_BLEND_ALPHA);
+    if (blend_status == RENDERER_STATUS_OK) {
+	stroke_attempted = 1;
+	stroke_status = Renderer_stroke_path(
+	    batch.renderer, path->points, path->point_count, 1.0f,
+	    Renderer_color_from_rgba32(hudColorRGBA), path->closed);
+    }
+
+    /* Restore the legacy setup before making any raw renderer failure sticky. */
+    stationary_status = setupPaint_stationary_cleanup();
+    (void)Track_semantic_world_line_batch(&batch, blend_status);
+    if (stroke_attempted) {
+	if (stroke_status == RENDERER_STATUS_OK)
+	    batch.has_accepted_commands = 1;
+	(void)Track_semantic_world_line_batch(&batch, stroke_status);
+    }
+    if (stationary_status != RENDERER_STATUS_OK)
+	(void)Track_semantic_world_line_batch(&batch, stationary_status);
+    (void)Finish_semantic_world_line_batch(&batch);
 }
 
 void Gui_paint_hudradar_limit(int x, int y, int xi, int yi)
 {
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
-	return;
+    SemanticWorldLineBatch batch;
+    SemanticWorldLineGeometry geometry;
+    RendererStatus status;
 
-    set_alphacolor(blueRGBA);
-    glBegin(GL_LINE_LOOP);
-    	glVertex2i(x, y);
-    	glVertex2i(x, yi);
-    	glVertex2i(xi, yi);
-    	glVertex2i(xi, y);
-    glEnd();
+    if (Begin_semantic_world_line_batch(&batch) != RENDERER_STATUS_OK)
+	return;
+    status = Build_semantic_world_rectangle_geometry(
+	x, y, xi, yi, &geometry);
+    if (status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_world_line_batch(&batch, status);
+	return;
+    }
+    (void)Paint_semantic_world_line_geometry(
+	&batch, &geometry, blueRGBA);
 }
 
 void Gui_paint_setup_check(int x, int y, bool isNext)
@@ -1052,38 +1452,20 @@ void Gui_paint_setup_treasure(int x, int y, int team, bool own)
 
 void Gui_paint_walls(int x, int y, int type)
 {
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+    SemanticWorldLineBatch batch;
+    SemanticWorldLineGeometry geometry;
+    RendererStatus status;
+
+    if (Begin_semantic_world_line_batch(&batch) != RENDERER_STATUS_OK)
 	return;
-
-    set_alphacolor(wallColorRGBA);
-    glBegin(GL_LINES);
-
-
-    if (type & BLUE_LEFT) {
-	glVertex2i(x, y);
-	glVertex2i(x, y + BLOCK_SZ);
+    status = Build_semantic_world_wall_geometry(
+	x, y, type, &geometry);
+    if (status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_world_line_batch(&batch, status);
+	return;
     }
-    if (type & BLUE_DOWN) {
-	glVertex2i(x, y);
-	glVertex2i(x + BLOCK_SZ, y);
-    }
-    if (type & BLUE_RIGHT) {
-	glVertex2i(x + BLOCK_SZ, y);
-	glVertex2i(x + BLOCK_SZ, y + BLOCK_SZ);
-    }
-    if (type & BLUE_UP) {
-	glVertex2i(x, y + BLOCK_SZ);
-	glVertex2i(x + BLOCK_SZ, y + BLOCK_SZ);
-    }
-    if ((type & BLUE_FUEL) == BLUE_FUEL) {
-    } else if (type & BLUE_OPEN) {
-	glVertex2i(x, y);
-	glVertex2i(x + BLOCK_SZ, y + BLOCK_SZ);
-    } else if (type & BLUE_CLOSED) {
-	glVertex2i(x, y + BLOCK_SZ);
-	glVertex2i(x + BLOCK_SZ, y);
-    }
-    glEnd();
+    (void)Paint_semantic_world_line_geometry(
+	&batch, &geometry, wallColorRGBA);
 }
 
 void Gui_paint_filled_slice(int bl, int tl, int tr, int br, int y)
@@ -1572,43 +1954,38 @@ void Gui_paint_ecm(int x, int y, int size)
 
 void Gui_paint_refuel(int x_0, int y_0, int x_1, int y_1)
 {
-    int stipple = 4;
+    SemanticWorldLineBatch batch;
+    SemanticWorldLineGeometry geometry;
+    RendererStatus status;
 
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+    if (Begin_semantic_world_line_batch(&batch) != RENDERER_STATUS_OK)
 	return;
-
-    set_alphacolor(fuelColorRGBA);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-    glLineStipple(stipple, 0xAAAA);
-    glEnable(GL_LINE_STIPPLE);
-    if (smoothLines) glEnable(GL_LINE_SMOOTH);
-    glBegin(GL_LINES);
-    glVertex2i(x_0, y_0);
-    glVertex2i(x_1, y_1);
-    glEnd();
-    if (smoothLines) glDisable(GL_LINE_SMOOTH);
-    glDisable(GL_LINE_STIPPLE);
+    status = Build_semantic_world_segment_geometry(
+	x_0, y_0, x_1, y_1, &geometry);
+    if (status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_world_line_batch(&batch, status);
+	return;
+    }
+    (void)Paint_semantic_world_stippled_geometry(
+	&batch, &geometry, fuelColorRGBA, 4);
 }
 
 void Gui_paint_connector(int x_0, int y_0, int x_1, int y_1, int tractor)
 {
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
-	return;
+    SemanticWorldLineBatch batch;
+    SemanticWorldLineGeometry geometry;
+    RendererStatus status;
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-    set_alphacolor(connColorRGBA);
-    glLineStipple(tractor ? 2 : 4, 0xAAAA);
-    glEnable(GL_LINE_STIPPLE);
-    if (smoothLines) glEnable(GL_LINE_SMOOTH);
-    glBegin(GL_LINES);
-    glVertex2i(x_0, y_0);
-    glVertex2i(x_1, y_1);
-    glEnd();
-    if (smoothLines) glDisable(GL_LINE_SMOOTH);
-    glDisable(GL_LINE_STIPPLE);
-    /*glDisable(GL_BLEND);*/
+    if (Begin_semantic_world_line_batch(&batch) != RENDERER_STATUS_OK)
+	return;
+    status = Build_semantic_world_segment_geometry(
+	x_0, y_0, x_1, y_1, &geometry);
+    if (status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_world_line_batch(&batch, status);
+	return;
+    }
+    (void)Paint_semantic_world_stippled_geometry(
+	&batch, &geometry, connColorRGBA, tractor ? 2 : 4);
 }
 
 void Gui_paint_transporter(int x_0, int y_0, int x_1, int y_1)

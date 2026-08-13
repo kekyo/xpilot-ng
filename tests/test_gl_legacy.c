@@ -503,7 +503,7 @@ static void check_procedural_baseline(void)
 static void check_known_legacy_draw_paths(void)
 {
     drain_gl_errors();
-    Gui_paint_border(0, 0, 1, 1);
+    Gui_paint_ball_connector(0, 0, 1, 1);
     CHECK_CONTINUE(drain_gl_errors() == 0);
 }
 

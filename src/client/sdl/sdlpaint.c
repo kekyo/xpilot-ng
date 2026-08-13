@@ -97,9 +97,10 @@ int paintSetupMode;
 
 GLWidget *MainWidget = NULL;
 
-static RendererStatus set_renderer_world_transform(int rounded_translation)
+static RendererStatus set_renderer_world_transform_raw(
+    SdlRenderer *sdl_renderer, int rounded_translation)
 {
-    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+    Renderer *renderer;
     RendererTransform2D transform;
     RendererStatus status;
     int drawable_width;
@@ -117,11 +118,29 @@ static RendererStatus set_renderer_world_transform(int rounded_translation)
 	status = RENDERER_STATUS_INVALID_ARGUMENT;
     }
     if (status == RENDERER_STATUS_OK) {
-	status = Sdl_renderer_set_transform_2d(sdl_renderer, transform);
+	renderer = Sdl_renderer_frontend(sdl_renderer);
+	if (renderer == NULL)
+	    status = RENDERER_STATUS_INVALID_STATE;
+	else
+	    status = Renderer_set_transform_2d(renderer, transform);
     }
+    return status;
+}
+
+static RendererStatus set_renderer_world_transform(int rounded_translation)
+{
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+    RendererStatus status;
+
+    if (sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, RENDERER_STATUS_OK);
     if (status != RENDERER_STATUS_OK)
-	return Sdl_renderer_track_frame_result(sdl_renderer, status);
-    return RENDERER_STATUS_OK;
+	return status;
+    status = set_renderer_world_transform_raw(
+	sdl_renderer, rounded_translation);
+    return Sdl_renderer_track_frame_result(sdl_renderer, status);
 }
 
 static RendererStatus set_renderer_hud_transform(void)
@@ -504,6 +523,21 @@ RendererStatus setupPaint_stationary(void)
     if (status != RENDERER_STATUS_OK)
 	return status;
     return Sdl_renderer_frame_result(Get_sdl_renderer());
+}
+
+RendererStatus setupPaint_stationary_cleanup(void)
+{
+    SdlRenderer *sdl_renderer;
+    RendererStatus status;
+
+    if (paintSetupMode == STATIONARY_MODE)
+	return RENDERER_STATUS_OK;
+    sdl_renderer = Get_sdl_renderer();
+    if (sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    status = set_renderer_world_transform_raw(sdl_renderer, 1);
+    return Apply_legacy_paint_setup(
+	PAINT_SETUP_TARGET_STATIONARY, status);
 }
 
 /* This one works best for things that move, since they don't get

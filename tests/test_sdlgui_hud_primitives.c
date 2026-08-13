@@ -50,7 +50,9 @@ typedef enum PaintEvent {
     PAINT_EVENT_IMAGE,
     PAINT_EVENT_MAP_TEXT,
     PAINT_EVENT_MEASURE,
-    PAINT_EVENT_HUD_TEXT
+    PAINT_EVENT_HUD_TEXT,
+    PAINT_EVENT_SETUP_MOVING,
+    PAINT_EVENT_SETUP_STATIONARY
 } PaintEvent;
 
 typedef struct FakeDraw {
@@ -174,6 +176,7 @@ static int measure_attempts;
 static int hud_text_attempts;
 static int setup_moving_attempts;
 static int setup_stationary_attempts;
+static int fake_paint_setup_mode;
 static int legacy_begin_calls;
 static int legacy_vertex_calls;
 static int legacy_end_calls;
@@ -202,6 +205,8 @@ static RendererStatus image_result;
 static RendererStatus map_text_result;
 static RendererStatus measure_result;
 static RendererStatus hud_text_result;
+static RendererStatus setup_moving_result;
+static RendererStatus setup_stationary_result;
 static float measured_width;
 static float measured_height;
 
@@ -295,6 +300,9 @@ extern Uint32 whiteRGBA;
 extern Uint32 blueRGBA;
 extern Uint32 redRGBA;
 extern Uint32 wallColorRGBA;
+extern Uint32 decorColorRGBA;
+extern Uint32 fuelColorRGBA;
+extern Uint32 connColorRGBA;
 extern Uint32 hudColorRGBA;
 extern Uint32 hudHLineColorRGBA;
 extern Uint32 hudVLineColorRGBA;
@@ -362,6 +370,64 @@ static int check_stippled_stroke(
     TEST_CHECK(stroke->pattern == UINT16_C(0xAAAA));
     TEST_CHECK(stroke->blend == RENDERER_BLEND_ADDITIVE);
     TEST_CHECK(stroke->transform_token == 71);
+    TEST_CHECK(stroke->scissor_token == 83);
+    for (point_index = 0; point_index < 2; point_index++) {
+        TEST_CHECK(stroke->points[point_index].x
+                   == expected_points[point_index][0]);
+        TEST_CHECK(stroke->points[point_index].y
+                   == expected_points[point_index][1]);
+    }
+    return 0;
+}
+
+static int check_world_stroke(
+    int stroke_index, const float expected_points[][2],
+    size_t expected_point_count, uint32_t rgba, int closed,
+    RendererBlendMode expected_blend, int expected_transform_token)
+{
+    const FakeStroke *stroke;
+    size_t point_index;
+
+    TEST_CHECK(stroke_index >= 0);
+    TEST_CHECK(stroke_index < successful_strokes);
+    stroke = &strokes[stroke_index];
+    TEST_CHECK(stroke->point_count == expected_point_count);
+    TEST_CHECK(stroke->width == 1.0f);
+    TEST_CHECK(color_equal(
+        stroke->color, Renderer_color_from_rgba32(rgba)));
+    TEST_CHECK(stroke->closed == closed);
+    TEST_CHECK(stroke->blend == expected_blend);
+    TEST_CHECK(stroke->transform_token == expected_transform_token);
+    TEST_CHECK(stroke->scissor_token == 83);
+    for (point_index = 0; point_index < expected_point_count;
+         point_index++) {
+        TEST_CHECK(stroke->points[point_index].x
+                   == expected_points[point_index][0]);
+        TEST_CHECK(stroke->points[point_index].y
+                   == expected_points[point_index][1]);
+    }
+    return 0;
+}
+
+static int check_world_stippled_stroke(
+    int stroke_index, const float expected_points[][2], uint32_t rgba,
+    unsigned int expected_factor, int expected_transform_token)
+{
+    const FakeStippledStroke *stroke;
+    size_t point_index;
+
+    TEST_CHECK(stroke_index >= 0);
+    TEST_CHECK(stroke_index < successful_stippled_strokes);
+    stroke = &stippled_strokes[stroke_index];
+    TEST_CHECK(stroke->point_count == 2);
+    TEST_CHECK(stroke->width == 1.0f);
+    TEST_CHECK(color_equal(
+        stroke->color, Renderer_color_from_rgba32(rgba)));
+    TEST_CHECK(stroke->closed == 0);
+    TEST_CHECK(stroke->factor == expected_factor);
+    TEST_CHECK(stroke->pattern == UINT16_C(0xAAAA));
+    TEST_CHECK(stroke->blend == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stroke->transform_token == expected_transform_token);
     TEST_CHECK(stroke->scissor_token == 83);
     for (point_index = 0; point_index < 2; point_index++) {
         TEST_CHECK(stroke->points[point_index].x
@@ -468,6 +534,7 @@ static void reset_frame(void)
     hud_text_attempts = 0;
     setup_moving_attempts = 0;
     setup_stationary_attempts = 0;
+    fake_paint_setup_mode = STATIONARY_MODE;
     legacy_begin_calls = 0;
     legacy_vertex_calls = 0;
     legacy_end_calls = 0;
@@ -495,6 +562,8 @@ static void reset_frame(void)
     map_text_result = RENDERER_STATUS_OK;
     measure_result = RENDERER_STATUS_OK;
     hud_text_result = RENDERER_STATUS_OK;
+    setup_moving_result = RENDERER_STATUS_OK;
+    setup_stationary_result = RENDERER_STATUS_OK;
     measured_width = 7.0f;
     measured_height = 12.0f;
     fake_renderer.frame_active = 1;
@@ -612,8 +681,8 @@ Renderer *Sdl_renderer_frontend(SdlRenderer *renderer)
 RendererStatus Sdl_renderer_track_frame_result(
     SdlRenderer *renderer, RendererStatus status)
 {
-    if (operation_result_pending) {
-        operation_result_pending = 0;
+    if (operation_result_pending > 0) {
+        operation_result_pending--;
     } else {
         preflight_attempts++;
     }
@@ -637,13 +706,42 @@ RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
 RendererStatus setupPaint_moving(void)
 {
     setup_moving_attempts++;
-    return Sdl_renderer_frame_result(&fake_sdl_renderer);
+    record_event(PAINT_EVENT_SETUP_MOVING);
+    if (fake_sdl_renderer.frame_result != RENDERER_STATUS_OK)
+        return fake_sdl_renderer.frame_result;
+    if (setup_moving_result != RENDERER_STATUS_OK) {
+        fake_sdl_renderer.frame_result = setup_moving_result;
+        return setup_moving_result;
+    }
+    fake_paint_setup_mode = MOVING_MODE;
+    fake_renderer.transform_token = 72;
+    return RENDERER_STATUS_OK;
 }
 
 RendererStatus setupPaint_stationary(void)
 {
     setup_stationary_attempts++;
-    return Sdl_renderer_frame_result(&fake_sdl_renderer);
+    record_event(PAINT_EVENT_SETUP_STATIONARY);
+    if (fake_sdl_renderer.frame_result != RENDERER_STATUS_OK)
+        return fake_sdl_renderer.frame_result;
+    if (setup_stationary_result != RENDERER_STATUS_OK) {
+        fake_sdl_renderer.frame_result = setup_stationary_result;
+        return setup_stationary_result;
+    }
+    fake_paint_setup_mode = STATIONARY_MODE;
+    fake_renderer.transform_token = 71;
+    return RENDERER_STATUS_OK;
+}
+
+RendererStatus setupPaint_stationary_cleanup(void)
+{
+    setup_stationary_attempts++;
+    record_event(PAINT_EVENT_SETUP_STATIONARY);
+    if (setup_stationary_result != RENDERER_STATUS_OK)
+        return setup_stationary_result;
+    fake_paint_setup_mode = STATIONARY_MODE;
+    fake_renderer.transform_token = 71;
+    return RENDERER_STATUS_OK;
 }
 
 RendererStatus Renderer_set_blend(Renderer *renderer,
@@ -652,7 +750,7 @@ RendererStatus Renderer_set_blend(Renderer *renderer,
     blend_attempts++;
     if (blend_attempts <= MAX_EVENTS)
         blend_modes[blend_attempts - 1] = blend;
-    operation_result_pending = 1;
+    operation_result_pending++;
     record_event(PAINT_EVENT_BLEND);
     if (renderer != &fake_renderer || !renderer->frame_active
         || (blend != RENDERER_BLEND_OPAQUE
@@ -675,7 +773,7 @@ RendererStatus Renderer_draw_triangles(
     FakeDraw *draw;
 
     draw_attempts++;
-    operation_result_pending = 1;
+    operation_result_pending++;
     record_event(PAINT_EVENT_TRIANGLES);
     if (renderer != &fake_renderer || !renderer->frame_active
         || texture != NULL || vertices == NULL || vertex_count == 0
@@ -724,7 +822,7 @@ RendererStatus Renderer_fill_rect(Renderer *renderer,
                                   RendererColor color)
 {
     fill_attempts++;
-    operation_result_pending = 1;
+    operation_result_pending++;
     record_event(PAINT_EVENT_FILL);
     if (renderer != &fake_renderer || !renderer->frame_active)
         return RENDERER_STATUS_INVALID_STATE;
@@ -756,7 +854,7 @@ RendererStatus Renderer_stroke_path(
     FakeStroke *stroke;
 
     stroke_attempts++;
-    operation_result_pending = 1;
+    operation_result_pending++;
     record_event(PAINT_EVENT_STROKE);
     if (renderer != &fake_renderer || !renderer->frame_active
         || points == NULL || point_count < 2
@@ -790,7 +888,7 @@ RendererStatus Renderer_stroke_stippled_path(
     FakeStippledStroke *stroke;
 
     stippled_stroke_attempts++;
-    operation_result_pending = 1;
+    operation_result_pending++;
     record_event(PAINT_EVENT_STIPPLED_STROKE);
     if (renderer != &fake_renderer || !renderer->frame_active
         || points == NULL || point_count != 2 || width <= 0.0f
@@ -821,7 +919,7 @@ RendererStatus Renderer_stroke_stippled_path(
 RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
 {
     flush_attempts++;
-    operation_result_pending = 1;
+    operation_result_pending++;
     record_event(PAINT_EVENT_FLUSH);
     if (renderer != &fake_sdl_renderer
         || renderer->frontend == NULL
@@ -845,7 +943,7 @@ RendererStatus disp_text(string_tex_t *texture, int color,
                          bool on_hud)
 {
     text_attempts++;
-    operation_result_pending = 1;
+    operation_result_pending++;
     record_event(PAINT_EVENT_TEXT);
     last_text.texture = texture;
     last_text.color = color;
@@ -871,7 +969,7 @@ void Image_paint(int index, int x, int y, int frame, int color)
     last_image.y = y;
     last_image.frame = frame;
     last_image.color = color;
-    operation_result_pending = 1;
+    operation_result_pending++;
     (void)Sdl_renderer_track_frame_result(
         &fake_sdl_renderer, image_result);
 }
@@ -3636,6 +3734,644 @@ static int check_label_failure_blocks_later_same_frame_meters(void)
     return check_no_legacy_primitives();
 }
 
+static int check_no_world_legacy_state(void)
+{
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+    TEST_CHECK(legacy_enable_calls == 0);
+    TEST_CHECK(legacy_disable_calls == 0);
+    TEST_CHECK(legacy_texture_bind_calls == 0);
+    TEST_CHECK(legacy_light_calls == 0);
+    return 0;
+}
+
+static int check_world_alpha_stroke_batch(int expected_stroke_count)
+{
+    int event_index;
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == expected_stroke_count + 2);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    for (event_index = 0; event_index < expected_stroke_count;
+         event_index++) {
+        TEST_CHECK(events[event_index + 1] == PAINT_EVENT_STROKE);
+    }
+    TEST_CHECK(events[event_count - 1] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(stroke_attempts == expected_stroke_count);
+    TEST_CHECK(successful_strokes == expected_stroke_count);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    TEST_CHECK(setup_moving_attempts == 0);
+    TEST_CHECK(setup_stationary_attempts == 0);
+    return check_no_world_legacy_state();
+}
+
+static int check_world_stippled_batch(void)
+{
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(stippled_stroke_attempts == 1);
+    TEST_CHECK(successful_stippled_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    TEST_CHECK(setup_moving_attempts == 0);
+    TEST_CHECK(setup_stationary_attempts == 0);
+    return check_no_world_legacy_state();
+}
+
+static int check_world_decor_paths_are_semantic(void)
+{
+    static const float filled_lines[][2][2] = {
+        {{10.0f, 20.0f}, {10.0f, 55.0f}},
+        {{10.0f, 20.0f}, {45.0f, 20.0f}},
+        {{45.0f, 20.0f}, {45.0f, 55.0f}},
+        {{10.0f, 55.0f}, {45.0f, 55.0f}}
+    };
+    static const struct {
+        int type;
+        float lines[3][2][2];
+    } corner_cases[] = {
+        {
+            SETUP_DECOR_RU,
+            {
+                {{45.0f, 20.0f}, {45.0f, 55.0f}},
+                {{10.0f, 55.0f}, {45.0f, 55.0f}},
+                {{10.0f, 55.0f}, {45.0f, 20.0f}}
+            }
+        },
+        {
+            SETUP_DECOR_RD,
+            {
+                {{10.0f, 20.0f}, {45.0f, 20.0f}},
+                {{45.0f, 20.0f}, {45.0f, 55.0f}},
+                {{10.0f, 20.0f}, {45.0f, 55.0f}}
+            }
+        },
+        {
+            SETUP_DECOR_LU,
+            {
+                {{10.0f, 20.0f}, {10.0f, 55.0f}},
+                {{10.0f, 55.0f}, {45.0f, 55.0f}},
+                {{10.0f, 20.0f}, {45.0f, 55.0f}}
+            }
+        },
+        {
+            SETUP_DECOR_LD,
+            {
+                {{10.0f, 20.0f}, {10.0f, 55.0f}},
+                {{10.0f, 20.0f}, {45.0f, 20.0f}},
+                {{10.0f, 55.0f}, {45.0f, 20.0f}}
+            }
+        }
+    };
+    const uint32_t color = UINT32_C(0x9a7b5c00);
+    size_t case_index;
+    int line_index;
+
+    reset_frame();
+    decorColorRGBA = color;
+    Gui_paint_decor(
+        10, 20, -777, 888, SETUP_DECOR_FILLED, true, true);
+
+    TEST_CHECK(check_world_alpha_stroke_batch(4) == 0);
+    for (line_index = 0; line_index < 4; line_index++) {
+        TEST_CHECK(check_world_stroke(
+            line_index, filled_lines[line_index], 2, color, 0,
+            RENDERER_BLEND_ALPHA, 71) == 0);
+    }
+
+    for (case_index = 0; case_index < NELEM(corner_cases);
+         case_index++) {
+        reset_frame();
+        decorColorRGBA = color;
+        Gui_paint_decor(
+            10, 20, 0, 0, corner_cases[case_index].type,
+            false, false);
+
+        TEST_CHECK(check_world_alpha_stroke_batch(3) == 0);
+        for (line_index = 0; line_index < 3; line_index++) {
+            TEST_CHECK(check_world_stroke(
+                line_index, corner_cases[case_index].lines[line_index],
+                2, color, 0, RENDERER_BLEND_ALPHA, 71) == 0);
+        }
+    }
+    return 0;
+}
+
+static int check_world_border_rectangles_are_semantic(void)
+{
+    static const float border_points[][2] = {
+        {-8.0f, 11.0f}, {17.0f, -23.0f}
+    };
+    static const float rectangle_points[][2] = {
+        {-8.0f, 11.0f}, {-8.0f, -23.0f},
+        {17.0f, -23.0f}, {17.0f, 11.0f}
+    };
+    static const float vertical_rectangle_points[][2] = {
+        {5.0f, 11.0f}, {5.0f, -23.0f},
+        {5.0f, -23.0f}, {5.0f, 11.0f}
+    };
+
+    reset_frame();
+    wallColorRGBA = UINT32_C(0x10203000);
+    Gui_paint_border(-8, 11, 17, -23);
+
+    TEST_CHECK(check_world_alpha_stroke_batch(1) == 0);
+    TEST_CHECK(check_world_stroke(
+        0, border_points, 2, UINT32_C(0x10203000), 0,
+        RENDERER_BLEND_ALPHA, 71) == 0);
+
+    reset_frame();
+    blueRGBA = UINT32_C(0x40506070);
+    Gui_paint_hudradar_limit(-8, 11, 17, -23);
+
+    TEST_CHECK(check_world_alpha_stroke_batch(1) == 0);
+    TEST_CHECK(check_world_stroke(
+        0, rectangle_points, 4, UINT32_C(0x40506070), 1,
+        RENDERER_BLEND_ALPHA, 71) == 0);
+
+    reset_frame();
+    hudColorRGBA = UINT32_C(0x8090a0b0);
+    Gui_paint_visible_border(-8, 11, 17, -23);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 5);
+    TEST_CHECK(events[0] == PAINT_EVENT_SETUP_MOVING);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_SETUP_STATIONARY);
+    TEST_CHECK(events[4] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(setup_moving_attempts == 1);
+    TEST_CHECK(setup_stationary_attempts == 1);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_paint_setup_mode == STATIONARY_MODE);
+    TEST_CHECK(fake_renderer.transform_token == 71);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    TEST_CHECK(check_world_stroke(
+        0, rectangle_points, 4, UINT32_C(0x8090a0b0), 1,
+        RENDERER_BLEND_ALPHA, 72) == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    blueRGBA = UINT32_C(0x40506070);
+    Gui_paint_hudradar_limit(5, 11, 5, -23);
+
+    TEST_CHECK(check_world_alpha_stroke_batch(1) == 0);
+    return check_world_stroke(
+        0, vertical_rectangle_points, 4, UINT32_C(0x40506070), 1,
+        RENDERER_BLEND_ALPHA, 71);
+}
+
+static int check_world_wall_paths_and_fuel_precedence(void)
+{
+    static const float all_lines[][2][2] = {
+        {{10.0f, 20.0f}, {10.0f, 55.0f}},
+        {{10.0f, 20.0f}, {45.0f, 20.0f}},
+        {{45.0f, 20.0f}, {45.0f, 55.0f}},
+        {{10.0f, 55.0f}, {45.0f, 55.0f}},
+        {{10.0f, 20.0f}, {45.0f, 55.0f}}
+    };
+    static const float closed_line[][2] = {
+        {10.0f, 55.0f}, {45.0f, 20.0f}
+    };
+    const uint32_t color = UINT32_C(0x12345600);
+    int line_index;
+
+    reset_frame();
+    wallColorRGBA = color;
+    Gui_paint_walls(
+        10, 20,
+        BLUE_LEFT | BLUE_DOWN | BLUE_RIGHT | BLUE_UP | BLUE_OPEN);
+
+    TEST_CHECK(check_world_alpha_stroke_batch(5) == 0);
+    for (line_index = 0; line_index < 5; line_index++) {
+        TEST_CHECK(check_world_stroke(
+            line_index, all_lines[line_index], 2, color, 0,
+            RENDERER_BLEND_ALPHA, 71) == 0);
+    }
+
+    reset_frame();
+    wallColorRGBA = color;
+    Gui_paint_walls(
+        10, 20,
+        BLUE_LEFT | BLUE_DOWN | BLUE_RIGHT | BLUE_UP | BLUE_FUEL);
+
+    TEST_CHECK(check_world_alpha_stroke_batch(4) == 0);
+    for (line_index = 0; line_index < 4; line_index++) {
+        TEST_CHECK(check_world_stroke(
+            line_index, all_lines[line_index], 2, color, 0,
+            RENDERER_BLEND_ALPHA, 71) == 0);
+    }
+
+    reset_frame();
+    wallColorRGBA = color;
+    Gui_paint_walls(10, 20, BLUE_CLOSED);
+
+    TEST_CHECK(check_world_alpha_stroke_batch(1) == 0);
+    return check_world_stroke(
+        0, closed_line, 2, color, 0, RENDERER_BLEND_ALPHA, 71);
+}
+
+static int check_world_stippled_lines_use_no_legacy_smoothing_state(void)
+{
+    static const float points[][2] = {
+        {-100.0f, 250.0f}, {300.0f, -450.0f}
+    };
+
+    reset_frame();
+    fuelColorRGBA = UINT32_C(0x31415900);
+    Gui_paint_refuel(-100, 250, 300, -450);
+
+    TEST_CHECK(check_world_stippled_batch() == 0);
+    TEST_CHECK(check_world_stippled_stroke(
+        0, points, UINT32_C(0x31415900), 4, 71) == 0);
+
+    reset_frame();
+    connColorRGBA = UINT32_C(0x27182818);
+    Gui_paint_connector(-100, 250, 300, -450, 0);
+
+    TEST_CHECK(check_world_stippled_batch() == 0);
+    TEST_CHECK(check_world_stippled_stroke(
+        0, points, UINT32_C(0x27182818), 4, 71) == 0);
+
+    reset_frame();
+    connColorRGBA = UINT32_C(0x27182818);
+    Gui_paint_connector(-100, 250, 300, -450, 1);
+
+    TEST_CHECK(check_world_stippled_batch() == 0);
+    return check_world_stippled_stroke(
+        0, points, UINT32_C(0x27182818), 2, 71);
+}
+
+static int check_world_line_preflight_only_noop(void)
+{
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    TEST_CHECK(setup_moving_attempts == 0);
+    TEST_CHECK(setup_stationary_attempts == 0);
+    return check_no_world_legacy_state();
+}
+
+static int check_world_line_empty_geometry_is_successful_noop(void)
+{
+    static const int empty_wall_types[] = {
+        0, BLUE_BELOW, BLUE_FUEL
+    };
+    size_t type_index;
+
+    reset_frame();
+    Gui_paint_decor(10, 20, 0, 0, 0, false, false);
+    TEST_CHECK(check_world_line_preflight_only_noop() == 0);
+
+    reset_frame();
+    Gui_paint_decor(
+        INT_MAX, INT_MAX, 0, 0, 0, false, false);
+    TEST_CHECK(check_world_line_preflight_only_noop() == 0);
+
+    for (type_index = 0; type_index < NELEM(empty_wall_types);
+         type_index++) {
+        reset_frame();
+        Gui_paint_walls(10, 20, empty_wall_types[type_index]);
+        TEST_CHECK(check_world_line_preflight_only_noop() == 0);
+    }
+
+    reset_frame();
+    Gui_paint_walls(INT_MAX, INT_MAX, 0);
+    TEST_CHECK(check_world_line_preflight_only_noop() == 0);
+
+    reset_frame();
+    Gui_paint_border(INT_MAX, INT_MIN, INT_MAX, INT_MIN);
+    TEST_CHECK(check_world_line_preflight_only_noop() == 0);
+
+    reset_frame();
+    Gui_paint_refuel(INT_MAX, INT_MIN, INT_MAX, INT_MIN);
+    TEST_CHECK(check_world_line_preflight_only_noop() == 0);
+
+    reset_frame();
+    Gui_paint_connector(INT_MAX, INT_MIN, INT_MAX, INT_MIN, 1);
+    TEST_CHECK(check_world_line_preflight_only_noop() == 0);
+
+    reset_frame();
+    Gui_paint_hudradar_limit(INT_MAX, INT_MIN, INT_MAX, INT_MIN);
+    TEST_CHECK(check_world_line_preflight_only_noop() == 0);
+
+    reset_frame();
+    Gui_paint_visible_border(INT_MAX, INT_MIN, INT_MAX, INT_MIN);
+    return check_world_line_preflight_only_noop();
+}
+
+static int check_invalid_world_line_result_is_sticky(void)
+{
+    PaintOperationCounts before_blocked_leaf;
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(setup_moving_attempts == 0);
+    TEST_CHECK(setup_stationary_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    before_blocked_leaf = paint_operation_counts();
+    Gui_paint_border(10, 20, 30, 40);
+    return check_paint_operation_counts_unchanged(before_blocked_leaf);
+}
+
+static int check_world_line_numeric_boundaries_are_checked(void)
+{
+    static const int invalid_decor_types[] = {-1, 256};
+    static const float int_min_points[][2] = {
+        {(float)INT_MIN, (float)INT_MIN},
+        {(float)(INT_MIN + 256), (float)(INT_MIN + 256)}
+    };
+    size_t type_index;
+
+    for (type_index = 0; type_index < NELEM(invalid_decor_types);
+         type_index++) {
+        reset_frame();
+        Gui_paint_decor(
+            10, 20, 0, 0, invalid_decor_types[type_index],
+            false, false);
+        TEST_CHECK(check_invalid_world_line_result_is_sticky() == 0);
+    }
+
+    reset_frame();
+    Gui_paint_walls(INT_MAX, 20, BLUE_RIGHT);
+    TEST_CHECK(check_invalid_world_line_result_is_sticky() == 0);
+
+    reset_frame();
+    Gui_paint_border(INT_MAX - 1, 20, INT_MAX, 20);
+    TEST_CHECK(check_invalid_world_line_result_is_sticky() == 0);
+
+    reset_frame();
+    Gui_paint_refuel(INT_MAX - 1, 20, INT_MAX, 20);
+    TEST_CHECK(check_invalid_world_line_result_is_sticky() == 0);
+
+    reset_frame();
+    Gui_paint_visible_border(INT_MAX - 1, 20, INT_MAX, 40);
+    TEST_CHECK(check_invalid_world_line_result_is_sticky() == 0);
+
+    reset_frame();
+    wallColorRGBA = UINT32_C(0x01020304);
+    Gui_paint_border(
+        INT_MIN, INT_MIN, INT_MIN + 256, INT_MIN + 256);
+    TEST_CHECK(check_world_alpha_stroke_batch(1) == 0);
+    return check_world_stroke(
+        0, int_min_points, 2, UINT32_C(0x01020304), 0,
+        RENDERER_BLEND_ALPHA, 71);
+}
+
+static int check_world_line_failures_preserve_prefix_and_sticky_status(void)
+{
+    static const float first_wall_line[][2] = {
+        {10.0f, 20.0f}, {10.0f, 55.0f}
+    };
+    static const float second_wall_line[][2] = {
+        {10.0f, 20.0f}, {45.0f, 20.0f}
+    };
+    static const float border_points[][2] = {
+        {10.0f, 20.0f}, {30.0f, 40.0f}
+    };
+    PaintOperationCounts before_blocked_leaf;
+
+    reset_frame();
+    wallColorRGBA = UINT32_C(0x12345678);
+    stroke_failure_attempt = 3;
+    stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    Gui_paint_walls(
+        10, 20,
+        BLUE_LEFT | BLUE_DOWN | BLUE_RIGHT | BLUE_UP | BLUE_OPEN);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(event_count == 5);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[4] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(stroke_attempts == 3);
+    TEST_CHECK(successful_strokes == 2);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(check_world_stroke(
+        0, first_wall_line, 2, UINT32_C(0x12345678), 0,
+        RENDERER_BLEND_ALPHA, 71) == 0);
+    TEST_CHECK(check_world_stroke(
+        1, second_wall_line, 2, UINT32_C(0x12345678), 0,
+        RENDERER_BLEND_ALPHA, 71) == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    before_blocked_leaf = paint_operation_counts();
+    stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+    Gui_paint_connector(1, 2, 3, 4, 0);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+
+    reset_frame();
+    blend_failure_attempt = 1;
+    blend_failure_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    Gui_paint_refuel(1, 2, 3, 4);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    stippled_stroke_failure_attempt = 1;
+    stippled_stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    Gui_paint_connector(1, 2, 3, 4, 1);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(stippled_stroke_attempts == 1);
+    TEST_CHECK(successful_stippled_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    wallColorRGBA = UINT32_C(0xabcdef12);
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    Gui_paint_border(10, 20, 30, 40);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(check_world_stroke(
+        0, border_points, 2, UINT32_C(0xabcdef12), 0,
+        RENDERER_BLEND_ALPHA, 71) == 0);
+    return check_no_world_legacy_state();
+}
+
+static int check_visible_border_setup_failures_restore_safely(void)
+{
+    static const float rectangle_points[][2] = {
+        {10.0f, 20.0f}, {10.0f, 40.0f},
+        {30.0f, 40.0f}, {30.0f, 20.0f}
+    };
+
+    reset_frame();
+    setup_moving_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    Gui_paint_visible_border(10, 20, 30, 40);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_SETUP_MOVING);
+    TEST_CHECK(setup_moving_attempts == 1);
+    TEST_CHECK(setup_stationary_attempts == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_paint_setup_mode == STATIONARY_MODE);
+    TEST_CHECK(fake_renderer.transform_token == 71);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    hudColorRGBA = UINT32_C(0x12345678);
+    stroke_failure_attempt = 1;
+    stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    Gui_paint_visible_border(10, 20, 30, 40);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == PAINT_EVENT_SETUP_MOVING);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_SETUP_STATIONARY);
+    TEST_CHECK(setup_moving_attempts == 1);
+    TEST_CHECK(setup_stationary_attempts == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_paint_setup_mode == STATIONARY_MODE);
+    TEST_CHECK(fake_renderer.transform_token == 71);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    hudColorRGBA = UINT32_C(0x12345678);
+    setup_stationary_result = RENDERER_STATUS_BACKEND_ERROR;
+    Gui_paint_visible_border(10, 20, 30, 40);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(event_count == 5);
+    TEST_CHECK(events[0] == PAINT_EVENT_SETUP_MOVING);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_SETUP_STATIONARY);
+    TEST_CHECK(events[4] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(setup_moving_attempts == 1);
+    TEST_CHECK(setup_stationary_attempts == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_paint_setup_mode == MOVING_MODE);
+    TEST_CHECK(fake_renderer.transform_token == 72);
+    TEST_CHECK(check_world_stroke(
+        0, rectangle_points, 4, UINT32_C(0x12345678), 1,
+        RENDERER_BLEND_ALPHA, 72) == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    blend_failure_attempt = 1;
+    blend_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    Gui_paint_visible_border(10, 20, 30, 40);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_SETUP_MOVING);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[2] == PAINT_EVENT_SETUP_STATIONARY);
+    TEST_CHECK(setup_stationary_attempts == 1);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_paint_setup_mode == STATIONARY_MODE);
+    TEST_CHECK(fake_renderer.transform_token == 71);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    Gui_paint_visible_border(10, 20, 30, 40);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(event_count == 5);
+    TEST_CHECK(events[0] == PAINT_EVENT_SETUP_MOVING);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_SETUP_STATIONARY);
+    TEST_CHECK(events[4] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_paint_setup_mode == STATIONARY_MODE);
+    TEST_CHECK(fake_renderer.transform_token == 71);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    stroke_failure_attempt = 1;
+    stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    setup_stationary_result = RENDERER_STATUS_BACKEND_ERROR;
+    Gui_paint_visible_border(10, 20, 30, 40);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == PAINT_EVENT_SETUP_MOVING);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_SETUP_STATIONARY);
+    TEST_CHECK(setup_stationary_attempts == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    return check_no_world_legacy_state();
+}
+
 static int check_laser_stroke(
     int stroke_index, const float expected_points[][2],
     float expected_width, uint32_t rgba)
@@ -4513,6 +5249,22 @@ int main(void)
     if (check_sticky_failure_gates_inactive_asteroid_batch() != 0)
         return 1;
     if (check_asteroid_batch_cleanup_survives_sticky_failure() != 0)
+        return 1;
+    if (check_world_decor_paths_are_semantic() != 0)
+        return 1;
+    if (check_world_border_rectangles_are_semantic() != 0)
+        return 1;
+    if (check_world_wall_paths_and_fuel_precedence() != 0)
+        return 1;
+    if (check_world_stippled_lines_use_no_legacy_smoothing_state() != 0)
+        return 1;
+    if (check_world_line_empty_geometry_is_successful_noop() != 0)
+        return 1;
+    if (check_world_line_numeric_boundaries_are_checked() != 0)
+        return 1;
+    if (check_world_line_failures_preserve_prefix_and_sticky_status() != 0)
+        return 1;
+    if (check_visible_border_setup_failures_restore_safely() != 0)
         return 1;
     if (check_target_full_order_and_geometry() != 0)
         return 1;

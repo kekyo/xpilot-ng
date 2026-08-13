@@ -43,6 +43,16 @@ extern int paintSetupMode;
 RendererStatus setupPaint_stationary(void);
 
 /**
+ * Restore the rounded stationary world transform without retaining status.
+ *
+ * @return The raw semantic or legacy setup result.
+ * @remarks This cleanup entry point ignores an already retained frame
+ *          failure. The caller must retain this result after retaining any
+ *          earlier operation failure.
+ */
+RendererStatus setupPaint_stationary_cleanup(void);
+
+/**
  * Select the moving world transform for semantic and legacy draw.
  *
  * @return The sticky result for the active renderer frame.
