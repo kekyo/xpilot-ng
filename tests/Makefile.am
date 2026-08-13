@@ -15,7 +15,7 @@ check_PROGRAMS = test-meta-environment \
 	test-sdlpaint-stage test-paintmap-vdecor \
 	test-glwidgets-scissor test-glwidgets-primitives \
 	test-sdlmeta-primitives test-sdlgui-appearing \
-	test-sdlgui-hud-primitives test-sdlgui-sparks \
+	test-sdlgui-hud-primitives test-sdlgui-sparks test-sdlgui-ships \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
 TESTS = test-meta-environment \
@@ -30,6 +30,7 @@ TESTS = test-meta-environment \
 	test-sdl-renderer-scissor test-glwidgets-scissor \
 	test-glwidgets-primitives test-sdlmeta-primitives \
 	test-sdlgui-appearing test-sdlgui-hud-primitives test-sdlgui-sparks \
+	test-sdlgui-ships \
 	test-text-geometry \
 	test-text-atlas test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
@@ -258,6 +259,23 @@ test_sdlgui_sparks_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_lasers_end \
 	-Wl,--wrap=Gui_paint_laser
 test_sdlgui_sparks_LDADD = @SDL2_LIBS@
+
+test_sdlgui_ships_SOURCES = test_sdlgui_ships.c \
+	$(top_srcdir)/src/client/sdl/sdlgui.c \
+	$(top_srcdir)/src/client/paintobjects.c
+test_sdlgui_ships_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_sdlgui_ships_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=Gui_paint_paused \
+	-Wl,--wrap=Gui_paint_appearing_begin \
+	-Wl,--wrap=Gui_paint_appearing \
+	-Wl,--wrap=Gui_paint_appearing_end \
+	-Wl,--wrap=Gui_paint_ecm \
+	-Wl,--wrap=Gui_paint_all_connectors_begin \
+	-Wl,--wrap=Gui_paint_refuel \
+	-Wl,--wrap=Gui_paint_connector \
+	-Wl,--wrap=Gui_paint_transporter
+test_sdlgui_ships_LDADD = @SDL2_LIBS@
 
 test_text_geometry_SOURCES = test_text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c \

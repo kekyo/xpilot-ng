@@ -2938,6 +2938,133 @@ static int Gui_calculate_ship_color(int id, other_t *other)
     return ship_color;
 }
 
+typedef struct SemanticShipOutlineGeometry {
+    RendererPoint2D points[MAX_SHIP_PTS2];
+    size_t point_count;
+    float width;
+} SemanticShipOutlineGeometry;
+
+static int Semantic_ship_outline_extent_preserved(
+    float first, float second, float translated_first,
+    float translated_second)
+{
+    /* Equal source coordinates are valid; only translation collapse is bad. */
+    return first == second || translated_first != translated_second;
+}
+
+static RendererStatus Build_semantic_ship_outline_geometry(
+    int x, int y, int dir, shipshape_t *ship, double width,
+    SemanticShipOutlineGeometry *geometry)
+{
+    position_t first_position;
+    position_t previous_position;
+    float center_x;
+    float center_y;
+    int has_visible_edge;
+    int point_index;
+
+    if (geometry == NULL || ship == NULL
+	|| dir < 0 || dir >= RES
+	|| ship->num_points < MIN_SHIP_PTS
+	|| ship->num_points > MAX_SHIP_PTS2
+	|| !isfinite(width) || width <= 0.0 || width > (double)FLT_MAX) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    geometry->width = (float)width;
+    if (!isfinite(geometry->width) || geometry->width <= 0.0f)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+
+    for (point_index = 0; point_index < ship->num_points; point_index++) {
+	if (ship->pts[point_index] == NULL)
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+
+    center_x = (float)x;
+    center_y = (float)y;
+    if (!isfinite(center_x) || !isfinite(center_y))
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+
+    has_visible_edge = 0;
+    for (point_index = 0; point_index < ship->num_points; point_index++) {
+	position_t position = Ship_get_point_position(
+	    ship, point_index, dir);
+	RendererPoint2D *point = &geometry->points[point_index];
+
+	if (!isfinite(position.x) || !isfinite(position.y))
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	point->x = center_x + position.x;
+	point->y = center_y + position.y;
+	if (!isfinite(point->x) || !isfinite(point->y))
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+
+	if (point_index == 0) {
+	    first_position = position;
+	} else if (!Semantic_ship_outline_extent_preserved(
+		previous_position.x, position.x,
+		geometry->points[point_index - 1].x, point->x)
+	    || !Semantic_ship_outline_extent_preserved(
+		previous_position.y, position.y,
+		geometry->points[point_index - 1].y, point->y)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+	if (point_index > 0
+	    && (geometry->points[point_index - 1].x != point->x
+		|| geometry->points[point_index - 1].y != point->y)) {
+	    has_visible_edge = 1;
+	}
+	previous_position = position;
+    }
+
+    if (!Semantic_ship_outline_extent_preserved(
+	    previous_position.x, first_position.x,
+	    geometry->points[ship->num_points - 1].x,
+	    geometry->points[0].x)
+	|| !Semantic_ship_outline_extent_preserved(
+	    previous_position.y, first_position.y,
+	    geometry->points[ship->num_points - 1].y,
+	    geometry->points[0].y)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    geometry->point_count = has_visible_edge
+	? (size_t)ship->num_points : 0;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Paint_semantic_ship_outline(
+    SemanticWorldLineBatch *batch,
+    const SemanticShipOutlineGeometry *geometry, Uint32 packed_color,
+    int stippled)
+{
+    RendererStatus operation_status;
+
+    if (batch == NULL || geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (batch->status != RENDERER_STATUS_OK)
+	return batch->status;
+    if (geometry->point_count == 0)
+	return batch->status;
+
+    operation_status = Renderer_set_blend(
+	batch->renderer, RENDERER_BLEND_ALPHA);
+    if (Track_semantic_world_line_batch(batch, operation_status)
+	!= RENDERER_STATUS_OK) {
+	return batch->status;
+    }
+
+    if (stippled) {
+	operation_status = Renderer_stroke_stippled_path(
+	    batch->renderer, geometry->points, geometry->point_count,
+	    geometry->width, Renderer_color_from_rgba32(packed_color), 1,
+	    3, UINT16_C(0xAAAA));
+    } else {
+	operation_status = Renderer_stroke_path(
+	    batch->renderer, geometry->points, geometry->point_count,
+	    geometry->width, Renderer_color_from_rgba32(packed_color), 1);
+    }
+    (void)Accept_semantic_world_line_command(batch, operation_status);
+    return Finish_semantic_world_line_batch(batch);
+}
+
 static void Gui_paint_ship_name(int x, int y, other_t *other)
 {
     int color = Life_color(other);
@@ -2965,10 +3092,12 @@ static void Gui_paint_ship_name(int x, int y, other_t *other)
 void Gui_paint_ship(int x, int y, int dir, int id, int cloak, int phased,
 		    int shield, int deflector, int eshield)
 {
-    int i, color, img;
+    int color, img;
     shipshape_t *ship;
-    position_t point;
     other_t *other;
+    SemanticWorldLineBatch batch;
+    SemanticShipOutlineGeometry geometry;
+    RendererStatus status;
 
     if (!(other = Other_by_id(id))) return;
 
@@ -2981,15 +3110,22 @@ void Gui_paint_ship(int x, int y, int dir, int id, int cloak, int phased,
 		else
 			ship = Ship_by_id(id);
 
-    if (!texturedShips
-	&& Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
-	return;
+    if (!texturedShips) {
+	if (Begin_semantic_world_line_batch(&batch) != RENDERER_STATUS_OK)
+	    return;
+	status = Build_semantic_ship_outline_geometry(
+	    x, y, dir, ship, shipLineWidth, &geometry);
+	if (status != RENDERER_STATUS_OK) {
+	    (void)Track_semantic_world_line_batch(&batch, status);
+	    return;
+	}
+    }
 
     if (shield) {
     	Image_paint(IMG_SHIELD, x - 27, y - 27, 0, (color & 0xffffff00) + ((color & 0x000000ff)/2));
-	/* Do not enter legacy drawing if the semantic shield draw failed. */
 	if (!texturedShips
-	    && Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	    && Track_semantic_world_line_batch(
+		&batch, RENDERER_STATUS_OK) != RENDERER_STATUS_OK)
 	    return;
     }
 	if (texturedShips) {
@@ -3006,29 +3142,10 @@ void Gui_paint_ship(int x, int y, int dir, int id, int cloak, int phased,
     	    if (cloak || phased) Image_paint_rotated(img, x, y, dir, (color & 0xffffff00) + ((color & 0x000000ff)/2));
 	    else Image_paint_rotated(img, x, y, dir, color);
 	} else {
-    	    glEnable(GL_BLEND);
-    	    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    	    glEnable(GL_LINE_SMOOTH);
-    	    glLineWidth(shipLineWidth);
-    	    set_alphacolor(color);
-		
-    	    if (cloak || phased ) {
-    	    	glEnable(GL_LINE_STIPPLE);
-    	    	glLineStipple( 3, 0xAAAA );
-	    }
-	    
-    	    glBegin(GL_LINE_LOOP);
-    	    	for (i = 0; i < ship->num_points; i++) {
-    	    	    point = Ship_get_point_position(ship, i, dir);
-    	    	    glVertex2d(x + point.x, y + point.y);
-    	    	}
-    	    glEnd();
-	    
-    	    if (cloak || phased ) glDisable(GL_LINE_STIPPLE);
-	
-    	    glLineWidth(1);
-    	    glDisable(GL_LINE_SMOOTH);
-    	    glDisable(GL_BLEND);
+	    status = Paint_semantic_ship_outline(
+		&batch, &geometry, (Uint32)color, cloak || phased);
+	    if (status != RENDERER_STATUS_OK)
+		return;
 	}
     if (self != NULL
     	&& self->id != id

@@ -138,6 +138,19 @@ void Gui_paint_all_connectors_begin(void);
 void Gui_paint_ships_begin(void);
 void Gui_paint_ships_end(void);
 
+/**
+ * Paint one ship and its requested status indicators.
+ *
+ * @param x Horizontal center in world coordinates.
+ * @param y Vertical center in world coordinates.
+ * @param dir Direction lookup-table index in the range [0, RES).
+ * @param id Player identifier used to select the ship appearance.
+ * @param cloak Nonzero when the ship is cloaked.
+ * @param phased Nonzero when the ship is phased.
+ * @param shield Nonzero when the shield is active.
+ * @param deflector Nonzero when the deflector is active.
+ * @param eshield Nonzero when the emergency shield is active.
+ */
 void Gui_paint_ship(int x, int y, int dir, int id, int cloak, int phased,
 		    int shield, int deflector, int eshield);
 
