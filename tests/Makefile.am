@@ -13,7 +13,7 @@ check_PROGRAMS = test-meta-environment \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
 	test-sdl-meta-frame test-sdl-game-frame test-sdl-renderer-scissor \
 	test-glwidgets-scissor test-glwidgets-primitives \
-	test-sdlmeta-primitives \
+	test-sdlmeta-primitives test-sdlgui-hud-primitives \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
 TESTS = test-meta-environment \
@@ -26,6 +26,7 @@ TESTS = test-meta-environment \
 	test-sdl-game-frame \
 	test-sdl-renderer-scissor test-glwidgets-scissor \
 	test-glwidgets-primitives test-sdlmeta-primitives \
+	test-sdlgui-hud-primitives \
 	test-text-geometry \
 	test-text-atlas test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
@@ -180,6 +181,13 @@ test_sdlmeta_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_sdlmeta_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdlmeta_primitives_LDADD = @SDL2_LIBS@
+
+test_sdlgui_hud_primitives_SOURCES = test_sdlgui_hud_primitives.c \
+	$(top_srcdir)/src/client/sdl/sdlgui.c
+test_sdlgui_hud_primitives_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_sdlgui_hud_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_sdlgui_hud_primitives_LDADD = @SDL2_LIBS@
 
 test_text_geometry_SOURCES = test_text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c \

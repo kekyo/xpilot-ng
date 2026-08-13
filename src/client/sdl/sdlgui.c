@@ -31,10 +31,14 @@
 #include "xpclient_sdl.h"
 
 #include "sdlpaint.h"
+#include "sdlinit.h"
 #include "images.h"
 #include "glwidgets.h"
 #include "text.h"
 #include "asteroid_data.h"
+
+#include <float.h>
+#include <math.h>
 
 Uint32 nullRGBA     = 0x00000000;
 Uint32 blackRGBA    = 0x000000ff;
@@ -1539,6 +1543,90 @@ void Paint_HUD_values(void)
     HUDprint(&gamefont,hudColorRGBA,RIGHT,DOWN,x,y-20,"CL.LAG : %.1f ms", clData.clientLag);
 }
 
+static RendererStatus Paint_semantic_meter_fill(
+    int x, int y, int value, int maximum, int height, Uint32 rgba)
+{
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    int64_t divisor;
+    int64_t product;
+    int64_t left;
+    int64_t width;
+    float renderer_x;
+    float renderer_y;
+    float renderer_width;
+    float renderer_height;
+
+    sdl_renderer = Get_sdl_renderer();
+    if (sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    renderer = Sdl_renderer_frontend(sdl_renderer);
+    if (renderer == NULL) {
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    }
+
+    divisor = maximum != 0 ? (int64_t)maximum : INT64_C(1);
+    product = (int64_t)meterWidth * (int64_t)value;
+    if (product == INT64_MIN && divisor == INT64_C(-1)) {
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
+    }
+    width = product / divisor;
+    if (width == 0 || height <= 0)
+	return RENDERER_STATUS_OK;
+    left = (int64_t)x;
+    if (width < 0) {
+	if (width == INT64_MIN || left < INT64_MIN - width) {
+	    return Sdl_renderer_track_frame_result(
+		sdl_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
+	}
+	left += width;
+	width = -width;
+    }
+    if ((double)left < -(double)FLT_MAX
+	|| (double)left > (double)FLT_MAX
+	|| (double)width > (double)FLT_MAX
+	|| (double)y < -(double)FLT_MAX
+	|| (double)y > (double)FLT_MAX
+	|| (double)height > (double)FLT_MAX) {
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
+    }
+    renderer_x = (float)left;
+    renderer_y = (float)y;
+    renderer_width = (float)width;
+    renderer_height = (float)height;
+    if (!isfinite(renderer_x) || !isfinite(renderer_y)
+	|| !isfinite(renderer_width) || !isfinite(renderer_height)) {
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
+    }
+
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer,
+	Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA));
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer,
+	    Renderer_fill_rect(
+		renderer, renderer_x, renderer_y,
+		renderer_width, renderer_height,
+		Renderer_color_from_rgba32(rgba)));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer,
+	    Sdl_renderer_flush_preserving_legacy(sdl_renderer));
+    }
+    return status;
+}
+
 static void Paint_meter(int xoff, int y, string_tex_t *tex, int val, int max,
 			int meter_color)
 {
@@ -1561,15 +1649,11 @@ static void Paint_meter(int xoff, int y, string_tex_t *tex, int val, int max,
 	x_alignment = RIGHT;
     }
 
-    set_alphacolor(meter_color);
-    glBegin( GL_POLYGON );
-    	glVertex2i(x,y);
-    	glVertex2i(x,y+2+meterHeight-3);
-    	glVertex2i(x+(int)(((meterWidth)*val)/(max?max:1)),y+2+meterHeight-3);
-    	glVertex2i(x+(int)(((meterWidth)*val)/(max?max:1)),y);
-    glEnd();
-
-
+    if (Paint_semantic_meter_fill(
+	    x, y, val, max,
+	    meterHeight - 1, (Uint32)meter_color) != RENDERER_STATUS_OK) {
+	return;
+    }
 
     /* meterBorderColorRGBA = 0 obviously means no meter borders are drawn */
     if (meterBorderColorRGBA) {
