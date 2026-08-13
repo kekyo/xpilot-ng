@@ -444,22 +444,36 @@ RendererStatus DrawGLWidgetsi_checked(GLWidget *list, int x, int y,
 
     if (sdl_renderer == NULL || draw_state == NULL)
 	return RENDERER_STATUS_INVALID_ARGUMENT;
+    status = Sdl_ui_draw_state_status(draw_state);
+    if (status == RENDERER_STATUS_OK)
+	status = Sdl_renderer_frame_result(sdl_renderer);
+    if (status != RENDERER_STATUS_OK)
+	return status;
     status = DrawGLWidgetsi_internal(
 	list, x, y, w, h, sdl_renderer, draw_state);
     if (status != RENDERER_STATUS_OK)
 	return status;
     return Sdl_renderer_set_logical_scissor(sdl_renderer, NULL);
 }
-void DrawGLWidgets( GLWidget *list )
+RendererStatus DrawGLWidgets_checked(
+    GLWidget *list, SdlRenderer *sdl_renderer,
+    const SdlUiDrawState *draw_state)
 {
+    RendererStatus status;
+
+    if (sdl_renderer == NULL || draw_state == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
     glScissor(0, 0, draw_width, draw_height);
     glEnable(GL_SCISSOR_TEST);
-    DrawGLWidgetsi( list , 0, 0, draw_width, draw_height );
+    status = DrawGLWidgetsi_checked(
+	list, 0, 0, draw_width, draw_height,
+	sdl_renderer, draw_state);
     glDisable(GL_SCISSOR_TEST);
+    return status;
 }
 
 /*
- * Similar to DrawGLWidgets, but this one needs to traverse the
+ * Similar to DrawGLWidgets_checked, but this one needs to traverse the
  * tree in reverse order! (since the things painted last will
  * be seen ontop, thus should get first pick of events
  * So it will descend to the last child in the list's last widget

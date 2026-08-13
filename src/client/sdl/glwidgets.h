@@ -88,7 +88,6 @@ bool AppendGLWidgetList( GLWidget **list, GLWidget *widget );
 void PrependGLWidgetList( GLWidget **list, GLWidget *widget );
 bool DelGLWidgetListItem( GLWidget **list, GLWidget *widget );
 
-void DrawGLWidgets( GLWidget *list );
 GLWidget *FindGLWidget( GLWidget *list, Uint16 x,Uint16 y );
 void DrawGLWidgetsi( GLWidget *list, int x, int y, int w, int h);
 /**
@@ -112,6 +111,21 @@ RendererStatus DrawGLWidgetsi_checked(GLWidget *list, int x, int y,
                                       int w, int h,
                                       SdlRenderer *sdl_renderer,
                                       const SdlUiDrawState *draw_state);
+/**
+ * Draw a full-window widget list until tracked semantic drawing fails.
+ *
+ * @param list First widget in the list, or NULL for an empty list.
+ * @param sdl_renderer Renderer facade with an active frame.
+ * @param draw_state Per-frame semantic UI draw state.
+ * @return First tracked draw or clipping failure, or RENDERER_STATUS_OK.
+ *
+ * @remarks The function brackets traversal with the legacy full-window
+ * scissor state. On failure it restores legacy state but leaves semantic
+ * state untouched so pending renderer commands can be retried safely.
+ */
+RendererStatus DrawGLWidgets_checked(
+    GLWidget *list, SdlRenderer *sdl_renderer,
+    const SdlUiDrawState *draw_state);
 GLWidget *FindGLWidgeti( GLWidget *widget, Uint16 x, Uint16 y );
 
 extern GLWidget *clicktarget[NUM_MOUSE_BUTTONS];

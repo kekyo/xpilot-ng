@@ -61,6 +61,7 @@ static SDL_Rect     scoreEntryRect; /* Bounds for the last painted score entry *
 static GLWidget     *scoreListWidget;
 static bool         scoreListMoving;
 static SdlGameFrameState rendererFrameState;
+static SdlUiDrawState gameUiDrawState;
 
 int paintSetupMode;
 
@@ -295,6 +296,7 @@ bool Set_altScaleFactor(xp_option_t *opt, double val)
 int Paint_init(void)
 {
     Sdl_game_frame_state_init(&rendererFrameState);
+    Sdl_ui_draw_state_init(&gameUiDrawState);
     if (Init_wreckage() == -1)
 	return -1;
     
@@ -312,6 +314,7 @@ void Paint_cleanup(void)
     int i;
 
     Sdl_game_frame_state_init(&rendererFrameState);
+    Sdl_ui_draw_state_init(&gameUiDrawState);
     Images_cleanup();
 
     for (i = 0; i < MAX_SCORE_OBJECTS; ++i)
@@ -437,6 +440,7 @@ void Paint_frame(void)
 		 (int)renderer_status);
 	    goto timing;
 	}
+	Sdl_ui_draw_state_init(&gameUiDrawState);
 	renderer_status = Sdl_renderer_prepare_legacy(
 	    sdl_renderer, SDL_RENDERER_LEGACY_BOTTOM_LEFT);
 	if (renderer_status != RENDERER_STATUS_OK) {
@@ -487,9 +491,14 @@ void Paint_frame(void)
 	Console_paint();
 	Paint_select();
 
-    	DrawGLWidgets(MainWidget);
-    		
+	renderer_status = DrawGLWidgets_checked(
+	    MainWidget, sdl_renderer, &gameUiDrawState);
 	glPopMatrix();
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    (void)Sdl_game_frame_abort(
+		&rendererFrameState, renderer_status);
+	    goto finish_frame;
+	}
     }
 
 finish_frame:
