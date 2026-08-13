@@ -12,7 +12,8 @@ check_PROGRAMS = test-meta-environment \
 	test-renderer-gl-backends test-paint-transform test-image-geometry \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
 	test-sdl-meta-frame test-sdl-game-frame test-sdl-renderer-scissor \
-	test-glwidgets-scissor test-text-geometry test-text-atlas \
+	test-glwidgets-scissor test-glwidgets-primitives \
+	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
 TESTS = test-meta-environment \
 	test-sdl-keys test-sdl-console test-sdl-surface \
@@ -22,7 +23,8 @@ TESTS = test-meta-environment \
 	test-image-geometry test-gfx2d-picture \
 	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
 	test-sdl-game-frame \
-	test-sdl-renderer-scissor test-glwidgets-scissor test-text-geometry \
+	test-sdl-renderer-scissor test-glwidgets-scissor \
+	test-glwidgets-primitives test-text-geometry \
 	test-text-atlas test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
 	run-renderer-gl-backends.sh run-e2e.sh
@@ -158,6 +160,13 @@ test_glwidgets_scissor_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_glwidgets_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_glwidgets_scissor_LDADD = @SDL2_LIBS@
+
+test_glwidgets_primitives_SOURCES = test_glwidgets_primitives.c \
+	$(top_srcdir)/src/client/sdl/glwidgets.c
+test_glwidgets_primitives_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_glwidgets_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_glwidgets_primitives_LDADD = @SDL2_LIBS@
 
 test_text_geometry_SOURCES = test_text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c \

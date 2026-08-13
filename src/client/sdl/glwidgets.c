@@ -21,6 +21,7 @@
 #include "xpclient_sdl.h"
 
 #include "sdlpaint.h"
+#include "sdlinit.h"
 #include "text.h"
 #include "glwidgets.h"
 #include "sdlclipboard.h"
@@ -35,6 +36,37 @@ static void hover_optionWidget( int over, Uint16 x , Uint16 y , void *data );
 static void clear_eventTarget( GLWidget *widget );
 
 static GLWidget *scraptarget = NULL;
+
+static RendererStatus Begin_semantic_widget(
+    SdlRenderer **sdl_renderer, Renderer **renderer)
+{
+    RendererStatus status;
+
+    if (sdl_renderer == NULL || renderer == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    *sdl_renderer = Get_sdl_renderer();
+    *renderer = NULL;
+    if (*sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    status = Sdl_renderer_track_frame_result(
+	*sdl_renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    *renderer = Sdl_renderer_frontend(*sdl_renderer);
+    if (*renderer == NULL) {
+	return Sdl_renderer_track_frame_result(
+	    *sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Track_semantic_widget(
+    SdlRenderer *sdl_renderer, RendererStatus status)
+{
+    if (sdl_renderer == NULL)
+	return status;
+    return Sdl_renderer_track_frame_result(sdl_renderer, status);
+}
 
 GLWidget *Init_EmptyBaseGLWidget( void )
 {
@@ -552,10 +584,14 @@ static void button_ArrowWidget( Uint8 button, Uint8 state, Uint16 x, Uint16 y, v
 
 static void Paint_ArrowWidget( GLWidget *widget )
 {
-    GLWidget *tmp;
     SDL_Rect *b;
     ArrowWidget *wid_info;
     ArrowWidget_dir_t dir;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererColor color;
+    RendererVertex2D vertices[3];
+    RendererStatus status;
     static Uint32 normalcolor  = 0xff0000ff;
     static Uint32 presscolor   = 0x00ff00ff;
     static Uint32 tapcolor     = 0xffffffff;
@@ -563,51 +599,87 @@ static void Paint_ArrowWidget( GLWidget *widget )
     
     if (!widget) return;
     	
-    tmp = widget;
-    b = &(tmp->bounds);
-    wid_info = (ArrowWidget *)(tmp->wid_info);
-    
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
+    b = &widget->bounds;
+    wid_info = widget->wid_info;
+
     if (wid_info->locked) {
-    	set_alphacolor( lockcolor );
+	color = Renderer_color_from_rgba32(lockcolor);
     } else if (wid_info->press) {
     	if (wid_info->action) {
 	    wid_info->action(wid_info->actiondata);
 	}
-	set_alphacolor( presscolor );
+	color = Renderer_color_from_rgba32(presscolor);
     } else if (wid_info->tap) {
-    	set_alphacolor( tapcolor );
-    	wid_info->tap = false;
+	color = Renderer_color_from_rgba32(tapcolor);
+	wid_info->tap = false;
     } else {
-    	set_alphacolor( normalcolor );
+	color = Renderer_color_from_rgba32(normalcolor);
     }
-    
+
     dir = wid_info->direction;
-    glBegin(GL_POLYGON);
     switch ( dir ) {
     	case RIGHTARROW:
-	    glVertex2i(b->x 	    ,b->y   	);
-	    glVertex2i(b->x 	    ,b->y+b->h	);
-	    glVertex2i(b->x + b->w  ,b->y+b->h/2);
+	    vertices[0] = (RendererVertex2D){
+		(float)b->x, (float)b->y, 0.0f, 0.0f, color};
+	    vertices[1] = (RendererVertex2D){
+		(float)b->x, (float)(b->y + b->h), 0.0f, 0.0f, color};
+	    vertices[2] = (RendererVertex2D){
+		(float)(b->x + b->w), (float)(b->y + b->h / 2),
+		0.0f, 0.0f, color};
 	    break;
     	case UPARROW:
-	    glVertex2i(b->x + b->w/2,b->y   	);
-	    glVertex2i(b->x 	    ,b->y+b->h	);
-	    glVertex2i(b->x + b->w  ,b->y+b->h	);
+	    vertices[0] = (RendererVertex2D){
+		(float)(b->x + b->w / 2), (float)b->y,
+		0.0f, 0.0f, color};
+	    vertices[1] = (RendererVertex2D){
+		(float)b->x, (float)(b->y + b->h), 0.0f, 0.0f, color};
+	    vertices[2] = (RendererVertex2D){
+		(float)(b->x + b->w), (float)(b->y + b->h),
+		0.0f, 0.0f, color};
 	    break;
     	case LEFTARROW:
-	    glVertex2i(b->x + b->w  ,b->y   	);
-	    glVertex2i(b->x 	    ,b->y+b->h/2);
-	    glVertex2i(b->x + b->w  ,b->y+b->h	);
+	    vertices[0] = (RendererVertex2D){
+		(float)(b->x + b->w), (float)b->y, 0.0f, 0.0f, color};
+	    vertices[1] = (RendererVertex2D){
+		(float)b->x, (float)(b->y + b->h / 2),
+		0.0f, 0.0f, color};
+	    vertices[2] = (RendererVertex2D){
+		(float)(b->x + b->w), (float)(b->y + b->h),
+		0.0f, 0.0f, color};
 	    break;
     	case DOWNARROW:
-	    glVertex2i(b->x 	    ,b->y   	);
-	    glVertex2i(b->x + b->w/2,b->y+b->h	);
-	    glVertex2i(b->x + b->w  ,b->y   	);
+	    vertices[0] = (RendererVertex2D){
+		(float)b->x, (float)b->y, 0.0f, 0.0f, color};
+	    vertices[1] = (RendererVertex2D){
+		(float)(b->x + b->w / 2), (float)(b->y + b->h),
+		0.0f, 0.0f, color};
+	    vertices[2] = (RendererVertex2D){
+		(float)(b->x + b->w), (float)b->y, 0.0f, 0.0f, color};
 	    break;
 	default:
 	    error("Weird direction for ArrowWidget! (direction:%i)\n",dir);
+	    (void)Track_semantic_widget(
+		sdl_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
+	    return;
     }
-    glEnd();
+    status = Track_semantic_widget(
+	sdl_renderer,
+	Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA));
+    if (status == RENDERER_STATUS_OK) {
+	status = Track_semantic_widget(
+	    sdl_renderer,
+	    Renderer_draw_triangles(renderer, NULL, vertices, 3));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Track_semantic_widget(
+	    sdl_renderer,
+	    Sdl_renderer_flush_preserving_legacy(sdl_renderer));
+    }
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw arrow widget");
 }
 
 GLWidget *Init_ArrowWidget( ArrowWidget_dir_t direction,int width, int height,

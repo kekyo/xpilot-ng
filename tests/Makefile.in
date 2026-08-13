@@ -100,7 +100,8 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
-	test-glwidgets-scissor$(EXEEXT) test-text-geometry$(EXEEXT) \
+	test-glwidgets-scissor$(EXEEXT) \
+	test-glwidgets-primitives$(EXEEXT) test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
 	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT)
 TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
@@ -114,7 +115,8 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
-	test-glwidgets-scissor$(EXEEXT) test-text-geometry$(EXEEXT) \
+	test-glwidgets-scissor$(EXEEXT) \
+	test-glwidgets-primitives$(EXEEXT) test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
 	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT) \
 	run-renderer-gl-backends.sh run-e2e.sh
@@ -148,6 +150,15 @@ test_gl_legacy_OBJECTS = $(am_test_gl_legacy_OBJECTS)
 test_gl_legacy_DEPENDENCIES =
 test_gl_legacy_LINK = $(CCLD) $(test_gl_legacy_CFLAGS) $(CFLAGS) \
 	$(test_gl_legacy_LDFLAGS) $(LDFLAGS) -o $@
+am_test_glwidgets_primitives_OBJECTS =  \
+	test_glwidgets_primitives-test_glwidgets_primitives.$(OBJEXT) \
+	test_glwidgets_primitives-glwidgets.$(OBJEXT)
+test_glwidgets_primitives_OBJECTS =  \
+	$(am_test_glwidgets_primitives_OBJECTS)
+test_glwidgets_primitives_DEPENDENCIES =
+test_glwidgets_primitives_LINK = $(CCLD) \
+	$(test_glwidgets_primitives_CFLAGS) $(CFLAGS) \
+	$(test_glwidgets_primitives_LDFLAGS) $(LDFLAGS) -o $@
 am_test_glwidgets_scissor_OBJECTS =  \
 	test_glwidgets_scissor-test_glwidgets_scissor.$(OBJEXT) \
 	test_glwidgets_scissor-glwidgets.$(OBJEXT)
@@ -319,6 +330,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_gl_legacy-text_atlas.Po \
 	./$(DEPDIR)/test_gl_legacy-text_geometry.Po \
 	./$(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po \
+	./$(DEPDIR)/test_glwidgets_primitives-glwidgets.Po \
+	./$(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Po \
 	./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po \
 	./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po \
 	./$(DEPDIR)/test_image_geometry.Po \
@@ -381,6 +394,7 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
 SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
+	$(test_glwidgets_primitives_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
 	$(test_meta_environment_SOURCES) \
@@ -398,6 +412,7 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES)
 DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
+	$(test_glwidgets_primitives_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
 	$(test_meta_environment_SOURCES) \
@@ -920,6 +935,14 @@ test_glwidgets_scissor_CFLAGS = $(AM_CFLAGS) \
 
 test_glwidgets_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_glwidgets_scissor_LDADD = @SDL2_LIBS@
+test_glwidgets_primitives_SOURCES = test_glwidgets_primitives.c \
+	$(top_srcdir)/src/client/sdl/glwidgets.c
+
+test_glwidgets_primitives_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+
+test_glwidgets_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_glwidgets_primitives_LDADD = @SDL2_LIBS@
 test_text_geometry_SOURCES = test_text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.h
@@ -1014,6 +1037,10 @@ test-gfx2d-picture$(EXEEXT): $(test_gfx2d_picture_OBJECTS) $(test_gfx2d_picture_
 test-gl-legacy$(EXEEXT): $(test_gl_legacy_OBJECTS) $(test_gl_legacy_DEPENDENCIES) $(EXTRA_test_gl_legacy_DEPENDENCIES)
 	@rm -f test-gl-legacy$(EXEEXT)
 	$(AM_V_CCLD)$(test_gl_legacy_LINK) $(test_gl_legacy_OBJECTS) $(test_gl_legacy_LDADD) $(LIBS)
+
+test-glwidgets-primitives$(EXEEXT): $(test_glwidgets_primitives_OBJECTS) $(test_glwidgets_primitives_DEPENDENCIES) $(EXTRA_test_glwidgets_primitives_DEPENDENCIES)
+	@rm -f test-glwidgets-primitives$(EXEEXT)
+	$(AM_V_CCLD)$(test_glwidgets_primitives_LINK) $(test_glwidgets_primitives_OBJECTS) $(test_glwidgets_primitives_LDADD) $(LIBS)
 
 test-glwidgets-scissor$(EXEEXT): $(test_glwidgets_scissor_OBJECTS) $(test_glwidgets_scissor_DEPENDENCIES) $(EXTRA_test_glwidgets_scissor_DEPENDENCIES)
 	@rm -f test-glwidgets-scissor$(EXEEXT)
@@ -1147,6 +1174,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_primitives-glwidgets.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_image_geometry.Po@am__quote@ # am--include-marker
@@ -1353,6 +1382,34 @@ test_gl_legacy-text_ttf_atlas.obj: $(top_srcdir)/src/client/sdl/text_ttf_atlas.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' object='test_gl_legacy-text_ttf_atlas.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_ttf_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; fi`
+
+test_glwidgets_primitives-test_glwidgets_primitives.o: test_glwidgets_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-test_glwidgets_primitives.o -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Tpo -c -o test_glwidgets_primitives-test_glwidgets_primitives.o `test -f 'test_glwidgets_primitives.c' || echo '$(srcdir)/'`test_glwidgets_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Tpo $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_glwidgets_primitives.c' object='test_glwidgets_primitives-test_glwidgets_primitives.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -c -o test_glwidgets_primitives-test_glwidgets_primitives.o `test -f 'test_glwidgets_primitives.c' || echo '$(srcdir)/'`test_glwidgets_primitives.c
+
+test_glwidgets_primitives-test_glwidgets_primitives.obj: test_glwidgets_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-test_glwidgets_primitives.obj -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Tpo -c -o test_glwidgets_primitives-test_glwidgets_primitives.obj `if test -f 'test_glwidgets_primitives.c'; then $(CYGPATH_W) 'test_glwidgets_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_glwidgets_primitives.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Tpo $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_glwidgets_primitives.c' object='test_glwidgets_primitives-test_glwidgets_primitives.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -c -o test_glwidgets_primitives-test_glwidgets_primitives.obj `if test -f 'test_glwidgets_primitives.c'; then $(CYGPATH_W) 'test_glwidgets_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_glwidgets_primitives.c'; fi`
+
+test_glwidgets_primitives-glwidgets.o: $(top_srcdir)/src/client/sdl/glwidgets.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-glwidgets.o -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-glwidgets.Tpo -c -o test_glwidgets_primitives-glwidgets.o `test -f '$(top_srcdir)/src/client/sdl/glwidgets.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/glwidgets.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_glwidgets_primitives-glwidgets.Tpo $(DEPDIR)/test_glwidgets_primitives-glwidgets.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/glwidgets.c' object='test_glwidgets_primitives-glwidgets.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -c -o test_glwidgets_primitives-glwidgets.o `test -f '$(top_srcdir)/src/client/sdl/glwidgets.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/glwidgets.c
+
+test_glwidgets_primitives-glwidgets.obj: $(top_srcdir)/src/client/sdl/glwidgets.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-glwidgets.obj -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-glwidgets.Tpo -c -o test_glwidgets_primitives-glwidgets.obj `if test -f '$(top_srcdir)/src/client/sdl/glwidgets.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/glwidgets.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/glwidgets.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_glwidgets_primitives-glwidgets.Tpo $(DEPDIR)/test_glwidgets_primitives-glwidgets.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/glwidgets.c' object='test_glwidgets_primitives-glwidgets.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -c -o test_glwidgets_primitives-glwidgets.obj `if test -f '$(top_srcdir)/src/client/sdl/glwidgets.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/glwidgets.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/glwidgets.c'; fi`
 
 test_glwidgets_scissor-test_glwidgets_scissor.o: test_glwidgets_scissor.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_scissor_CFLAGS) $(CFLAGS) -MT test_glwidgets_scissor-test_glwidgets_scissor.o -MD -MP -MF $(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Tpo -c -o test_glwidgets_scissor-test_glwidgets_scissor.o `test -f 'test_glwidgets_scissor.c' || echo '$(srcdir)/'`test_glwidgets_scissor.c
@@ -2303,6 +2360,13 @@ test-glwidgets-scissor.log: test-glwidgets-scissor$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-glwidgets-primitives.log: test-glwidgets-primitives$(EXEEXT)
+	@p='test-glwidgets-primitives$(EXEEXT)'; \
+	b='test-glwidgets-primitives'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-text-geometry.log: test-text-geometry$(EXEEXT)
 	@p='test-text-geometry$(EXEEXT)'; \
 	b='test-text-geometry'; \
@@ -2455,6 +2519,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_gl_legacy-text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-text_geometry.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po
+	-rm -f ./$(DEPDIR)/test_glwidgets_primitives-glwidgets.Po
+	-rm -f ./$(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po
 	-rm -f ./$(DEPDIR)/test_image_geometry.Po
@@ -2572,6 +2638,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_gl_legacy-text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-text_geometry.Po
 	-rm -f ./$(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po
+	-rm -f ./$(DEPDIR)/test_glwidgets_primitives-glwidgets.Po
+	-rm -f ./$(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po
 	-rm -f ./$(DEPDIR)/test_image_geometry.Po
