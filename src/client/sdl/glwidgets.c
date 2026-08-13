@@ -1229,44 +1229,45 @@ bool LabelWidget_SetColor( GLWidget *widget , Uint32 *fgcolor, Uint32 *bgcolor )
 }
 static void Paint_LabelWidget( GLWidget *widget )
 {
-    GLWidget *tmp;
     SDL_Rect *b;
     LabelWidget *wid_info;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
     int x, y, alpha;
     Uint32 color;
     static int flasher = 0;
 
     if (!widget) return;
-     
-    tmp = widget;
-    b = &(tmp->bounds);
-    wid_info = (LabelWidget *)(tmp->wid_info);
-    
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
+    b = &widget->bounds;
+    wid_info = widget->wid_info;
+
     if ( (wid_info->bgcolor) && *(wid_info->bgcolor) ) {
-    	set_alphacolor(*(wid_info->bgcolor));
-    
-    	glBegin(GL_QUADS);
-    	    glVertex2i(b->x     	,b->y);
-   	    glVertex2i(b->x + b->w  ,b->y);
-    	    glVertex2i(b->x + b->w  ,b->y+b->h);
-    	    glVertex2i(b->x     	,b->y+b->h);
-     	glEnd();
+	status = Fill_semantic_widget_bounds(
+	    sdl_renderer, renderer, b, *(wid_info->bgcolor));
+        if (status != RENDERER_STATUS_OK) {
+	    warn("Could not draw label widget background");
+	    return;
+	}
     }
     
-    x = wid_info->align == LEFT   ? tmp->bounds.x :
-	wid_info->align == CENTER ? tmp->bounds.x + tmp->bounds.w / 2 :
-	tmp->bounds.x + tmp->bounds.w;
-    y = wid_info->valign == DOWN   ? tmp->bounds.y :
-	wid_info->valign == CENTER ? tmp->bounds.y + tmp->bounds.h / 2 :
-	tmp->bounds.y + tmp->bounds.h;
+    x = wid_info->align == LEFT   ? widget->bounds.x :
+	wid_info->align == CENTER ? widget->bounds.x + widget->bounds.w / 2 :
+	widget->bounds.x + widget->bounds.w;
+    y = wid_info->valign == DOWN   ? widget->bounds.y :
+	wid_info->valign == CENTER ? widget->bounds.y + widget->bounds.h / 2 :
+	widget->bounds.y + widget->bounds.h;
 
     
     if ( wid_info->fgcolor )
     	color = *(wid_info->fgcolor);
     else
     	color = whiteRGBA;
-	
-    if (scraptarget == tmp) {
+
+    if (scraptarget == widget) {
 	alpha = MAX(0,MIN(255,(color & 255) + tsin(flasher)*64));
 	flasher += TABLE_SIZE/clientFPS;
     	if (flasher >= TABLE_SIZE) flasher -= TABLE_SIZE;
@@ -1274,13 +1275,17 @@ static void Paint_LabelWidget( GLWidget *widget )
 	color = (color&0xFFFFFF00) + alpha;
     }
 	
-    disp_text(&(wid_info->tex), 
-    	    	color, 
-    	    	wid_info->align, 
-    	    	wid_info->valign, 
-    	    	x, 
-    	    	draw_height - y, 
-    	    	true);
+    status = Track_semantic_widget(
+	sdl_renderer,
+	disp_text(&(wid_info->tex),
+	    color,
+	    wid_info->align,
+	    wid_info->valign,
+	    x,
+	    draw_height - y,
+	    true));
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw label widget text");
 }
 
 GLWidget *Init_LabelWidget( const char *text , Uint32 *fgcolor, Uint32 *bgcolor, int align, int valign  )
@@ -1355,37 +1360,47 @@ static void button_LabeledRadiobuttonWidget( Uint8 button, Uint8 state, Uint16 x
 
 static void Paint_LabeledRadiobuttonWidget( GLWidget *widget )
 {
-    GLWidget *tmp;
-    SDL_Rect *b;
     LabeledRadiobuttonWidget *wid_info;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    string_tex_t *texture;
+    Uint32 background_color;
+    Uint32 text_color;
     static Uint32 false_bg_color	= 0x00000044;
     static Uint32 true_bg_color	    	= 0x00000044;
     static Uint32 false_text_color	= 0xff0000ff;
     static Uint32 true_text_color	= 0x00ff00ff;
 
     if (!widget) return;
-     
-    tmp = widget;
-    b = &(tmp->bounds);
-    wid_info = (LabeledRadiobuttonWidget *)(tmp->wid_info);
-    
-    if (wid_info->state)
-    	set_alphacolor(true_bg_color);
-    else
-    	set_alphacolor(false_bg_color);
-    
-    glBegin(GL_QUADS);
-    	glVertex2i(b->x     	,b->y);
-   	glVertex2i(b->x + b->w  ,b->y);
-    	glVertex2i(b->x + b->w  ,b->y+b->h);
-    	glVertex2i(b->x     	,b->y+b->h);
-     glEnd();
-    
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
+    wid_info = widget->wid_info;
     if (wid_info->state) {
-    	disp_text(wid_info->ontex, true_text_color, CENTER, CENTER,tmp->bounds.x+tmp->bounds.w/2, draw_height - tmp->bounds.y-tmp->bounds.h/2, true);
+	background_color = true_bg_color;
+	text_color = true_text_color;
+	texture = wid_info->ontex;
     } else {
-    	disp_text(wid_info->offtex, false_text_color, CENTER, CENTER, tmp->bounds.x+tmp->bounds.w/2, draw_height - tmp->bounds.y-tmp->bounds.h/2, true);
+	background_color = false_bg_color;
+	text_color = false_text_color;
+	texture = wid_info->offtex;
     }
+    status = Fill_semantic_widget_bounds(
+	sdl_renderer, renderer, &widget->bounds, background_color);
+    if (status != RENDERER_STATUS_OK) {
+	warn("Could not draw labeled radio button background");
+	return;
+    }
+    status = Track_semantic_widget(
+	sdl_renderer,
+	disp_text(
+	    texture, text_color, CENTER, CENTER,
+	    widget->bounds.x + widget->bounds.w / 2,
+	    draw_height - widget->bounds.y - widget->bounds.h / 2,
+	    true));
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw labeled radio button text");
 }
 
 GLWidget *Init_LabeledRadiobuttonWidget( string_tex_t *ontex, string_tex_t *offtex,

@@ -15,6 +15,7 @@
 #define MAX_EVENTS 8
 #define MAX_DRAWS 8
 #define MAX_FILLS 8
+#define MAX_TEXT_DRAWS 8
 
 struct Renderer {
     int frame_active;
@@ -25,11 +26,20 @@ struct SdlRenderer {
     RendererStatus frame_result;
 };
 
+struct TextRenderer {
+    int identity;
+};
+
+struct TextRendererCache {
+    int identity;
+};
+
 typedef enum DrawEvent {
     DRAW_EVENT_BLEND,
     DRAW_EVENT_TRIANGLES,
     DRAW_EVENT_FILL_RECT,
-    DRAW_EVENT_FLUSH
+    DRAW_EVENT_FLUSH,
+    DRAW_EVENT_TEXT
 } DrawEvent;
 
 typedef struct FakeDraw {
@@ -46,6 +56,16 @@ typedef struct FakeFill {
     RendererColor color;
 } FakeFill;
 
+typedef struct FakeTextDraw {
+    string_tex_t *texture;
+    uint32_t color;
+    int horizontal_alignment;
+    int vertical_alignment;
+    int x;
+    int y;
+    bool on_hud;
+} FakeTextDraw;
+
 static Renderer fake_renderer;
 static SdlRenderer fake_sdl_renderer = {
     &fake_renderer,
@@ -54,6 +74,7 @@ static SdlRenderer fake_sdl_renderer = {
 static DrawEvent events[MAX_EVENTS];
 static FakeDraw draws[MAX_DRAWS];
 static FakeFill fills[MAX_FILLS];
+static FakeTextDraw text_draws[MAX_TEXT_DRAWS];
 static int event_count;
 static int call_order;
 static int preflight_attempts;
@@ -62,6 +83,7 @@ static int blend_order;
 static int draw_order;
 static int fill_order;
 static int flush_order;
+static int text_order;
 static int operation_result_pending;
 static int blend_attempts;
 static int draw_attempts;
@@ -69,6 +91,8 @@ static int successful_draws;
 static int fill_attempts;
 static int successful_fills;
 static int flush_attempts;
+static int text_attempts;
+static int successful_text_draws;
 static int legacy_begin_calls;
 static int legacy_vertex_calls;
 static int legacy_color_calls;
@@ -76,10 +100,22 @@ static RendererStatus blend_result;
 static RendererStatus draw_result;
 static RendererStatus fill_result;
 static RendererStatus flush_result;
+static RendererStatus text_result;
+static int clipboard_attempts;
+static char clipboard_text[64];
+
+static TextRenderer fake_text_renderer = {1};
+static TextRendererCache fake_text_cache = {1};
 
 long loopsSlow;
+unsigned draw_width = 160;
+unsigned draw_height = 101;
+double clientFPS = 60.0;
+double tbl_sin[TABLE_SIZE];
 Uint32 redRGBA = 0xff0000ff;
 Uint32 greenRGBA = 0x00ff00ff;
+Uint32 whiteRGBA = 0xffffffff;
+font_data gamefont;
 
 static int color_equal(RendererColor actual, RendererColor expected)
 {
@@ -106,6 +142,7 @@ static void reset_frame(void)
     memset(events, 0, sizeof(events));
     memset(draws, 0, sizeof(draws));
     memset(fills, 0, sizeof(fills));
+    memset(text_draws, 0, sizeof(text_draws));
     event_count = 0;
     call_order = 0;
     preflight_attempts = 0;
@@ -114,6 +151,7 @@ static void reset_frame(void)
     draw_order = 0;
     fill_order = 0;
     flush_order = 0;
+    text_order = 0;
     operation_result_pending = 0;
     blend_attempts = 0;
     draw_attempts = 0;
@@ -121,6 +159,8 @@ static void reset_frame(void)
     fill_attempts = 0;
     successful_fills = 0;
     flush_attempts = 0;
+    text_attempts = 0;
+    successful_text_draws = 0;
     legacy_begin_calls = 0;
     legacy_vertex_calls = 0;
     legacy_color_calls = 0;
@@ -128,6 +168,9 @@ static void reset_frame(void)
     draw_result = RENDERER_STATUS_OK;
     fill_result = RENDERER_STATUS_OK;
     flush_result = RENDERER_STATUS_OK;
+    text_result = RENDERER_STATUS_OK;
+    clipboard_attempts = 0;
+    memset(clipboard_text, 0, sizeof(clipboard_text));
     fake_renderer.frame_active = 1;
     fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
 }
@@ -266,6 +309,79 @@ RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
     return flush_result;
 }
 
+bool render_text(font_data *font, const char *text,
+                 string_tex_t *string_texture)
+{
+    size_t length;
+    char *copy;
+
+    if (font != &gamefont || text == NULL || string_texture == NULL)
+        return false;
+    length = strlen(text);
+    copy = malloc(length + 1);
+    if (copy == NULL)
+        return false;
+    memcpy(copy, text, length + 1);
+    memset(string_texture, 0, sizeof(*string_texture));
+    string_texture->text_renderer = &fake_text_renderer;
+    string_texture->cache = &fake_text_cache;
+    string_texture->text = copy;
+    string_texture->width = 13;
+    string_texture->height = 7;
+    string_texture->font_height = 7;
+    return true;
+}
+
+RendererStatus disp_text(string_tex_t *string_texture, int color,
+                         int horizontal_alignment,
+                         int vertical_alignment,
+                         int x, int y, bool on_hud)
+{
+    FakeTextDraw *draw;
+
+    text_attempts++;
+    if (text_order == 0)
+        text_order = ++call_order;
+    operation_result_pending = 1;
+    record_event(DRAW_EVENT_TEXT);
+    if (text_result != RENDERER_STATUS_OK)
+        return text_result;
+    if (successful_text_draws >= MAX_TEXT_DRAWS)
+        return RENDERER_STATUS_OUT_OF_MEMORY;
+    draw = &text_draws[successful_text_draws++];
+    draw->texture = string_texture;
+    draw->color = (uint32_t)color;
+    draw->horizontal_alignment = horizontal_alignment;
+    draw->vertical_alignment = vertical_alignment;
+    draw->x = x;
+    draw->y = y;
+    draw->on_hud = on_hud;
+    return RENDERER_STATUS_OK;
+}
+
+void free_string_texture(string_tex_t *string_texture)
+{
+    if (string_texture == NULL)
+        return;
+    free(string_texture->text);
+    memset(string_texture, 0, sizeof(*string_texture));
+}
+
+int Sdl_clipboard_set_text(const char *text)
+{
+    size_t length;
+
+    clipboard_attempts++;
+    if (text == NULL)
+        return -1;
+    length = strlen(text);
+    if (length >= sizeof(clipboard_text))
+        length = sizeof(clipboard_text) - 1;
+    memcpy(clipboard_text, text, length);
+    clipboard_text[length] = '\0';
+    return 0;
+}
+
 void set_alphacolor(Uint32 color)
 {
     (void)color;
@@ -323,6 +439,8 @@ static void destroy_widget(GLWidget *widget)
         destroy_widget(child);
         child = next;
     }
+    if (widget->Close != NULL)
+        widget->Close(widget);
     free(widget->wid_info);
     free(widget);
 }
@@ -437,6 +555,89 @@ static int check_successful_fill(float expected_x, float expected_y,
     return 0;
 }
 
+static int check_text_draw(string_tex_t *expected_texture,
+                           uint32_t expected_color,
+                           int expected_horizontal_alignment,
+                           int expected_vertical_alignment,
+                           int expected_x, int expected_y)
+{
+    TEST_CHECK(text_attempts == 1);
+    TEST_CHECK(successful_text_draws == 1);
+    TEST_CHECK(text_draws[0].texture == expected_texture);
+    TEST_CHECK(text_draws[0].color == expected_color);
+    TEST_CHECK(text_draws[0].horizontal_alignment
+               == expected_horizontal_alignment);
+    TEST_CHECK(text_draws[0].vertical_alignment
+               == expected_vertical_alignment);
+    TEST_CHECK(text_draws[0].x == expected_x);
+    TEST_CHECK(text_draws[0].y == expected_y);
+    TEST_CHECK(text_draws[0].on_hud);
+    return 0;
+}
+
+static int check_successful_background_text(
+    float x, float y, float width, float height,
+    RendererColor background_color,
+    string_tex_t *expected_texture, uint32_t expected_text_color,
+    int expected_horizontal_alignment, int expected_vertical_alignment,
+    int expected_text_x, int expected_text_y)
+{
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+    TEST_CHECK(events[2] == DRAW_EVENT_FLUSH);
+    TEST_CHECK(events[3] == DRAW_EVENT_TEXT);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == 3);
+    TEST_CHECK(flush_order == 4);
+    TEST_CHECK(text_order == 5);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fills[0].x == x);
+    TEST_CHECK(fills[0].y == y);
+    TEST_CHECK(fills[0].width == width);
+    TEST_CHECK(fills[0].height == height);
+    TEST_CHECK(color_equal(fills[0].color, background_color));
+    TEST_CHECK(check_text_draw(
+        expected_texture, expected_text_color,
+        expected_horizontal_alignment, expected_vertical_alignment,
+        expected_text_x, expected_text_y) == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    return 0;
+}
+
+static int check_successful_text_without_background(
+    string_tex_t *expected_texture, uint32_t expected_text_color,
+    int expected_horizontal_alignment, int expected_vertical_alignment,
+    int expected_text_x, int expected_text_y)
+{
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == DRAW_EVENT_TEXT);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(text_order == 2);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(successful_fills == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_text_draw(
+        expected_texture, expected_text_color,
+        expected_horizontal_alignment, expected_vertical_alignment,
+        expected_text_x, expected_text_y) == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    return 0;
+}
+
 static int check_direction_geometry(void)
 {
     static const ArrowWidget_dir_t directions[4] = {
@@ -539,6 +740,225 @@ static int check_slide_geometry_colors_and_state(void)
     TEST_CHECK(release_count == 1);
 
     destroy_widget(widget);
+    return 0;
+}
+
+static int check_label_background_and_alignment(void)
+{
+    Uint32 foreground = 0x12345678;
+    Uint32 background = 0x90abcdef;
+    Uint32 zero_background = 0x00000000;
+    Uint32 transparent_background = 0x23456700;
+    const RendererColor background_color = {0x90, 0xab, 0xcd, 0xef};
+    const RendererColor transparent_background_color = {
+        0x23, 0x45, 0x67, 0x00
+    };
+    SDL_Rect bounds = {11, 17, 9, 7};
+    GLWidget *widget;
+    LabelWidget *info;
+
+    widget = Init_LabelWidget(
+        "left", &foreground, &background, LEFT, DOWN);
+    TEST_CHECK(widget != NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_background_text(
+        11.0f, 17.0f, 9.0f, 7.0f, background_color,
+        &info->tex, 0x12345678, LEFT, DOWN, 11, 84) == 0);
+    destroy_widget(widget);
+
+    widget = Init_LabelWidget(
+        "center", NULL, &zero_background, CENTER, CENTER);
+    TEST_CHECK(widget != NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_text_without_background(
+        &info->tex, 0xffffffff, CENTER, CENTER, 15, 81) == 0);
+    destroy_widget(widget);
+
+    widget = Init_LabelWidget(
+        "right", &foreground, &transparent_background, RIGHT, UP);
+    TEST_CHECK(widget != NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_background_text(
+        11.0f, 17.0f, 9.0f, 7.0f,
+        transparent_background_color,
+        &info->tex, 0x12345678, RIGHT, UP, 20, 77) == 0);
+    destroy_widget(widget);
+    return 0;
+}
+
+typedef struct RadioActionCapture {
+    int calls;
+    bool state;
+} RadioActionCapture;
+
+static void capture_radio_action(bool state, void *data)
+{
+    RadioActionCapture *capture = data;
+
+    capture->calls++;
+    capture->state = state;
+}
+
+static void initialize_external_text(string_tex_t *texture,
+                                     TextRendererCache *cache,
+                                     int width, int height)
+{
+    memset(texture, 0, sizeof(*texture));
+    texture->text_renderer = &fake_text_renderer;
+    texture->cache = cache;
+    texture->width = width;
+    texture->height = height;
+}
+
+static int check_radio_background_text_and_toggle(void)
+{
+    const RendererColor background_color = {0x00, 0x00, 0x00, 0x44};
+    TextRendererCache on_cache = {2};
+    TextRendererCache off_cache = {3};
+    string_tex_t on_texture;
+    string_tex_t off_texture;
+    RadioActionCapture capture = {0, false};
+    SDL_Rect bounds = {21, 31, 11, 9};
+    GLWidget *widget;
+    LabeledRadiobuttonWidget *info;
+
+    initialize_external_text(&on_texture, &on_cache, 14, 7);
+    initialize_external_text(&off_texture, &off_cache, 10, 9);
+    widget = Init_LabeledRadiobuttonWidget(
+        &on_texture, &off_texture,
+        capture_radio_action, &capture, false);
+    TEST_CHECK(widget != NULL);
+    TEST_CHECK(widget->bounds.w == 19);
+    TEST_CHECK(widget->bounds.h == 9);
+    SetBounds_GLWidget(widget, &bounds);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+    TEST_CHECK(!info->state);
+
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_background_text(
+        21.0f, 31.0f, 11.0f, 9.0f, background_color,
+        &off_texture, 0xff0000ff, CENTER, CENTER, 26, 66) == 0);
+
+    widget->button(1, SDL_RELEASED, 0, 0, widget->buttondata);
+    widget->button(2, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(2, SDL_RELEASED, 0, 0, widget->buttondata);
+    TEST_CHECK(!info->state);
+    TEST_CHECK(capture.calls == 0);
+
+    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    TEST_CHECK(info->state);
+    TEST_CHECK(capture.calls == 1);
+    TEST_CHECK(capture.state);
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_background_text(
+        21.0f, 31.0f, 11.0f, 9.0f, background_color,
+        &on_texture, 0x00ff00ff, CENTER, CENTER, 26, 66) == 0);
+
+    widget->button(1, SDL_RELEASED, 0, 0, widget->buttondata);
+    TEST_CHECK(info->state);
+    TEST_CHECK(capture.calls == 1);
+    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    TEST_CHECK(!info->state);
+    TEST_CHECK(capture.calls == 2);
+    TEST_CHECK(!capture.state);
+
+    destroy_widget(widget);
+    return 0;
+}
+
+static int check_text_failure_short_circuit_for_widget(
+    GLWidget *widget, int has_background)
+{
+    int expected_event_count = has_background ? 4 : 1;
+    int blend_attempts_after_failure;
+    int fill_attempts_after_failure;
+    int flush_attempts_after_failure;
+
+    TEST_CHECK(widget != NULL);
+    reset_frame();
+    text_result = RENDERER_STATUS_BACKEND_ERROR;
+    widget->Draw(widget);
+    TEST_CHECK(event_count == expected_event_count);
+    TEST_CHECK(events[expected_event_count - 1] == DRAW_EVENT_TEXT);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(text_order == (has_background ? 5 : 2));
+    TEST_CHECK(text_attempts == 1);
+    TEST_CHECK(successful_text_draws == 0);
+    if (has_background) {
+        TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+        TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+        TEST_CHECK(events[2] == DRAW_EVENT_FLUSH);
+        TEST_CHECK(blend_attempts == 1);
+        TEST_CHECK(fill_attempts == 1);
+        TEST_CHECK(successful_fills == 1);
+        TEST_CHECK(flush_attempts == 1);
+    } else {
+        TEST_CHECK(blend_attempts == 0);
+        TEST_CHECK(fill_attempts == 0);
+        TEST_CHECK(flush_attempts == 0);
+    }
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+
+    blend_attempts_after_failure = blend_attempts;
+    fill_attempts_after_failure = fill_attempts;
+    flush_attempts_after_failure = flush_attempts;
+    text_result = RENDERER_STATUS_OK;
+    widget->Draw(widget);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == expected_event_count);
+    TEST_CHECK(blend_attempts == blend_attempts_after_failure);
+    TEST_CHECK(fill_attempts == fill_attempts_after_failure);
+    TEST_CHECK(flush_attempts == flush_attempts_after_failure);
+    TEST_CHECK(text_attempts == 1);
+    TEST_CHECK(successful_text_draws == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    return 0;
+}
+
+static int check_text_failure_short_circuit(void)
+{
+    Uint32 zero_background = 0;
+    TextRendererCache on_cache = {4};
+    TextRendererCache off_cache = {5};
+    string_tex_t on_texture;
+    string_tex_t off_texture;
+    GLWidget *label;
+    GLWidget *radio;
+
+    initialize_external_text(&on_texture, &on_cache, 12, 7);
+    initialize_external_text(&off_texture, &off_cache, 11, 7);
+    label = Init_LabelWidget(
+        "failure", NULL, &zero_background, CENTER, CENTER);
+    radio = Init_LabeledRadiobuttonWidget(
+        &on_texture, &off_texture, NULL, NULL, false);
+    TEST_CHECK(label != NULL);
+    TEST_CHECK(radio != NULL);
+    TEST_CHECK(check_text_failure_short_circuit_for_widget(label, 0) == 0);
+    TEST_CHECK(check_text_failure_short_circuit_for_widget(radio, 1) == 0);
+
+    destroy_widget(label);
+    destroy_widget(radio);
     return 0;
 }
 
@@ -826,6 +1246,7 @@ static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(fill_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(text_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
     widget->Draw(widget);
@@ -834,6 +1255,7 @@ static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(fill_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(text_attempts == 0);
     TEST_CHECK(legacy_begin_calls == 0);
     TEST_CHECK(legacy_vertex_calls == 0);
     TEST_CHECK(legacy_color_calls == 0);
@@ -852,6 +1274,7 @@ static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
     TEST_CHECK(fill_attempts == 1);
     TEST_CHECK(successful_fills == 0);
     TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(text_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_RESOURCE_MISMATCH);
     widget->Draw(widget);
@@ -861,6 +1284,7 @@ static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
     TEST_CHECK(fill_attempts == 1);
     TEST_CHECK(successful_fills == 0);
     TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(text_attempts == 0);
     TEST_CHECK(legacy_begin_calls == 0);
     TEST_CHECK(legacy_vertex_calls == 0);
     TEST_CHECK(legacy_color_calls == 0);
@@ -881,6 +1305,7 @@ static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
     TEST_CHECK(fill_attempts == 1);
     TEST_CHECK(successful_fills == 1);
     TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(text_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
     widget->Draw(widget);
@@ -890,6 +1315,7 @@ static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
     TEST_CHECK(fill_attempts == 1);
     TEST_CHECK(successful_fills == 1);
     TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(text_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(legacy_begin_calls == 0);
@@ -921,6 +1347,32 @@ static int check_fill_failure_short_circuit(void)
     return 0;
 }
 
+static int check_label_radio_background_failure_short_circuit(void)
+{
+    Uint32 background = 0x12345678;
+    TextRendererCache on_cache = {6};
+    TextRendererCache off_cache = {7};
+    string_tex_t on_texture;
+    string_tex_t off_texture;
+    GLWidget *label;
+    GLWidget *radio;
+
+    initialize_external_text(&on_texture, &on_cache, 12, 7);
+    initialize_external_text(&off_texture, &off_cache, 11, 7);
+    label = Init_LabelWidget(
+        "background failure", NULL, &background, CENTER, CENTER);
+    radio = Init_LabeledRadiobuttonWidget(
+        &on_texture, &off_texture, NULL, NULL, false);
+    TEST_CHECK(label != NULL);
+    TEST_CHECK(radio != NULL);
+    TEST_CHECK(check_fill_failure_short_circuit_for_widget(label) == 0);
+    TEST_CHECK(check_fill_failure_short_circuit_for_widget(radio) == 0);
+
+    destroy_widget(label);
+    destroy_widget(radio);
+    return 0;
+}
+
 static int check_tap_is_consumed_when_flush_fails(void)
 {
     GLWidget *widget = Init_ArrowWidget(
@@ -944,6 +1396,26 @@ static int check_tap_is_consumed_when_flush_fails(void)
     return 0;
 }
 
+static int check_label_scrap_button(void)
+{
+    Uint32 zero_background = 0;
+    GLWidget *widget = Init_LabelWidget(
+        "copy-me", NULL, &zero_background, LEFT, DOWN);
+
+    TEST_CHECK(widget != NULL);
+    reset_frame();
+    widget->button(1, SDL_RELEASED, 0, 0, widget->buttondata);
+    widget->button(2, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(2, SDL_RELEASED, 0, 0, widget->buttondata);
+    TEST_CHECK(clipboard_attempts == 0);
+    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    TEST_CHECK(clipboard_attempts == 1);
+    TEST_CHECK(strcmp(clipboard_text, "copy-me") == 0);
+
+    destroy_widget(widget);
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(check_direction_geometry() == 0);
@@ -955,5 +1427,10 @@ int main(void)
     TEST_CHECK(check_button_geometry_colors_and_state() == 0);
     TEST_CHECK(check_scrollbar_geometry_and_color() == 0);
     TEST_CHECK(check_fill_failure_short_circuit() == 0);
+    TEST_CHECK(check_label_background_and_alignment() == 0);
+    TEST_CHECK(check_radio_background_text_and_toggle() == 0);
+    TEST_CHECK(check_text_failure_short_circuit() == 0);
+    TEST_CHECK(check_label_radio_background_failure_short_circuit() == 0);
+    TEST_CHECK(check_label_scrap_button() == 0);
     return 0;
 }
