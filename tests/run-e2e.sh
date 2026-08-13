@@ -9,6 +9,14 @@ if test "${1:-}" != --inside-xvfb; then
             exit 1
         fi
     done
+    if test -n "${XPILOT_E2E_SCREENSHOT_DIR:-}"; then
+        for command_name in xwd ffmpeg; do
+            if ! command -v "$command_name" >/dev/null 2>&1; then
+                echo "Missing screenshot dependency: $command_name" >&2
+                exit 1
+            fi
+        done
+    fi
 
     case "${XPILOT_TEST_PREFIX:?XPILOT_TEST_PREFIX is required}" in
         /tmp/*|/var/tmp/*)
@@ -42,6 +50,23 @@ server_pid=
 client_pid=
 window_id=
 window_owner_pid=
+
+capture_window()
+{
+    capture_name=$1
+    if test -z "${XPILOT_E2E_SCREENSHOT_DIR:-}"; then
+        return 0
+    fi
+    capture_variant=${XPILOT_TEST_PREFIX##*/}
+    capture_xwd="$runtime_dir/$capture_name.xwd"
+    capture_png="$XPILOT_E2E_SCREENSHOT_DIR/$capture_variant-$capture_name.png"
+    mkdir -p -- "$XPILOT_E2E_SCREENSHOT_DIR"
+    xwd -silent -id "$window_id" -out "$capture_xwd" \
+        || fail "could not capture the $capture_name window"
+    ffmpeg -hide_banner -loglevel error -y -i "$capture_xwd" \
+        "$capture_png" \
+        || fail "could not encode the $capture_name screenshot"
+}
 
 cleanup()
 {
@@ -180,6 +205,15 @@ client_accepted()
     grep -q "Welcome .*SDL2Smoke" "$runtime_dir/server.log" 2>/dev/null
 }
 
+game_frame_ready()
+{
+    if ! kill -0 "$client_pid" 2>/dev/null; then
+        fail "client stopped before presenting a semantic game frame"
+    fi
+    grep -q '^Game frame ready: semantic=ok, presented=1$' \
+        "$runtime_dir/client.log" 2>/dev/null
+}
+
 runtime_logs_have_no_gl_errors()
 {
     if grep -q 'OpenGL error at ' "$runtime_dir"/*.log 2>/dev/null; then
@@ -290,6 +324,7 @@ wait_until "metaserver text renderers" 10 \
 wait_until "semantic metaserver UI" 20 meta_ui_ready
 wait_until "local metaserver request" 5 meta_fixture_served
 find_game_window || fail "metaserver window was not visible"
+capture_window metaserver
 kill -0 "$meta_pid" 2>/dev/null \
     || fail "metaserver client exited before Escape"
 meta_deadline=$(($(date +%s) + 20))
@@ -342,6 +377,8 @@ wait_until "game core OpenGL context diagnostics" 10 \
 wait_until "game text renderers" 10 \
     grep -q '^Font text renderers ready: game=renderer map=renderer$' \
         "$runtime_dir/client.log"
+wait_until "successful semantic game frame presentation" 20 \
+    game_frame_ready
 
 xdotool windowsize "$window_id" 900 700 >/dev/null 2>&1 \
     || fail "could not request an SDL window resize"
@@ -361,6 +398,7 @@ xdotool key --window "$window_id" Return >/dev/null 2>&1 \
 if ! kill -0 "$client_pid" 2>/dev/null; then
     fail "client stopped after resize/input events"
 fi
+capture_window game
 
 xdotool key --window "$window_id" Escape y >/dev/null 2>&1 \
     || fail "could not request a graceful client quit"

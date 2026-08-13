@@ -48,6 +48,7 @@
 #include "sdlrenderer.h"
 
 #include <limits.h>
+#include <stdio.h>
 
 #define SCORE_BORDER 5
 
@@ -62,12 +63,7 @@ static GLWidget     *scoreListWidget;
 static bool         scoreListMoving;
 static SdlGameFrameState rendererFrameState;
 static SdlUiDrawState gameUiDrawState;
-
-typedef enum PaintMatrixPhase {
-    PAINT_MATRIX_PHASE_NONE,
-    PAINT_MATRIX_PHASE_WORLD,
-    PAINT_MATRIX_PHASE_HUD
-} PaintMatrixPhase;
+static bool gameFrameReadyReported;
 
 typedef enum PaintSetupTarget {
     PAINT_SETUP_TARGET_STATIONARY,
@@ -90,8 +86,6 @@ typedef struct PaintStageOps {
     PaintStageCallback paint_ships;
     RendererStatus (*frame_result)(void *context);
 } PaintStageOps;
-
-static PaintMatrixPhase paintMatrixPhase;
 
 int paintSetupMode;
 
@@ -172,70 +166,15 @@ static RendererStatus set_renderer_hud_transform(void)
 static void Begin_logical_paint_frame(void)
 {
     paintSetupMode = 0;
-    paintMatrixPhase = PAINT_MATRIX_PHASE_NONE;
-}
-
-static void Unwind_legacy_paint_frame(void)
-{
-    if (paintMatrixPhase == PAINT_MATRIX_PHASE_WORLD) {
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
-    } else if (paintMatrixPhase == PAINT_MATRIX_PHASE_HUD) {
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-    }
-    paintSetupMode = 0;
-    paintMatrixPhase = PAINT_MATRIX_PHASE_NONE;
 }
 
 static RendererStatus End_logical_paint_frame(void)
 {
-    Unwind_legacy_paint_frame();
+    paintSetupMode = 0;
     return Sdl_renderer_frame_result(Get_sdl_renderer());
 }
 
-static void Set_legacy_world_transform(int rounded_translation)
-{
-    if (paintMatrixPhase == PAINT_MATRIX_PHASE_HUD) {
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-    } else {
-	glMatrixMode(GL_MODELVIEW);
-	if (paintMatrixPhase == PAINT_MATRIX_PHASE_NONE)
-	    glPushMatrix();
-    }
-    glLoadIdentity();
-    if (rounded_translation) {
-	glTranslatef(rint(-world.x * clData.scale),
-		     rint(-world.y * clData.scale), 0);
-    } else {
-	glTranslatef(-world.x * clData.scale,
-		     -world.y * clData.scale, 0);
-    }
-    glScalef(clData.scale, clData.scale, 0);
-    paintMatrixPhase = PAINT_MATRIX_PHASE_WORLD;
-}
-
-static void Set_legacy_hud_transform(void)
-{
-    if (paintMatrixPhase == PAINT_MATRIX_PHASE_WORLD) {
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
-    }
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glMatrixMode(GL_PROJECTION);
-    if (paintMatrixPhase != PAINT_MATRIX_PHASE_HUD)
-	glPushMatrix();
-    glLoadIdentity();
-    gluOrtho2D(0, draw_width, draw_height, 0);
-    paintMatrixPhase = PAINT_MATRIX_PHASE_HUD;
-}
-
-static RendererStatus Apply_legacy_paint_setup(
+static RendererStatus Commit_paint_setup(
     PaintSetupTarget target, RendererStatus semantic_status)
 {
     if (target != PAINT_SETUP_TARGET_STATIONARY
@@ -247,13 +186,10 @@ static RendererStatus Apply_legacy_paint_setup(
 	return semantic_status;
 
     if (target == PAINT_SETUP_TARGET_STATIONARY) {
-	Set_legacy_world_transform(1);
 	paintSetupMode = STATIONARY_MODE;
     } else if (target == PAINT_SETUP_TARGET_MOVING) {
-	Set_legacy_world_transform(0);
 	paintSetupMode = MOVING_MODE;
     } else {
-	Set_legacy_hud_transform();
 	paintSetupMode = HUD_MODE;
     }
     return RENDERER_STATUS_OK;
@@ -518,7 +454,7 @@ RendererStatus setupPaint_stationary(void)
     if (paintSetupMode == STATIONARY_MODE)
 	return Sdl_renderer_frame_result(Get_sdl_renderer());
     status = set_renderer_world_transform(1);
-    status = Apply_legacy_paint_setup(
+    status = Commit_paint_setup(
 	PAINT_SETUP_TARGET_STATIONARY, status);
     if (status != RENDERER_STATUS_OK)
 	return status;
@@ -536,7 +472,7 @@ RendererStatus setupPaint_stationary_cleanup(void)
     if (sdl_renderer == NULL)
 	return RENDERER_STATUS_INVALID_ARGUMENT;
     status = set_renderer_world_transform_raw(sdl_renderer, 1);
-    return Apply_legacy_paint_setup(
+    return Commit_paint_setup(
 	PAINT_SETUP_TARGET_STATIONARY, status);
 }
 
@@ -550,7 +486,7 @@ RendererStatus setupPaint_moving(void)
     if (paintSetupMode == MOVING_MODE)
 	return Sdl_renderer_frame_result(Get_sdl_renderer());
     status = set_renderer_world_transform(0);
-    status = Apply_legacy_paint_setup(
+    status = Commit_paint_setup(
 	PAINT_SETUP_TARGET_MOVING, status);
     if (status != RENDERER_STATUS_OK)
 	return status;
@@ -564,7 +500,7 @@ RendererStatus setupPaint_HUD(void)
     if (paintSetupMode == HUD_MODE)
 	return Sdl_renderer_frame_result(Get_sdl_renderer());
     status = set_renderer_hud_transform();
-    status = Apply_legacy_paint_setup(PAINT_SETUP_TARGET_HUD, status);
+    status = Commit_paint_setup(PAINT_SETUP_TARGET_HUD, status);
     if (status != RENDERER_STATUS_OK)
 	return status;
     return Sdl_renderer_frame_result(Get_sdl_renderer());
@@ -679,7 +615,7 @@ void Sdlpaint_test_begin_logical_frame(void)
     Begin_logical_paint_frame();
 }
 
-RendererStatus Sdlpaint_test_apply_setup(
+RendererStatus Sdlpaint_test_commit_setup(
     SdlPaintTestSetupTarget target, RendererStatus semantic_status)
 {
     PaintSetupTarget private_target;
@@ -692,23 +628,14 @@ RendererStatus Sdlpaint_test_apply_setup(
 	private_target = PAINT_SETUP_TARGET_HUD;
     else
 	return RENDERER_STATUS_INVALID_ARGUMENT;
-    return Apply_legacy_paint_setup(private_target, semantic_status);
+    return Commit_paint_setup(private_target, semantic_status);
 }
 
 RendererStatus Sdlpaint_test_end_logical_frame(
     RendererStatus frame_result)
 {
-    Unwind_legacy_paint_frame();
+    paintSetupMode = 0;
     return frame_result;
-}
-
-SdlPaintTestMatrixPhase Sdlpaint_test_matrix_phase(void)
-{
-    if (paintMatrixPhase == PAINT_MATRIX_PHASE_WORLD)
-	return SDLPAINT_TEST_MATRIX_WORLD;
-    if (paintMatrixPhase == PAINT_MATRIX_PHASE_HUD)
-	return SDLPAINT_TEST_MATRIX_HUD;
-    return SDLPAINT_TEST_MATRIX_NONE;
 }
 #endif
 
@@ -721,6 +648,15 @@ static void Swap_game_frame(void *context)
 {
     (void)context;
     Swap_buffers();
+}
+
+static void Report_successful_game_frame(RendererStatus status)
+{
+    if (status != RENDERER_STATUS_OK || gameFrameReadyReported)
+	return;
+    xpprintf("Game frame ready: semantic=ok, presented=1\n");
+    fflush(stdout);
+    gameFrameReadyReported = true;
 }
 
 void Paint_frame(void)
@@ -743,6 +679,7 @@ void Paint_frame(void)
 	    warn("Could not recover the previous renderer frame (%d)",
 		 (int)renderer_status);
 	}
+	Report_successful_game_frame(renderer_status);
 	goto timing;
     }
 
@@ -778,16 +715,6 @@ void Paint_frame(void)
 	    goto timing;
 	}
 	Sdl_ui_draw_state_init(&gameUiDrawState);
-	renderer_status = Sdl_renderer_prepare_legacy(
-	    sdl_renderer, SDL_RENDERER_LEGACY_BOTTOM_LEFT);
-	if (renderer_status != RENDERER_STATUS_OK) {
-	    (void)Sdl_renderer_track_frame_result(
-		sdl_renderer, renderer_status);
-	    warn("Could not prepare legacy world rendering (%d)",
-		 (int)renderer_status);
-	    goto finish_frame;
-	}
-
 	renderer_status = setupPaint_stationary();
 	{
 	    RendererStatus stage_status = Run_world_object_stages(
@@ -848,8 +775,9 @@ finish_frame:
 	if (renderer_status != RENDERER_STATUS_OK) {
 	    warn("Could not end renderer frame (%d)", (int)renderer_status);
 	}
+	Report_successful_game_frame(renderer_status);
     } else {
-	/* A damaged tick intentionally performs no redraw, but the legacy
+	/* A damaged tick intentionally performs no redraw, but the
 	 * double-buffer cadence still presents the unchanged back buffer. */
 	(void)Sdl_game_frame_present_idle(
 	    &rendererFrameState, Swap_game_frame, sdl_renderer);

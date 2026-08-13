@@ -17,112 +17,6 @@ ipos_t world;
 unsigned draw_width;
 unsigned draw_height;
 
-typedef struct FakeMatrices {
-    GLenum mode;
-    int modelview_depth;
-    int projection_depth;
-    int calls;
-    int invalid_operations;
-    int load_identity_calls;
-    int translate_calls;
-    int scale_calls;
-    int ortho_calls;
-    GLfloat translate_x;
-    GLfloat translate_y;
-    GLfloat scale_x;
-    GLfloat scale_y;
-    GLdouble ortho_right;
-    GLdouble ortho_bottom;
-} FakeMatrices;
-
-static FakeMatrices matrices;
-
-void GLAPIENTRY glMatrixMode(GLenum mode)
-{
-    matrices.calls++;
-    if (mode != GL_MODELVIEW && mode != GL_PROJECTION) {
-        matrices.invalid_operations++;
-        return;
-    }
-    matrices.mode = mode;
-}
-
-void GLAPIENTRY glPushMatrix(void)
-{
-    matrices.calls++;
-    if (matrices.mode == GL_MODELVIEW)
-        matrices.modelview_depth++;
-    else if (matrices.mode == GL_PROJECTION)
-        matrices.projection_depth++;
-    else
-        matrices.invalid_operations++;
-}
-
-void GLAPIENTRY glPopMatrix(void)
-{
-    int *depth = NULL;
-
-    matrices.calls++;
-    if (matrices.mode == GL_MODELVIEW)
-        depth = &matrices.modelview_depth;
-    else if (matrices.mode == GL_PROJECTION)
-        depth = &matrices.projection_depth;
-    if (depth == NULL || *depth == 0) {
-        matrices.invalid_operations++;
-        return;
-    }
-    (*depth)--;
-}
-
-void GLAPIENTRY glLoadIdentity(void)
-{
-    matrices.calls++;
-    matrices.load_identity_calls++;
-}
-
-void GLAPIENTRY glTranslatef(GLfloat x, GLfloat y, GLfloat z)
-{
-    matrices.calls++;
-    matrices.translate_calls++;
-    matrices.translate_x = x;
-    matrices.translate_y = y;
-    if (z != 0.0f)
-        matrices.invalid_operations++;
-}
-
-void GLAPIENTRY glScalef(GLfloat x, GLfloat y, GLfloat z)
-{
-    matrices.calls++;
-    matrices.scale_calls++;
-    matrices.scale_x = x;
-    matrices.scale_y = y;
-    if (z != 0.0f)
-        matrices.invalid_operations++;
-}
-
-void GLAPIENTRY gluOrtho2D(GLdouble left, GLdouble right,
-                           GLdouble bottom, GLdouble top)
-{
-    matrices.calls++;
-    matrices.ortho_calls++;
-    matrices.ortho_right = right;
-    matrices.ortho_bottom = bottom;
-    if (left != 0.0 || top != 0.0)
-        matrices.invalid_operations++;
-}
-
-static void reset_matrices(void)
-{
-    memset(&matrices, 0, sizeof(matrices));
-    matrices.mode = GL_MODELVIEW;
-    world.x = 2;
-    world.y = -3;
-    clData.scale = 1.4;
-    draw_width = 640;
-    draw_height = 480;
-    Sdlpaint_test_begin_logical_frame();
-}
-
 typedef enum StageEvent {
     STAGE_EVENT_WORLD,
     STAGE_EVENT_VFUEL,
@@ -426,7 +320,7 @@ static int check_existing_failure_still_traverses_cleanup(void)
     return 0;
 }
 
-static int check_logical_frames_reset_matrix_phase(void)
+static int check_logical_frames_reset_setup_mode(void)
 {
     paintSetupMode = HUD_MODE;
     Sdlpaint_test_begin_logical_frame();
@@ -438,148 +332,68 @@ static int check_logical_frames_reset_matrix_phase(void)
     return 0;
 }
 
-static int check_matrix_phase_sequence_is_balanced(void)
+static int check_successful_setup_commits_mode(void)
 {
-    reset_matrices();
-    TEST_CHECK(Sdlpaint_test_matrix_phase()
-               == SDLPAINT_TEST_MATRIX_NONE);
+    Sdlpaint_test_begin_logical_frame();
 
-    TEST_CHECK(Sdlpaint_test_apply_setup(
+    TEST_CHECK(Sdlpaint_test_commit_setup(
                    SDLPAINT_TEST_SETUP_STATIONARY,
                    RENDERER_STATUS_OK) == RENDERER_STATUS_OK);
     TEST_CHECK(paintSetupMode == STATIONARY_MODE);
-    TEST_CHECK(Sdlpaint_test_matrix_phase()
-               == SDLPAINT_TEST_MATRIX_WORLD);
-    TEST_CHECK(matrices.modelview_depth == 1);
-    TEST_CHECK(matrices.projection_depth == 0);
-    TEST_CHECK(matrices.translate_x == -3.0f);
-    TEST_CHECK(matrices.translate_y == 4.0f);
 
-    TEST_CHECK(Sdlpaint_test_apply_setup(
+    TEST_CHECK(Sdlpaint_test_commit_setup(
                    SDLPAINT_TEST_SETUP_MOVING,
                    RENDERER_STATUS_OK) == RENDERER_STATUS_OK);
     TEST_CHECK(paintSetupMode == MOVING_MODE);
-    TEST_CHECK(Sdlpaint_test_matrix_phase()
-               == SDLPAINT_TEST_MATRIX_WORLD);
-    TEST_CHECK(matrices.modelview_depth == 1);
-    TEST_CHECK(matrices.projection_depth == 0);
-    TEST_CHECK(matrices.translate_x == -2.8f);
-    TEST_CHECK(matrices.translate_y == 4.2f);
 
-    TEST_CHECK(Sdlpaint_test_apply_setup(
+    TEST_CHECK(Sdlpaint_test_commit_setup(
                    SDLPAINT_TEST_SETUP_HUD,
                    RENDERER_STATUS_OK) == RENDERER_STATUS_OK);
     TEST_CHECK(paintSetupMode == HUD_MODE);
-    TEST_CHECK(Sdlpaint_test_matrix_phase()
-               == SDLPAINT_TEST_MATRIX_HUD);
-    TEST_CHECK(matrices.modelview_depth == 0);
-    TEST_CHECK(matrices.projection_depth == 1);
-    TEST_CHECK(matrices.ortho_right == 640.0);
-    TEST_CHECK(matrices.ortho_bottom == 480.0);
-
-    TEST_CHECK(Sdlpaint_test_end_logical_frame(
-                   RENDERER_STATUS_BACKEND_ERROR)
-               == RENDERER_STATUS_BACKEND_ERROR);
-    TEST_CHECK(paintSetupMode == 0);
-    TEST_CHECK(Sdlpaint_test_matrix_phase()
-               == SDLPAINT_TEST_MATRIX_NONE);
-    TEST_CHECK(matrices.modelview_depth == 0);
-    TEST_CHECK(matrices.projection_depth == 0);
-    TEST_CHECK(matrices.mode == GL_MODELVIEW);
-    TEST_CHECK(matrices.invalid_operations == 0);
     return 0;
 }
 
-static int check_failed_setup_is_atomic_and_world_unwinds(void)
+static int check_failed_setup_leaves_mode_unchanged(void)
 {
-    int calls_before_failure;
-
-    reset_matrices();
-    TEST_CHECK(Sdlpaint_test_apply_setup(
+    Sdlpaint_test_begin_logical_frame();
+    TEST_CHECK(Sdlpaint_test_commit_setup(
                    SDLPAINT_TEST_SETUP_STATIONARY,
                    RENDERER_STATUS_OK) == RENDERER_STATUS_OK);
-    calls_before_failure = matrices.calls;
-    TEST_CHECK(Sdlpaint_test_apply_setup(
+    TEST_CHECK(Sdlpaint_test_commit_setup(
                    SDLPAINT_TEST_SETUP_HUD,
                    RENDERER_STATUS_OUT_OF_MEMORY)
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    TEST_CHECK(matrices.calls == calls_before_failure);
     TEST_CHECK(paintSetupMode == STATIONARY_MODE);
-    TEST_CHECK(Sdlpaint_test_matrix_phase()
-               == SDLPAINT_TEST_MATRIX_WORLD);
-    TEST_CHECK(matrices.modelview_depth == 1);
-    TEST_CHECK(matrices.projection_depth == 0);
-
-    TEST_CHECK(Sdlpaint_test_end_logical_frame(RENDERER_STATUS_OK)
-               == RENDERER_STATUS_OK);
-    TEST_CHECK(matrices.modelview_depth == 0);
-    TEST_CHECK(matrices.projection_depth == 0);
-    TEST_CHECK(matrices.invalid_operations == 0);
     return 0;
 }
 
-static int check_hud_to_world_transition_is_balanced(void)
+static int check_invalid_setup_target_leaves_mode_unchanged(void)
 {
-    reset_matrices();
-    TEST_CHECK(Sdlpaint_test_apply_setup(
+    Sdlpaint_test_begin_logical_frame();
+    TEST_CHECK(Sdlpaint_test_commit_setup(
                    SDLPAINT_TEST_SETUP_HUD,
                    RENDERER_STATUS_OK) == RENDERER_STATUS_OK);
-    TEST_CHECK(matrices.modelview_depth == 0);
-    TEST_CHECK(matrices.projection_depth == 1);
-
-    TEST_CHECK(Sdlpaint_test_apply_setup(
-                   SDLPAINT_TEST_SETUP_MOVING,
-                   RENDERER_STATUS_OK) == RENDERER_STATUS_OK);
-    TEST_CHECK(paintSetupMode == MOVING_MODE);
-    TEST_CHECK(Sdlpaint_test_matrix_phase()
-               == SDLPAINT_TEST_MATRIX_WORLD);
-    TEST_CHECK(matrices.modelview_depth == 1);
-    TEST_CHECK(matrices.projection_depth == 0);
-    TEST_CHECK(matrices.mode == GL_MODELVIEW);
-
-    TEST_CHECK(Sdlpaint_test_end_logical_frame(RENDERER_STATUS_OK)
-               == RENDERER_STATUS_OK);
-    TEST_CHECK(matrices.modelview_depth == 0);
-    TEST_CHECK(matrices.projection_depth == 0);
-    TEST_CHECK(matrices.invalid_operations == 0);
+    TEST_CHECK(Sdlpaint_test_commit_setup(
+                   (SdlPaintTestSetupTarget)99,
+                   RENDERER_STATUS_OK) == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(paintSetupMode == HUD_MODE);
     return 0;
 }
 
-static int check_none_failure_invalid_target_and_next_frame(void)
+static int check_end_frame_resets_mode_and_preserves_result(void)
 {
-    int calls_before_failure;
-
-    reset_matrices();
-    calls_before_failure = matrices.calls;
-    TEST_CHECK(Sdlpaint_test_apply_setup(
-                   SDLPAINT_TEST_SETUP_STATIONARY,
-                   RENDERER_STATUS_INVALID_STATE)
-               == RENDERER_STATUS_INVALID_STATE);
-    TEST_CHECK(matrices.calls == calls_before_failure);
-    TEST_CHECK(paintSetupMode == 0);
-    TEST_CHECK(Sdlpaint_test_matrix_phase()
-               == SDLPAINT_TEST_MATRIX_NONE);
-
-    TEST_CHECK(Sdlpaint_test_apply_setup(
-                   (SdlPaintTestSetupTarget)99,
-                   RENDERER_STATUS_OK)
-               == RENDERER_STATUS_INVALID_ARGUMENT);
-    TEST_CHECK(matrices.calls == calls_before_failure);
-    TEST_CHECK(paintSetupMode == 0);
-    TEST_CHECK(Sdlpaint_test_matrix_phase()
-               == SDLPAINT_TEST_MATRIX_NONE);
-
+    Sdlpaint_test_begin_logical_frame();
+    TEST_CHECK(Sdlpaint_test_commit_setup(
+                   SDLPAINT_TEST_SETUP_MOVING,
+                   RENDERER_STATUS_OK) == RENDERER_STATUS_OK);
     TEST_CHECK(Sdlpaint_test_end_logical_frame(
                    RENDERER_STATUS_RESOURCE_MISMATCH)
                == RENDERER_STATUS_RESOURCE_MISMATCH);
-    TEST_CHECK(matrices.calls == calls_before_failure);
+    TEST_CHECK(paintSetupMode == 0);
+
+    paintSetupMode = HUD_MODE;
     Sdlpaint_test_begin_logical_frame();
     TEST_CHECK(paintSetupMode == 0);
-    TEST_CHECK(Sdlpaint_test_matrix_phase()
-               == SDLPAINT_TEST_MATRIX_NONE);
-    TEST_CHECK(matrices.modelview_depth == 0);
-    TEST_CHECK(matrices.projection_depth == 0);
-    TEST_CHECK(matrices.invalid_operations == 0);
     return 0;
 }
 
@@ -595,15 +409,15 @@ int main(void)
         return 1;
     if (check_existing_failure_still_traverses_cleanup() != 0)
         return 1;
-    if (check_logical_frames_reset_matrix_phase() != 0)
+    if (check_logical_frames_reset_setup_mode() != 0)
         return 1;
-    if (check_matrix_phase_sequence_is_balanced() != 0)
+    if (check_successful_setup_commits_mode() != 0)
         return 1;
-    if (check_failed_setup_is_atomic_and_world_unwinds() != 0)
+    if (check_failed_setup_leaves_mode_unchanged() != 0)
         return 1;
-    if (check_hud_to_world_transition_is_balanced() != 0)
+    if (check_invalid_setup_target_leaves_mode_unchanged() != 0)
         return 1;
-    if (check_none_failure_invalid_target_and_next_frame() != 0)
+    if (check_end_frame_resets_mode_and_preserves_result() != 0)
         return 1;
     return 0;
 }

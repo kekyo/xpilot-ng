@@ -36,7 +36,7 @@ typedef unsigned int color_t;
 extern int paintSetupMode;
 
 /**
- * Select the rounded stationary world transform for semantic and legacy draw.
+ * Select the rounded stationary world transform for semantic draw.
  *
  * @return The sticky result for the active renderer frame.
  */
@@ -45,7 +45,7 @@ RendererStatus setupPaint_stationary(void);
 /**
  * Restore the rounded stationary world transform without retaining status.
  *
- * @return The raw semantic or legacy setup result.
+ * @return The raw semantic setup result.
  * @remarks This cleanup entry point ignores an already retained frame
  *          failure. The caller must retain this result after retaining any
  *          earlier operation failure.
@@ -53,14 +53,14 @@ RendererStatus setupPaint_stationary(void);
 RendererStatus setupPaint_stationary_cleanup(void);
 
 /**
- * Select the moving world transform for semantic and legacy draw.
+ * Select the moving world transform for semantic draw.
  *
  * @return The sticky result for the active renderer frame.
  */
 RendererStatus setupPaint_moving(void);
 
 /**
- * Select the HUD transform for semantic and legacy draw.
+ * Select the HUD transform for semantic draw.
  *
  * @return The sticky result for the active renderer frame.
  */
@@ -116,16 +116,6 @@ typedef enum SdlPaintTestSetupTarget {
     SDLPAINT_TEST_SETUP_HUD
 } SdlPaintTestSetupTarget;
 
-/** Observable legacy matrix phases exposed to the SDL paint stage test. */
-typedef enum SdlPaintTestMatrixPhase {
-    /** No logical-frame matrix is currently saved. */
-    SDLPAINT_TEST_MATRIX_NONE,
-    /** A model-view world matrix is currently saved. */
-    SDLPAINT_TEST_MATRIX_WORLD,
-    /** A projection HUD matrix is currently saved. */
-    SDLPAINT_TEST_MATRIX_HUD
-} SdlPaintTestMatrixPhase;
-
 /**
  * Callback operations used to exercise the world/object stage gate.
  *
@@ -174,44 +164,35 @@ extern RendererStatus Sdlpaint_test_run_world_object_stages(
     bool old_server, const SdlPaintStageOps *ops, void *context);
 
 /**
- * Begin a logical paint frame for matrix-phase tests.
+ * Begin a logical paint frame for setup-mode tests.
  *
  * @remarks Resets paintSetupMode so that the next frame cannot inherit the
- *          stationary, moving, or HUD matrix phase of the previous frame.
+ *          stationary, moving, or HUD setup mode of the previous frame.
  */
 extern void Sdlpaint_test_begin_logical_frame(void);
 
 /**
- * Apply a production legacy matrix transition after an injected semantic
- * transform result.
+ * Commit a production setup mode after an injected semantic transform result.
  *
  * @param target Requested stationary, moving, or HUD transform.
  * @param semantic_status Result of the semantic transform operation.
- * @return @p semantic_status, OK after a successful transition, or
+ * @return @p semantic_status, OK after a successful commit, or
  *         RENDERER_STATUS_INVALID_ARGUMENT for an invalid target.
- * @remarks A non-OK semantic result and an invalid target leave the legacy
- *          matrix phase and paint setup mode unchanged.
+ * @remarks A non-OK semantic result and an invalid target leave the paint
+ *          setup mode unchanged.
  */
-extern RendererStatus Sdlpaint_test_apply_setup(
+extern RendererStatus Sdlpaint_test_commit_setup(
     SdlPaintTestSetupTarget target, RendererStatus semantic_status);
 
 /**
- * Apply the production logical-frame legacy matrix unwind.
+ * Finish a logical frame after an injected sticky renderer result.
  *
  * @param frame_result Injected sticky renderer result.
  * @return @p frame_result unchanged.
- * @remarks The unwind balances the saved matrix for the current phase and
- *          resets both the phase and paint setup mode.
+ * @remarks The result remains sticky while paint setup mode is reset.
  */
 extern RendererStatus Sdlpaint_test_end_logical_frame(
     RendererStatus frame_result);
-
-/**
- * Return the current production legacy matrix phase for tests.
- *
- * @return The current logical-frame legacy matrix phase.
- */
-extern SdlPaintTestMatrixPhase Sdlpaint_test_matrix_phase(void);
 #endif
 
 #ifdef XPILOT_SDLGUI_TEST_HOOKS
