@@ -752,24 +752,25 @@ static int render_texture_sampling_scene(RendererFactory factory,
                                          GLubyte *pixels)
 {
     static const uint8_t texture_pixels[] = {
-        255,   0,   0, 255,    0, 255,   0, 255,
-          0,   0, 255, 255,  255, 255, 255, 255
+        255,   0,   0, 255,    0,   0, 255, 255,    0, 255,   0, 255,
+        255,   0,   0, 255,    0,   0, 255, 255,    0, 255,   0, 255,
+        255,   0,   0, 255,    0,   0, 255, 255,    0, 255,   0, 255
     };
     const RendererTextureDesc nearest_clamp_desc = {
-        .width = 2,
-        .height = 2,
+        .width = 3,
+        .height = 3,
         .filter = RENDERER_TEXTURE_FILTER_NEAREST,
         .wrap = RENDERER_TEXTURE_WRAP_CLAMP
     };
     const RendererTextureDesc linear_clamp_desc = {
-        .width = 2,
-        .height = 2,
+        .width = 3,
+        .height = 3,
         .filter = RENDERER_TEXTURE_FILTER_LINEAR,
         .wrap = RENDERER_TEXTURE_WRAP_CLAMP
     };
     const RendererTextureDesc nearest_repeat_desc = {
-        .width = 2,
-        .height = 2,
+        .width = 3,
+        .height = 3,
         .filter = RENDERER_TEXTURE_FILTER_NEAREST,
         .wrap = RENDERER_TEXTURE_WRAP_REPEAT
     };
@@ -788,13 +789,13 @@ static int render_texture_sampling_scene(RendererFactory factory,
     TEST_CHECK_CLEANUP(factory(load_gl_proc, NULL, &renderer)
                        == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(Renderer_texture_create_with_desc(
-                           renderer, &nearest_clamp_desc, texture_pixels, 8,
+                           renderer, &nearest_clamp_desc, texture_pixels, 12,
                            &nearest_clamp) == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(Renderer_texture_create_with_desc(
-                           renderer, &linear_clamp_desc, texture_pixels, 8,
+                           renderer, &linear_clamp_desc, texture_pixels, 12,
                            &linear_clamp) == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(Renderer_texture_create_with_desc(
-                           renderer, &nearest_repeat_desc, texture_pixels, 8,
+                           renderer, &nearest_repeat_desc, texture_pixels, 12,
                            &nearest_repeat) == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(Renderer_begin_frame(renderer, FRAME_WIDTH,
                                              FRAME_HEIGHT, black)
@@ -815,7 +816,8 @@ static int render_texture_sampling_scene(RendererFactory factory,
     TEST_CHECK_CLEANUP(Renderer_draw_sprite(
                            renderer, linear_clamp,
                            18.0f, 2.0f, 24.0f, 8.0f,
-                           0.5f, 0.25f, 0.5f, 0.25f, white)
+                           1.0f / 3.0f, 0.25f,
+                           1.0f / 3.0f, 0.25f, white)
                        == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(Renderer_draw_sprite(
                            renderer, nearest_repeat,
@@ -887,12 +889,12 @@ static int check_rgba(const GLubyte *pixels, int x, int y,
 
 static int check_texture_sampling_pixels(const GLubyte *pixels)
 {
-    /* Nearest chooses the red texel instead of blending toward green. */
-    TEST_CHECK(check_rgba(pixels, 5, 5, 255, 0, 0, 255) == 0);
+    /* Nearest chooses the blue texel instead of blending adjacent colors. */
+    TEST_CHECK(check_rgba(pixels, 5, 5, 0, 0, 255, 255) == 0);
     /* Clamp keeps an out-of-range horizontal coordinate at the green edge. */
     TEST_CHECK(check_rgba(pixels, 13, 5, 0, 255, 0, 255) == 0);
-    /* Linear sampling halfway between the top two texels mixes them evenly. */
-    TEST_CHECK(check_rgba(pixels, 21, 5, 128, 128, 0, 255) == 0);
+    /* Linear sampling halfway between red and blue mixes them evenly. */
+    TEST_CHECK(check_rgba(pixels, 21, 5, 128, 0, 128, 255) == 0);
     /* Repeat maps the same out-of-range coordinate back to the red texel. */
     TEST_CHECK(check_rgba(pixels, 5, 13, 255, 0, 0, 255) == 0);
     return 0;

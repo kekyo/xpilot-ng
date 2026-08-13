@@ -27,6 +27,7 @@ fi
 
 legacy_context_status=0
 MESA_GL_VERSION_OVERRIDE=1.5 \
+MESA_EXTENSION_OVERRIDE=-GL_ARB_texture_non_power_of_two \
     "$test_binary" --context-log-gl-1.5 || legacy_context_status=$?
 
 case "$legacy_context_status" in

@@ -306,6 +306,7 @@ static int check_context_logging_on_gl_1_5(void)
 {
     SDL_Window *window = NULL;
     SDL_GLContext context = NULL;
+    Renderer *renderer = NULL;
     const char *version;
     int major = 0;
     int minor = 0;
@@ -366,9 +367,17 @@ static int check_context_logging_on_gl_1_5(void)
     CHECK_CONTINUE(Gl_diagnostics_check("OpenGL 1.5 context logging") == 0);
     CHECK_CONTINUE(Gl_diagnostics_total_errors() == 0);
     CHECK_CONTINUE(glGetError() == GL_NO_ERROR);
+    CHECK_CONTINUE(Renderer_gl_legacy_create(load_current_gl_proc, NULL,
+                                             &renderer)
+                   == RENDERER_STATUS_BACKEND_ERROR);
+    CHECK_CONTINUE(renderer == NULL);
+    CHECK_CONTINUE(SDL_GL_GetCurrentContext() == context);
+    CHECK_CONTINUE(glGetString(GL_VERSION) != NULL);
     result = failure_count == 0 ? 0 : 1;
 
 cleanup:
+    if (renderer != NULL)
+        Renderer_destroy(renderer);
     if (context != NULL)
         SDL_GL_DeleteContext(context);
     if (window != NULL)
