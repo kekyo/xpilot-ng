@@ -63,6 +63,36 @@ static bool         scoreListMoving;
 static SdlGameFrameState rendererFrameState;
 static SdlUiDrawState gameUiDrawState;
 
+typedef enum PaintMatrixPhase {
+    PAINT_MATRIX_PHASE_NONE,
+    PAINT_MATRIX_PHASE_WORLD,
+    PAINT_MATRIX_PHASE_HUD
+} PaintMatrixPhase;
+
+typedef enum PaintSetupTarget {
+    PAINT_SETUP_TARGET_STATIONARY,
+    PAINT_SETUP_TARGET_MOVING,
+    PAINT_SETUP_TARGET_HUD
+} PaintSetupTarget;
+
+typedef void (*PaintStageCallback)(void *context);
+
+typedef struct PaintStageOps {
+    PaintStageCallback paint_world;
+    PaintStageCallback paint_vfuel;
+    PaintStageCallback paint_vdecor;
+    PaintStageCallback paint_vcannon;
+    PaintStageCallback paint_vbase;
+    PaintStageCallback paint_objects;
+    PaintStageCallback paint_score_objects;
+    PaintStageCallback paint_shots;
+    PaintStageCallback setup_moving;
+    PaintStageCallback paint_ships;
+    RendererStatus (*frame_result)(void *context);
+} PaintStageOps;
+
+static PaintMatrixPhase paintMatrixPhase;
+
 int paintSetupMode;
 
 GLWidget *MainWidget = NULL;
@@ -118,6 +148,157 @@ static RendererStatus set_renderer_hud_transform(void)
     if (status != RENDERER_STATUS_OK)
 	return Sdl_renderer_track_frame_result(sdl_renderer, status);
     return RENDERER_STATUS_OK;
+}
+
+static void Begin_logical_paint_frame(void)
+{
+    paintSetupMode = 0;
+    paintMatrixPhase = PAINT_MATRIX_PHASE_NONE;
+}
+
+static void Unwind_legacy_paint_frame(void)
+{
+    if (paintMatrixPhase == PAINT_MATRIX_PHASE_WORLD) {
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
+    } else if (paintMatrixPhase == PAINT_MATRIX_PHASE_HUD) {
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+    }
+    paintSetupMode = 0;
+    paintMatrixPhase = PAINT_MATRIX_PHASE_NONE;
+}
+
+static RendererStatus End_logical_paint_frame(void)
+{
+    Unwind_legacy_paint_frame();
+    return Sdl_renderer_frame_result(Get_sdl_renderer());
+}
+
+static void Set_legacy_world_transform(int rounded_translation)
+{
+    if (paintMatrixPhase == PAINT_MATRIX_PHASE_HUD) {
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+    } else {
+	glMatrixMode(GL_MODELVIEW);
+	if (paintMatrixPhase == PAINT_MATRIX_PHASE_NONE)
+	    glPushMatrix();
+    }
+    glLoadIdentity();
+    if (rounded_translation) {
+	glTranslatef(rint(-world.x * clData.scale),
+		     rint(-world.y * clData.scale), 0);
+    } else {
+	glTranslatef(-world.x * clData.scale,
+		     -world.y * clData.scale, 0);
+    }
+    glScalef(clData.scale, clData.scale, 0);
+    paintMatrixPhase = PAINT_MATRIX_PHASE_WORLD;
+}
+
+static void Set_legacy_hud_transform(void)
+{
+    if (paintMatrixPhase == PAINT_MATRIX_PHASE_WORLD) {
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
+    }
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glMatrixMode(GL_PROJECTION);
+    if (paintMatrixPhase != PAINT_MATRIX_PHASE_HUD)
+	glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, draw_width, draw_height, 0);
+    paintMatrixPhase = PAINT_MATRIX_PHASE_HUD;
+}
+
+static RendererStatus Apply_legacy_paint_setup(
+    PaintSetupTarget target, RendererStatus semantic_status)
+{
+    if (target != PAINT_SETUP_TARGET_STATIONARY
+	&& target != PAINT_SETUP_TARGET_MOVING
+	&& target != PAINT_SETUP_TARGET_HUD) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    if (semantic_status != RENDERER_STATUS_OK)
+	return semantic_status;
+
+    if (target == PAINT_SETUP_TARGET_STATIONARY) {
+	Set_legacy_world_transform(1);
+	paintSetupMode = STATIONARY_MODE;
+    } else if (target == PAINT_SETUP_TARGET_MOVING) {
+	Set_legacy_world_transform(0);
+	paintSetupMode = MOVING_MODE;
+    } else {
+	Set_legacy_hud_transform();
+	paintSetupMode = HUD_MODE;
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Retain_stage_result(
+    RendererStatus first_result, const PaintStageOps *ops, void *context)
+{
+    RendererStatus observed_result = ops->frame_result(context);
+
+    if (first_result == RENDERER_STATUS_OK)
+	return observed_result;
+    return first_result;
+}
+
+static RendererStatus Run_paint_stage(
+    PaintStageCallback callback, const PaintStageOps *ops, void *context,
+    RendererStatus first_result)
+{
+    callback(context);
+    return Retain_stage_result(first_result, ops, context);
+}
+
+static RendererStatus Run_world_object_stages(
+    bool old_server, const PaintStageOps *ops, void *context)
+{
+    RendererStatus first_result;
+
+    if (ops == NULL || ops->paint_world == NULL
+	|| ops->paint_vfuel == NULL || ops->paint_vdecor == NULL
+	|| ops->paint_vcannon == NULL || ops->paint_vbase == NULL
+	|| ops->paint_objects == NULL || ops->paint_score_objects == NULL
+	|| ops->paint_shots == NULL || ops->setup_moving == NULL
+	|| ops->paint_ships == NULL || ops->frame_result == NULL) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+
+    first_result = Retain_stage_result(
+	RENDERER_STATUS_OK, ops, context);
+    first_result = Run_paint_stage(
+	ops->paint_world, ops, context, first_result);
+    if (old_server) {
+	first_result = Run_paint_stage(
+	    ops->paint_vfuel, ops, context, first_result);
+	first_result = Run_paint_stage(
+	    ops->paint_vdecor, ops, context, first_result);
+	first_result = Run_paint_stage(
+	    ops->paint_vcannon, ops, context, first_result);
+	first_result = Run_paint_stage(
+	    ops->paint_vbase, ops, context, first_result);
+    } else {
+	first_result = Run_paint_stage(
+	    ops->paint_objects, ops, context, first_result);
+    }
+    first_result = Run_paint_stage(
+	ops->paint_score_objects, ops, context, first_result);
+    first_result = Run_paint_stage(
+	ops->paint_shots, ops, context, first_result);
+    if (first_result == RENDERER_STATUS_OK) {
+	first_result = Run_paint_stage(
+	    ops->setup_moving, ops, context, first_result);
+    }
+    return Run_paint_stage(
+	ops->paint_ships, ops, context, first_result);
 }
 
 static void Scorelist_button(Uint8 button, Uint8 state, Uint16 x, Uint16 y, void *data)
@@ -311,53 +492,191 @@ void Paint_cleanup(void)
 /* This one works best for things that are fixed in position
  * since they won't appear to move relative to eachother
  */
-void setupPaint_stationary(void)
+RendererStatus setupPaint_stationary(void)
 {
-    if (paintSetupMode & STATIONARY_MODE) return;
-    paintSetupMode = STATIONARY_MODE;
-    if (set_renderer_world_transform(1) != RENDERER_STATUS_OK)
-	warn("Could not update the renderer world transform");
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
-    glTranslatef(rint(-world.x * clData.scale),
-		 rint(-world.y * clData.scale),
-		 0);
-    glScalef(clData.scale, clData.scale, 0);
+    RendererStatus status;
+
+    if (paintSetupMode == STATIONARY_MODE)
+	return Sdl_renderer_frame_result(Get_sdl_renderer());
+    status = set_renderer_world_transform(1);
+    status = Apply_legacy_paint_setup(
+	PAINT_SETUP_TARGET_STATIONARY, status);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    return Sdl_renderer_frame_result(Get_sdl_renderer());
 }
 
 /* This one works best for things that move, since they don't get
  * painted differently depending on map position
  */
-void setupPaint_moving(void)
+RendererStatus setupPaint_moving(void)
 {
-    if (paintSetupMode & MOVING_MODE) return;
-    paintSetupMode = MOVING_MODE;
-    if (set_renderer_world_transform(0) != RENDERER_STATUS_OK)
-	warn("Could not update the renderer world transform");
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
-    glTranslatef(-world.x * clData.scale, -world.y * clData.scale, 0);
-    glScalef(clData.scale, clData.scale, 0);
+    RendererStatus status;
+
+    if (paintSetupMode == MOVING_MODE)
+	return Sdl_renderer_frame_result(Get_sdl_renderer());
+    status = set_renderer_world_transform(0);
+    status = Apply_legacy_paint_setup(
+	PAINT_SETUP_TARGET_MOVING, status);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    return Sdl_renderer_frame_result(Get_sdl_renderer());
 }
 
-void setupPaint_HUD(void)
+RendererStatus setupPaint_HUD(void)
 {
-    if (paintSetupMode & HUD_MODE) return;
-    paintSetupMode = HUD_MODE;
-    if (set_renderer_hud_transform() != RENDERER_STATUS_OK)
-	warn("Could not update the renderer HUD transform");
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    gluOrtho2D(0, draw_width, draw_height, 0);
+    RendererStatus status;
+
+    if (paintSetupMode == HUD_MODE)
+	return Sdl_renderer_frame_result(Get_sdl_renderer());
+    status = set_renderer_hud_transform();
+    status = Apply_legacy_paint_setup(PAINT_SETUP_TARGET_HUD, status);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    return Sdl_renderer_frame_result(Get_sdl_renderer());
 }
+
+static void Paint_world_stage(void *context)
+{
+    (void)context;
+    Paint_world();
+    Gl_diagnostics_check("world");
+}
+
+static void Paint_vfuel_stage(void *context)
+{
+    (void)context;
+    Paint_vfuel();
+}
+
+static void Paint_vdecor_stage(void *context)
+{
+    (void)context;
+    Paint_vdecor();
+}
+
+static void Paint_vcannon_stage(void *context)
+{
+    (void)context;
+    Paint_vcannon();
+}
+
+static void Paint_vbase_stage(void *context)
+{
+    (void)context;
+    Paint_vbase();
+}
+
+static void Paint_objects_stage(void *context)
+{
+    (void)context;
+    Paint_objects();
+}
+
+static void Paint_score_objects_stage(void *context)
+{
+    (void)context;
+    Paint_score_objects();
+}
+
+static void Paint_shots_stage(void *context)
+{
+    (void)context;
+    Paint_shots();
+}
+
+static void Setup_moving_stage(void *context)
+{
+    (void)context;
+    (void)setupPaint_moving();
+}
+
+static void Paint_ships_stage(void *context)
+{
+    (void)context;
+    Paint_ships();
+    Gl_diagnostics_check("objects");
+}
+
+static RendererStatus Current_frame_result(void *context)
+{
+    return Sdl_renderer_frame_result(context);
+}
+
+static const PaintStageOps productionStageOps = {
+    Paint_world_stage,
+    Paint_vfuel_stage,
+    Paint_vdecor_stage,
+    Paint_vcannon_stage,
+    Paint_vbase_stage,
+    Paint_objects_stage,
+    Paint_score_objects_stage,
+    Paint_shots_stage,
+    Setup_moving_stage,
+    Paint_ships_stage,
+    Current_frame_result
+};
+
+#ifdef XPILOT_SDLPAINT_TEST_HOOKS
+RendererStatus Sdlpaint_test_run_world_object_stages(
+    bool old_server, const SdlPaintStageOps *ops, void *context)
+{
+    PaintStageOps private_ops;
+
+    if (ops == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    private_ops.paint_world = ops->paint_world;
+    private_ops.paint_vfuel = ops->paint_vfuel;
+    private_ops.paint_vdecor = ops->paint_vdecor;
+    private_ops.paint_vcannon = ops->paint_vcannon;
+    private_ops.paint_vbase = ops->paint_vbase;
+    private_ops.paint_objects = ops->paint_objects;
+    private_ops.paint_score_objects = ops->paint_score_objects;
+    private_ops.paint_shots = ops->paint_shots;
+    private_ops.setup_moving = ops->setup_moving;
+    private_ops.paint_ships = ops->paint_ships;
+    private_ops.frame_result = ops->frame_result;
+    return Run_world_object_stages(
+	old_server, &private_ops, context);
+}
+
+void Sdlpaint_test_begin_logical_frame(void)
+{
+    Begin_logical_paint_frame();
+}
+
+RendererStatus Sdlpaint_test_apply_setup(
+    SdlPaintTestSetupTarget target, RendererStatus semantic_status)
+{
+    PaintSetupTarget private_target;
+
+    if (target == SDLPAINT_TEST_SETUP_STATIONARY)
+	private_target = PAINT_SETUP_TARGET_STATIONARY;
+    else if (target == SDLPAINT_TEST_SETUP_MOVING)
+	private_target = PAINT_SETUP_TARGET_MOVING;
+    else if (target == SDLPAINT_TEST_SETUP_HUD)
+	private_target = PAINT_SETUP_TARGET_HUD;
+    else
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    return Apply_legacy_paint_setup(private_target, semantic_status);
+}
+
+RendererStatus Sdlpaint_test_end_logical_frame(
+    RendererStatus frame_result)
+{
+    Unwind_legacy_paint_frame();
+    return frame_result;
+}
+
+SdlPaintTestMatrixPhase Sdlpaint_test_matrix_phase(void)
+{
+    if (paintMatrixPhase == PAINT_MATRIX_PHASE_WORLD)
+	return SDLPAINT_TEST_MATRIX_WORLD;
+    if (paintMatrixPhase == PAINT_MATRIX_PHASE_HUD)
+	return SDLPAINT_TEST_MATRIX_HUD;
+    return SDLPAINT_TEST_MATRIX_NONE;
+}
+#endif
 
 static RendererStatus End_game_frame(void *context)
 {
@@ -393,6 +712,7 @@ void Paint_frame(void)
 	goto timing;
     }
 
+    Begin_logical_paint_frame();
     Paint_frame_start();
     Gl_diagnostics_check("frame start");
 
@@ -437,36 +757,20 @@ void Paint_frame(void)
 	glEnable(GL_BLEND);
     	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	/* This one works best for things that are fixed in position
-	 * since they won't appear to move relative to eachother
-	 */
-    	
-    	glPushMatrix();
-    	setupPaint_stationary();
-	
-    	Paint_world();
-	Gl_diagnostics_check("world");
+	renderer_status = setupPaint_stationary();
+	{
+	    RendererStatus stage_status = Run_world_object_stages(
+		oldServer, &productionStageOps, sdl_renderer);
 
-	if (oldServer) {
-	    Paint_vfuel();
-	    Paint_vdecor();
-	    Paint_vcannon();
-	    Paint_vbase();
-	} else
-	    Paint_objects();
-
-    	Paint_score_objects();
-	
-	Paint_shots();
-
-	setupPaint_moving();
-	Paint_ships();
-	Gl_diagnostics_check("objects");
-
-	setupPaint_HUD();
-
-	Paint_meters();
-	renderer_status = Sdl_renderer_frame_result(sdl_renderer);
+	    if (renderer_status == RENDERER_STATUS_OK)
+		renderer_status = stage_status;
+	}
+	if (renderer_status == RENDERER_STATUS_OK)
+	    renderer_status = setupPaint_HUD();
+	if (renderer_status == RENDERER_STATUS_OK) {
+	    Paint_meters();
+	    renderer_status = Sdl_renderer_frame_result(sdl_renderer);
+	}
 	if (renderer_status == RENDERER_STATUS_OK)
 	    renderer_status = Paint_HUD_checked();
 	if (renderer_status == RENDERER_STATUS_OK) {
@@ -487,7 +791,12 @@ void Paint_frame(void)
 		    MainWidget, sdl_renderer, &gameUiDrawState);
 	    }
 	}
-	glPopMatrix();
+	{
+	    RendererStatus unwind_status = End_logical_paint_frame();
+
+	    if (renderer_status == RENDERER_STATUS_OK)
+		renderer_status = unwind_status;
+	}
 	if (renderer_status != RENDERER_STATUS_OK) {
 	    (void)Sdl_game_frame_abort(
 		&rendererFrameState, renderer_status);

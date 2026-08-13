@@ -35,9 +35,26 @@ typedef unsigned int color_t;
 
 extern int paintSetupMode;
 
-void setupPaint_stationary(void);
-void setupPaint_moving(void);
-void setupPaint_HUD(void);
+/**
+ * Select the rounded stationary world transform for semantic and legacy draw.
+ *
+ * @return The sticky result for the active renderer frame.
+ */
+RendererStatus setupPaint_stationary(void);
+
+/**
+ * Select the moving world transform for semantic and legacy draw.
+ *
+ * @return The sticky result for the active renderer frame.
+ */
+RendererStatus setupPaint_moving(void);
+
+/**
+ * Select the HUD transform for semantic and legacy draw.
+ *
+ * @return The sticky result for the active renderer frame.
+ */
+RendererStatus setupPaint_HUD(void);
 
 /* Shared paint colors and direct-OpenGL color helper from sdlgui.c. */
 extern Uint32 nullRGBA;
@@ -79,6 +96,115 @@ extern RendererStatus Paint_select(void);
  *          the shared client paint interface.
  */
 extern RendererStatus Paint_HUD_checked(void);
+
+#ifdef XPILOT_SDLPAINT_TEST_HOOKS
+/** Setup targets exposed to the SDL paint stage test. */
+typedef enum SdlPaintTestSetupTarget {
+    /** Select the rounded stationary world transform. */
+    SDLPAINT_TEST_SETUP_STATIONARY,
+    /** Select the unrounded moving world transform. */
+    SDLPAINT_TEST_SETUP_MOVING,
+    /** Select the top-left HUD transform. */
+    SDLPAINT_TEST_SETUP_HUD
+} SdlPaintTestSetupTarget;
+
+/** Observable legacy matrix phases exposed to the SDL paint stage test. */
+typedef enum SdlPaintTestMatrixPhase {
+    /** No logical-frame matrix is currently saved. */
+    SDLPAINT_TEST_MATRIX_NONE,
+    /** A model-view world matrix is currently saved. */
+    SDLPAINT_TEST_MATRIX_WORLD,
+    /** A projection HUD matrix is currently saved. */
+    SDLPAINT_TEST_MATRIX_HUD
+} SdlPaintTestMatrixPhase;
+
+/**
+ * Callback operations used to exercise the world/object stage gate.
+ *
+ * @remarks Every callback is required. Paint callbacks perform one generic
+ *          paint traversal, while frame_result reports the renderer result
+ *          observed immediately after a traversal.
+ */
+typedef struct SdlPaintStageOps {
+    /** Paint the world traversal. */
+    void (*paint_world)(void *context);
+    /** Paint old-server fuel objects. */
+    void (*paint_vfuel)(void *context);
+    /** Paint old-server decorations. */
+    void (*paint_vdecor)(void *context);
+    /** Paint old-server cannons. */
+    void (*paint_vcannon)(void *context);
+    /** Paint old-server bases. */
+    void (*paint_vbase)(void *context);
+    /** Paint new-server objects. */
+    void (*paint_objects)(void *context);
+    /** Paint score objects. */
+    void (*paint_score_objects)(void *context);
+    /** Paint shot traversals and release their transient buffers. */
+    void (*paint_shots)(void *context);
+    /** Select the moving world transform. */
+    void (*setup_moving)(void *context);
+    /** Paint ship traversals and release their transient buffers. */
+    void (*paint_ships)(void *context);
+    /** Return the renderer result currently visible to the stage gate. */
+    RendererStatus (*frame_result)(void *context);
+} SdlPaintStageOps;
+
+/**
+ * Run the production world/object stage gate with injected operations.
+ *
+ * @param old_server Whether to run the old-server object traversal sequence.
+ * @param ops Required callback operations.
+ * @param context Opaque context passed to every callback.
+ * @return The first non-OK renderer result observed, or RENDERER_STATUS_OK.
+ * @remarks Generic paint traversals continue after a renderer failure so
+ *          that transient client buffers are released. The moving transform
+ *          setup is suppressed after an earlier failure, but ship traversal
+ *          still runs for cleanup.
+ */
+extern RendererStatus Sdlpaint_test_run_world_object_stages(
+    bool old_server, const SdlPaintStageOps *ops, void *context);
+
+/**
+ * Begin a logical paint frame for matrix-phase tests.
+ *
+ * @remarks Resets paintSetupMode so that the next frame cannot inherit the
+ *          stationary, moving, or HUD matrix phase of the previous frame.
+ */
+extern void Sdlpaint_test_begin_logical_frame(void);
+
+/**
+ * Apply a production legacy matrix transition after an injected semantic
+ * transform result.
+ *
+ * @param target Requested stationary, moving, or HUD transform.
+ * @param semantic_status Result of the semantic transform operation.
+ * @return @p semantic_status, OK after a successful transition, or
+ *         RENDERER_STATUS_INVALID_ARGUMENT for an invalid target.
+ * @remarks A non-OK semantic result and an invalid target leave the legacy
+ *          matrix phase and paint setup mode unchanged.
+ */
+extern RendererStatus Sdlpaint_test_apply_setup(
+    SdlPaintTestSetupTarget target, RendererStatus semantic_status);
+
+/**
+ * Apply the production logical-frame legacy matrix unwind.
+ *
+ * @param frame_result Injected sticky renderer result.
+ * @return @p frame_result unchanged.
+ * @remarks The unwind balances the saved matrix for the current phase and
+ *          resets both the phase and paint setup mode.
+ */
+extern RendererStatus Sdlpaint_test_end_logical_frame(
+    RendererStatus frame_result);
+
+/**
+ * Return the current production legacy matrix phase for tests.
+ *
+ * @return The current logical-frame legacy matrix phase.
+ */
+extern SdlPaintTestMatrixPhase Sdlpaint_test_matrix_phase(void);
+#endif
 
 #ifdef XPILOT_SDLGUI_TEST_HOOKS
 /**

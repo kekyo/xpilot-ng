@@ -99,7 +99,7 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-gfx2d-picture$(EXEEXT) test-images$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
-	test-sdl-renderer-scissor$(EXEEXT) \
+	test-sdl-renderer-scissor$(EXEEXT) test-sdlpaint-stage$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) \
 	test-glwidgets-primitives$(EXEEXT) \
 	test-sdlmeta-primitives$(EXEEXT) \
@@ -116,6 +116,7 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-gfx2d-picture$(EXEEXT) test-images$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
+	test-sdlpaint-stage$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) \
 	test-glwidgets-primitives$(EXEEXT) \
@@ -286,6 +287,13 @@ test_sdlgui_hud_primitives_DEPENDENCIES =
 test_sdlgui_hud_primitives_LINK = $(CCLD) \
 	$(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) \
 	$(test_sdlgui_hud_primitives_LDFLAGS) $(LDFLAGS) -o $@
+am_test_sdlpaint_stage_OBJECTS =  \
+	test_sdlpaint_stage-test_sdlpaint_stage.$(OBJEXT) \
+	test_sdlpaint_stage-sdlpaint.$(OBJEXT)
+test_sdlpaint_stage_OBJECTS = $(am_test_sdlpaint_stage_OBJECTS)
+test_sdlpaint_stage_DEPENDENCIES =
+test_sdlpaint_stage_LINK = $(CCLD) $(test_sdlpaint_stage_CFLAGS) \
+	$(CFLAGS) $(test_sdlpaint_stage_LDFLAGS) $(LDFLAGS) -o $@
 am_test_surface_rgba8_OBJECTS = test_surface_rgba8.$(OBJEXT) \
 	surface_rgba8.$(OBJEXT) sdlcompat.$(OBJEXT)
 test_surface_rgba8_OBJECTS = $(am_test_surface_rgba8_OBJECTS)
@@ -392,6 +400,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po \
 	./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po \
+	./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po \
+	./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po \
 	./$(DEPDIR)/test_surface_rgba8.Po \
 	./$(DEPDIR)/test_text_atlas.Po \
 	./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po \
@@ -437,6 +447,7 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_sdlmeta_primitives_SOURCES) \
 	$(test_sdlgui_hud_primitives_SOURCES) \
+	$(test_sdlpaint_stage_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
 	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
@@ -457,6 +468,7 @@ DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_sdlmeta_primitives_SOURCES) \
 	$(test_sdlgui_hud_primitives_SOURCES) \
+	$(test_sdlpaint_stage_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
 	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
@@ -952,6 +964,16 @@ test_sdl_meta_frame_SOURCES = test_sdl_meta_frame.c \
 test_sdl_game_frame_SOURCES = test_sdl_game_frame.c \
 	$(top_srcdir)/src/client/sdl/sdlgameframe.c
 
+test_sdlpaint_stage_SOURCES = test_sdlpaint_stage.c \
+	$(top_srcdir)/src/client/sdl/sdlpaint.c
+
+test_sdlpaint_stage_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_SDLPAINT_TEST_HOOKS
+test_sdlpaint_stage_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+
+test_sdlpaint_stage_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_sdlpaint_stage_LDADD = @SDL2_LIBS@
 test_sdl_renderer_scissor_SOURCES = test_sdl_renderer_scissor.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
 	$(top_srcdir)/src/client/sdl/sdlrenderer.c
@@ -1185,6 +1207,10 @@ test-sdlgui-hud-primitives$(EXEEXT): $(test_sdlgui_hud_primitives_OBJECTS) $(tes
 	@rm -f test-sdlgui-hud-primitives$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_hud_primitives_LINK) $(test_sdlgui_hud_primitives_OBJECTS) $(test_sdlgui_hud_primitives_LDADD) $(LIBS)
 
+test-sdlpaint-stage$(EXEEXT): $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_stage_DEPENDENCIES) $(EXTRA_test_sdlpaint_stage_DEPENDENCIES)
+	@rm -f test-sdlpaint-stage$(EXEEXT)
+	$(AM_V_CCLD)$(test_sdlpaint_stage_LINK) $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_stage_LDADD) $(LIBS)
+
 test-surface-rgba8$(EXEEXT): $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_DEPENDENCIES) $(EXTRA_test_surface_rgba8_DEPENDENCIES)
 	@rm -f test-surface-rgba8$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_LDADD) $(LIBS)
@@ -1280,6 +1306,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po@am__quote@ # am--include-marker
@@ -2014,6 +2042,34 @@ test_sdlgui_hud_primitives-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
 
+test_sdlpaint_stage-test_sdlpaint_stage.o: test_sdlpaint_stage.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlpaint_stage_CPPFLAGS) $(CPPFLAGS) $(test_sdlpaint_stage_CFLAGS) $(CFLAGS) -MT test_sdlpaint_stage-test_sdlpaint_stage.o -MD -MP -MF $(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Tpo -c -o test_sdlpaint_stage-test_sdlpaint_stage.o `test -f 'test_sdlpaint_stage.c' || echo '$(srcdir)/'`test_sdlpaint_stage.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Tpo $(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlpaint_stage.c' object='test_sdlpaint_stage-test_sdlpaint_stage.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlpaint_stage_CPPFLAGS) $(CPPFLAGS) $(test_sdlpaint_stage_CFLAGS) $(CFLAGS) -c -o test_sdlpaint_stage-test_sdlpaint_stage.o `test -f 'test_sdlpaint_stage.c' || echo '$(srcdir)/'`test_sdlpaint_stage.c
+
+test_sdlpaint_stage-test_sdlpaint_stage.obj: test_sdlpaint_stage.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlpaint_stage_CPPFLAGS) $(CPPFLAGS) $(test_sdlpaint_stage_CFLAGS) $(CFLAGS) -MT test_sdlpaint_stage-test_sdlpaint_stage.obj -MD -MP -MF $(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Tpo -c -o test_sdlpaint_stage-test_sdlpaint_stage.obj `if test -f 'test_sdlpaint_stage.c'; then $(CYGPATH_W) 'test_sdlpaint_stage.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlpaint_stage.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Tpo $(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlpaint_stage.c' object='test_sdlpaint_stage-test_sdlpaint_stage.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlpaint_stage_CPPFLAGS) $(CPPFLAGS) $(test_sdlpaint_stage_CFLAGS) $(CFLAGS) -c -o test_sdlpaint_stage-test_sdlpaint_stage.obj `if test -f 'test_sdlpaint_stage.c'; then $(CYGPATH_W) 'test_sdlpaint_stage.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlpaint_stage.c'; fi`
+
+test_sdlpaint_stage-sdlpaint.o: $(top_srcdir)/src/client/sdl/sdlpaint.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlpaint_stage_CPPFLAGS) $(CPPFLAGS) $(test_sdlpaint_stage_CFLAGS) $(CFLAGS) -MT test_sdlpaint_stage-sdlpaint.o -MD -MP -MF $(DEPDIR)/test_sdlpaint_stage-sdlpaint.Tpo -c -o test_sdlpaint_stage-sdlpaint.o `test -f '$(top_srcdir)/src/client/sdl/sdlpaint.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlpaint.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlpaint_stage-sdlpaint.Tpo $(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlpaint.c' object='test_sdlpaint_stage-sdlpaint.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlpaint_stage_CPPFLAGS) $(CPPFLAGS) $(test_sdlpaint_stage_CFLAGS) $(CFLAGS) -c -o test_sdlpaint_stage-sdlpaint.o `test -f '$(top_srcdir)/src/client/sdl/sdlpaint.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlpaint.c
+
+test_sdlpaint_stage-sdlpaint.obj: $(top_srcdir)/src/client/sdl/sdlpaint.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlpaint_stage_CPPFLAGS) $(CPPFLAGS) $(test_sdlpaint_stage_CFLAGS) $(CFLAGS) -MT test_sdlpaint_stage-sdlpaint.obj -MD -MP -MF $(DEPDIR)/test_sdlpaint_stage-sdlpaint.Tpo -c -o test_sdlpaint_stage-sdlpaint.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlpaint.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlpaint.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlpaint.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlpaint_stage-sdlpaint.Tpo $(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlpaint.c' object='test_sdlpaint_stage-sdlpaint.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlpaint_stage_CPPFLAGS) $(CPPFLAGS) $(test_sdlpaint_stage_CFLAGS) $(CFLAGS) -c -o test_sdlpaint_stage-sdlpaint.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlpaint.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlpaint.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlpaint.c'; fi`
+
 surface_rgba8.o: $(top_srcdir)/src/client/sdl/surface_rgba8.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT surface_rgba8.o -MD -MP -MF $(DEPDIR)/surface_rgba8.Tpo -c -o surface_rgba8.o `test -f '$(top_srcdir)/src/client/sdl/surface_rgba8.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/surface_rgba8.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/surface_rgba8.Tpo $(DEPDIR)/surface_rgba8.Po
@@ -2508,6 +2564,13 @@ test-sdlgui-hud-primitives.log: test-sdlgui-hud-primitives$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-sdlpaint-stage.log: test-sdlpaint-stage$(EXEEXT)
+	@p='test-sdlpaint-stage$(EXEEXT)'; \
+	b='test-sdlpaint-stage'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-text-geometry.log: test-text-geometry$(EXEEXT)
 	@p='test-text-geometry$(EXEEXT)'; \
 	b='test-text-geometry'; \
@@ -2699,6 +2762,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
+	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
+	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po
@@ -2822,6 +2887,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
+	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
+	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po

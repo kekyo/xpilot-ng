@@ -12,6 +12,7 @@ check_PROGRAMS = test-meta-environment \
 	test-renderer-gl-backends test-paint-transform test-image-geometry \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
 	test-sdl-meta-frame test-sdl-game-frame test-sdl-renderer-scissor \
+	test-sdlpaint-stage \
 	test-glwidgets-scissor test-glwidgets-primitives \
 	test-sdlmeta-primitives test-sdlgui-hud-primitives \
 	test-text-geometry test-text-atlas \
@@ -24,6 +25,7 @@ TESTS = test-meta-environment \
 	test-image-geometry test-gfx2d-picture \
 	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
 	test-sdl-game-frame \
+	test-sdlpaint-stage \
 	test-sdl-renderer-scissor test-glwidgets-scissor \
 	test-glwidgets-primitives test-sdlmeta-primitives \
 	test-sdlgui-hud-primitives \
@@ -150,6 +152,15 @@ test_sdl_meta_frame_SOURCES = test_sdl_meta_frame.c \
 
 test_sdl_game_frame_SOURCES = test_sdl_game_frame.c \
 	$(top_srcdir)/src/client/sdl/sdlgameframe.c
+
+test_sdlpaint_stage_SOURCES = test_sdlpaint_stage.c \
+	$(top_srcdir)/src/client/sdl/sdlpaint.c
+test_sdlpaint_stage_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_SDLPAINT_TEST_HOOKS
+test_sdlpaint_stage_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_sdlpaint_stage_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_sdlpaint_stage_LDADD = @SDL2_LIBS@
 
 test_sdl_renderer_scissor_SOURCES = test_sdl_renderer_scissor.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
