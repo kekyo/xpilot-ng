@@ -34,7 +34,7 @@ typedef enum DrawEvent {
 
 typedef struct FakeDraw {
     RendererTexture *texture;
-    RendererVertex2D vertices[3];
+    RendererVertex2D vertices[6];
     size_t vertex_count;
 } FakeDraw;
 
@@ -209,7 +209,8 @@ RendererStatus Renderer_draw_triangles(Renderer *renderer,
     operation_result_pending = 1;
     record_event(DRAW_EVENT_TRIANGLES);
     if (renderer != &fake_renderer || !renderer->frame_active
-        || texture != NULL || vertices == NULL || vertex_count != 3) {
+        || texture != NULL || vertices == NULL
+        || (vertex_count != 3 && vertex_count != 6)) {
         return RENDERER_STATUS_INVALID_STATE;
     }
     if (draw_result != RENDERER_STATUS_OK)
@@ -359,6 +360,52 @@ static int check_successful_draw(RendererColor expected_color,
     return 0;
 }
 
+static int check_successful_gradient_quad(
+    float x, float y, float width, float height,
+    RendererColor top_color, RendererColor bottom_color)
+{
+    const float points[6][2] = {
+        {x, y},
+        {x + width, y},
+        {x + width, y + height},
+        {x, y},
+        {x + width, y + height},
+        {x, y + height}
+    };
+    const RendererColor colors[6] = {
+        top_color, top_color, bottom_color,
+        top_color, bottom_color, bottom_color
+    };
+    int index;
+
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(events[1] == DRAW_EVENT_TRIANGLES);
+    TEST_CHECK(events[2] == DRAW_EVENT_FLUSH);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(draw_order == 3);
+    TEST_CHECK(flush_order == 4);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(successful_draws == 1);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(draws[0].texture == NULL);
+    TEST_CHECK(draws[0].vertex_count == 6);
+    for (index = 0; index < 6; index++) {
+        TEST_CHECK(vertex_equal(
+            &draws[0].vertices[index],
+            points[index][0], points[index][1], colors[index]));
+    }
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    return 0;
+}
+
 static int check_successful_fill(float expected_x, float expected_y,
                                  float expected_width,
                                  float expected_height,
@@ -424,6 +471,75 @@ static void count_action(void *data)
     int *count = data;
 
     (*count)++;
+}
+
+static int check_slide_geometry_colors_and_state(void)
+{
+    const RendererColor normal_top = {0xff, 0x00, 0x00, 0xff};
+    const RendererColor normal_bottom = {0xff, 0x00, 0x00, 0x77};
+    const RendererColor sliding_top = {0x00, 0xff, 0x00, 0xff};
+    const RendererColor sliding_bottom = {0x00, 0xff, 0x00, 0x77};
+    const RendererColor locked_top = {0x33, 0x33, 0x33, 0xff};
+    const RendererColor locked_bottom = {0x33, 0x33, 0x33, 0x77};
+    SDL_Rect bounds = {11, 17, 9, 7};
+    GLWidget *widget;
+    SlideWidget *info;
+    int release_count = 0;
+
+    widget = Init_SlideWidget(
+        false, NULL, NULL, count_action, &release_count);
+    TEST_CHECK(widget != NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+    TEST_CHECK(!info->sliding);
+    TEST_CHECK(!info->locked);
+
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_gradient_quad(
+        11.0f, 17.0f, 9.0f, 7.0f,
+        normal_top, normal_bottom) == 0);
+
+    widget->button(2, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(2, SDL_RELEASED, 0, 0, widget->buttondata);
+    TEST_CHECK(!info->sliding);
+    TEST_CHECK(release_count == 0);
+
+    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    TEST_CHECK(info->sliding);
+    TEST_CHECK(release_count == 0);
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_gradient_quad(
+        11.0f, 17.0f, 9.0f, 7.0f,
+        sliding_top, sliding_bottom) == 0);
+
+    widget->button(2, SDL_RELEASED, 0, 0, widget->buttondata);
+    TEST_CHECK(info->sliding);
+    TEST_CHECK(release_count == 0);
+    widget->button(1, SDL_RELEASED, 0, 0, widget->buttondata);
+    TEST_CHECK(!info->sliding);
+    TEST_CHECK(release_count == 1);
+    destroy_widget(widget);
+
+    widget = Init_SlideWidget(
+        true, NULL, NULL, count_action, &release_count);
+    TEST_CHECK(widget != NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+    TEST_CHECK(info->locked);
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_gradient_quad(
+        11.0f, 17.0f, 9.0f, 7.0f,
+        locked_top, locked_bottom) == 0);
+    TEST_CHECK(release_count == 1);
+
+    destroy_widget(widget);
+    return 0;
 }
 
 static int check_button_geometry_colors_and_state(void)
@@ -578,10 +694,8 @@ static int check_state_colors(void)
     return 0;
 }
 
-static int check_failure_short_circuit(void)
+static int check_triangle_failure_short_circuit_for_widget(GLWidget *widget)
 {
-    GLWidget *widget = Init_ArrowWidget(
-        RIGHTARROW, 10, 8, NULL, NULL);
     int event_count_after_failure;
     int blend_attempts_after_failure;
     int draw_attempts_after_failure;
@@ -595,12 +709,16 @@ static int check_failure_short_circuit(void)
     widget->Draw(widget);
     TEST_CHECK(event_count == 1);
     TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
     widget->Draw(widget);
+    TEST_CHECK(preflight_attempts == 2);
     TEST_CHECK(event_count == 1);
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(draw_attempts == 0);
@@ -612,6 +730,10 @@ static int check_failure_short_circuit(void)
     TEST_CHECK(event_count == 2);
     TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
     TEST_CHECK(events[1] == DRAW_EVENT_TRIANGLES);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(draw_order == 3);
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(successful_draws == 0);
@@ -619,6 +741,7 @@ static int check_failure_short_circuit(void)
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_RESOURCE_MISMATCH);
     widget->Draw(widget);
+    TEST_CHECK(preflight_attempts == 2);
     TEST_CHECK(event_count == 2);
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(draw_attempts == 1);
@@ -632,6 +755,11 @@ static int check_failure_short_circuit(void)
     TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
     TEST_CHECK(events[1] == DRAW_EVENT_TRIANGLES);
     TEST_CHECK(events[2] == DRAW_EVENT_FLUSH);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(draw_order == 3);
+    TEST_CHECK(flush_order == 4);
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(successful_draws == 1);
@@ -646,6 +774,7 @@ static int check_failure_short_circuit(void)
     flush_attempts_after_failure = flush_attempts;
     flush_result = RENDERER_STATUS_OK;
     widget->Draw(widget);
+    TEST_CHECK(preflight_attempts == 2);
     TEST_CHECK(event_count == event_count_after_failure);
     TEST_CHECK(blend_attempts == blend_attempts_after_failure);
     TEST_CHECK(draw_attempts == draw_attempts_after_failure);
@@ -657,6 +786,27 @@ static int check_failure_short_circuit(void)
     TEST_CHECK(legacy_vertex_calls == 0);
     TEST_CHECK(legacy_color_calls == 0);
 
+    return 0;
+}
+
+static int check_failure_short_circuit(void)
+{
+    GLWidget *widget = Init_ArrowWidget(
+        RIGHTARROW, 10, 8, NULL, NULL);
+
+    TEST_CHECK(widget != NULL);
+    TEST_CHECK(check_triangle_failure_short_circuit_for_widget(widget) == 0);
+    destroy_widget(widget);
+    return 0;
+}
+
+static int check_slide_failure_short_circuit(void)
+{
+    GLWidget *widget = Init_SlideWidget(
+        false, NULL, NULL, NULL, NULL);
+
+    TEST_CHECK(widget != NULL);
+    TEST_CHECK(check_triangle_failure_short_circuit_for_widget(widget) == 0);
     destroy_widget(widget);
     return 0;
 }
@@ -800,6 +950,8 @@ int main(void)
     TEST_CHECK(check_state_colors() == 0);
     TEST_CHECK(check_failure_short_circuit() == 0);
     TEST_CHECK(check_tap_is_consumed_when_flush_fails() == 0);
+    TEST_CHECK(check_slide_geometry_colors_and_state() == 0);
+    TEST_CHECK(check_slide_failure_short_circuit() == 0);
     TEST_CHECK(check_button_geometry_colors_and_state() == 0);
     TEST_CHECK(check_scrollbar_geometry_and_color() == 0);
     TEST_CHECK(check_fill_failure_short_circuit() == 0);

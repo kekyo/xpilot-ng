@@ -867,20 +867,25 @@ static void button_SlideWidget( Uint8 button, Uint8 state, Uint16 x, Uint16 y, v
 
 static void Paint_SlideWidget( GLWidget *widget )
 {
-    GLWidget *tmp;
     SDL_Rect *b;
     SlideWidget *wid_info;
-
-   
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererColor top_color;
+    RendererColor bottom_color;
+    RendererVertex2D vertices[6];
+    RendererStatus status;
     static Uint32 normalcolor	= 0xff0000ff;
     static Uint32 presscolor	= 0x00ff00ff;
     static Uint32 lockcolor 	= 0x333333ff;
     Uint32 color;
 
     if (!widget) return;
-    tmp = widget;
-    b = &(tmp->bounds);
-    wid_info = (SlideWidget *)(tmp->wid_info);
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
+    b = &widget->bounds;
+    wid_info = widget->wid_info;
     
     if (wid_info->locked) {
     	color = lockcolor;
@@ -889,17 +894,35 @@ static void Paint_SlideWidget( GLWidget *widget )
     } else {
     	color = normalcolor;
     }
-
-    glBegin(GL_QUADS);
-    	set_alphacolor(color	    	    	);
-	glVertex2i(b->x     	, b->y	    	);
-    	set_alphacolor(color	    	    	);
-    	glVertex2i(b->x + b->w	, b->y	    	);
-    	set_alphacolor(color & 0xffffff77   	);
-    	glVertex2i(b->x + b->w	, b->y + b->h	);
-    	set_alphacolor(color & 0xffffff77   	);
-    	glVertex2i(b->x     	, b->y + b->h	);
-    glEnd();
+    top_color = Renderer_color_from_rgba32(color);
+    bottom_color = Renderer_color_from_rgba32(color & 0xffffff77);
+    vertices[0] = (RendererVertex2D){
+	(float)b->x, (float)b->y, 0.0f, 0.0f, top_color};
+    vertices[1] = (RendererVertex2D){
+	(float)(b->x + b->w), (float)b->y, 0.0f, 0.0f, top_color};
+    vertices[2] = (RendererVertex2D){
+	(float)(b->x + b->w), (float)(b->y + b->h),
+	0.0f, 0.0f, bottom_color};
+    vertices[3] = vertices[0];
+    vertices[4] = vertices[2];
+    vertices[5] = (RendererVertex2D){
+	(float)b->x, (float)(b->y + b->h),
+	0.0f, 0.0f, bottom_color};
+    status = Track_semantic_widget(
+	sdl_renderer,
+	Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA));
+    if (status == RENDERER_STATUS_OK) {
+	status = Track_semantic_widget(
+	    sdl_renderer,
+	    Renderer_draw_triangles(renderer, NULL, vertices, 6));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Track_semantic_widget(
+	    sdl_renderer,
+	    Sdl_renderer_flush_preserving_legacy(sdl_renderer));
+    }
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw slide widget");
 }
 
 GLWidget *Init_SlideWidget( bool locked,
