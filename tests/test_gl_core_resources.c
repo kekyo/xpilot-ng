@@ -3,38 +3,22 @@
 #include "xpclient_sdl.h"
 #include "gl_diagnostics.h"
 #include "renderer.h"
-#include "renderer_gl_legacy.h"
+#include "renderer_gl_core.h"
 #include "sdlrenderer.h"
 #include "text.h"
 #include "text_atlas.h"
+
+#include <SDL.h>
+#include <SDL_opengl.h>
+#include <SDL_ttf.h>
 
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define BASELINE_SIZE 12
-#define PIXEL_COMPONENTS 4
-#define TEST_SKIP 77
-#define CONTEXT_LOG_GL_1_5_ARGUMENT "--context-log-gl-1.5"
-
 #ifndef XPILOT_TEST_FONT_PATH
 #error "XPILOT_TEST_FONT_PATH must name the bundled test font"
 #endif
-
-typedef void (APIENTRYP gen_framebuffers_fn)(GLsizei, GLuint *);
-typedef void (APIENTRYP bind_framebuffer_fn)(GLenum, GLuint);
-typedef void (APIENTRYP framebuffer_texture_2d_fn)(GLenum, GLenum, GLenum,
-                                                   GLuint, GLint);
-typedef GLenum (APIENTRYP check_framebuffer_status_fn)(GLenum);
-typedef void (APIENTRYP delete_framebuffers_fn)(GLsizei, const GLuint *);
-
-typedef struct framebuffer_api {
-    gen_framebuffers_fn gen;
-    bind_framebuffer_fn bind;
-    framebuffer_texture_2d_fn attach_texture;
-    check_framebuffer_status_fn check_status;
-    delete_framebuffers_fn destroy;
-} framebuffer_api_t;
 
 struct SdlRenderer {
     unsigned int identity;
@@ -48,10 +32,7 @@ struct TextRenderer {
 };
 
 static int failure_count;
-static int reject_pre_2_glsl_query;
-static unsigned int rejected_pre_2_glsl_queries;
 static int capture_font_resources;
-static size_t captured_font_list_generations;
 static size_t captured_font_texture_count;
 static size_t ttf_open_count;
 static size_t ttf_close_count;
@@ -123,37 +104,8 @@ int Text_renderer_matches(const TextRenderer *text_renderer,
         && text_renderer->atlas == atlas;
 }
 
-extern const GLubyte *APIENTRY __real_glGetString(GLenum name);
-extern GLuint APIENTRY __real_glGenLists(GLsizei range);
-extern void APIENTRY __real_glGenTextures(GLsizei count, GLuint *textures);
 extern TTF_Font *__real_TTF_OpenFont(const char *file, int ptsize);
 extern void __real_TTF_CloseFont(TTF_Font *font);
-
-const GLubyte *APIENTRY __wrap_glGetString(GLenum name)
-{
-    if (reject_pre_2_glsl_query
-        && name == GL_SHADING_LANGUAGE_VERSION) {
-        rejected_pre_2_glsl_queries++;
-        return __real_glGetString(0);
-    }
-    return __real_glGetString(name);
-}
-
-GLuint APIENTRY __wrap_glGenLists(GLsizei range)
-{
-    GLuint list_base = __real_glGenLists(range);
-
-    if (capture_font_resources)
-        captured_font_list_generations++;
-    return list_base;
-}
-
-void APIENTRY __wrap_glGenTextures(GLsizei count, GLuint *textures)
-{
-    __real_glGenTextures(count, textures);
-    if (capture_font_resources && count > 0)
-        captured_font_texture_count += (size_t)count;
-}
 
 TTF_Font *__wrap_TTF_OpenFont(const char *file, int ptsize)
 {
@@ -213,273 +165,17 @@ int xpprintf(const char *format, ...)
 
 static void APIENTRY capture_gl_gen_textures(GLsizei count, GLuint *textures)
 {
-    __real_glGenTextures(count, textures);
+    glGenTextures(count, textures);
     if (capture_font_resources && count > 0)
         captured_font_texture_count += (size_t)count;
 }
 
-static void *load_current_gl_proc(void *userdata, const char *name)
+static void *load_font_gl_proc(void *userdata, const char *name)
 {
     (void)userdata;
     if (strcmp(name, "glGenTextures") == 0)
         return (void *)capture_gl_gen_textures;
     return SDL_GL_GetProcAddress(name);
-}
-
-static void *load_gl_function(const char *core_name, const char *ext_name)
-{
-    void *function = SDL_GL_GetProcAddress(core_name);
-
-    if (function == NULL)
-        function = SDL_GL_GetProcAddress(ext_name);
-    return function;
-}
-
-static int load_framebuffer_api(framebuffer_api_t *api)
-{
-    memset(api, 0, sizeof(*api));
-    api->gen = (gen_framebuffers_fn)load_gl_function(
-        "glGenFramebuffers", "glGenFramebuffersEXT");
-    api->bind = (bind_framebuffer_fn)load_gl_function(
-        "glBindFramebuffer", "glBindFramebufferEXT");
-    api->attach_texture = (framebuffer_texture_2d_fn)load_gl_function(
-        "glFramebufferTexture2D", "glFramebufferTexture2DEXT");
-    api->check_status = (check_framebuffer_status_fn)load_gl_function(
-        "glCheckFramebufferStatus", "glCheckFramebufferStatusEXT");
-    api->destroy = (delete_framebuffers_fn)load_gl_function(
-        "glDeleteFramebuffers", "glDeleteFramebuffersEXT");
-
-    return api->gen != NULL && api->bind != NULL
-        && api->attach_texture != NULL && api->check_status != NULL
-        && api->destroy != NULL;
-}
-
-static unsigned int drain_gl_errors(void)
-{
-    unsigned int count = 0;
-
-    while (glGetError() != GL_NO_ERROR)
-        count++;
-    return count;
-}
-
-static int check_context_logging_on_gl_1_5(void)
-{
-    SDL_Window *window = NULL;
-    SDL_GLContext context = NULL;
-    Renderer *renderer = NULL;
-    const char *version;
-    int major = 0;
-    int minor = 0;
-    int result = 1;
-
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        fprintf(stderr, "SKIP: SDL video initialization failed for the "
-                "OpenGL 1.5 context: %s\n", SDL_GetError());
-        return TEST_SKIP;
-    }
-    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1) != 0
-        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5) != 0
-        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0) != 0) {
-        fprintf(stderr, "SKIP: SDL cannot request an OpenGL 1.5 context: %s\n",
-                SDL_GetError());
-        result = TEST_SKIP;
-        goto cleanup;
-    }
-
-    window = SDL_CreateWindow("XPilot OpenGL 1.5 diagnostics test",
-                              SDL_WINDOWPOS_UNDEFINED,
-                              SDL_WINDOWPOS_UNDEFINED,
-                              64, 64,
-                              SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
-    if (window == NULL) {
-        fprintf(stderr, "SKIP: OpenGL 1.5 window creation failed: %s\n",
-                SDL_GetError());
-        result = TEST_SKIP;
-        goto cleanup;
-    }
-    context = SDL_GL_CreateContext(window);
-    if (context == NULL) {
-        fprintf(stderr, "SKIP: OpenGL 1.5 context creation failed: %s\n",
-                SDL_GetError());
-        result = TEST_SKIP;
-        goto cleanup;
-    }
-
-    version = (const char *)glGetString(GL_VERSION);
-    if (version == NULL || sscanf(version, "%d.%d", &major, &minor) != 2) {
-        fprintf(stderr, "Could not read the OpenGL 1.5 context version\n");
-        goto cleanup;
-    }
-    if (major != 1 || minor != 5) {
-        fprintf(stderr, "SKIP: MESA_GL_VERSION_OVERRIDE=1.5 was not "
-                "honored (actual version: %s)\n", version);
-        result = TEST_SKIP;
-        goto cleanup;
-    }
-
-    drain_gl_errors();
-    Gl_diagnostics_reset();
-    rejected_pre_2_glsl_queries = 0;
-    reject_pre_2_glsl_query = 1;
-    Gl_diagnostics_log_context();
-    reject_pre_2_glsl_query = 0;
-    CHECK_CONTINUE(rejected_pre_2_glsl_queries == 0);
-    CHECK_CONTINUE(Gl_diagnostics_check("OpenGL 1.5 context logging") == 0);
-    CHECK_CONTINUE(Gl_diagnostics_total_errors() == 0);
-    CHECK_CONTINUE(glGetError() == GL_NO_ERROR);
-    CHECK_CONTINUE(Renderer_gl_legacy_create(load_current_gl_proc, NULL,
-                                             &renderer)
-                   == RENDERER_STATUS_BACKEND_ERROR);
-    CHECK_CONTINUE(renderer == NULL);
-    CHECK_CONTINUE(SDL_GL_GetCurrentContext() == context);
-    CHECK_CONTINUE(glGetString(GL_VERSION) != NULL);
-    result = failure_count == 0 ? 0 : 1;
-
-cleanup:
-    if (renderer != NULL)
-        Renderer_destroy(renderer);
-    if (context != NULL)
-        SDL_GL_DeleteContext(context);
-    if (window != NULL)
-        SDL_DestroyWindow(window);
-    SDL_Quit();
-    return result;
-}
-
-static int component_near(GLubyte actual, int expected, int tolerance)
-{
-    int difference = (int)actual - expected;
-
-    if (difference < 0)
-        difference = -difference;
-    return difference <= tolerance;
-}
-
-static void check_pixel(const GLubyte *pixels, int x, int y,
-                        int red, int green, int blue, int tolerance)
-{
-    const GLubyte *pixel = pixels
-        + (y * BASELINE_SIZE + x) * PIXEL_COMPONENTS;
-
-    CHECK_CONTINUE(component_near(pixel[0], red, tolerance));
-    CHECK_CONTINUE(component_near(pixel[1], green, tolerance));
-    CHECK_CONTINUE(component_near(pixel[2], blue, tolerance));
-}
-
-static void draw_quad(GLfloat left, GLfloat bottom,
-                      GLfloat right, GLfloat top)
-{
-    glBegin(GL_QUADS);
-    glVertex2f(left, bottom);
-    glVertex2f(right, bottom);
-    glVertex2f(right, top);
-    glVertex2f(left, top);
-    glEnd();
-}
-
-static void check_procedural_baseline(void)
-{
-    framebuffer_api_t api;
-    GLuint framebuffer = 0;
-    GLuint color_texture = 0;
-    GLuint sample_texture = 0;
-    GLubyte sample_color[] = {255, 255, 0, 255};
-    GLubyte pixels[BASELINE_SIZE * BASELINE_SIZE * PIXEL_COMPONENTS];
-    int framebuffer_api_loaded;
-
-    framebuffer_api_loaded = load_framebuffer_api(&api);
-    CHECK_CONTINUE(framebuffer_api_loaded);
-    if (!framebuffer_api_loaded)
-        return;
-
-    glGenTextures(1, &color_texture);
-    glBindTexture(GL_TEXTURE_2D, color_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, BASELINE_SIZE, BASELINE_SIZE,
-                 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-
-    api.gen(1, &framebuffer);
-    api.bind(GL_FRAMEBUFFER, framebuffer);
-    api.attach_texture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                       color_texture, 0);
-    CHECK_CONTINUE(api.check_status(GL_FRAMEBUFFER)
-                   == GL_FRAMEBUFFER_COMPLETE);
-
-    glViewport(0, 0, BASELINE_SIZE, BASELINE_SIZE);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0.0, BASELINE_SIZE, 0.0, BASELINE_SIZE, -1.0, 1.0);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_TEXTURE_2D);
-    glDisable(GL_BLEND);
-    glDisable(GL_SCISSOR_TEST);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    glColor4ub(255, 0, 0, 255);
-    draw_quad(0.0f, 0.0f, 4.0f, 4.0f);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glColor4ub(0, 0, 255, 128);
-    draw_quad(2.0f, 0.0f, 6.0f, 4.0f);
-    glDisable(GL_BLEND);
-
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(8, 0, 2, 2);
-    glColor4ub(0, 255, 0, 255);
-    draw_quad(0.0f, 0.0f, BASELINE_SIZE, BASELINE_SIZE);
-    glDisable(GL_SCISSOR_TEST);
-
-    glGenTextures(1, &sample_texture);
-    glBindTexture(GL_TEXTURE_2D, sample_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, sample_color);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-    glEnable(GL_TEXTURE_2D);
-    glBegin(GL_QUADS);
-    glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, 8.0f);
-    glTexCoord2f(1.0f, 0.0f); glVertex2f(4.0f, 8.0f);
-    glTexCoord2f(1.0f, 1.0f); glVertex2f(4.0f, 12.0f);
-    glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, 12.0f);
-    glEnd();
-    glDisable(GL_TEXTURE_2D);
-
-    glColor4ub(255, 255, 255, 255);
-    glBegin(GL_TRIANGLES);
-    glVertex2f(6.0f, 8.0f);
-    glVertex2f(12.0f, 8.0f);
-    glVertex2f(9.0f, 12.0f);
-    glEnd();
-
-    glFinish();
-    memset(pixels, 0, sizeof(pixels));
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glReadPixels(0, 0, BASELINE_SIZE, BASELINE_SIZE,
-                 GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-
-    check_pixel(pixels, 1, 1, 255, 0, 0, 0);
-    check_pixel(pixels, 3, 1, 127, 0, 128, 2);
-    check_pixel(pixels, 5, 1, 0, 0, 128, 2);
-    check_pixel(pixels, 8, 1, 0, 255, 0, 0);
-    check_pixel(pixels, 7, 1, 0, 0, 0, 0);
-    check_pixel(pixels, 8, 3, 0, 0, 0, 0);
-    check_pixel(pixels, 1, 9, 255, 255, 0, 0);
-    check_pixel(pixels, 9, 9, 255, 255, 255, 0);
-    check_pixel(pixels, 11, 6, 0, 0, 0, 0);
-    CHECK_CONTINUE(drain_gl_errors() == 0);
-
-    api.bind(GL_FRAMEBUFFER, 0);
-    api.destroy(1, &framebuffer);
-    glDeleteTextures(1, &sample_texture);
-    glDeleteTextures(1, &color_texture);
 }
 
 static int font_state_is_empty(const font_data *font)
@@ -501,7 +197,6 @@ static void check_font_renderer_lifecycle(Renderer *renderer)
     int frame_active = 0;
 
     memset(&font, 0, sizeof(font));
-    captured_font_list_generations = 0;
     captured_font_texture_count = 0;
     ttf_open_count = 0;
     ttf_close_count = 0;
@@ -516,7 +211,6 @@ static void check_font_renderer_lifecycle(Renderer *renderer)
 
     CHECK_CONTINUE(font.atlas != NULL);
     CHECK_CONTINUE(font.requested_height == 17);
-    CHECK_CONTINUE(captured_font_list_generations == 0);
     CHECK_CONTINUE(captured_font_texture_count == 1);
     CHECK_CONTINUE(ttf_open_count == 1);
     CHECK_CONTINUE(ttf_close_count == 1);
@@ -605,7 +299,6 @@ static void check_active_frame_font_init_rolls_back(Renderer *renderer)
     int frame_active = 0;
 
     memset(&candidate, 0, sizeof(candidate));
-    captured_font_list_generations = 0;
     captured_font_texture_count = 0;
     ttf_open_count = 0;
     ttf_close_count = 0;
@@ -621,7 +314,6 @@ static void check_active_frame_font_init_rolls_back(Renderer *renderer)
     capture_font_resources = 0;
     CHECK_CONTINUE(status == RENDERER_STATUS_INVALID_STATE);
     CHECK_CONTINUE(font_state_is_empty(&candidate));
-    CHECK_CONTINUE(captured_font_list_generations == 0);
     CHECK_CONTINUE(captured_font_texture_count == 0);
     CHECK_CONTINUE(ttf_open_count == 1);
     CHECK_CONTINUE(ttf_close_count == 1);
@@ -650,25 +342,32 @@ static void check_diagnostics(void)
     CHECK_CONTINUE(Gl_diagnostics_total_errors() == 0);
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
-    SDL_Window *window;
-    SDL_GLContext context;
+    SDL_Window *window = NULL;
+    SDL_GLContext context = NULL;
     Renderer *font_renderer = NULL;
-
-    if (argc == 2 && strcmp(argv[1], CONTEXT_LOG_GL_1_5_ARGUMENT) == 0)
-        return check_context_logging_on_gl_1_5();
-    if (argc != 1) {
-        fprintf(stderr, "Unexpected test argument\n");
-        return 2;
-    }
+    int actual_major = 0;
+    int actual_minor = 0;
+    int actual_profile = 0;
+    int ttf_initialized = 0;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "SDL video initialization failed: %s\n",
                 SDL_GetError());
         return 1;
     }
-    window = SDL_CreateWindow("XPilot legacy OpenGL test",
+    SDL_GL_ResetAttributes();
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) != 0
+        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) != 0
+        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                               SDL_GL_CONTEXT_PROFILE_CORE) != 0) {
+        fprintf(stderr, "OpenGL core attribute request failed: %s\n",
+                SDL_GetError());
+        failure_count++;
+        goto cleanup;
+    }
+    window = SDL_CreateWindow("XPilot OpenGL core resource test",
                               SDL_WINDOWPOS_UNDEFINED,
                               SDL_WINDOWPOS_UNDEFINED,
                               64, 64,
@@ -676,45 +375,59 @@ int main(int argc, char **argv)
     if (window == NULL) {
         fprintf(stderr, "SDL OpenGL window creation failed: %s\n",
                 SDL_GetError());
-        SDL_Quit();
-        return 1;
+        failure_count++;
+        goto cleanup;
     }
     context = SDL_GL_CreateContext(window);
     if (context == NULL) {
         fprintf(stderr, "SDL OpenGL context creation failed: %s\n",
                 SDL_GetError());
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
+        failure_count++;
+        goto cleanup;
     }
+    CHECK_CONTINUE(SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,
+                                       &actual_major) == 0);
+    CHECK_CONTINUE(SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,
+                                       &actual_minor) == 0);
+    CHECK_CONTINUE(SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                                       &actual_profile) == 0);
+    CHECK_CONTINUE(actual_major > 3
+                   || (actual_major == 3 && actual_minor >= 3));
+    CHECK_CONTINUE(actual_profile == SDL_GL_CONTEXT_PROFILE_CORE);
+    CHECK_CONTINUE(glGetString(GL_VERSION) != NULL);
+
     if (TTF_Init() < 0) {
         fprintf(stderr, "SDL_ttf initialization failed: %s\n",
                 TTF_GetError());
-        SDL_GL_DeleteContext(context);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
+        failure_count++;
+        goto cleanup;
     }
-
-    CHECK_CONTINUE(glGetString(GL_VERSION) != NULL);
-    check_procedural_baseline();
-    CHECK_CONTINUE(Renderer_gl_legacy_create(load_current_gl_proc, NULL,
-                                             &font_renderer)
+    ttf_initialized = 1;
+    CHECK_CONTINUE(Renderer_gl_core_create(load_font_gl_proc, NULL,
+                                           &font_renderer)
                    == RENDERER_STATUS_OK);
     if (font_renderer != NULL) {
         check_font_renderer_lifecycle(font_renderer);
         check_active_frame_font_init_rolls_back(font_renderer);
         Renderer_destroy(font_renderer);
+        font_renderer = NULL;
     }
     check_diagnostics();
 
-    TTF_Quit();
-    SDL_GL_DeleteContext(context);
-    SDL_DestroyWindow(window);
+cleanup:
+    if (font_renderer != NULL)
+        Renderer_destroy(font_renderer);
+    if (ttf_initialized)
+        TTF_Quit();
+    if (context != NULL)
+        SDL_GL_DeleteContext(context);
+    if (window != NULL)
+        SDL_DestroyWindow(window);
     SDL_Quit();
 
     if (failure_count != 0) {
-        fprintf(stderr, "%d legacy OpenGL checks failed\n", failure_count);
+        fprintf(stderr, "%d OpenGL core resource checks failed\n",
+                failure_count);
         return 1;
     }
     return 0;

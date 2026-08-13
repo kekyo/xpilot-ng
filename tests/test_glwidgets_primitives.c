@@ -5,8 +5,6 @@
 #include "sdlinit.h"
 #include "sdlrenderer.h"
 
-#include <GL/gl.h>
-
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -109,10 +107,6 @@ static int successful_strokes;
 static int flush_attempts;
 static int text_attempts;
 static int successful_text_draws;
-static int legacy_begin_calls;
-static int legacy_vertex_calls;
-static int legacy_color_calls;
-static int legacy_blend_calls;
 static RendererStatus blend_result;
 static RendererStatus draw_result;
 static int draw_failure_attempt;
@@ -251,10 +245,6 @@ static void reset_frame(void)
     flush_attempts = 0;
     text_attempts = 0;
     successful_text_draws = 0;
-    legacy_begin_calls = 0;
-    legacy_vertex_calls = 0;
-    legacy_color_calls = 0;
-    legacy_blend_calls = 0;
     blend_result = RENDERER_STATUS_OK;
     draw_result = RENDERER_STATUS_OK;
     draw_failure_attempt = 0;
@@ -432,7 +422,7 @@ RendererStatus Renderer_stroke_colored_path(
     return RENDERER_STATUS_OK;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
+RendererStatus Sdl_renderer_flush(SdlRenderer *renderer)
 {
     flush_attempts++;
     if (flush_order == 0)
@@ -529,12 +519,6 @@ int Sdl_clipboard_set_text(const char *text)
     return 0;
 }
 
-void set_alphacolor(Uint32 color)
-{
-    (void)color;
-    legacy_color_calls++;
-}
-
 void warn(const char *format, ...)
 {
     (void)format;
@@ -543,40 +527,6 @@ void warn(const char *format, ...)
 void error(const char *format, ...)
 {
     (void)format;
-}
-
-void GLAPIENTRY glColor4ub(GLubyte red, GLubyte green,
-                          GLubyte blue, GLubyte alpha)
-{
-    (void)red;
-    (void)green;
-    (void)blue;
-    (void)alpha;
-    legacy_color_calls++;
-}
-
-void GLAPIENTRY glBegin(GLenum mode)
-{
-    (void)mode;
-    legacy_begin_calls++;
-}
-
-void GLAPIENTRY glVertex2i(GLint x, GLint y)
-{
-    (void)x;
-    (void)y;
-    legacy_vertex_calls++;
-}
-
-void GLAPIENTRY glEnd(void)
-{
-}
-
-void GLAPIENTRY glBlendFunc(GLenum source, GLenum destination)
-{
-    (void)source;
-    (void)destination;
-    legacy_blend_calls++;
 }
 
 static void destroy_widget(GLWidget *widget)
@@ -626,9 +576,6 @@ static int check_successful_draw(RendererColor expected_color,
             expected_points[index][0], expected_points[index][1],
             expected_color));
     }
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
     return 0;
 }
 
@@ -672,9 +619,6 @@ static int check_successful_gradient_quad(
             &draws[0].vertices[index],
             points[index][0], points[index][1], colors[index]));
     }
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
     return 0;
 }
 
@@ -703,9 +647,6 @@ static int check_successful_fill(float expected_x, float expected_y,
     TEST_CHECK(fills[0].width == expected_width);
     TEST_CHECK(fills[0].height == expected_height);
     TEST_CHECK(color_equal(fills[0].color, expected_color));
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
     return 0;
 }
 
@@ -761,9 +702,6 @@ static int check_successful_background_text(
         expected_horizontal_alignment, expected_vertical_alignment,
         expected_text_x, expected_text_y) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
     return 0;
 }
 
@@ -786,9 +724,6 @@ static int check_successful_text_without_background(
         expected_horizontal_alignment, expected_vertical_alignment,
         expected_text_x, expected_text_y) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
     return 0;
 }
 
@@ -804,9 +739,6 @@ static int check_successful_preflight_only(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(text_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
     return 0;
 }
 
@@ -1117,9 +1049,6 @@ static int check_text_failure_short_circuit_for_widget(
     TEST_CHECK(successful_text_draws == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
     return 0;
 }
 
@@ -1391,9 +1320,6 @@ static int check_triangle_failure_short_circuit_for_widget(GLWidget *widget)
     TEST_CHECK(flush_attempts == flush_attempts_after_failure);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
 
     return 0;
 }
@@ -1454,9 +1380,6 @@ static int check_fill_failure_short_circuit_for_widget(
     TEST_CHECK(fill_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(text_attempts == 0);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
 
     reset_frame();
     fill_result = RENDERER_STATUS_RESOURCE_MISMATCH;
@@ -1489,9 +1412,6 @@ static int check_fill_failure_short_circuit_for_widget(
     TEST_CHECK(successful_fills == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(text_attempts == 0);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
 
     reset_frame();
     flush_result = RENDERER_STATUS_BACKEND_ERROR;
@@ -1528,9 +1448,6 @@ static int check_fill_failure_short_circuit_for_widget(
     TEST_CHECK(text_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
 
     return 0;
 }
@@ -1885,10 +1802,6 @@ static int check_successful_color_chooser_parent_paint(
             points[index][0], points[index][1], black));
     }
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
     return 0;
 }
 
@@ -1923,10 +1836,6 @@ static int check_color_chooser_partial_failures(GLWidget *widget)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_RESOURCE_MISMATCH);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
 
     reset_frame();
     draw_result = RENDERER_STATUS_BACKEND_ERROR;
@@ -1964,10 +1873,6 @@ static int check_color_chooser_partial_failures(GLWidget *widget)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
     return 0;
 }
 
@@ -2108,10 +2013,6 @@ static int check_successful_color_mod_parent_paint(
     TEST_CHECK(check_recorded_draw(
         2, 6, value_points, value_colors) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
     return 0;
 }
 
@@ -2166,10 +2067,6 @@ static int check_color_mod_later_draw_failure(
     TEST_CHECK(text_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
     return 0;
 }
 
@@ -2210,10 +2107,6 @@ static int check_color_mod_first_draw_failure(GLWidget *widget)
     TEST_CHECK(text_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
     return 0;
 }
 
@@ -2399,10 +2292,6 @@ static int check_list_widget_parent_paint(void)
     TEST_CHECK(check_list_fill(
         2, 19.0f, 29.0f, 29.0f, 5.0f, first_color) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
 
     second_background = 0;
     reset_frame();
@@ -2429,16 +2318,11 @@ static int check_list_widget_parent_paint(void)
     TEST_CHECK(check_list_fill(
         1, 19.0f, 29.0f, 29.0f, 5.0f, first_color) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
 
     first_background = 0;
     reset_frame();
     widget->Draw(widget);
     TEST_CHECK(check_successful_preflight_only() == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
 
     first_background = 0x12345678;
     second_background = 0x90abcdef;
@@ -2483,10 +2367,6 @@ static int check_list_widget_parent_paint(void)
     TEST_CHECK(text_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
 
     empty = Init_ListWidget(
         31, 37, &first_background, &second_background, &highlight,
@@ -2495,7 +2375,6 @@ static int check_list_widget_parent_paint(void)
     reset_frame();
     empty->Draw(empty);
     TEST_CHECK(check_successful_preflight_only() == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
 
     destroy_widget(empty);
     destroy_widget(widget);
@@ -2564,10 +2443,6 @@ static int check_conf_menu_widget_parent_paint(void)
             strokes[0].colors[index], edge_colors[index]));
     }
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
     TEST_CHECK(memcmp(&widget, &widget_before, sizeof(widget)) == 0);
     TEST_CHECK(memcmp(&info, &info_before, sizeof(info)) == 0);
 
@@ -2593,10 +2468,6 @@ static int check_conf_menu_widget_parent_paint(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
     TEST_CHECK(memcmp(&widget, &widget_before, sizeof(widget)) == 0);
     TEST_CHECK(memcmp(&info, &info_before, sizeof(info)) == 0);
 
@@ -2643,10 +2514,6 @@ static int check_conf_menu_widget_parent_paint(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
     TEST_CHECK(memcmp(&widget, &widget_before, sizeof(widget)) == 0);
     TEST_CHECK(memcmp(&info, &info_before, sizeof(info)) == 0);
 

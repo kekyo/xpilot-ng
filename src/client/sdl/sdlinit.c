@@ -235,6 +235,21 @@ int Init_window(void)
 
     num_spark_colors=8;
 
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) < 0) {
+	error("Could not request OpenGL context major version 3: %s",
+	      SDL_GetError());
+	goto fail;
+    }
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) < 0) {
+	error("Could not request OpenGL context minor version 3: %s",
+	      SDL_GetError());
+	goto fail;
+    }
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+			    SDL_GL_CONTEXT_PROFILE_CORE) < 0) {
+	error("Could not request an OpenGL core profile: %s", SDL_GetError());
+	goto fail;
+    }
     if (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1) < 0) {
 	error("Could not enable OpenGL double buffering: %s", SDL_GetError());
 	goto fail;
@@ -260,7 +275,7 @@ int Init_window(void)
     Gl_diagnostics_check("context creation");
     renderer_status = Sdl_renderer_create(main_window, &main_renderer);
     if (renderer_status != RENDERER_STATUS_OK) {
-	error("Could not initialize the compatibility OpenGL renderer (%d)",
+	error("Could not initialize the OpenGL core renderer (%d)",
 	      (int)renderer_status);
 	goto fail;
     }

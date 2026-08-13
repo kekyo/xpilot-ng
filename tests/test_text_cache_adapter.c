@@ -65,10 +65,6 @@ static int fail_next_cache_replace;
 static int fail_next_cached_draw;
 static int fail_next_measure;
 static int fail_next_immediate_draw;
-static int gl_texture_create_calls;
-static int gl_texture_destroy_calls;
-static int gl_list_create_calls;
-static int gl_list_destroy_calls;
 static int renderer_texture_create_calls;
 static int renderer_texture_update_calls;
 static int renderer_texture_destroy_calls;
@@ -92,9 +88,7 @@ static int color_equal(RendererColor actual, RendererColor expected)
 
 static int no_gpu_resource_calls(void)
 {
-    return gl_texture_create_calls == 0 && gl_texture_destroy_calls == 0
-        && gl_list_create_calls == 0 && gl_list_destroy_calls == 0
-        && renderer_texture_create_calls == 0
+    return renderer_texture_create_calls == 0
         && renderer_texture_update_calls == 0
         && renderer_texture_destroy_calls == 0
         && renderer_mesh_create_calls == 0
@@ -121,10 +115,6 @@ static void reset_fixture(void)
     fail_next_cached_draw = 0;
     fail_next_measure = 0;
     fail_next_immediate_draw = 0;
-    gl_texture_create_calls = 0;
-    gl_texture_destroy_calls = 0;
-    gl_list_create_calls = 0;
-    gl_list_destroy_calls = 0;
     renderer_texture_create_calls = 0;
     renderer_texture_update_calls = 0;
     renderer_texture_destroy_calls = 0;
@@ -396,33 +386,6 @@ RendererColor Renderer_color_from_rgba32(uint32_t rgba)
     return color;
 }
 
-void APIENTRY glGenTextures(GLsizei count, GLuint *textures)
-{
-    GLsizei index;
-
-    gl_texture_create_calls += count;
-    for (index = 0; index < count; index++)
-        textures[index] = (GLuint)(index + 1);
-}
-
-void APIENTRY glDeleteTextures(GLsizei count, const GLuint *textures)
-{
-    (void)textures;
-    gl_texture_destroy_calls += count;
-}
-
-GLuint APIENTRY glGenLists(GLsizei range)
-{
-    gl_list_create_calls += range;
-    return range > 0 ? 1U : 0U;
-}
-
-void APIENTRY glDeleteLists(GLuint list, GLsizei range)
-{
-    (void)list;
-    gl_list_destroy_calls += range;
-}
-
 RendererStatus Renderer_texture_create_with_desc(
     Renderer *renderer, const RendererTextureDesc *desc,
     const uint8_t *pixels, size_t pitch, RendererTexture **texture)
@@ -493,7 +456,7 @@ RendererStatus Renderer_mesh_destroy(Renderer *renderer, RendererMesh *mesh)
     return RENDERER_STATUS_BACKEND_ERROR;
 }
 
-static font_data make_font(TextRenderer *text_renderer, GLuint height)
+static font_data make_font(TextRenderer *text_renderer, unsigned int height)
 {
     font_data font;
 

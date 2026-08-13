@@ -7,7 +7,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_srcdir)/src/common -I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
 	@SDL2_CFLAGS@ @SDL2_IMAGE_CFLAGS@ @SDL2_TTF_CFLAGS@ \
-	@GL_CFLAGS@ @GLU_CFLAGS@
+	@GL_CFLAGS@
 libxp_libtess2_a_SOURCES = \
 	third_party/libtess2/Include/tesselator.h \
 	third_party/libtess2/Source/bucketalloc.c \
@@ -34,8 +34,7 @@ xpilot_ng_sdl_SOURCES = \
 	paint_transform.c paint_transform.h \
 	polygon_geometry.c polygon_geometry.h \
 	renderer.c renderer.h renderer_backend.h \
-	renderer_gl.h renderer_gl_legacy.c renderer_gl_legacy.h \
-	renderer_gl_core.c renderer_gl_core.h \
+	renderer_gl.h renderer_gl_core.c renderer_gl_core.h \
 	sdlclipboard.c sdlclipboard.h \
 	sdlcompat.c sdlcompat.h \
 	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h \
@@ -52,7 +51,7 @@ xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	libxp_libtess2.a \
 	@SDL2_IMAGE_LIBS@ @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
-	@GLU_LIBS@ @GL_LIBS@ @SOUND_LIBS@ @W32_LIBS@
+	@GL_LIBS@ @SOUND_LIBS@ @W32_LIBS@
 
 if COND_WINDOWS
   xpilot_ng_sdl_SOURCES += win32hacks.c

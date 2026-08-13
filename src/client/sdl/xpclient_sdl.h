@@ -32,8 +32,6 @@
 #endif
 
 #ifdef USUAL_SDL_INCLUDE_CONVENTION
-# include <GL/gl.h>
-# include <GL/glu.h>
 # include "SDL.h"
 # include "SDL_events.h"
 # include "SDL_video.h"
@@ -43,8 +41,6 @@
 #endif
 
 #ifdef MACOSX_FRAMEWORKS
-# include <OpenGL/gl.h>
-# include <OpenGL/glu.h>
 # include <SDL2/SDL.h>
 # include <SDL2/SDL_events.h>
 # include <SDL2/SDL_video.h>

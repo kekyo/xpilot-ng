@@ -206,22 +206,56 @@ GLWidget *Init_SlideWidget( bool locked,
 /***************************/
 /* Begin: ScrollbarWidget  */
 /***************************/
-typedef enum {SB_VERTICAL, SB_HORISONTAL} ScrollWidget_dir_t;
-/* note 0.0 <= pos && pos + size <= 1.0 */
+/** Scrollbar movement axis. */
+typedef enum ScrollWidget_dir_t {
+    /** Move along the vertical axis. */
+    SB_VERTICAL,
+    /** Move along the horizontal axis. */
+    SB_HORISONTAL
+} ScrollWidget_dir_t;
 #define SCROLLBARWIDGET 3
+/** Scrollbar state expressed in normalized widget coordinates. */
 typedef struct {
+    /** Owned slider widget. */
     GLWidget	    	*slide;
-    GLfloat 	    	pos;
-    GLfloat 	    	size;
+    /** Normalized start position. */
+    float 	    	pos;
+    /** Normalized visible fraction. */
+    float 	    	size;
+    /** Previous relative movement. */
     Sint16  	    	oldmoves;
+    /** Movement axis. */
     ScrollWidget_dir_t	dir;
-    void    	    (	*poschange)( GLfloat pos , void *poschangedata );
+    /** Callback invoked after the normalized position changes. */
+    void    	    (	*poschange)( float pos , void *poschangedata );
+    /** Opaque callback data. */
     void    	    	*poschangedata;
 } ScrollbarWidget;
-GLWidget *Init_ScrollbarWidget( bool locked, GLfloat pos, GLfloat size,ScrollWidget_dir_t dir,
-    	    	    	    	void (*poschange)( GLfloat pos , void *data), void *data );
 
-void ScrollbarWidget_SetSlideSize( GLWidget *widget, GLfloat size );
+/**
+ * Create a scrollbar widget.
+ *
+ * @param locked Whether user movement is disabled.
+ * @param pos Normalized start position.
+ * @param size Normalized visible fraction.
+ * @param dir Movement axis.
+ * @param poschange Optional position-change callback.
+ * @param data Opaque callback data.
+ * @return New widget, or NULL on failure.
+ * @remarks Inputs are normalized so that 0 <= pos and pos + size <= 1.
+ */
+GLWidget *Init_ScrollbarWidget( bool locked, float pos, float size,
+				ScrollWidget_dir_t dir,
+				void (*poschange)( float pos , void *data),
+				void *data );
+
+/**
+ * Update a scrollbar's normalized visible fraction.
+ *
+ * @param widget Scrollbar widget.
+ * @param size New normalized visible fraction.
+ */
+void ScrollbarWidget_SetSlideSize( GLWidget *widget, float size );
 /*************************/
 /* End:  ScrollbarWidget */
 /*************************/

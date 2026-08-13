@@ -166,7 +166,7 @@ RendererStatus Sdl_ui_image_draw(SdlRenderer *sdl_renderer,
             tint);
     }
     if (status == RENDERER_STATUS_OK)
-        status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
+        status = Sdl_renderer_flush(sdl_renderer);
     return status;
 }
 

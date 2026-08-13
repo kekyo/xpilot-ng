@@ -17,8 +17,8 @@ if test "${1:-}" != --inside-xvfb; then
         /bin/sh "$0" --inside-xvfb
 fi
 
-test_binary=${XPILOT_RENDERER_GL_TEST_BINARY:?
-XPILOT_RENDERER_GL_TEST_BINARY is required}
+test_binary=${XPILOT_RENDERER_GL_CORE_TEST_BINARY:?
+XPILOT_RENDERER_GL_CORE_TEST_BINARY is required}
 if test ! -x "$test_binary"; then
     echo "Renderer OpenGL test binary is missing: $test_binary" >&2
     exit 1

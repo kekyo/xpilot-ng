@@ -5,7 +5,6 @@
 #include "sdlrenderer.h"
 
 #include <SDL.h>
-#include <GL/gl.h>
 
 #include <stdarg.h>
 #include <stdint.h>
@@ -47,10 +46,6 @@ static int blend_attempts;
 static int fill_attempts;
 static int successful_fills;
 static int flush_attempts;
-static int legacy_alpha_calls;
-static int legacy_begin_calls;
-static int legacy_vertex_calls;
-static int legacy_end_calls;
 static RendererStatus fill_result;
 static RendererStatus flush_result;
 
@@ -77,10 +72,6 @@ static void reset_frame(void)
     fill_attempts = 0;
     successful_fills = 0;
     flush_attempts = 0;
-    legacy_alpha_calls = 0;
-    legacy_begin_calls = 0;
-    legacy_vertex_calls = 0;
-    legacy_end_calls = 0;
     fill_result = RENDERER_STATUS_OK;
     flush_result = RENDERER_STATUS_OK;
     fake_renderer.frame_active = 1;
@@ -168,7 +159,7 @@ RendererStatus Renderer_fill_rect(Renderer *renderer,
     return RENDERER_STATUS_OK;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
+RendererStatus Sdl_renderer_flush(SdlRenderer *renderer)
 {
     flush_attempts++;
     operation_result_pending = 1;
@@ -181,30 +172,6 @@ RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
     return flush_result;
 }
 
-void set_alphacolor(Uint32 color)
-{
-    (void)color;
-    legacy_alpha_calls++;
-}
-
-void GLAPIENTRY glBegin(GLenum mode)
-{
-    (void)mode;
-    legacy_begin_calls++;
-}
-
-void GLAPIENTRY glVertex2i(GLint x, GLint y)
-{
-    (void)x;
-    (void)y;
-    legacy_vertex_calls++;
-}
-
-void GLAPIENTRY glEnd(void)
-{
-    legacy_end_calls++;
-}
-
 void warn(const char *format, ...)
 {
     (void)format;
@@ -213,15 +180,6 @@ void warn(const char *format, ...)
 void error(const char *format, ...)
 {
     (void)format;
-}
-
-static int check_no_legacy_calls(void)
-{
-    TEST_CHECK(legacy_alpha_calls == 0);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_end_calls == 0);
-    return 0;
 }
 
 static int check_successful_fill(float x, float y,
@@ -244,7 +202,7 @@ static int check_successful_fill(float x, float y,
     TEST_CHECK(color_equal(
         last_fill.color, Renderer_color_from_rgba32(rgba)));
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_calls();
+    return 0;
 }
 
 static int check_player_list_background(void)
@@ -269,7 +227,7 @@ static int check_narrow_player_list_is_empty(void)
     TEST_CHECK(fill_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_calls();
+    return 0;
 }
 
 static int check_unselected_row_background(void)
@@ -309,7 +267,7 @@ static int check_fill_failure_is_sticky_without_flush(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    return check_no_legacy_calls();
+    return 0;
 }
 
 static int check_flush_failure_blocks_same_frame_repaint(void)
@@ -338,7 +296,7 @@ static int check_flush_failure_blocks_same_frame_repaint(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    return check_no_legacy_calls();
+    return 0;
 }
 
 int main(void)

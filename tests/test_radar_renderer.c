@@ -90,8 +90,7 @@ typedef enum PaintEvent {
     PAINT_EVENT_STROKE,
     PAINT_EVENT_RECT,
     PAINT_EVENT_COLORED_STROKE,
-    PAINT_EVENT_FLUSH,
-    PAINT_EVENT_LEGACY
+    PAINT_EVENT_FLUSH
 } PaintEvent;
 
 typedef enum FakeOperation {
@@ -127,13 +126,9 @@ static int rect_calls;
 static int colored_stroke_calls;
 static int blend_calls;
 static RendererBlendMode blend_modes[4];
-static int preserving_flush_calls;
+static int flush_calls;
 static int scissor_calls;
 static int paint_event_count;
-static int forbidden_legacy_texture_calls;
-static int legacy_begin_calls;
-static int legacy_vertex_calls;
-static int legacy_color_calls;
 static FakeOperation fail_operation;
 static xp_option_t *radar_geometry_option;
 
@@ -521,11 +516,11 @@ RendererStatus Sdl_renderer_set_logical_scissor(
     return RENDERER_STATUS_OK;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
+RendererStatus Sdl_renderer_flush(SdlRenderer *renderer)
 {
     if (renderer != &fake_sdl_renderer || !fake_renderer.frame_active)
         return RENDERER_STATUS_INVALID_STATE;
-    preserving_flush_calls++;
+    flush_calls++;
     record_paint_event(PAINT_EVENT_FLUSH);
     return fake_operation_status(FAKE_OPERATION_FLUSH);
 }
@@ -620,119 +615,6 @@ void error(const char *format, ...)
     (void)format;
 }
 
-GLenum GLAPIENTRY glGetError(void)
-{
-    return GL_NO_ERROR;
-}
-
-void GLAPIENTRY glGenTextures(GLsizei count, GLuint *textures)
-{
-    GLsizei index;
-
-    forbidden_legacy_texture_calls++;
-    for (index = 0; index < count; index++)
-        textures[index] = (GLuint)(index + 1);
-}
-
-void GLAPIENTRY glDeleteTextures(GLsizei count, const GLuint *textures)
-{
-    (void)count;
-    (void)textures;
-    forbidden_legacy_texture_calls++;
-}
-
-void GLAPIENTRY glBindTexture(GLenum target, GLuint texture)
-{
-    (void)target;
-    (void)texture;
-    forbidden_legacy_texture_calls++;
-}
-
-void GLAPIENTRY glTexImage2D(GLenum target, GLint level,
-                            GLint internal_format, GLsizei width,
-                            GLsizei height, GLint border, GLenum format,
-                            GLenum type, const GLvoid *pixels)
-{
-    (void)target;
-    (void)level;
-    (void)internal_format;
-    (void)width;
-    (void)height;
-    (void)border;
-    (void)format;
-    (void)type;
-    (void)pixels;
-    forbidden_legacy_texture_calls++;
-}
-
-void GLAPIENTRY glTexParameterf(GLenum target, GLenum name, GLfloat value)
-{
-    (void)target;
-    (void)name;
-    (void)value;
-    forbidden_legacy_texture_calls++;
-}
-
-void GLAPIENTRY glEnable(GLenum capability)
-{
-    if (capability == GL_TEXTURE_2D)
-        forbidden_legacy_texture_calls++;
-}
-
-void GLAPIENTRY glDisable(GLenum capability)
-{
-    if (capability == GL_TEXTURE_2D)
-        forbidden_legacy_texture_calls++;
-}
-
-void GLAPIENTRY glBlendFunc(GLenum source, GLenum destination)
-{
-    (void)source;
-    (void)destination;
-}
-
-void GLAPIENTRY glColor3ub(GLubyte red, GLubyte green, GLubyte blue)
-{
-    (void)red;
-    (void)green;
-    (void)blue;
-    legacy_color_calls++;
-}
-
-void GLAPIENTRY glColor4ub(GLubyte red, GLubyte green,
-                          GLubyte blue, GLubyte alpha)
-{
-    (void)red;
-    (void)green;
-    (void)blue;
-    (void)alpha;
-    legacy_color_calls++;
-}
-
-void GLAPIENTRY glBegin(GLenum mode)
-{
-    (void)mode;
-    legacy_begin_calls++;
-}
-
-void GLAPIENTRY glTexCoord2f(GLfloat u, GLfloat v)
-{
-    (void)u;
-    (void)v;
-    forbidden_legacy_texture_calls++;
-}
-
-void GLAPIENTRY glVertex2i(GLint x, GLint y)
-{
-    (void)x;
-    (void)y;
-    legacy_vertex_calls++;
-}
-
-void GLAPIENTRY glEnd(void)
-{
-}
-
 static void reset_paint_records(void)
 {
     memset(fake_sprites, 0, sizeof(fake_sprites));
@@ -748,12 +630,9 @@ static void reset_paint_records(void)
     colored_stroke_calls = 0;
     blend_calls = 0;
     memset(blend_modes, 0, sizeof(blend_modes));
-    preserving_flush_calls = 0;
+    flush_calls = 0;
     scissor_calls = 0;
     paint_event_count = 0;
-    legacy_begin_calls = 0;
-    legacy_vertex_calls = 0;
-    legacy_color_calls = 0;
     fail_operation = FAKE_OPERATION_NONE;
     fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
 }
@@ -808,7 +687,6 @@ static int check_initial_prepare(GLWidget **widget_out,
     TEST_CHECK(Radar_test_texture() == NULL);
     TEST_CHECK(rect_equal(Radar_test_bounds(), expected_bounds));
     TEST_CHECK(texture_create_attempts == 0);
-    TEST_CHECK(forbidden_legacy_texture_calls == 0);
 
     TEST_CHECK(Radar_prepare(&fake_renderer) == 0);
     texture = Radar_test_texture();
@@ -826,7 +704,6 @@ static int check_initial_prepare(GLWidget **widget_out,
     TEST_CHECK(pixel_equals(record, 0, 0, 0x00, 0x00, 0x00, 0xa0));
     TEST_CHECK(pixel_equals(record, 0, 1, 0x00, 0x00, 0x00, 0xa0));
     TEST_CHECK(texture_update_calls == 0);
-    TEST_CHECK(forbidden_legacy_texture_calls == 0);
     *texture_out = texture;
     return 0;
 }
@@ -878,7 +755,6 @@ static int check_atomic_update_and_resize(GLWidget *widget,
     record = fake_texture_from_handle(texture);
     TEST_CHECK(pixel_equals(record, 0, 0, 0x11, 0x22, 0x33, 0xff));
     TEST_CHECK(texture_update_calls == 0);
-    TEST_CHECK(forbidden_legacy_texture_calls == 0);
     *texture_out = texture;
     return 0;
 }
@@ -928,7 +804,7 @@ static int check_non_sliding_paint(GLWidget *widget,
     TEST_CHECK(blend_calls == 2);
     TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
     TEST_CHECK(blend_modes[1] == RENDERER_BLEND_OPAQUE);
-    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(flush_calls == 1);
     TEST_CHECK(paint_event_count == 7);
     TEST_CHECK(paint_events[0] == PAINT_EVENT_SPRITE);
     TEST_CHECK(paint_events[1] == PAINT_EVENT_TRIANGLES);
@@ -996,10 +872,6 @@ static int check_non_sliding_paint(GLWidget *widget,
     TEST_CHECK(radar_ptr == NULL);
     TEST_CHECK(resource_calls_during_frame == resource_calls_before);
     TEST_CHECK(texture_update_calls == 0);
-    TEST_CHECK(forbidden_legacy_texture_calls == 0);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
 
     return 0;
 }
@@ -1040,7 +912,7 @@ static int check_sliding_paint_order_and_uv(GLWidget *widget,
     TEST_CHECK(blend_calls == 2);
     TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
     TEST_CHECK(blend_modes[1] == RENDERER_BLEND_OPAQUE);
-    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(flush_calls == 1);
     TEST_CHECK(paint_event_count == 8);
     for (index = 0; index < 4; index++)
         TEST_CHECK(paint_events[index] == PAINT_EVENT_SPRITE);
@@ -1053,10 +925,6 @@ static int check_sliding_paint_order_and_uv(GLWidget *widget,
     TEST_CHECK(colored_stroke_calls == 1);
     TEST_CHECK(resource_calls_during_frame == resource_calls_before);
     TEST_CHECK(texture_update_calls == 0);
-    TEST_CHECK(forbidden_legacy_texture_calls == 0);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
 
     selfPos.x = 60;
     selfPos.y = 40;
@@ -1073,7 +941,7 @@ static int check_sliding_paint_order_and_uv(GLWidget *widget,
     TEST_CHECK(blend_calls == 2);
     TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
     TEST_CHECK(blend_modes[1] == RENDERER_BLEND_OPAQUE);
-    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(flush_calls == 1);
     TEST_CHECK(paint_event_count == 5);
     TEST_CHECK(paint_events[0] == PAINT_EVENT_SPRITE);
     TEST_CHECK(paint_events[1] == PAINT_EVENT_TRIANGLES);
@@ -1113,13 +981,10 @@ static int check_sticky_failure_short_circuit(GLWidget *widget)
     TEST_CHECK(paint_event_count == 2);
     TEST_CHECK(paint_events[0] == PAINT_EVENT_SPRITE);
     TEST_CHECK(paint_events[1] == PAINT_EVENT_FLUSH);
-    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(flush_calls == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(radar_ptr == NULL);
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
 
     /* A retained frame failure must preflight the next widget draw too. */
     {
@@ -1129,7 +994,7 @@ static int check_sticky_failure_short_circuit(GLWidget *widget)
         int old_rect_calls = rect_calls;
         int old_colored_stroke_calls = colored_stroke_calls;
         int old_blend_calls = blend_calls;
-        int old_flush_calls = preserving_flush_calls;
+        int old_flush_calls = flush_calls;
         int old_event_count = paint_event_count;
 
         fake_renderer.frame_active = 1;
@@ -1141,7 +1006,7 @@ static int check_sticky_failure_short_circuit(GLWidget *widget)
         TEST_CHECK(rect_calls == old_rect_calls);
         TEST_CHECK(colored_stroke_calls == old_colored_stroke_calls);
         TEST_CHECK(blend_calls == old_blend_calls);
-        TEST_CHECK(preserving_flush_calls == old_flush_calls);
+        TEST_CHECK(flush_calls == old_flush_calls);
         TEST_CHECK(paint_event_count == old_event_count);
         TEST_CHECK(radar_ptr == NULL);
     }
@@ -1165,14 +1030,14 @@ static int check_semantic_clip_lifetime(GLWidget *widget)
     widget->Draw(widget);
     fake_renderer.frame_active = 0;
 
-    /* Semantic drawing uses the same logical extent as the widget's
-     * root-clipped legacy scissor, then disables it after the flush. */
+    /* Semantic drawing uses the widget's root-clipped logical extent,
+     * then disables it after the flush. */
     TEST_CHECK(scissor_calls == 2);
     TEST_CHECK(fake_scissor_calls[0].enabled != 0);
     TEST_CHECK(renderer_rect_equal(
         fake_scissor_calls[0].scissor, expected_clip));
     TEST_CHECK(fake_scissor_calls[0].paint_events_before == 0);
-    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(flush_calls == 1);
     TEST_CHECK(paint_event_count > 0);
     TEST_CHECK(paint_events[paint_event_count - 1] == PAINT_EVENT_FLUSH);
     TEST_CHECK(fake_scissor_calls[1].enabled == 0);
@@ -1187,7 +1052,7 @@ static int check_semantic_clip_lifetime(GLWidget *widget)
 
     /* A failed flush retains commands for retry and locks draw-state
      * mutation, so Radar_paint must leave the active clip unchanged. */
-    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(flush_calls == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(scissor_calls == 1);
@@ -1241,7 +1106,6 @@ static int check_cleanup_is_exact_and_idempotent(GLWidget *widget,
     TEST_CHECK(texture_destroy_calls == destroys_before + 1);
     TEST_CHECK(resource_calls_during_frame == 0);
     TEST_CHECK(texture_update_calls == 0);
-    TEST_CHECK(forbidden_legacy_texture_calls == 0);
     return 0;
 }
 

@@ -7,7 +7,6 @@
 #include "sdlwindow.h"
 
 #include <SDL.h>
-#include <GL/gl.h>
 
 #include <stdarg.h>
 #include <stdint.h>
@@ -109,7 +108,6 @@ static RendererStatus fill_result;
 static RendererStatus sprite_result;
 static RendererStatus stroke_result;
 static RendererStatus flush_result;
-static int legacy_calls;
 
 static int float_equal(float actual, float expected)
 {
@@ -154,7 +152,6 @@ static void reset_paint_frame(void)
     sprite_result = RENDERER_STATUS_OK;
     stroke_result = RENDERER_STATUS_OK;
     flush_result = RENDERER_STATUS_OK;
-    legacy_calls = 0;
     fake_renderer.frame_active = 1;
     foreign_renderer.frame_active = 1;
     fake_sdl_renderer.frontend = &fake_renderer;
@@ -395,7 +392,7 @@ RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
                             : renderer->frame_result;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
+RendererStatus Sdl_renderer_flush(SdlRenderer *renderer)
 {
     flush_attempts++;
     operation_result_pending = 1;
@@ -415,108 +412,6 @@ void warn(const char *format, ...)
 void error(const char *format, ...)
 {
     (void)format;
-}
-
-void GLAPIENTRY glGenTextures(GLsizei count, GLuint *textures)
-{
-    GLsizei index;
-
-    legacy_calls++;
-    for (index = 0; index < count; index++)
-        textures[index] = (GLuint)(index + 1);
-}
-
-void GLAPIENTRY glDeleteTextures(GLsizei count, const GLuint *textures)
-{
-    (void)count;
-    (void)textures;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glBindTexture(GLenum target, GLuint texture)
-{
-    (void)target;
-    (void)texture;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glTexImage2D(GLenum target, GLint level,
-                            GLint internal_format, GLsizei width,
-                            GLsizei height, GLint border, GLenum format,
-                            GLenum type, const GLvoid *pixels)
-{
-    (void)target;
-    (void)level;
-    (void)internal_format;
-    (void)width;
-    (void)height;
-    (void)border;
-    (void)format;
-    (void)type;
-    (void)pixels;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glTexParameterf(GLenum target, GLenum name, GLfloat value)
-{
-    (void)target;
-    (void)name;
-    (void)value;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glEnable(GLenum capability)
-{
-    (void)capability;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glDisable(GLenum capability)
-{
-    (void)capability;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glBlendFunc(GLenum source, GLenum destination)
-{
-    (void)source;
-    (void)destination;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glColor4ub(GLubyte red, GLubyte green,
-                          GLubyte blue, GLubyte alpha)
-{
-    (void)red;
-    (void)green;
-    (void)blue;
-    (void)alpha;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glBegin(GLenum mode)
-{
-    (void)mode;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glTexCoord2f(GLfloat u, GLfloat v)
-{
-    (void)u;
-    (void)v;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glVertex2i(GLint x, GLint y)
-{
-    (void)x;
-    (void)y;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glEnd(void)
-{
-    legacy_calls++;
 }
 
 static int check_initial_prepare(sdl_window_t *window,
@@ -640,7 +535,6 @@ static int check_dirty_refresh_and_semantic_paint(
     TEST_CHECK(float_equal(last_stroke.width, 1.0f));
     TEST_CHECK(last_stroke.closed == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    TEST_CHECK(legacy_calls == 0);
     TEST_CHECK(texture_create_attempts == attempts_before);
     TEST_CHECK(texture_update_calls == 0);
     TEST_CHECK(texture_destroy_calls == destroys_before);
@@ -748,11 +642,10 @@ static int check_paint_preconditions_and_sticky_preflight(
     TEST_CHECK(preflight_attempts == 1);
     TEST_CHECK(tracked_operation_results == 0);
     TEST_CHECK(paint_event_count == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
-static int check_paint_failures_and_preserving_flush(sdl_window_t *window)
+static int check_paint_failures_and_flush(sdl_window_t *window)
 {
     const RendererColor background = {35, 69, 103, 137};
 
@@ -862,7 +755,6 @@ static int check_paint_failures_and_preserving_flush(sdl_window_t *window)
     TEST_CHECK(sprite_attempts == 1);
     TEST_CHECK(stroke_attempts == 1);
     TEST_CHECK(flush_attempts == 1);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -911,7 +803,6 @@ static int check_move_paint_and_exact_cleanup(sdl_window_t *window,
     TEST_CHECK(float_equal(last_stroke.points[2].y, 30.0f));
     TEST_CHECK(float_equal(last_stroke.points[3].x, 27.0f));
     TEST_CHECK(float_equal(last_stroke.points[3].y, 37.0f));
-    TEST_CHECK(legacy_calls == 0);
     fake_renderer.frame_active = 0;
 
     destroys_before = texture_destroy_calls;
@@ -959,7 +850,7 @@ int main(void)
     }
     if (check_paint_preconditions_and_sticky_preflight(&window) != 0)
         goto cleanup;
-    if (check_paint_failures_and_preserving_flush(&window) != 0)
+    if (check_paint_failures_and_flush(&window) != 0)
         goto cleanup;
     if (check_move_paint_and_exact_cleanup(
             &window, resized_texture) != 0) {

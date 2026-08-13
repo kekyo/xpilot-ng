@@ -56,8 +56,8 @@ static int draw_attempts;
 static int draw_count;
 static int blend_attempts;
 static int blend_calls;
-static int preserving_flush_attempts;
-static int preserving_flush_successes;
+static int flush_attempts;
+static int flush_successes;
 static int fail_next_draw;
 static int fail_next_blend;
 static int fail_next_flush;
@@ -162,8 +162,8 @@ static void reset_fixture(void)
     draw_count = 0;
     blend_attempts = 0;
     blend_calls = 0;
-    preserving_flush_attempts = 0;
-    preserving_flush_successes = 0;
+    flush_attempts = 0;
+    flush_successes = 0;
     fail_next_draw = 0;
     fail_next_blend = 0;
     fail_next_flush = 0;
@@ -208,9 +208,9 @@ static void begin_fake_frame(SdlRenderer *renderer)
     renderer->frame_result = RENDERER_STATUS_OK;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
+RendererStatus Sdl_renderer_flush(SdlRenderer *renderer)
 {
-    preserving_flush_attempts++;
+    flush_attempts++;
     if (renderer == NULL || renderer->frontend == NULL
         || !renderer->frontend->frame_active) {
         return RENDERER_STATUS_INVALID_STATE;
@@ -219,7 +219,7 @@ RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
         fail_next_flush = 0;
         return RENDERER_STATUS_BACKEND_ERROR;
     }
-    preserving_flush_successes++;
+    flush_successes++;
     return RENDERER_STATUS_OK;
 }
 
@@ -398,7 +398,7 @@ static int check_create_measure_and_empty_draw(void)
                    (RendererColor){1, 2, 3, 4}, TEXT_RENDERER_SPACE_HUD)
                == RENDERER_STATUS_OK);
     TEST_CHECK(draw_attempts == 0);
-    TEST_CHECK(preserving_flush_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(no_gpu_resource_calls());
 
     Text_renderer_destroy(&renderer);
@@ -428,8 +428,8 @@ static int check_immediate_hud_and_world_draws(void)
                == RENDERER_STATUS_OK);
     TEST_CHECK(draw_count == 1);
     TEST_CHECK(blend_calls == 1);
-    TEST_CHECK(preserving_flush_attempts == 1);
-    TEST_CHECK(preserving_flush_successes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(flush_successes == 1);
     TEST_CHECK(no_gpu_resource_calls());
     hud = &draws[0];
     TEST_CHECK(hud->texture == &first_texture);
@@ -450,7 +450,7 @@ static int check_immediate_hud_and_world_draws(void)
                == RENDERER_STATUS_OK);
     TEST_CHECK(draw_count == 2);
     TEST_CHECK(blend_calls == 2);
-    TEST_CHECK(preserving_flush_attempts == 2);
+    TEST_CHECK(flush_attempts == 2);
     world = &draws[1];
     TEST_CHECK(world->vertex_count == hud->vertex_count);
     TEST_CHECK(vertex_equal(&world->vertices[0], 94.5f, 205.0f,
@@ -540,7 +540,7 @@ static int check_cached_draw_and_font_identity(void)
                             0.0f, 0.0f, color));
     TEST_CHECK(vertex_equal(&draws[0].vertices[6], 6.0f, 11.0f,
                             9.0f / 64.0f, 0.0f, color));
-    TEST_CHECK(preserving_flush_attempts == 1);
+    TEST_CHECK(flush_attempts == 1);
 
     TEST_CHECK(Text_renderer_draw_cached(
                    second, cache, anchor, TEXT_GEOMETRY_ALIGN_LEFT,
@@ -548,7 +548,7 @@ static int check_cached_draw_and_font_identity(void)
                    TEXT_RENDERER_SPACE_HUD)
                == RENDERER_STATUS_RESOURCE_MISMATCH);
     TEST_CHECK(draw_count == 1);
-    TEST_CHECK(preserving_flush_attempts == 1);
+    TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(no_gpu_resource_calls());
 
     Text_renderer_cache_destroy(&cache);
@@ -598,7 +598,7 @@ static int check_failures_preserve_cache_and_ordering(void)
     TEST_CHECK(blend_calls == 0);
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(draw_count == 0);
-    TEST_CHECK(preserving_flush_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
 
     /* Once a frame has failed, even the other public draw entry point must
      * return the first failure without queuing or flushing more work. */
@@ -610,7 +610,7 @@ static int check_failures_preserve_cache_and_ordering(void)
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(draw_attempts == 0);
-    TEST_CHECK(preserving_flush_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
 
     /* Vertex allocation is part of drawing, so OOM must abort the frame even
      * though no backend state or command has been submitted yet. */
@@ -625,7 +625,7 @@ static int check_failures_preserve_cache_and_ordering(void)
                == RENDERER_STATUS_OUT_OF_MEMORY);
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(draw_attempts == 0);
-    TEST_CHECK(preserving_flush_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(Text_renderer_draw_cached(
                    renderer, cache, anchor, TEXT_GEOMETRY_ALIGN_LEFT,
                    TEXT_GEOMETRY_ALIGN_TOP, white,
@@ -647,7 +647,7 @@ static int check_failures_preserve_cache_and_ordering(void)
     TEST_CHECK(blend_calls == 1);
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(draw_count == 0);
-    TEST_CHECK(preserving_flush_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(Text_renderer_draw_cached(
                    renderer, cache, anchor, TEXT_GEOMETRY_ALIGN_LEFT,
                    TEXT_GEOMETRY_ALIGN_TOP, white,
@@ -655,7 +655,7 @@ static int check_failures_preserve_cache_and_ordering(void)
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(blend_attempts == 2);
     TEST_CHECK(draw_attempts == 1);
-    TEST_CHECK(preserving_flush_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
 
     begin_fake_frame(&first_sdl_renderer);
     fail_next_flush = 1;
@@ -670,8 +670,8 @@ static int check_failures_preserve_cache_and_ordering(void)
     TEST_CHECK(blend_calls == 2);
     TEST_CHECK(draw_attempts == 2);
     TEST_CHECK(draw_count == 1);
-    TEST_CHECK(preserving_flush_attempts == 1);
-    TEST_CHECK(preserving_flush_successes == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(flush_successes == 0);
     TEST_CHECK(Text_renderer_draw(
                    renderer, text, sizeof(text), anchor,
                    TEXT_GEOMETRY_ALIGN_LEFT,
@@ -681,7 +681,7 @@ static int check_failures_preserve_cache_and_ordering(void)
     TEST_CHECK(blend_attempts == 3);
     TEST_CHECK(draw_attempts == 2);
     TEST_CHECK(draw_count == 1);
-    TEST_CHECK(preserving_flush_attempts == 1);
+    TEST_CHECK(flush_attempts == 1);
 
     /* A new successful frame clears the sticky result and permits drawing
      * the retained CPU cache again. */
@@ -694,8 +694,8 @@ static int check_failures_preserve_cache_and_ordering(void)
     TEST_CHECK(blend_calls == 3);
     TEST_CHECK(draw_attempts == 3);
     TEST_CHECK(draw_count == 2);
-    TEST_CHECK(preserving_flush_attempts == 2);
-    TEST_CHECK(preserving_flush_successes == 1);
+    TEST_CHECK(flush_attempts == 2);
+    TEST_CHECK(flush_successes == 1);
     TEST_CHECK(Text_renderer_cache_metrics(cache, &after)
                == RENDERER_STATUS_OK);
     TEST_CHECK(memcmp(&before, &after, sizeof(before)) == 0);
@@ -776,7 +776,7 @@ static int check_invalid_arguments_do_not_publish(void)
                    (RendererColor){1, 2, 3, 4}, (TextRendererSpace)99)
                == RENDERER_STATUS_INVALID_ARGUMENT);
     TEST_CHECK(draw_attempts == 0);
-    TEST_CHECK(preserving_flush_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(no_gpu_resource_calls());
 
     Text_renderer_cache_destroy(&other_cache);
@@ -809,7 +809,7 @@ static int check_measure_failure_is_sticky_and_atomic(void)
     TEST_CHECK(memcmp(&metrics, &unchanged, sizeof(metrics)) == 0);
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(draw_attempts == 0);
-    TEST_CHECK(preserving_flush_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
 
     begin_fake_frame(&first_sdl_renderer);
     TEST_CHECK(Text_renderer_measure(renderer, text, sizeof(text), &metrics)

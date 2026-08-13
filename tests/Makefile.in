@@ -92,18 +92,18 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdl-console$(EXEEXT) test-sdl-surface$(EXEEXT) \
 	test-surface-rgba8$(EXEEXT) test-sdl-window$(EXEEXT) \
 	test-sdl-clipboard$(EXEEXT) test-sdl-event$(EXEEXT) \
-	test-gl-legacy$(EXEEXT) test-renderer-commands$(EXEEXT) \
-	test-renderer-geometry$(EXEEXT) \
-	test-renderer-gl-backends$(EXEEXT) \
+	test-gl-core-resources$(EXEEXT) \
+	test-renderer-commands$(EXEEXT) \
+	test-renderer-geometry$(EXEEXT) test-renderer-gl-core$(EXEEXT) \
 	test-paint-transform$(EXEEXT) test-image-geometry$(EXEEXT) \
 	test-polygon-geometry$(EXEEXT) test-gfx2d-picture$(EXEEXT) \
-	test-images$(EXEEXT) \
-	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
-	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
+	test-images$(EXEEXT) test-radar-renderer$(EXEEXT) \
+	test-sdl-ui-image$(EXEEXT) test-sdl-meta-frame$(EXEEXT) \
+	test-sdl-game-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-sdl-init-core-profile$(EXEEXT) \
-	test-sdl-renderer-core-context$(EXEEXT) test-sdlpaint-stage$(EXEEXT) \
-	test-paintmap-vdecor$(EXEEXT) \
+	test-sdl-renderer-core-context$(EXEEXT) \
+	test-sdlpaint-stage$(EXEEXT) test-paintmap-vdecor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) \
 	test-glwidgets-primitives$(EXEEXT) \
 	test-sdlmeta-primitives$(EXEEXT) \
@@ -111,22 +111,22 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdlgui-hud-primitives$(EXEEXT) \
 	test-sdlgui-asteroids$(EXEEXT) test-sdlgui-polygons$(EXEEXT) \
 	test-sdlgui-sparks$(EXEEXT) test-sdlgui-ships$(EXEEXT) \
-	test-text-geometry$(EXEEXT) \
-	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
-	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT)
+	test-text-geometry$(EXEEXT) test-text-atlas$(EXEEXT) \
+	test-text-ttf-atlas$(EXEEXT) test-text-renderer$(EXEEXT) \
+	test-text-cache-adapter$(EXEEXT)
 TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdl-console$(EXEEXT) test-sdl-surface$(EXEEXT) \
 	test-surface-rgba8$(EXEEXT) test-sdl-window$(EXEEXT) \
 	test-sdl-clipboard$(EXEEXT) test-sdl-event$(EXEEXT) \
 	test-renderer-commands$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) test-paint-transform$(EXEEXT) \
-	run-gl-legacy.sh test-image-geometry$(EXEEXT) \
+	run-gl-core-resources.sh test-image-geometry$(EXEEXT) \
 	test-polygon-geometry$(EXEEXT) test-gfx2d-picture$(EXEEXT) \
-	test-images$(EXEEXT) \
-	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
-	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
-	test-sdl-init-core-profile$(EXEEXT) test-sdlpaint-stage$(EXEEXT) \
-	run-sdl-core-boundary.sh \
+	test-images$(EXEEXT) test-radar-renderer$(EXEEXT) \
+	test-sdl-ui-image$(EXEEXT) test-sdl-meta-frame$(EXEEXT) \
+	test-sdl-game-frame$(EXEEXT) \
+	test-sdl-init-core-profile$(EXEEXT) \
+	test-sdlpaint-stage$(EXEEXT) run-sdl-core-boundary.sh \
 	test-paintmap-vdecor$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) \
@@ -136,11 +136,10 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdlgui-hud-primitives$(EXEEXT) \
 	test-sdlgui-asteroids$(EXEEXT) test-sdlgui-polygons$(EXEEXT) \
 	test-sdlgui-sparks$(EXEEXT) test-sdlgui-ships$(EXEEXT) \
-	test-text-geometry$(EXEEXT) \
-	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
-	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT) \
-	run-renderer-gl-backends.sh run-sdl-renderer-core-context.sh \
-	run-e2e.sh
+	test-text-geometry$(EXEEXT) test-text-atlas$(EXEEXT) \
+	test-text-ttf-atlas$(EXEEXT) test-text-renderer$(EXEEXT) \
+	test-text-cache-adapter$(EXEEXT) run-renderer-gl-core.sh \
+	run-sdl-renderer-core-context.sh run-e2e.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -158,18 +157,19 @@ test_gfx2d_picture_DEPENDENCIES =  \
 	$(top_builddir)/src/common/libxpcommon.a
 test_gfx2d_picture_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(test_gfx2d_picture_LDFLAGS) $(LDFLAGS) -o $@
-am_test_gl_legacy_OBJECTS = test_gl_legacy-test_gl_legacy.$(OBJEXT) \
-	test_gl_legacy-gl_diagnostics.$(OBJEXT) \
-	test_gl_legacy-renderer.$(OBJEXT) \
-	test_gl_legacy-renderer_gl_legacy.$(OBJEXT) \
-	test_gl_legacy-text.$(OBJEXT) \
-	test_gl_legacy-text_atlas.$(OBJEXT) \
-	test_gl_legacy-text_geometry.$(OBJEXT) \
-	test_gl_legacy-text_ttf_atlas.$(OBJEXT)
-test_gl_legacy_OBJECTS = $(am_test_gl_legacy_OBJECTS)
-test_gl_legacy_DEPENDENCIES =
-test_gl_legacy_LINK = $(CCLD) $(test_gl_legacy_CFLAGS) $(CFLAGS) \
-	$(test_gl_legacy_LDFLAGS) $(LDFLAGS) -o $@
+am_test_gl_core_resources_OBJECTS =  \
+	test_gl_core_resources-test_gl_core_resources.$(OBJEXT) \
+	test_gl_core_resources-gl_diagnostics.$(OBJEXT) \
+	test_gl_core_resources-renderer.$(OBJEXT) \
+	test_gl_core_resources-renderer_gl_core.$(OBJEXT) \
+	test_gl_core_resources-text.$(OBJEXT) \
+	test_gl_core_resources-text_atlas.$(OBJEXT) \
+	test_gl_core_resources-text_geometry.$(OBJEXT) \
+	test_gl_core_resources-text_ttf_atlas.$(OBJEXT)
+test_gl_core_resources_OBJECTS = $(am_test_gl_core_resources_OBJECTS)
+test_gl_core_resources_DEPENDENCIES =
+test_gl_core_resources_LINK = $(CCLD) $(test_gl_core_resources_CFLAGS) \
+	$(CFLAGS) $(test_gl_core_resources_LDFLAGS) $(LDFLAGS) -o $@
 am_test_glwidgets_primitives_OBJECTS =  \
 	test_glwidgets_primitives-test_glwidgets_primitives.$(OBJEXT) \
 	test_glwidgets_primitives-glwidgets.$(OBJEXT)
@@ -190,11 +190,6 @@ am_test_image_geometry_OBJECTS = test_image_geometry.$(OBJEXT) \
 	image_geometry.$(OBJEXT)
 test_image_geometry_OBJECTS = $(am_test_image_geometry_OBJECTS)
 test_image_geometry_LDADD = $(LDADD)
-am_test_polygon_geometry_OBJECTS = test_polygon_geometry.$(OBJEXT) \
-	polygon_geometry.$(OBJEXT)
-test_polygon_geometry_OBJECTS = $(am_test_polygon_geometry_OBJECTS)
-test_polygon_geometry_DEPENDENCIES = \
-	$(top_builddir)/src/client/sdl/libxp_libtess2.a
 am_test_images_OBJECTS = test_images-test_images.$(OBJEXT) \
 	test_images-images.$(OBJEXT) \
 	test_images-image_geometry.$(OBJEXT) \
@@ -220,6 +215,11 @@ test_paintmap_vdecor_OBJECTS = $(am_test_paintmap_vdecor_OBJECTS)
 test_paintmap_vdecor_LDADD = $(LDADD)
 test_paintmap_vdecor_LINK = $(CCLD) $(test_paintmap_vdecor_CFLAGS) \
 	$(CFLAGS) $(test_paintmap_vdecor_LDFLAGS) $(LDFLAGS) -o $@
+am_test_polygon_geometry_OBJECTS = test_polygon_geometry.$(OBJEXT) \
+	polygon_geometry.$(OBJEXT)
+test_polygon_geometry_OBJECTS = $(am_test_polygon_geometry_OBJECTS)
+test_polygon_geometry_DEPENDENCIES =  \
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a
 am_test_radar_renderer_OBJECTS =  \
 	test_radar_renderer-test_radar_renderer.$(OBJEXT) \
 	test_radar_renderer-radar.$(OBJEXT)
@@ -237,13 +237,11 @@ am_test_renderer_geometry_OBJECTS = test_renderer_geometry.$(OBJEXT) \
 	renderer.$(OBJEXT)
 test_renderer_geometry_OBJECTS = $(am_test_renderer_geometry_OBJECTS)
 test_renderer_geometry_LDADD = $(LDADD)
-am_test_renderer_gl_backends_OBJECTS =  \
-	test_renderer_gl_backends.$(OBJEXT) renderer.$(OBJEXT) \
-	renderer_gl_legacy.$(OBJEXT) renderer_gl_core.$(OBJEXT) \
-	sdlrenderer.$(OBJEXT) text_geometry.$(OBJEXT)
-test_renderer_gl_backends_OBJECTS =  \
-	$(am_test_renderer_gl_backends_OBJECTS)
-test_renderer_gl_backends_DEPENDENCIES =
+am_test_renderer_gl_core_OBJECTS = test_renderer_gl_core.$(OBJEXT) \
+	renderer.$(OBJEXT) renderer_gl_core.$(OBJEXT) \
+	text_geometry.$(OBJEXT)
+test_renderer_gl_core_OBJECTS = $(am_test_renderer_gl_core_OBJECTS)
+test_renderer_gl_core_DEPENDENCIES =
 am_test_sdl_clipboard_OBJECTS = test_sdl_clipboard.$(OBJEXT) \
 	sdlclipboard.$(OBJEXT)
 test_sdl_clipboard_OBJECTS = $(am_test_sdl_clipboard_OBJECTS)
@@ -262,7 +260,7 @@ test_sdl_game_frame_OBJECTS = $(am_test_sdl_game_frame_OBJECTS)
 test_sdl_game_frame_LDADD = $(LDADD)
 am_test_sdl_init_core_profile_OBJECTS = test_sdl_init_core_profile-test_sdl_init_core_profile.$(OBJEXT) \
 	test_sdl_init_core_profile-sdlinit.$(OBJEXT)
-test_sdl_init_core_profile_OBJECTS = \
+test_sdl_init_core_profile_OBJECTS =  \
 	$(am_test_sdl_init_core_profile_OBJECTS)
 test_sdl_init_core_profile_DEPENDENCIES =
 test_sdl_init_core_profile_LINK = $(CCLD) \
@@ -275,11 +273,10 @@ am_test_sdl_meta_frame_OBJECTS = test_sdl_meta_frame.$(OBJEXT) \
 	sdlmetaframe.$(OBJEXT)
 test_sdl_meta_frame_OBJECTS = $(am_test_sdl_meta_frame_OBJECTS)
 test_sdl_meta_frame_LDADD = $(LDADD)
-am_test_sdl_renderer_core_context_OBJECTS = \
+am_test_sdl_renderer_core_context_OBJECTS =  \
 	test_sdl_renderer_core_context.$(OBJEXT) renderer.$(OBJEXT) \
-	renderer_gl_legacy.$(OBJEXT) renderer_gl_core.$(OBJEXT) \
-	sdlrenderer.$(OBJEXT)
-test_sdl_renderer_core_context_OBJECTS = \
+	renderer_gl_core.$(OBJEXT) sdlrenderer.$(OBJEXT)
+test_sdl_renderer_core_context_OBJECTS =  \
 	$(am_test_sdl_renderer_core_context_OBJECTS)
 test_sdl_renderer_core_context_DEPENDENCIES =
 am_test_sdl_renderer_scissor_OBJECTS =  \
@@ -311,15 +308,6 @@ am_test_sdl_window_OBJECTS = test_sdl_window.$(OBJEXT) \
 	sdlwindow.$(OBJEXT)
 test_sdl_window_OBJECTS = $(am_test_sdl_window_OBJECTS)
 test_sdl_window_DEPENDENCIES =
-am_test_sdlmeta_primitives_OBJECTS =  \
-	test_sdlmeta_primitives-test_sdlmeta_primitives.$(OBJEXT) \
-	test_sdlmeta_primitives-sdlmeta.$(OBJEXT)
-test_sdlmeta_primitives_OBJECTS =  \
-	$(am_test_sdlmeta_primitives_OBJECTS)
-test_sdlmeta_primitives_DEPENDENCIES =
-test_sdlmeta_primitives_LINK = $(CCLD) \
-	$(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) \
-	$(test_sdlmeta_primitives_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdlgui_appearing_OBJECTS =  \
 	test_sdlgui_appearing-test_sdlgui_appearing.$(OBJEXT) \
 	test_sdlgui_appearing-sdlgui.$(OBJEXT) \
@@ -328,8 +316,17 @@ test_sdlgui_appearing_OBJECTS = $(am_test_sdlgui_appearing_OBJECTS)
 test_sdlgui_appearing_DEPENDENCIES =
 test_sdlgui_appearing_LINK = $(CCLD) $(test_sdlgui_appearing_CFLAGS) \
 	$(CFLAGS) $(test_sdlgui_appearing_LDFLAGS) $(LDFLAGS) -o $@
-am_test_sdlgui_hud_primitives_OBJECTS =  \
-	test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.$(OBJEXT) \
+am_test_sdlgui_asteroids_OBJECTS =  \
+	test_sdlgui_asteroids-test_sdlgui_asteroids.$(OBJEXT) \
+	test_sdlgui_asteroids-sdlgui.$(OBJEXT) \
+	test_sdlgui_asteroids-polygon_geometry.$(OBJEXT) \
+	test_sdlgui_asteroids-paintobjects.$(OBJEXT)
+test_sdlgui_asteroids_OBJECTS = $(am_test_sdlgui_asteroids_OBJECTS)
+test_sdlgui_asteroids_DEPENDENCIES =  \
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a
+test_sdlgui_asteroids_LINK = $(CCLD) $(test_sdlgui_asteroids_CFLAGS) \
+	$(CFLAGS) $(test_sdlgui_asteroids_LDFLAGS) $(LDFLAGS) -o $@
+am_test_sdlgui_hud_primitives_OBJECTS = test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.$(OBJEXT) \
 	test_sdlgui_hud_primitives-sdlgui.$(OBJEXT)
 test_sdlgui_hud_primitives_OBJECTS =  \
 	$(am_test_sdlgui_hud_primitives_OBJECTS)
@@ -342,21 +339,10 @@ am_test_sdlgui_polygons_OBJECTS =  \
 	test_sdlgui_polygons-sdlgui.$(OBJEXT) \
 	test_sdlgui_polygons-polygon_geometry.$(OBJEXT)
 test_sdlgui_polygons_OBJECTS = $(am_test_sdlgui_polygons_OBJECTS)
-test_sdlgui_polygons_DEPENDENCIES = \
+test_sdlgui_polygons_DEPENDENCIES =  \
 	$(top_builddir)/src/client/sdl/libxp_libtess2.a
 test_sdlgui_polygons_LINK = $(CCLD) $(test_sdlgui_polygons_CFLAGS) \
 	$(CFLAGS) $(test_sdlgui_polygons_LDFLAGS) $(LDFLAGS) -o $@
-am_test_sdlgui_asteroids_OBJECTS =  \
-	test_sdlgui_asteroids-test_sdlgui_asteroids.$(OBJEXT) \
-	test_sdlgui_asteroids-sdlgui.$(OBJEXT) \
-	test_sdlgui_asteroids-polygon_geometry.$(OBJEXT) \
-	test_sdlgui_asteroids-paintobjects.$(OBJEXT)
-test_sdlgui_asteroids_OBJECTS = $(am_test_sdlgui_asteroids_OBJECTS)
-test_sdlgui_asteroids_DEPENDENCIES = \
-	$(top_builddir)/src/client/sdl/libxp_libtess2.a
-test_sdlgui_asteroids_LINK = $(CCLD) \
-	$(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) \
-	$(test_sdlgui_asteroids_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdlgui_ships_OBJECTS =  \
 	test_sdlgui_ships-test_sdlgui_ships.$(OBJEXT) \
 	test_sdlgui_ships-sdlgui.$(OBJEXT) \
@@ -373,6 +359,15 @@ test_sdlgui_sparks_OBJECTS = $(am_test_sdlgui_sparks_OBJECTS)
 test_sdlgui_sparks_DEPENDENCIES =
 test_sdlgui_sparks_LINK = $(CCLD) $(test_sdlgui_sparks_CFLAGS) \
 	$(CFLAGS) $(test_sdlgui_sparks_LDFLAGS) $(LDFLAGS) -o $@
+am_test_sdlmeta_primitives_OBJECTS =  \
+	test_sdlmeta_primitives-test_sdlmeta_primitives.$(OBJEXT) \
+	test_sdlmeta_primitives-sdlmeta.$(OBJEXT)
+test_sdlmeta_primitives_OBJECTS =  \
+	$(am_test_sdlmeta_primitives_OBJECTS)
+test_sdlmeta_primitives_DEPENDENCIES =
+test_sdlmeta_primitives_LINK = $(CCLD) \
+	$(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) \
+	$(test_sdlmeta_primitives_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdlpaint_stage_OBJECTS =  \
 	test_sdlpaint_stage-test_sdlpaint_stage.$(OBJEXT) \
 	test_sdlpaint_stage-sdlpaint.$(OBJEXT)
@@ -432,28 +427,26 @@ depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/image_geometry.Po ./$(DEPDIR)/paint_transform.Po \
-	./$(DEPDIR)/renderer.Po ./$(DEPDIR)/renderer_gl_core.Po \
-	./$(DEPDIR)/renderer_gl_legacy.Po ./$(DEPDIR)/sdlclipboard.Po \
+	./$(DEPDIR)/polygon_geometry.Po ./$(DEPDIR)/renderer.Po \
+	./$(DEPDIR)/renderer_gl_core.Po ./$(DEPDIR)/sdlclipboard.Po \
 	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
 	./$(DEPDIR)/sdlgameframe.Po ./$(DEPDIR)/sdlkeys.Po \
 	./$(DEPDIR)/sdlmetaframe.Po ./$(DEPDIR)/sdlrenderer.Po \
 	./$(DEPDIR)/sdlwindow.Po ./$(DEPDIR)/surface_rgba8.Po \
 	./$(DEPDIR)/test_gfx2d_picture.Po \
-	./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po \
-	./$(DEPDIR)/test_gl_legacy-renderer.Po \
-	./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po \
-	./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po \
-	./$(DEPDIR)/test_gl_legacy-text.Po \
-	./$(DEPDIR)/test_gl_legacy-text_atlas.Po \
-	./$(DEPDIR)/test_gl_legacy-text_geometry.Po \
-	./$(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po \
+	./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po \
+	./$(DEPDIR)/test_gl_core_resources-renderer.Po \
+	./$(DEPDIR)/test_gl_core_resources-renderer_gl_core.Po \
+	./$(DEPDIR)/test_gl_core_resources-test_gl_core_resources.Po \
+	./$(DEPDIR)/test_gl_core_resources-text.Po \
+	./$(DEPDIR)/test_gl_core_resources-text_atlas.Po \
+	./$(DEPDIR)/test_gl_core_resources-text_geometry.Po \
+	./$(DEPDIR)/test_gl_core_resources-text_ttf_atlas.Po \
 	./$(DEPDIR)/test_glwidgets_primitives-glwidgets.Po \
 	./$(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Po \
 	./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po \
 	./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po \
 	./$(DEPDIR)/test_image_geometry.Po \
-	./$(DEPDIR)/polygon_geometry.Po \
-	./$(DEPDIR)/test_polygon_geometry.Po \
 	./$(DEPDIR)/test_images-image_geometry.Po \
 	./$(DEPDIR)/test_images-images.Po \
 	./$(DEPDIR)/test_images-strdup.Po \
@@ -464,11 +457,12 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_paint_transform.Po \
 	./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po \
 	./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po \
+	./$(DEPDIR)/test_polygon_geometry.Po \
 	./$(DEPDIR)/test_radar_renderer-radar.Po \
 	./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po \
 	./$(DEPDIR)/test_renderer_commands.Po \
 	./$(DEPDIR)/test_renderer_geometry.Po \
-	./$(DEPDIR)/test_renderer_gl_backends.Po \
+	./$(DEPDIR)/test_renderer_gl_core.Po \
 	./$(DEPDIR)/test_sdl_clipboard.Po \
 	./$(DEPDIR)/test_sdl_console.Po ./$(DEPDIR)/test_sdl_event.Po \
 	./$(DEPDIR)/test_sdl_game_frame.Po \
@@ -488,26 +482,26 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_sdl_ui_image-surface_rgba8.Po \
 	./$(DEPDIR)/test_sdl_ui_image-test_sdl_ui_image.Po \
 	./$(DEPDIR)/test_sdl_window.Po \
-	./$(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po \
-	./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po \
 	./$(DEPDIR)/test_sdlgui_appearing-paintobjects.Po \
 	./$(DEPDIR)/test_sdlgui_appearing-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po \
+	./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po \
+	./$(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po \
+	./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po \
+	./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po \
 	./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po \
 	./$(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Po \
 	./$(DEPDIR)/test_sdlgui_polygons-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po \
-	./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po \
-	./$(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po \
-	./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po \
-	./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po \
 	./$(DEPDIR)/test_sdlgui_ships-paintobjects.Po \
 	./$(DEPDIR)/test_sdlgui_ships-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Po \
 	./$(DEPDIR)/test_sdlgui_sparks-paintobjects.Po \
 	./$(DEPDIR)/test_sdlgui_sparks-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Po \
+	./$(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po \
+	./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po \
 	./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po \
 	./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po \
 	./$(DEPDIR)/test_surface_rgba8.Po \
@@ -539,62 +533,64 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
-SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
+SOURCES = $(test_gfx2d_picture_SOURCES) \
+	$(test_gl_core_resources_SOURCES) \
 	$(test_glwidgets_primitives_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
 	$(test_meta_environment_SOURCES) \
-	$(test_paint_transform_SOURCES) $(test_paintmap_vdecor_SOURCES) \
+	$(test_paint_transform_SOURCES) \
+	$(test_paintmap_vdecor_SOURCES) \
 	$(test_polygon_geometry_SOURCES) \
 	$(test_radar_renderer_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
-	$(test_renderer_gl_backends_SOURCES) \
-	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
-	$(test_sdl_event_SOURCES) $(test_sdl_game_frame_SOURCES) \
+	$(test_renderer_gl_core_SOURCES) $(test_sdl_clipboard_SOURCES) \
+	$(test_sdl_console_SOURCES) $(test_sdl_event_SOURCES) \
+	$(test_sdl_game_frame_SOURCES) \
 	$(test_sdl_init_core_profile_SOURCES) $(test_sdl_keys_SOURCES) \
 	$(test_sdl_meta_frame_SOURCES) \
 	$(test_sdl_renderer_core_context_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
-	$(test_sdl_window_SOURCES) $(test_sdlmeta_primitives_SOURCES) \
-	$(test_sdlgui_appearing_SOURCES) \
-	$(test_sdlgui_hud_primitives_SOURCES) \
+	$(test_sdl_window_SOURCES) $(test_sdlgui_appearing_SOURCES) \
 	$(test_sdlgui_asteroids_SOURCES) \
-	$(test_sdlgui_polygons_SOURCES) \
-	$(test_sdlgui_ships_SOURCES) $(test_sdlgui_sparks_SOURCES) \
-	$(test_sdlpaint_stage_SOURCES) \
-	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
-	$(test_text_cache_adapter_SOURCES) \
+	$(test_sdlgui_hud_primitives_SOURCES) \
+	$(test_sdlgui_polygons_SOURCES) $(test_sdlgui_ships_SOURCES) \
+	$(test_sdlgui_sparks_SOURCES) \
+	$(test_sdlmeta_primitives_SOURCES) \
+	$(test_sdlpaint_stage_SOURCES) $(test_surface_rgba8_SOURCES) \
+	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES)
-DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
+DIST_SOURCES = $(test_gfx2d_picture_SOURCES) \
+	$(test_gl_core_resources_SOURCES) \
 	$(test_glwidgets_primitives_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
 	$(test_meta_environment_SOURCES) \
-	$(test_paint_transform_SOURCES) $(test_paintmap_vdecor_SOURCES) \
+	$(test_paint_transform_SOURCES) \
+	$(test_paintmap_vdecor_SOURCES) \
 	$(test_polygon_geometry_SOURCES) \
 	$(test_radar_renderer_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
-	$(test_renderer_gl_backends_SOURCES) \
-	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
-	$(test_sdl_event_SOURCES) $(test_sdl_game_frame_SOURCES) \
+	$(test_renderer_gl_core_SOURCES) $(test_sdl_clipboard_SOURCES) \
+	$(test_sdl_console_SOURCES) $(test_sdl_event_SOURCES) \
+	$(test_sdl_game_frame_SOURCES) \
 	$(test_sdl_init_core_profile_SOURCES) $(test_sdl_keys_SOURCES) \
 	$(test_sdl_meta_frame_SOURCES) \
 	$(test_sdl_renderer_core_context_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
-	$(test_sdl_window_SOURCES) $(test_sdlmeta_primitives_SOURCES) \
-	$(test_sdlgui_appearing_SOURCES) \
-	$(test_sdlgui_hud_primitives_SOURCES) \
+	$(test_sdl_window_SOURCES) $(test_sdlgui_appearing_SOURCES) \
 	$(test_sdlgui_asteroids_SOURCES) \
-	$(test_sdlgui_polygons_SOURCES) \
-	$(test_sdlgui_ships_SOURCES) $(test_sdlgui_sparks_SOURCES) \
-	$(test_sdlpaint_stage_SOURCES) \
-	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
-	$(test_text_cache_adapter_SOURCES) \
+	$(test_sdlgui_hud_primitives_SOURCES) \
+	$(test_sdlgui_polygons_SOURCES) $(test_sdlgui_ships_SOURCES) \
+	$(test_sdlgui_sparks_SOURCES) \
+	$(test_sdlmeta_primitives_SOURCES) \
+	$(test_sdlpaint_stage_SOURCES) $(test_surface_rgba8_SOURCES) \
+	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES)
 am__can_run_installinfo = \
@@ -848,8 +844,6 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
-GLU_CFLAGS = @GLU_CFLAGS@
-GLU_LIBS = @GLU_LIBS@
 GL_CFLAGS = @GL_CFLAGS@
 GL_LIBS = @GL_LIBS@
 INSTALL = @INSTALL@
@@ -961,7 +955,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_srcdir)/src/client/sdl \
 	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
 	@SDL2_CFLAGS@ @SDL2_IMAGE_CFLAGS@ @SDL2_TTF_CFLAGS@ \
-	@GL_CFLAGS@ @GLU_CFLAGS@
+	@GL_CFLAGS@
 
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
@@ -1002,10 +996,10 @@ test_sdl_event_SOURCES = test_sdl_event.c \
 	$(top_srcdir)/src/client/sdl/sdlevent.c
 
 test_sdl_event_LDADD = @SDL2_LIBS@
-test_gl_legacy_SOURCES = test_gl_legacy.c \
+test_gl_core_resources_SOURCES = test_gl_core_resources.c \
 	$(top_srcdir)/src/client/sdl/gl_diagnostics.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
-	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
+	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
 	$(top_srcdir)/src/client/sdl/text.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.h \
@@ -1014,36 +1008,34 @@ test_gl_legacy_SOURCES = test_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/text_ttf_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_ttf_atlas.h
 
-test_gl_legacy_CPPFLAGS = $(AM_CPPFLAGS) \
+test_gl_core_resources_CPPFLAGS = $(AM_CPPFLAGS) \
 	-DXPILOT_TEST_FONT_PATH=\"$(top_srcdir)/lib/fonts/FreeSansBoldOblique.ttf\"
 
-test_gl_legacy_CFLAGS = $(AM_CFLAGS) -DXPILOT_GL_TEST_HOOKS \
+test_gl_core_resources_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
-test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
-	-Wl,--wrap=glGetString -Wl,--wrap=glGenLists \
-	-Wl,--wrap=glGenTextures -Wl,--wrap=TTF_OpenFont \
+test_gl_core_resources_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=TTF_OpenFont \
 	-Wl,--wrap=TTF_CloseFont
 
-test_gl_legacy_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
+test_gl_core_resources_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
 	@GL_LIBS@
 
 test_renderer_commands_SOURCES = test_renderer_commands.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
+
 test_renderer_commands_LDFLAGS = $(AM_LDFLAGS) \
 	-Wl,--wrap=malloc -Wl,--wrap=calloc
 
 test_renderer_geometry_SOURCES = test_renderer_geometry.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
 
-test_renderer_gl_backends_SOURCES = test_renderer_gl_backends.c \
+test_renderer_gl_core_SOURCES = test_renderer_gl_core.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
-	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
-	$(top_srcdir)/src/client/sdl/sdlrenderer.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c
 
-test_renderer_gl_backends_LDADD = @SDL2_LIBS@ @GL_LIBS@
+test_renderer_gl_core_LDADD = @SDL2_LIBS@ @GL_LIBS@
 test_paint_transform_SOURCES = test_paint_transform.c \
 	$(top_srcdir)/src/client/sdl/paint_transform.c
 
@@ -1053,6 +1045,7 @@ test_image_geometry_SOURCES = test_image_geometry.c \
 test_polygon_geometry_SOURCES = test_polygon_geometry.c \
 	$(top_srcdir)/src/client/sdl/polygon_geometry.c \
 	$(top_srcdir)/src/client/sdl/polygon_geometry.h
+
 test_polygon_geometry_LDADD = \
 	$(top_builddir)/src/client/sdl/libxp_libtess2.a
 
@@ -1100,6 +1093,7 @@ test_sdlpaint_stage_SOURCES = test_sdlpaint_stage.c \
 
 test_sdlpaint_stage_CPPFLAGS = $(AM_CPPFLAGS) \
 	-DXPILOT_SDLPAINT_TEST_HOOKS
+
 test_sdlpaint_stage_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
@@ -1107,6 +1101,7 @@ test_sdlpaint_stage_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdlpaint_stage_LDADD = @SDL2_LIBS@
 test_paintmap_vdecor_SOURCES = test_paintmap_vdecor.c \
 	$(top_srcdir)/src/client/paintmap.c
+
 test_paintmap_vdecor_CPPFLAGS = $(AM_CPPFLAGS) -DPAINT_FREE=0
 test_paintmap_vdecor_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
@@ -1135,10 +1130,10 @@ test_sdl_init_core_profile_LDFLAGS = $(AM_LDFLAGS) \
 
 test_sdl_init_core_profile_LDADD = @SDL2_IMAGE_LIBS@ @SDL2_TTF_LIBS@ \
 	@SDL2_LIBS@
+
 test_sdl_renderer_core_context_SOURCES = \
 	test_sdl_renderer_core_context.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
-	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
 	$(top_srcdir)/src/client/sdl/sdlrenderer.c
 
@@ -1177,10 +1172,13 @@ test_sdlgui_appearing_SOURCES = test_sdlgui_appearing.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/appearing_batch_test_support.h \
 	$(top_srcdir)/src/client/paintobjects.c
+
 test_sdlgui_appearing_CPPFLAGS = $(AM_CPPFLAGS) \
 	-DXPILOT_APPEARING_BATCH_TEST_HOOKS
+
 test_sdlgui_appearing_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
+
 test_sdlgui_appearing_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=realloc \
 	-Wl,--wrap=Gui_paint_paused \
@@ -1190,6 +1188,7 @@ test_sdlgui_appearing_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_refuel \
 	-Wl,--wrap=Gui_paint_connector \
 	-Wl,--wrap=Gui_paint_transporter
+
 test_sdlgui_appearing_LDADD = @SDL2_LIBS@
 test_sdlgui_hud_primitives_SOURCES = test_sdlgui_hud_primitives.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c
@@ -1237,19 +1236,25 @@ test_sdlgui_asteroids_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 
 test_sdlgui_asteroids_LDADD = \
 	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL2_LIBS@
+
 test_sdlgui_polygons_SOURCES = test_sdlgui_polygons.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/polygon_cache_test_support.h \
 	$(top_srcdir)/src/client/sdl/polygon_geometry.c \
 	$(top_srcdir)/src/client/sdl/polygon_geometry.h
+
 test_sdlgui_polygons_CPPFLAGS = $(AM_CPPFLAGS) \
 	-DXPILOT_POLYGON_CACHE_TEST_HOOKS
+
 test_sdlgui_polygons_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
+
 test_sdlgui_polygons_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc
+
 test_sdlgui_polygons_LDADD = \
 	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL2_LIBS@
+
 test_sdlgui_sparks_SOURCES = test_sdlgui_sparks.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/spark_batch_test_support.h \
@@ -1342,10 +1347,10 @@ AM_TESTS_ENVIRONMENT = \
 	XPILOT_TEST_PREFIX='$(prefix)'; export XPILOT_TEST_PREFIX; \
 	XPILOT_TEST_BINDIR='$(bindir)'; export XPILOT_TEST_BINDIR; \
 	XPILOT_TEST_PKGDATADIR='$(pkgdatadir)'; export XPILOT_TEST_PKGDATADIR; \
-	XPILOT_GL_TEST_BINARY='$(abs_builddir)/test-gl-legacy'; \
-	export XPILOT_GL_TEST_BINARY; \
-	XPILOT_RENDERER_GL_TEST_BINARY='$(abs_builddir)/test-renderer-gl-backends'; \
-	export XPILOT_RENDERER_GL_TEST_BINARY; \
+	XPILOT_GL_CORE_RESOURCE_TEST_BINARY='$(abs_builddir)/test-gl-core-resources'; \
+	export XPILOT_GL_CORE_RESOURCE_TEST_BINARY; \
+	XPILOT_RENDERER_GL_CORE_TEST_BINARY='$(abs_builddir)/test-renderer-gl-core'; \
+	export XPILOT_RENDERER_GL_CORE_TEST_BINARY; \
 	XPILOT_SDL_CORE_CONTEXT_TEST_BINARY='$(abs_builddir)/test-sdl-renderer-core-context'; \
 	export XPILOT_SDL_CORE_CONTEXT_TEST_BINARY; \
 	XPILOT_SDL_OBJECT_DIR='$(abs_top_builddir)/src/client/sdl'; \
@@ -1353,8 +1358,8 @@ AM_TESTS_ENVIRONMENT = \
 	XPILOT_SDL_BINARY='$(abs_top_builddir)/src/client/sdl/xpilot-ng-sdl'; \
 	export XPILOT_SDL_BINARY;
 
-EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-legacy.sh \
-	run-renderer-gl-backends.sh run-sdl-core-boundary.sh \
+EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-core-resources.sh \
+	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
 	run-sdl-renderer-core-context.sh \
 	test_helpers.h
 
@@ -1399,9 +1404,9 @@ test-gfx2d-picture$(EXEEXT): $(test_gfx2d_picture_OBJECTS) $(test_gfx2d_picture_
 	@rm -f test-gfx2d-picture$(EXEEXT)
 	$(AM_V_CCLD)$(test_gfx2d_picture_LINK) $(test_gfx2d_picture_OBJECTS) $(test_gfx2d_picture_LDADD) $(LIBS)
 
-test-gl-legacy$(EXEEXT): $(test_gl_legacy_OBJECTS) $(test_gl_legacy_DEPENDENCIES) $(EXTRA_test_gl_legacy_DEPENDENCIES)
-	@rm -f test-gl-legacy$(EXEEXT)
-	$(AM_V_CCLD)$(test_gl_legacy_LINK) $(test_gl_legacy_OBJECTS) $(test_gl_legacy_LDADD) $(LIBS)
+test-gl-core-resources$(EXEEXT): $(test_gl_core_resources_OBJECTS) $(test_gl_core_resources_DEPENDENCIES) $(EXTRA_test_gl_core_resources_DEPENDENCIES)
+	@rm -f test-gl-core-resources$(EXEEXT)
+	$(AM_V_CCLD)$(test_gl_core_resources_LINK) $(test_gl_core_resources_OBJECTS) $(test_gl_core_resources_LDADD) $(LIBS)
 
 test-glwidgets-primitives$(EXEEXT): $(test_glwidgets_primitives_OBJECTS) $(test_glwidgets_primitives_DEPENDENCIES) $(EXTRA_test_glwidgets_primitives_DEPENDENCIES)
 	@rm -f test-glwidgets-primitives$(EXEEXT)
@@ -1414,10 +1419,6 @@ test-glwidgets-scissor$(EXEEXT): $(test_glwidgets_scissor_OBJECTS) $(test_glwidg
 test-image-geometry$(EXEEXT): $(test_image_geometry_OBJECTS) $(test_image_geometry_DEPENDENCIES) $(EXTRA_test_image_geometry_DEPENDENCIES)
 	@rm -f test-image-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_image_geometry_OBJECTS) $(test_image_geometry_LDADD) $(LIBS)
-
-test-polygon-geometry$(EXEEXT): $(test_polygon_geometry_OBJECTS) $(test_polygon_geometry_DEPENDENCIES) $(EXTRA_test_polygon_geometry_DEPENDENCIES)
-	@rm -f test-polygon-geometry$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(test_polygon_geometry_OBJECTS) $(test_polygon_geometry_LDADD) $(LIBS)
 
 test-images$(EXEEXT): $(test_images_OBJECTS) $(test_images_DEPENDENCIES) $(EXTRA_test_images_DEPENDENCIES)
 	@rm -f test-images$(EXEEXT)
@@ -1435,6 +1436,10 @@ test-paintmap-vdecor$(EXEEXT): $(test_paintmap_vdecor_OBJECTS) $(test_paintmap_v
 	@rm -f test-paintmap-vdecor$(EXEEXT)
 	$(AM_V_CCLD)$(test_paintmap_vdecor_LINK) $(test_paintmap_vdecor_OBJECTS) $(test_paintmap_vdecor_LDADD) $(LIBS)
 
+test-polygon-geometry$(EXEEXT): $(test_polygon_geometry_OBJECTS) $(test_polygon_geometry_DEPENDENCIES) $(EXTRA_test_polygon_geometry_DEPENDENCIES)
+	@rm -f test-polygon-geometry$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_polygon_geometry_OBJECTS) $(test_polygon_geometry_LDADD) $(LIBS)
+
 test-radar-renderer$(EXEEXT): $(test_radar_renderer_OBJECTS) $(test_radar_renderer_DEPENDENCIES) $(EXTRA_test_radar_renderer_DEPENDENCIES)
 	@rm -f test-radar-renderer$(EXEEXT)
 	$(AM_V_CCLD)$(test_radar_renderer_LINK) $(test_radar_renderer_OBJECTS) $(test_radar_renderer_LDADD) $(LIBS)
@@ -1447,9 +1452,9 @@ test-renderer-geometry$(EXEEXT): $(test_renderer_geometry_OBJECTS) $(test_render
 	@rm -f test-renderer-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_renderer_geometry_OBJECTS) $(test_renderer_geometry_LDADD) $(LIBS)
 
-test-renderer-gl-backends$(EXEEXT): $(test_renderer_gl_backends_OBJECTS) $(test_renderer_gl_backends_DEPENDENCIES) $(EXTRA_test_renderer_gl_backends_DEPENDENCIES)
-	@rm -f test-renderer-gl-backends$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(test_renderer_gl_backends_OBJECTS) $(test_renderer_gl_backends_LDADD) $(LIBS)
+test-renderer-gl-core$(EXEEXT): $(test_renderer_gl_core_OBJECTS) $(test_renderer_gl_core_DEPENDENCIES) $(EXTRA_test_renderer_gl_core_DEPENDENCIES)
+	@rm -f test-renderer-gl-core$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_renderer_gl_core_OBJECTS) $(test_renderer_gl_core_LDADD) $(LIBS)
 
 test-sdl-clipboard$(EXEEXT): $(test_sdl_clipboard_OBJECTS) $(test_sdl_clipboard_DEPENDENCIES) $(EXTRA_test_sdl_clipboard_DEPENDENCIES)
 	@rm -f test-sdl-clipboard$(EXEEXT)
@@ -1499,21 +1504,17 @@ test-sdl-window$(EXEEXT): $(test_sdl_window_OBJECTS) $(test_sdl_window_DEPENDENC
 	@rm -f test-sdl-window$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_window_OBJECTS) $(test_sdl_window_LDADD) $(LIBS)
 
-test-sdlmeta-primitives$(EXEEXT): $(test_sdlmeta_primitives_OBJECTS) $(test_sdlmeta_primitives_DEPENDENCIES) $(EXTRA_test_sdlmeta_primitives_DEPENDENCIES)
-	@rm -f test-sdlmeta-primitives$(EXEEXT)
-	$(AM_V_CCLD)$(test_sdlmeta_primitives_LINK) $(test_sdlmeta_primitives_OBJECTS) $(test_sdlmeta_primitives_LDADD) $(LIBS)
-
 test-sdlgui-appearing$(EXEEXT): $(test_sdlgui_appearing_OBJECTS) $(test_sdlgui_appearing_DEPENDENCIES) $(EXTRA_test_sdlgui_appearing_DEPENDENCIES)
 	@rm -f test-sdlgui-appearing$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_appearing_LINK) $(test_sdlgui_appearing_OBJECTS) $(test_sdlgui_appearing_LDADD) $(LIBS)
 
-test-sdlgui-hud-primitives$(EXEEXT): $(test_sdlgui_hud_primitives_OBJECTS) $(test_sdlgui_hud_primitives_DEPENDENCIES) $(EXTRA_test_sdlgui_hud_primitives_DEPENDENCIES)
-	@rm -f test-sdlgui-hud-primitives$(EXEEXT)
-	$(AM_V_CCLD)$(test_sdlgui_hud_primitives_LINK) $(test_sdlgui_hud_primitives_OBJECTS) $(test_sdlgui_hud_primitives_LDADD) $(LIBS)
-
 test-sdlgui-asteroids$(EXEEXT): $(test_sdlgui_asteroids_OBJECTS) $(test_sdlgui_asteroids_DEPENDENCIES) $(EXTRA_test_sdlgui_asteroids_DEPENDENCIES)
 	@rm -f test-sdlgui-asteroids$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_asteroids_LINK) $(test_sdlgui_asteroids_OBJECTS) $(test_sdlgui_asteroids_LDADD) $(LIBS)
+
+test-sdlgui-hud-primitives$(EXEEXT): $(test_sdlgui_hud_primitives_OBJECTS) $(test_sdlgui_hud_primitives_DEPENDENCIES) $(EXTRA_test_sdlgui_hud_primitives_DEPENDENCIES)
+	@rm -f test-sdlgui-hud-primitives$(EXEEXT)
+	$(AM_V_CCLD)$(test_sdlgui_hud_primitives_LINK) $(test_sdlgui_hud_primitives_OBJECTS) $(test_sdlgui_hud_primitives_LDADD) $(LIBS)
 
 test-sdlgui-polygons$(EXEEXT): $(test_sdlgui_polygons_OBJECTS) $(test_sdlgui_polygons_DEPENDENCIES) $(EXTRA_test_sdlgui_polygons_DEPENDENCIES)
 	@rm -f test-sdlgui-polygons$(EXEEXT)
@@ -1526,6 +1527,10 @@ test-sdlgui-ships$(EXEEXT): $(test_sdlgui_ships_OBJECTS) $(test_sdlgui_ships_DEP
 test-sdlgui-sparks$(EXEEXT): $(test_sdlgui_sparks_OBJECTS) $(test_sdlgui_sparks_DEPENDENCIES) $(EXTRA_test_sdlgui_sparks_DEPENDENCIES)
 	@rm -f test-sdlgui-sparks$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_sparks_LINK) $(test_sdlgui_sparks_OBJECTS) $(test_sdlgui_sparks_LDADD) $(LIBS)
+
+test-sdlmeta-primitives$(EXEEXT): $(test_sdlmeta_primitives_OBJECTS) $(test_sdlmeta_primitives_DEPENDENCIES) $(EXTRA_test_sdlmeta_primitives_DEPENDENCIES)
+	@rm -f test-sdlmeta-primitives$(EXEEXT)
+	$(AM_V_CCLD)$(test_sdlmeta_primitives_LINK) $(test_sdlmeta_primitives_OBJECTS) $(test_sdlmeta_primitives_LDADD) $(LIBS)
 
 test-sdlpaint-stage$(EXEEXT): $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_stage_DEPENDENCIES) $(EXTRA_test_sdlpaint_stage_DEPENDENCIES)
 	@rm -f test-sdlpaint-stage$(EXEEXT)
@@ -1565,9 +1570,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gfx2d.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/image_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/paint_transform.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/polygon_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer_gl_core.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer_gl_legacy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlclipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlcompat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlevent.Po@am__quote@ # am--include-marker
@@ -1578,21 +1583,19 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlwindow.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gfx2d_picture.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-renderer.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text_atlas.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text_geometry.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_core_resources-renderer.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_core_resources-renderer_gl_core.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_core_resources-test_gl_core_resources.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_core_resources-text.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_core_resources-text_atlas.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_core_resources-text_geometry.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_core_resources-text_ttf_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_primitives-glwidgets.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_image_geometry.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/polygon_geometry.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_polygon_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-image_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-images.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-strdup.Po@am__quote@ # am--include-marker
@@ -1603,11 +1606,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paint_transform.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_polygon_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_radar_renderer-radar.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_commands.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_geometry.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_gl_backends.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_gl_core.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_clipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_console.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_event.Po@am__quote@ # am--include-marker
@@ -1628,26 +1632,26 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_ui_image-surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_ui_image-test_sdl_ui_image.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_window.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_appearing-paintobjects.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_appearing-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_polygons-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_ships-paintobjects.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_ships-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_sparks-paintobjects.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_sparks-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_rgba8.Po@am__quote@ # am--include-marker
@@ -1698,117 +1702,117 @@ gfx2d.obj: $(top_srcdir)/src/client/gfx2d.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gfx2d.obj `if test -f '$(top_srcdir)/src/client/gfx2d.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/gfx2d.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/gfx2d.c'; fi`
 
-test_gl_legacy-test_gl_legacy.o: test_gl_legacy.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-test_gl_legacy.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo -c -o test_gl_legacy-test_gl_legacy.o `test -f 'test_gl_legacy.c' || echo '$(srcdir)/'`test_gl_legacy.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo $(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_gl_legacy.c' object='test_gl_legacy-test_gl_legacy.o' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-test_gl_core_resources.o: test_gl_core_resources.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-test_gl_core_resources.o -MD -MP -MF $(DEPDIR)/test_gl_core_resources-test_gl_core_resources.Tpo -c -o test_gl_core_resources-test_gl_core_resources.o `test -f 'test_gl_core_resources.c' || echo '$(srcdir)/'`test_gl_core_resources.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-test_gl_core_resources.Tpo $(DEPDIR)/test_gl_core_resources-test_gl_core_resources.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_gl_core_resources.c' object='test_gl_core_resources-test_gl_core_resources.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-test_gl_legacy.o `test -f 'test_gl_legacy.c' || echo '$(srcdir)/'`test_gl_legacy.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-test_gl_core_resources.o `test -f 'test_gl_core_resources.c' || echo '$(srcdir)/'`test_gl_core_resources.c
 
-test_gl_legacy-test_gl_legacy.obj: test_gl_legacy.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-test_gl_legacy.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo -c -o test_gl_legacy-test_gl_legacy.obj `if test -f 'test_gl_legacy.c'; then $(CYGPATH_W) 'test_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/test_gl_legacy.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-test_gl_legacy.Tpo $(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_gl_legacy.c' object='test_gl_legacy-test_gl_legacy.obj' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-test_gl_core_resources.obj: test_gl_core_resources.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-test_gl_core_resources.obj -MD -MP -MF $(DEPDIR)/test_gl_core_resources-test_gl_core_resources.Tpo -c -o test_gl_core_resources-test_gl_core_resources.obj `if test -f 'test_gl_core_resources.c'; then $(CYGPATH_W) 'test_gl_core_resources.c'; else $(CYGPATH_W) '$(srcdir)/test_gl_core_resources.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-test_gl_core_resources.Tpo $(DEPDIR)/test_gl_core_resources-test_gl_core_resources.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_gl_core_resources.c' object='test_gl_core_resources-test_gl_core_resources.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-test_gl_legacy.obj `if test -f 'test_gl_legacy.c'; then $(CYGPATH_W) 'test_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/test_gl_legacy.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-test_gl_core_resources.obj `if test -f 'test_gl_core_resources.c'; then $(CYGPATH_W) 'test_gl_core_resources.c'; else $(CYGPATH_W) '$(srcdir)/test_gl_core_resources.c'; fi`
 
-test_gl_legacy-gl_diagnostics.o: $(top_srcdir)/src/client/sdl/gl_diagnostics.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-gl_diagnostics.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo -c -o test_gl_legacy-gl_diagnostics.o `test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/gl_diagnostics.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo $(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/gl_diagnostics.c' object='test_gl_legacy-gl_diagnostics.o' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-gl_diagnostics.o: $(top_srcdir)/src/client/sdl/gl_diagnostics.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-gl_diagnostics.o -MD -MP -MF $(DEPDIR)/test_gl_core_resources-gl_diagnostics.Tpo -c -o test_gl_core_resources-gl_diagnostics.o `test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/gl_diagnostics.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-gl_diagnostics.Tpo $(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/gl_diagnostics.c' object='test_gl_core_resources-gl_diagnostics.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-gl_diagnostics.o `test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/gl_diagnostics.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-gl_diagnostics.o `test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/gl_diagnostics.c
 
-test_gl_legacy-gl_diagnostics.obj: $(top_srcdir)/src/client/sdl/gl_diagnostics.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-gl_diagnostics.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo -c -o test_gl_legacy-gl_diagnostics.obj `if test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-gl_diagnostics.Tpo $(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/gl_diagnostics.c' object='test_gl_legacy-gl_diagnostics.obj' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-gl_diagnostics.obj: $(top_srcdir)/src/client/sdl/gl_diagnostics.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-gl_diagnostics.obj -MD -MP -MF $(DEPDIR)/test_gl_core_resources-gl_diagnostics.Tpo -c -o test_gl_core_resources-gl_diagnostics.obj `if test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-gl_diagnostics.Tpo $(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/gl_diagnostics.c' object='test_gl_core_resources-gl_diagnostics.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-gl_diagnostics.obj `if test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-gl_diagnostics.obj `if test -f '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gl_diagnostics.c'; fi`
 
-test_gl_legacy-renderer.o: $(top_srcdir)/src/client/sdl/renderer.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-renderer.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-renderer.Tpo -c -o test_gl_legacy-renderer.o `test -f '$(top_srcdir)/src/client/sdl/renderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-renderer.Tpo $(DEPDIR)/test_gl_legacy-renderer.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer.c' object='test_gl_legacy-renderer.o' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-renderer.o: $(top_srcdir)/src/client/sdl/renderer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-renderer.o -MD -MP -MF $(DEPDIR)/test_gl_core_resources-renderer.Tpo -c -o test_gl_core_resources-renderer.o `test -f '$(top_srcdir)/src/client/sdl/renderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-renderer.Tpo $(DEPDIR)/test_gl_core_resources-renderer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer.c' object='test_gl_core_resources-renderer.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-renderer.o `test -f '$(top_srcdir)/src/client/sdl/renderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-renderer.o `test -f '$(top_srcdir)/src/client/sdl/renderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer.c
 
-test_gl_legacy-renderer.obj: $(top_srcdir)/src/client/sdl/renderer.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-renderer.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-renderer.Tpo -c -o test_gl_legacy-renderer.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-renderer.Tpo $(DEPDIR)/test_gl_legacy-renderer.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer.c' object='test_gl_legacy-renderer.obj' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-renderer.obj: $(top_srcdir)/src/client/sdl/renderer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-renderer.obj -MD -MP -MF $(DEPDIR)/test_gl_core_resources-renderer.Tpo -c -o test_gl_core_resources-renderer.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-renderer.Tpo $(DEPDIR)/test_gl_core_resources-renderer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer.c' object='test_gl_core_resources-renderer.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-renderer.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-renderer.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer.c'; fi`
 
-test_gl_legacy-renderer_gl_legacy.o: $(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-renderer_gl_legacy.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Tpo -c -o test_gl_legacy-renderer_gl_legacy.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Tpo $(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' object='test_gl_legacy-renderer_gl_legacy.o' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-renderer_gl_core.o: $(top_srcdir)/src/client/sdl/renderer_gl_core.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-renderer_gl_core.o -MD -MP -MF $(DEPDIR)/test_gl_core_resources-renderer_gl_core.Tpo -c -o test_gl_core_resources-renderer_gl_core.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_core.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_core.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-renderer_gl_core.Tpo $(DEPDIR)/test_gl_core_resources-renderer_gl_core.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer_gl_core.c' object='test_gl_core_resources-renderer_gl_core.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-renderer_gl_legacy.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-renderer_gl_core.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_core.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_core.c
 
-test_gl_legacy-renderer_gl_legacy.obj: $(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-renderer_gl_legacy.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Tpo -c -o test_gl_legacy-renderer_gl_legacy.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Tpo $(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' object='test_gl_legacy-renderer_gl_legacy.obj' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-renderer_gl_core.obj: $(top_srcdir)/src/client/sdl/renderer_gl_core.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-renderer_gl_core.obj -MD -MP -MF $(DEPDIR)/test_gl_core_resources-renderer_gl_core.Tpo -c -o test_gl_core_resources-renderer_gl_core.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-renderer_gl_core.Tpo $(DEPDIR)/test_gl_core_resources-renderer_gl_core.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer_gl_core.c' object='test_gl_core_resources-renderer_gl_core.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-renderer_gl_legacy.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-renderer_gl_core.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; fi`
 
-test_gl_legacy-text.o: $(top_srcdir)/src/client/sdl/text.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-text.Tpo -c -o test_gl_legacy-text.o `test -f '$(top_srcdir)/src/client/sdl/text.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text.Tpo $(DEPDIR)/test_gl_legacy-text.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text.c' object='test_gl_legacy-text.o' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-text.o: $(top_srcdir)/src/client/sdl/text.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-text.o -MD -MP -MF $(DEPDIR)/test_gl_core_resources-text.Tpo -c -o test_gl_core_resources-text.o `test -f '$(top_srcdir)/src/client/sdl/text.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-text.Tpo $(DEPDIR)/test_gl_core_resources-text.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text.c' object='test_gl_core_resources-text.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text.o `test -f '$(top_srcdir)/src/client/sdl/text.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-text.o `test -f '$(top_srcdir)/src/client/sdl/text.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text.c
 
-test_gl_legacy-text.obj: $(top_srcdir)/src/client/sdl/text.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-text.Tpo -c -o test_gl_legacy-text.obj `if test -f '$(top_srcdir)/src/client/sdl/text.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text.Tpo $(DEPDIR)/test_gl_legacy-text.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text.c' object='test_gl_legacy-text.obj' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-text.obj: $(top_srcdir)/src/client/sdl/text.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-text.obj -MD -MP -MF $(DEPDIR)/test_gl_core_resources-text.Tpo -c -o test_gl_core_resources-text.obj `if test -f '$(top_srcdir)/src/client/sdl/text.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-text.Tpo $(DEPDIR)/test_gl_core_resources-text.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text.c' object='test_gl_core_resources-text.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text.obj `if test -f '$(top_srcdir)/src/client/sdl/text.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-text.obj `if test -f '$(top_srcdir)/src/client/sdl/text.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text.c'; fi`
 
-test_gl_legacy-text_atlas.o: $(top_srcdir)/src/client/sdl/text_atlas.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text_atlas.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-text_atlas.Tpo -c -o test_gl_legacy-text_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_atlas.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text_atlas.Tpo $(DEPDIR)/test_gl_legacy-text_atlas.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_atlas.c' object='test_gl_legacy-text_atlas.o' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-text_atlas.o: $(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-text_atlas.o -MD -MP -MF $(DEPDIR)/test_gl_core_resources-text_atlas.Tpo -c -o test_gl_core_resources-text_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-text_atlas.Tpo $(DEPDIR)/test_gl_core_resources-text_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_atlas.c' object='test_gl_core_resources-text_atlas.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-text_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_atlas.c
 
-test_gl_legacy-text_atlas.obj: $(top_srcdir)/src/client/sdl/text_atlas.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text_atlas.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-text_atlas.Tpo -c -o test_gl_legacy-text_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_atlas.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text_atlas.Tpo $(DEPDIR)/test_gl_legacy-text_atlas.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_atlas.c' object='test_gl_legacy-text_atlas.obj' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-text_atlas.obj: $(top_srcdir)/src/client/sdl/text_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-text_atlas.obj -MD -MP -MF $(DEPDIR)/test_gl_core_resources-text_atlas.Tpo -c -o test_gl_core_resources-text_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_atlas.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-text_atlas.Tpo $(DEPDIR)/test_gl_core_resources-text_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_atlas.c' object='test_gl_core_resources-text_atlas.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_atlas.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-text_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_atlas.c'; fi`
 
-test_gl_legacy-text_geometry.o: $(top_srcdir)/src/client/sdl/text_geometry.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text_geometry.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-text_geometry.Tpo -c -o test_gl_legacy-text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text_geometry.Tpo $(DEPDIR)/test_gl_legacy-text_geometry.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='test_gl_legacy-text_geometry.o' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-text_geometry.o: $(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-text_geometry.o -MD -MP -MF $(DEPDIR)/test_gl_core_resources-text_geometry.Tpo -c -o test_gl_core_resources-text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-text_geometry.Tpo $(DEPDIR)/test_gl_core_resources-text_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='test_gl_core_resources-text_geometry.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
 
-test_gl_legacy-text_geometry.obj: $(top_srcdir)/src/client/sdl/text_geometry.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text_geometry.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-text_geometry.Tpo -c -o test_gl_legacy-text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text_geometry.Tpo $(DEPDIR)/test_gl_legacy-text_geometry.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='test_gl_legacy-text_geometry.obj' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-text_geometry.obj: $(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-text_geometry.obj -MD -MP -MF $(DEPDIR)/test_gl_core_resources-text_geometry.Tpo -c -o test_gl_core_resources-text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-text_geometry.Tpo $(DEPDIR)/test_gl_core_resources-text_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='test_gl_core_resources-text_geometry.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
 
-test_gl_legacy-text_ttf_atlas.o: $(top_srcdir)/src/client/sdl/text_ttf_atlas.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text_ttf_atlas.o -MD -MP -MF $(DEPDIR)/test_gl_legacy-text_ttf_atlas.Tpo -c -o test_gl_legacy-text_ttf_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_ttf_atlas.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text_ttf_atlas.Tpo $(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' object='test_gl_legacy-text_ttf_atlas.o' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-text_ttf_atlas.o: $(top_srcdir)/src/client/sdl/text_ttf_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-text_ttf_atlas.o -MD -MP -MF $(DEPDIR)/test_gl_core_resources-text_ttf_atlas.Tpo -c -o test_gl_core_resources-text_ttf_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_ttf_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-text_ttf_atlas.Tpo $(DEPDIR)/test_gl_core_resources-text_ttf_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' object='test_gl_core_resources-text_ttf_atlas.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_ttf_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_ttf_atlas.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-text_ttf_atlas.o `test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_ttf_atlas.c
 
-test_gl_legacy-text_ttf_atlas.obj: $(top_srcdir)/src/client/sdl/text_ttf_atlas.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -MT test_gl_legacy-text_ttf_atlas.obj -MD -MP -MF $(DEPDIR)/test_gl_legacy-text_ttf_atlas.Tpo -c -o test_gl_legacy-text_ttf_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_legacy-text_ttf_atlas.Tpo $(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' object='test_gl_legacy-text_ttf_atlas.obj' libtool=no @AMDEPBACKSLASH@
+test_gl_core_resources-text_ttf_atlas.obj: $(top_srcdir)/src/client/sdl/text_ttf_atlas.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -MT test_gl_core_resources-text_ttf_atlas.obj -MD -MP -MF $(DEPDIR)/test_gl_core_resources-text_ttf_atlas.Tpo -c -o test_gl_core_resources-text_ttf_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_gl_core_resources-text_ttf_atlas.Tpo $(DEPDIR)/test_gl_core_resources-text_ttf_atlas.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_ttf_atlas.c' object='test_gl_core_resources-text_ttf_atlas.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_legacy_CPPFLAGS) $(CPPFLAGS) $(test_gl_legacy_CFLAGS) $(CFLAGS) -c -o test_gl_legacy-text_ttf_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_gl_core_resources_CPPFLAGS) $(CPPFLAGS) $(test_gl_core_resources_CFLAGS) $(CFLAGS) -c -o test_gl_core_resources-text_ttf_atlas.obj `if test -f '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_ttf_atlas.c'; fi`
 
 test_glwidgets_primitives-test_glwidgets_primitives.o: test_glwidgets_primitives.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_glwidgets_primitives_CPPFLAGS) $(CPPFLAGS) $(test_glwidgets_primitives_CFLAGS) $(CFLAGS) -MT test_glwidgets_primitives-test_glwidgets_primitives.o -MD -MP -MF $(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Tpo -c -o test_glwidgets_primitives-test_glwidgets_primitives.o `test -f 'test_glwidgets_primitives.c' || echo '$(srcdir)/'`test_glwidgets_primitives.c
@@ -1879,20 +1883,6 @@ image_geometry.obj: $(top_srcdir)/src/client/sdl/image_geometry.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/image_geometry.c' object='image_geometry.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o image_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/image_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/image_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/image_geometry.c'; fi`
-
-polygon_geometry.o: $(top_srcdir)/src/client/sdl/polygon_geometry.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT polygon_geometry.o -MD -MP -MF $(DEPDIR)/polygon_geometry.Tpo -c -o polygon_geometry.o `test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/polygon_geometry.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/polygon_geometry.Tpo $(DEPDIR)/polygon_geometry.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/polygon_geometry.c' object='polygon_geometry.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o polygon_geometry.o `test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/polygon_geometry.c
-
-polygon_geometry.obj: $(top_srcdir)/src/client/sdl/polygon_geometry.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT polygon_geometry.obj -MD -MP -MF $(DEPDIR)/polygon_geometry.Tpo -c -o polygon_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/polygon_geometry.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/polygon_geometry.Tpo $(DEPDIR)/polygon_geometry.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/polygon_geometry.c' object='polygon_geometry.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o polygon_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/polygon_geometry.c'; fi`
 
 test_images-test_images.o: test_images.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_images_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_images-test_images.o -MD -MP -MF $(DEPDIR)/test_images-test_images.Tpo -c -o test_images-test_images.o `test -f 'test_images.c' || echo '$(srcdir)/'`test_images.c
@@ -2034,6 +2024,20 @@ test_paintmap_vdecor-paintmap.obj: $(top_srcdir)/src/client/paintmap.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_paintmap_vdecor_CPPFLAGS) $(CPPFLAGS) $(test_paintmap_vdecor_CFLAGS) $(CFLAGS) -c -o test_paintmap_vdecor-paintmap.obj `if test -f '$(top_srcdir)/src/client/paintmap.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/paintmap.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/paintmap.c'; fi`
 
+polygon_geometry.o: $(top_srcdir)/src/client/sdl/polygon_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT polygon_geometry.o -MD -MP -MF $(DEPDIR)/polygon_geometry.Tpo -c -o polygon_geometry.o `test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/polygon_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/polygon_geometry.Tpo $(DEPDIR)/polygon_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/polygon_geometry.c' object='polygon_geometry.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o polygon_geometry.o `test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/polygon_geometry.c
+
+polygon_geometry.obj: $(top_srcdir)/src/client/sdl/polygon_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT polygon_geometry.obj -MD -MP -MF $(DEPDIR)/polygon_geometry.Tpo -c -o polygon_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/polygon_geometry.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/polygon_geometry.Tpo $(DEPDIR)/polygon_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/polygon_geometry.c' object='polygon_geometry.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o polygon_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/polygon_geometry.c'; fi`
+
 test_radar_renderer-test_radar_renderer.o: test_radar_renderer.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_radar_renderer_CPPFLAGS) $(CPPFLAGS) $(test_radar_renderer_CFLAGS) $(CFLAGS) -MT test_radar_renderer-test_radar_renderer.o -MD -MP -MF $(DEPDIR)/test_radar_renderer-test_radar_renderer.Tpo -c -o test_radar_renderer-test_radar_renderer.o `test -f 'test_radar_renderer.c' || echo '$(srcdir)/'`test_radar_renderer.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_radar_renderer-test_radar_renderer.Tpo $(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
@@ -2076,20 +2080,6 @@ renderer.obj: $(top_srcdir)/src/client/sdl/renderer.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o renderer.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer.c'; fi`
 
-renderer_gl_legacy.o: $(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT renderer_gl_legacy.o -MD -MP -MF $(DEPDIR)/renderer_gl_legacy.Tpo -c -o renderer_gl_legacy.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/renderer_gl_legacy.Tpo $(DEPDIR)/renderer_gl_legacy.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' object='renderer_gl_legacy.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o renderer_gl_legacy.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
-
-renderer_gl_legacy.obj: $(top_srcdir)/src/client/sdl/renderer_gl_legacy.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT renderer_gl_legacy.obj -MD -MP -MF $(DEPDIR)/renderer_gl_legacy.Tpo -c -o renderer_gl_legacy.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/renderer_gl_legacy.Tpo $(DEPDIR)/renderer_gl_legacy.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c' object='renderer_gl_legacy.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o renderer_gl_legacy.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c'; fi`
-
 renderer_gl_core.o: $(top_srcdir)/src/client/sdl/renderer_gl_core.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT renderer_gl_core.o -MD -MP -MF $(DEPDIR)/renderer_gl_core.Tpo -c -o renderer_gl_core.o `test -f '$(top_srcdir)/src/client/sdl/renderer_gl_core.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/renderer_gl_core.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/renderer_gl_core.Tpo $(DEPDIR)/renderer_gl_core.Po
@@ -2104,19 +2094,19 @@ renderer_gl_core.obj: $(top_srcdir)/src/client/sdl/renderer_gl_core.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o renderer_gl_core.obj `if test -f '$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/renderer_gl_core.c'; fi`
 
-sdlrenderer.o: $(top_srcdir)/src/client/sdl/sdlrenderer.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlrenderer.o -MD -MP -MF $(DEPDIR)/sdlrenderer.Tpo -c -o sdlrenderer.o `test -f '$(top_srcdir)/src/client/sdl/sdlrenderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlrenderer.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/sdlrenderer.Tpo $(DEPDIR)/sdlrenderer.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlrenderer.c' object='sdlrenderer.o' libtool=no @AMDEPBACKSLASH@
+text_geometry.o: $(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT text_geometry.o -MD -MP -MF $(DEPDIR)/text_geometry.Tpo -c -o text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/text_geometry.Tpo $(DEPDIR)/text_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='text_geometry.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdlrenderer.o `test -f '$(top_srcdir)/src/client/sdl/sdlrenderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlrenderer.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
 
-sdlrenderer.obj: $(top_srcdir)/src/client/sdl/sdlrenderer.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlrenderer.obj -MD -MP -MF $(DEPDIR)/sdlrenderer.Tpo -c -o sdlrenderer.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlrenderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlrenderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlrenderer.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/sdlrenderer.Tpo $(DEPDIR)/sdlrenderer.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlrenderer.c' object='sdlrenderer.obj' libtool=no @AMDEPBACKSLASH@
+text_geometry.obj: $(top_srcdir)/src/client/sdl/text_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT text_geometry.obj -MD -MP -MF $(DEPDIR)/text_geometry.Tpo -c -o text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/text_geometry.Tpo $(DEPDIR)/text_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='text_geometry.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdlrenderer.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlrenderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlrenderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlrenderer.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
 
 sdlclipboard.o: $(top_srcdir)/src/client/sdl/sdlclipboard.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlclipboard.o -MD -MP -MF $(DEPDIR)/sdlclipboard.Tpo -c -o sdlclipboard.o `test -f '$(top_srcdir)/src/client/sdl/sdlclipboard.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlclipboard.c
@@ -2229,6 +2219,20 @@ sdlmetaframe.obj: $(top_srcdir)/src/client/sdl/sdlmetaframe.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlmetaframe.c' object='sdlmetaframe.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdlmetaframe.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlmetaframe.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlmetaframe.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlmetaframe.c'; fi`
+
+sdlrenderer.o: $(top_srcdir)/src/client/sdl/sdlrenderer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlrenderer.o -MD -MP -MF $(DEPDIR)/sdlrenderer.Tpo -c -o sdlrenderer.o `test -f '$(top_srcdir)/src/client/sdl/sdlrenderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlrenderer.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/sdlrenderer.Tpo $(DEPDIR)/sdlrenderer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlrenderer.c' object='sdlrenderer.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdlrenderer.o `test -f '$(top_srcdir)/src/client/sdl/sdlrenderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlrenderer.c
+
+sdlrenderer.obj: $(top_srcdir)/src/client/sdl/sdlrenderer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlrenderer.obj -MD -MP -MF $(DEPDIR)/sdlrenderer.Tpo -c -o sdlrenderer.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlrenderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlrenderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlrenderer.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/sdlrenderer.Tpo $(DEPDIR)/sdlrenderer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlrenderer.c' object='sdlrenderer.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdlrenderer.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlrenderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlrenderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlrenderer.c'; fi`
 
 test_sdl_renderer_scissor-test_sdl_renderer_scissor.o: test_sdl_renderer_scissor.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdl_renderer_scissor_CFLAGS) $(CFLAGS) -MT test_sdl_renderer_scissor-test_sdl_renderer_scissor.o -MD -MP -MF $(DEPDIR)/test_sdl_renderer_scissor-test_sdl_renderer_scissor.Tpo -c -o test_sdl_renderer_scissor-test_sdl_renderer_scissor.o `test -f 'test_sdl_renderer_scissor.c' || echo '$(srcdir)/'`test_sdl_renderer_scissor.c
@@ -2384,34 +2388,6 @@ sdlwindow.obj: $(top_srcdir)/src/client/sdl/sdlwindow.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdlwindow.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlwindow.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlwindow.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlwindow.c'; fi`
 
-test_sdlmeta_primitives-test_sdlmeta_primitives.o: test_sdlmeta_primitives.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -MT test_sdlmeta_primitives-test_sdlmeta_primitives.o -MD -MP -MF $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Tpo -c -o test_sdlmeta_primitives-test_sdlmeta_primitives.o `test -f 'test_sdlmeta_primitives.c' || echo '$(srcdir)/'`test_sdlmeta_primitives.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Tpo $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlmeta_primitives.c' object='test_sdlmeta_primitives-test_sdlmeta_primitives.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-test_sdlmeta_primitives.o `test -f 'test_sdlmeta_primitives.c' || echo '$(srcdir)/'`test_sdlmeta_primitives.c
-
-test_sdlmeta_primitives-test_sdlmeta_primitives.obj: test_sdlmeta_primitives.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -MT test_sdlmeta_primitives-test_sdlmeta_primitives.obj -MD -MP -MF $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Tpo -c -o test_sdlmeta_primitives-test_sdlmeta_primitives.obj `if test -f 'test_sdlmeta_primitives.c'; then $(CYGPATH_W) 'test_sdlmeta_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlmeta_primitives.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Tpo $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlmeta_primitives.c' object='test_sdlmeta_primitives-test_sdlmeta_primitives.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-test_sdlmeta_primitives.obj `if test -f 'test_sdlmeta_primitives.c'; then $(CYGPATH_W) 'test_sdlmeta_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlmeta_primitives.c'; fi`
-
-test_sdlmeta_primitives-sdlmeta.o: $(top_srcdir)/src/client/sdl/sdlmeta.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -MT test_sdlmeta_primitives-sdlmeta.o -MD -MP -MF $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Tpo -c -o test_sdlmeta_primitives-sdlmeta.o `test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlmeta.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Tpo $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlmeta.c' object='test_sdlmeta_primitives-sdlmeta.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-sdlmeta.o `test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlmeta.c
-
-test_sdlmeta_primitives-sdlmeta.obj: $(top_srcdir)/src/client/sdl/sdlmeta.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -MT test_sdlmeta_primitives-sdlmeta.obj -MD -MP -MF $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Tpo -c -o test_sdlmeta_primitives-sdlmeta.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlmeta.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlmeta.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Tpo $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlmeta.c' object='test_sdlmeta_primitives-sdlmeta.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-sdlmeta.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlmeta.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlmeta.c'; fi`
-
 test_sdlgui_appearing-test_sdlgui_appearing.o: test_sdlgui_appearing.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_appearing_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_appearing_CFLAGS) $(CFLAGS) -MT test_sdlgui_appearing-test_sdlgui_appearing.o -MD -MP -MF $(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Tpo -c -o test_sdlgui_appearing-test_sdlgui_appearing.o `test -f 'test_sdlgui_appearing.c' || echo '$(srcdir)/'`test_sdlgui_appearing.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Tpo $(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po
@@ -2453,34 +2429,6 @@ test_sdlgui_appearing-paintobjects.obj: $(top_srcdir)/src/client/paintobjects.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/paintobjects.c' object='test_sdlgui_appearing-paintobjects.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_appearing_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_appearing_CFLAGS) $(CFLAGS) -c -o test_sdlgui_appearing-paintobjects.obj `if test -f '$(top_srcdir)/src/client/paintobjects.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/paintobjects.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/paintobjects.c'; fi`
-
-test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o: test_sdlgui_hud_primitives.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o `test -f 'test_sdlgui_hud_primitives.c' || echo '$(srcdir)/'`test_sdlgui_hud_primitives.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlgui_hud_primitives.c' object='test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o `test -f 'test_sdlgui_hud_primitives.c' || echo '$(srcdir)/'`test_sdlgui_hud_primitives.c
-
-test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj: test_sdlgui_hud_primitives.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj `if test -f 'test_sdlgui_hud_primitives.c'; then $(CYGPATH_W) 'test_sdlgui_hud_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_hud_primitives.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlgui_hud_primitives.c' object='test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj `if test -f 'test_sdlgui_hud_primitives.c'; then $(CYGPATH_W) 'test_sdlgui_hud_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_hud_primitives.c'; fi`
-
-test_sdlgui_hud_primitives-sdlgui.o: $(top_srcdir)/src/client/sdl/sdlgui.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-sdlgui.o -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo -c -o test_sdlgui_hud_primitives-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_hud_primitives-sdlgui.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
-
-test_sdlgui_hud_primitives-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-sdlgui.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo -c -o test_sdlgui_hud_primitives-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_hud_primitives-sdlgui.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
 
 test_sdlgui_asteroids-test_sdlgui_asteroids.o: test_sdlgui_asteroids.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -MT test_sdlgui_asteroids-test_sdlgui_asteroids.o -MD -MP -MF $(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Tpo -c -o test_sdlgui_asteroids-test_sdlgui_asteroids.o `test -f 'test_sdlgui_asteroids.c' || echo '$(srcdir)/'`test_sdlgui_asteroids.c
@@ -2537,6 +2485,34 @@ test_sdlgui_asteroids-paintobjects.obj: $(top_srcdir)/src/client/paintobjects.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/paintobjects.c' object='test_sdlgui_asteroids-paintobjects.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -c -o test_sdlgui_asteroids-paintobjects.obj `if test -f '$(top_srcdir)/src/client/paintobjects.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/paintobjects.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/paintobjects.c'; fi`
+
+test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o: test_sdlgui_hud_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o `test -f 'test_sdlgui_hud_primitives.c' || echo '$(srcdir)/'`test_sdlgui_hud_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlgui_hud_primitives.c' object='test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o `test -f 'test_sdlgui_hud_primitives.c' || echo '$(srcdir)/'`test_sdlgui_hud_primitives.c
+
+test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj: test_sdlgui_hud_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj `if test -f 'test_sdlgui_hud_primitives.c'; then $(CYGPATH_W) 'test_sdlgui_hud_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_hud_primitives.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlgui_hud_primitives.c' object='test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj `if test -f 'test_sdlgui_hud_primitives.c'; then $(CYGPATH_W) 'test_sdlgui_hud_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_hud_primitives.c'; fi`
+
+test_sdlgui_hud_primitives-sdlgui.o: $(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-sdlgui.o -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo -c -o test_sdlgui_hud_primitives-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_hud_primitives-sdlgui.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+
+test_sdlgui_hud_primitives-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-sdlgui.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo -c -o test_sdlgui_hud_primitives-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_hud_primitives-sdlgui.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
 
 test_sdlgui_polygons-test_sdlgui_polygons.o: test_sdlgui_polygons.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_polygons_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_polygons_CFLAGS) $(CFLAGS) -MT test_sdlgui_polygons-test_sdlgui_polygons.o -MD -MP -MF $(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Tpo -c -o test_sdlgui_polygons-test_sdlgui_polygons.o `test -f 'test_sdlgui_polygons.c' || echo '$(srcdir)/'`test_sdlgui_polygons.c
@@ -2664,6 +2640,34 @@ test_sdlgui_sparks-paintobjects.obj: $(top_srcdir)/src/client/paintobjects.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -c -o test_sdlgui_sparks-paintobjects.obj `if test -f '$(top_srcdir)/src/client/paintobjects.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/paintobjects.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/paintobjects.c'; fi`
 
+test_sdlmeta_primitives-test_sdlmeta_primitives.o: test_sdlmeta_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -MT test_sdlmeta_primitives-test_sdlmeta_primitives.o -MD -MP -MF $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Tpo -c -o test_sdlmeta_primitives-test_sdlmeta_primitives.o `test -f 'test_sdlmeta_primitives.c' || echo '$(srcdir)/'`test_sdlmeta_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Tpo $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlmeta_primitives.c' object='test_sdlmeta_primitives-test_sdlmeta_primitives.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-test_sdlmeta_primitives.o `test -f 'test_sdlmeta_primitives.c' || echo '$(srcdir)/'`test_sdlmeta_primitives.c
+
+test_sdlmeta_primitives-test_sdlmeta_primitives.obj: test_sdlmeta_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -MT test_sdlmeta_primitives-test_sdlmeta_primitives.obj -MD -MP -MF $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Tpo -c -o test_sdlmeta_primitives-test_sdlmeta_primitives.obj `if test -f 'test_sdlmeta_primitives.c'; then $(CYGPATH_W) 'test_sdlmeta_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlmeta_primitives.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Tpo $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlmeta_primitives.c' object='test_sdlmeta_primitives-test_sdlmeta_primitives.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-test_sdlmeta_primitives.obj `if test -f 'test_sdlmeta_primitives.c'; then $(CYGPATH_W) 'test_sdlmeta_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlmeta_primitives.c'; fi`
+
+test_sdlmeta_primitives-sdlmeta.o: $(top_srcdir)/src/client/sdl/sdlmeta.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -MT test_sdlmeta_primitives-sdlmeta.o -MD -MP -MF $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Tpo -c -o test_sdlmeta_primitives-sdlmeta.o `test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlmeta.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Tpo $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlmeta.c' object='test_sdlmeta_primitives-sdlmeta.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-sdlmeta.o `test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlmeta.c
+
+test_sdlmeta_primitives-sdlmeta.obj: $(top_srcdir)/src/client/sdl/sdlmeta.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -MT test_sdlmeta_primitives-sdlmeta.obj -MD -MP -MF $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Tpo -c -o test_sdlmeta_primitives-sdlmeta.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlmeta.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlmeta.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Tpo $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlmeta.c' object='test_sdlmeta_primitives-sdlmeta.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-sdlmeta.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlmeta.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlmeta.c'; fi`
+
 test_sdlpaint_stage-test_sdlpaint_stage.o: test_sdlpaint_stage.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlpaint_stage_CPPFLAGS) $(CPPFLAGS) $(test_sdlpaint_stage_CFLAGS) $(CFLAGS) -MT test_sdlpaint_stage-test_sdlpaint_stage.o -MD -MP -MF $(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Tpo -c -o test_sdlpaint_stage-test_sdlpaint_stage.o `test -f 'test_sdlpaint_stage.c' || echo '$(srcdir)/'`test_sdlpaint_stage.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Tpo $(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
@@ -2747,20 +2751,6 @@ test_text_cache_adapter-text.obj: $(top_srcdir)/src/client/sdl/text.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text.c' object='test_text_cache_adapter-text.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_text_cache_adapter_CFLAGS) $(CFLAGS) -c -o test_text_cache_adapter-text.obj `if test -f '$(top_srcdir)/src/client/sdl/text.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text.c'; fi`
-
-text_geometry.o: $(top_srcdir)/src/client/sdl/text_geometry.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT text_geometry.o -MD -MP -MF $(DEPDIR)/text_geometry.Tpo -c -o text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/text_geometry.Tpo $(DEPDIR)/text_geometry.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='text_geometry.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o text_geometry.o `test -f '$(top_srcdir)/src/client/sdl/text_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_geometry.c
-
-text_geometry.obj: $(top_srcdir)/src/client/sdl/text_geometry.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT text_geometry.obj -MD -MP -MF $(DEPDIR)/text_geometry.Tpo -c -o text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/text_geometry.Tpo $(DEPDIR)/text_geometry.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='text_geometry.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
 
 text_renderer.o: $(top_srcdir)/src/client/sdl/text_renderer.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT text_renderer.o -MD -MP -MF $(DEPDIR)/text_renderer.Tpo -c -o text_renderer.o `test -f '$(top_srcdir)/src/client/sdl/text_renderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/text_renderer.c
@@ -3165,6 +3155,20 @@ test-sdl-init-core-profile.log: test-sdl-init-core-profile$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-sdlpaint-stage.log: test-sdlpaint-stage$(EXEEXT)
+	@p='test-sdlpaint-stage$(EXEEXT)'; \
+	b='test-sdlpaint-stage'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-paintmap-vdecor.log: test-paintmap-vdecor$(EXEEXT)
+	@p='test-paintmap-vdecor$(EXEEXT)'; \
+	b='test-paintmap-vdecor'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdl-renderer-scissor.log: test-sdl-renderer-scissor$(EXEEXT)
 	@p='test-sdl-renderer-scissor$(EXEEXT)'; \
 	b='test-sdl-renderer-scissor'; \
@@ -3214,13 +3218,6 @@ test-sdlgui-asteroids.log: test-sdlgui-asteroids$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-test-sdlgui-ships.log: test-sdlgui-ships$(EXEEXT)
-	@p='test-sdlgui-ships$(EXEEXT)'; \
-	b='test-sdlgui-ships'; \
-	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
-	--log-file $$b.log --trs-file $$b.trs \
-	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
-	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdlgui-polygons.log: test-sdlgui-polygons$(EXEEXT)
 	@p='test-sdlgui-polygons$(EXEEXT)'; \
 	b='test-sdlgui-polygons'; \
@@ -3235,16 +3232,9 @@ test-sdlgui-sparks.log: test-sdlgui-sparks$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-test-sdlpaint-stage.log: test-sdlpaint-stage$(EXEEXT)
-	@p='test-sdlpaint-stage$(EXEEXT)'; \
-	b='test-sdlpaint-stage'; \
-	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
-	--log-file $$b.log --trs-file $$b.trs \
-	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
-	"$$tst" $(AM_TESTS_FD_REDIRECT)
-test-paintmap-vdecor.log: test-paintmap-vdecor$(EXEEXT)
-	@p='test-paintmap-vdecor$(EXEEXT)'; \
-	b='test-paintmap-vdecor'; \
+test-sdlgui-ships.log: test-sdlgui-ships$(EXEEXT)
+	@p='test-sdlgui-ships$(EXEEXT)'; \
+	b='test-sdlgui-ships'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -3379,9 +3369,9 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/gfx2d.Po
 	-rm -f ./$(DEPDIR)/image_geometry.Po
 	-rm -f ./$(DEPDIR)/paint_transform.Po
+	-rm -f ./$(DEPDIR)/polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
 	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
-	-rm -f ./$(DEPDIR)/renderer_gl_legacy.Po
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
@@ -3392,21 +3382,19 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sdlwindow.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_gfx2d_picture.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-renderer.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-text.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-text_atlas.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-text_geometry.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-renderer.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-renderer_gl_core.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-test_gl_core_resources.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-text.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-text_atlas.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-text_geometry.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-text_ttf_atlas.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_primitives-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po
 	-rm -f ./$(DEPDIR)/test_image_geometry.Po
-	-rm -f ./$(DEPDIR)/polygon_geometry.Po
-	-rm -f ./$(DEPDIR)/test_polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_images-image_geometry.Po
 	-rm -f ./$(DEPDIR)/test_images-images.Po
 	-rm -f ./$(DEPDIR)/test_images-strdup.Po
@@ -3417,11 +3405,12 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po
+	-rm -f ./$(DEPDIR)/test_polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-radar.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
 	-rm -f ./$(DEPDIR)/test_renderer_geometry.Po
-	-rm -f ./$(DEPDIR)/test_renderer_gl_backends.Po
+	-rm -f ./$(DEPDIR)/test_renderer_gl_core.Po
 	-rm -f ./$(DEPDIR)/test_sdl_clipboard.Po
 	-rm -f ./$(DEPDIR)/test_sdl_console.Po
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po
@@ -3442,26 +3431,26 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-test_sdl_ui_image.Po
 	-rm -f ./$(DEPDIR)/test_sdl_window.Po
-	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po
-	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_appearing-paintobjects.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_appearing-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po
-	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po
-	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po
-	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po
-	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-paintobjects.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_sparks-paintobjects.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_sparks-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Po
+	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po
+	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
@@ -3526,9 +3515,9 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/gfx2d.Po
 	-rm -f ./$(DEPDIR)/image_geometry.Po
 	-rm -f ./$(DEPDIR)/paint_transform.Po
+	-rm -f ./$(DEPDIR)/polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
 	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
-	-rm -f ./$(DEPDIR)/renderer_gl_legacy.Po
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
@@ -3539,21 +3528,19 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sdlwindow.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_gfx2d_picture.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-gl_diagnostics.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-renderer.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-renderer_gl_legacy.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-test_gl_legacy.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-text.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-text_atlas.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-text_geometry.Po
-	-rm -f ./$(DEPDIR)/test_gl_legacy-text_ttf_atlas.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-renderer.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-renderer_gl_core.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-test_gl_core_resources.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-text.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-text_atlas.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-text_geometry.Po
+	-rm -f ./$(DEPDIR)/test_gl_core_resources-text_ttf_atlas.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_primitives-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_primitives-test_glwidgets_primitives.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po
 	-rm -f ./$(DEPDIR)/test_image_geometry.Po
-	-rm -f ./$(DEPDIR)/polygon_geometry.Po
-	-rm -f ./$(DEPDIR)/test_polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_images-image_geometry.Po
 	-rm -f ./$(DEPDIR)/test_images-images.Po
 	-rm -f ./$(DEPDIR)/test_images-strdup.Po
@@ -3564,11 +3551,12 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po
+	-rm -f ./$(DEPDIR)/test_polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-radar.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
 	-rm -f ./$(DEPDIR)/test_renderer_geometry.Po
-	-rm -f ./$(DEPDIR)/test_renderer_gl_backends.Po
+	-rm -f ./$(DEPDIR)/test_renderer_gl_core.Po
 	-rm -f ./$(DEPDIR)/test_sdl_clipboard.Po
 	-rm -f ./$(DEPDIR)/test_sdl_console.Po
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po
@@ -3589,26 +3577,26 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-test_sdl_ui_image.Po
 	-rm -f ./$(DEPDIR)/test_sdl_window.Po
-	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po
-	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_appearing-paintobjects.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_appearing-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po
-	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po
-	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po
-	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po
-	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-paintobjects.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_sparks-paintobjects.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_sparks-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Po
+	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po
+	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
@@ -3657,6 +3645,7 @@ uninstall-am:
 	recheck tags tags-am uninstall uninstall-am
 
 .PRECIOUS: Makefile
+
 
 run-sdl-core-boundary.log: \
 	$(top_builddir)/src/client/sdl/xpilot-ng-sdl

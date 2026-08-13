@@ -9,8 +9,6 @@
 #include "sdlinit.h"
 #include "sdlrenderer.h"
 
-#include <GL/gl.h>
-
 #include <limits.h>
 #include <math.h>
 #include <stdint.h>
@@ -69,7 +67,6 @@ static int blend_attempts;
 static int draw_attempts;
 static int successful_draws;
 static int flush_attempts;
-static int legacy_calls;
 static int realloc_attempts;
 static int failed_reallocs;
 static int fail_initial_realloc;
@@ -222,7 +219,6 @@ static void reset_state(void)
     draw_attempts = 0;
     successful_draws = 0;
     flush_attempts = 0;
-    legacy_calls = 0;
     realloc_attempts = 0;
     failed_reallocs = 0;
     fail_initial_realloc = 0;
@@ -477,7 +473,6 @@ static int no_renderer_commands(RendererStatus expected_status)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(successful_draws == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -574,7 +569,7 @@ RendererStatus Renderer_draw_triangles(
     return RENDERER_STATUS_OK;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(
+RendererStatus Sdl_renderer_flush(
     SdlRenderer *renderer)
 {
     flush_attempts++;
@@ -596,92 +591,6 @@ other_t *Other_by_id(int id)
 {
     (void)id;
     return NULL;
-}
-
-void GLAPIENTRY glEnable(GLenum capability)
-{
-    (void)capability;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glDisable(GLenum capability)
-{
-    (void)capability;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glBindTexture(GLenum target, GLuint texture)
-{
-    (void)target;
-    (void)texture;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glColor4ub(
-    GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha)
-{
-    (void)red;
-    (void)green;
-    (void)blue;
-    (void)alpha;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glLightfv(
-    GLenum light, GLenum parameter, const GLfloat *values)
-{
-    (void)light;
-    (void)parameter;
-    (void)values;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glPushMatrix(void)
-{
-    legacy_calls++;
-}
-
-void GLAPIENTRY glPopMatrix(void)
-{
-    legacy_calls++;
-}
-
-void GLAPIENTRY glTranslatef(GLfloat x, GLfloat y, GLfloat z)
-{
-    (void)x;
-    (void)y;
-    (void)z;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glScalef(GLfloat x, GLfloat y, GLfloat z)
-{
-    (void)x;
-    (void)y;
-    (void)z;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glRotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z)
-{
-    (void)angle;
-    (void)x;
-    (void)y;
-    (void)z;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glCallList(GLuint list)
-{
-    (void)list;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glDeleteLists(GLuint list, GLsizei range)
-{
-    (void)list;
-    (void)range;
-    legacy_calls++;
 }
 
 void __wrap_Gui_paint_item_object(int type, int x, int y)
@@ -822,7 +731,6 @@ static int check_actual_traversal_exact_geometry_and_release(void)
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(image_lookup_attempts == 1);
-    TEST_CHECK(legacy_calls == 0);
     TEST_CHECK(batch_allocation_is_released(1) == 0);
     TEST_CHECK(input_allocation_is_released() == 0);
 
@@ -873,7 +781,6 @@ static int check_missing_image_draws_untextured(void)
     TEST_CHECK(event_count == 3);
     TEST_CHECK(successful_draws == 1);
     TEST_CHECK(image_lookup_attempts == 1);
-    TEST_CHECK(legacy_calls == 0);
     TEST_CHECK(batch_allocation_is_released(1) == 0);
     return 0;
 }
@@ -950,7 +857,6 @@ static int check_full_byte_type_and_rotation_have_low_bit_parity(void)
         TEST_CHECK(vertex_near(&captured_draw.vertices[index],
                                &maximum_vertices[index]));
     TEST_CHECK(all_triangles_are_front_facing());
-    TEST_CHECK(legacy_calls == 0);
     TEST_CHECK(batch_allocation_is_released(1) == 0);
     return 0;
 }
@@ -1168,7 +1074,6 @@ static int check_renderer_failures_are_sticky(void)
     TEST_CHECK(events[0] == TEST_EVENT_BLEND);
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
     TEST_CHECK(batch_allocation_is_released(1) == 0);
 
     reset_state();
@@ -1180,7 +1085,6 @@ static int check_renderer_failures_are_sticky(void)
     TEST_CHECK(events[1] == TEST_EVENT_DRAW);
     TEST_CHECK(successful_draws == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
     TEST_CHECK(batch_allocation_is_released(1) == 0);
 
     reset_state();
@@ -1193,7 +1097,6 @@ static int check_renderer_failures_are_sticky(void)
     TEST_CHECK(events[2] == TEST_EVENT_FLUSH);
     TEST_CHECK(successful_draws == 1);
     TEST_CHECK(flush_attempts == 1);
-    TEST_CHECK(legacy_calls == 0);
     TEST_CHECK(batch_allocation_is_released(1) == 0);
 
     previous_event_count = event_count;
@@ -1205,7 +1108,6 @@ static int check_renderer_failures_are_sticky(void)
     TEST_CHECK(event_count == previous_event_count);
     TEST_CHECK(image_lookup_attempts == previous_image_lookups);
     TEST_CHECK(realloc_attempts == previous_realloc_attempts);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 

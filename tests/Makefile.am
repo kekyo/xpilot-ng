@@ -3,14 +3,14 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_srcdir)/src/client/sdl \
 	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
 	@SDL2_CFLAGS@ @SDL2_IMAGE_CFLAGS@ @SDL2_TTF_CFLAGS@ \
-	@GL_CFLAGS@ @GLU_CFLAGS@
+	@GL_CFLAGS@
 
 check_PROGRAMS = test-meta-environment \
 	test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
-	test-sdl-clipboard test-sdl-event test-gl-legacy \
+	test-sdl-clipboard test-sdl-event test-gl-core-resources \
 	test-renderer-commands test-renderer-geometry \
-	test-renderer-gl-backends test-paint-transform test-image-geometry \
+	test-renderer-gl-core test-paint-transform test-image-geometry \
 	test-polygon-geometry \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
 	test-sdl-meta-frame test-sdl-game-frame test-sdl-renderer-scissor \
@@ -26,7 +26,7 @@ TESTS = test-meta-environment \
 	test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
-	test-renderer-geometry test-paint-transform run-gl-legacy.sh \
+	test-renderer-geometry test-paint-transform run-gl-core-resources.sh \
 	test-image-geometry test-polygon-geometry test-gfx2d-picture \
 	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
 	test-sdl-game-frame \
@@ -41,7 +41,7 @@ TESTS = test-meta-environment \
 	test-text-geometry \
 	test-text-atlas test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
-	run-renderer-gl-backends.sh run-sdl-renderer-core-context.sh \
+	run-renderer-gl-core.sh run-sdl-renderer-core-context.sh \
 	run-e2e.sh
 
 test_meta_environment_SOURCES = test_meta_environment.c \
@@ -82,10 +82,10 @@ test_sdl_event_SOURCES = test_sdl_event.c \
 	$(top_srcdir)/src/client/sdl/sdlevent.c
 test_sdl_event_LDADD = @SDL2_LIBS@
 
-test_gl_legacy_SOURCES = test_gl_legacy.c \
+test_gl_core_resources_SOURCES = test_gl_core_resources.c \
 	$(top_srcdir)/src/client/sdl/gl_diagnostics.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
-	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
+	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
 	$(top_srcdir)/src/client/sdl/text.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.h \
@@ -93,15 +93,14 @@ test_gl_legacy_SOURCES = test_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.h \
 	$(top_srcdir)/src/client/sdl/text_ttf_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_ttf_atlas.h
-test_gl_legacy_CPPFLAGS = $(AM_CPPFLAGS) \
+test_gl_core_resources_CPPFLAGS = $(AM_CPPFLAGS) \
 	-DXPILOT_TEST_FONT_PATH=\"$(top_srcdir)/lib/fonts/FreeSansBoldOblique.ttf\"
-test_gl_legacy_CFLAGS = $(AM_CFLAGS) -DXPILOT_GL_TEST_HOOKS \
+test_gl_core_resources_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
-test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
-	-Wl,--wrap=glGetString -Wl,--wrap=glGenLists \
-	-Wl,--wrap=glGenTextures -Wl,--wrap=TTF_OpenFont \
+test_gl_core_resources_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=TTF_OpenFont \
 	-Wl,--wrap=TTF_CloseFont
-test_gl_legacy_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
+test_gl_core_resources_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
 	@GL_LIBS@
 
 test_renderer_commands_SOURCES = test_renderer_commands.c \
@@ -112,13 +111,11 @@ test_renderer_commands_LDFLAGS = $(AM_LDFLAGS) \
 test_renderer_geometry_SOURCES = test_renderer_geometry.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
 
-test_renderer_gl_backends_SOURCES = test_renderer_gl_backends.c \
+test_renderer_gl_core_SOURCES = test_renderer_gl_core.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
-	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
-	$(top_srcdir)/src/client/sdl/sdlrenderer.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c
-test_renderer_gl_backends_LDADD = @SDL2_LIBS@ @GL_LIBS@
+test_renderer_gl_core_LDADD = @SDL2_LIBS@ @GL_LIBS@
 
 test_paint_transform_SOURCES = test_paint_transform.c \
 	$(top_srcdir)/src/client/sdl/paint_transform.c
@@ -208,7 +205,6 @@ test_sdl_init_core_profile_LDADD = @SDL2_IMAGE_LIBS@ @SDL2_TTF_LIBS@ \
 test_sdl_renderer_core_context_SOURCES = \
 	test_sdl_renderer_core_context.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
-	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
 	$(top_srcdir)/src/client/sdl/sdlrenderer.c
 test_sdl_renderer_core_context_LDADD = @SDL2_LIBS@ @GL_LIBS@
@@ -397,10 +393,10 @@ AM_TESTS_ENVIRONMENT = \
 	XPILOT_TEST_PREFIX='$(prefix)'; export XPILOT_TEST_PREFIX; \
 	XPILOT_TEST_BINDIR='$(bindir)'; export XPILOT_TEST_BINDIR; \
 	XPILOT_TEST_PKGDATADIR='$(pkgdatadir)'; export XPILOT_TEST_PKGDATADIR; \
-	XPILOT_GL_TEST_BINARY='$(abs_builddir)/test-gl-legacy'; \
-	export XPILOT_GL_TEST_BINARY; \
-	XPILOT_RENDERER_GL_TEST_BINARY='$(abs_builddir)/test-renderer-gl-backends'; \
-	export XPILOT_RENDERER_GL_TEST_BINARY; \
+	XPILOT_GL_CORE_RESOURCE_TEST_BINARY='$(abs_builddir)/test-gl-core-resources'; \
+	export XPILOT_GL_CORE_RESOURCE_TEST_BINARY; \
+	XPILOT_RENDERER_GL_CORE_TEST_BINARY='$(abs_builddir)/test-renderer-gl-core'; \
+	export XPILOT_RENDERER_GL_CORE_TEST_BINARY; \
 	XPILOT_SDL_CORE_CONTEXT_TEST_BINARY='$(abs_builddir)/test-sdl-renderer-core-context'; \
 	export XPILOT_SDL_CORE_CONTEXT_TEST_BINARY; \
 	XPILOT_SDL_OBJECT_DIR='$(abs_top_builddir)/src/client/sdl'; \
@@ -408,8 +404,8 @@ AM_TESTS_ENVIRONMENT = \
 	XPILOT_SDL_BINARY='$(abs_top_builddir)/src/client/sdl/xpilot-ng-sdl'; \
 	export XPILOT_SDL_BINARY;
 
-EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-legacy.sh \
-	run-renderer-gl-backends.sh run-sdl-core-boundary.sh \
+EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-core-resources.sh \
+	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
 	run-sdl-renderer-core-context.sh \
 	test_helpers.h
 

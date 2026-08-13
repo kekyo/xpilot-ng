@@ -105,8 +105,8 @@ void sdl_window_refresh(sdl_window_t *win);
  * @return The operation status or the first failure retained for the frame.
  *
  * @remarks Drawing requires an active renderer frame. All accepted semantic
- * commands are flushed together while preserving transitional compatibility
- * state, including commands accepted before a later operation fails.
+ * commands are flushed together, including commands accepted before a later
+ * operation fails.
  */
 RendererStatus sdl_window_paint(
     sdl_window_t *win, const RendererColor *background);

@@ -9,8 +9,6 @@
 #include "sdlinit.h"
 #include "sdlrenderer.h"
 
-#include <GL/gl.h>
-
 #include <stdarg.h>
 #include <limits.h>
 #include <stdint.h>
@@ -85,7 +83,6 @@ static int flush_attempts;
 static int texture_lookups;
 static int last_texture_index;
 static int texture_available;
-static int legacy_calls;
 static RendererBlendMode current_blend;
 static RendererStatus blend_result;
 static RendererStatus draw_result;
@@ -170,7 +167,6 @@ static void reset_capture(void)
     flush_attempts = 0;
     texture_lookups = 0;
     last_texture_index = -1;
-    legacy_calls = 0;
     current_blend = RENDERER_BLEND_OPAQUE;
     blend_result = RENDERER_STATUS_OK;
     draw_result = RENDERER_STATUS_OK;
@@ -373,7 +369,6 @@ static int check_textured_fill_repeat_uv_and_special_edge_mask(void)
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(texture_lookups == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     Gui_paint_polygon(0, 1, -1);
 
@@ -438,7 +433,6 @@ static int check_textured_fill_repeat_uv_and_special_edge_mask(void)
     TEST_CHECK(events[5] == TEST_EVENT_STROKE);
     TEST_CHECK(events[6] == TEST_EVENT_FLUSH);
     TEST_CHECK(flush_attempts == 1);
-    TEST_CHECK(legacy_calls == 0);
 
     Sdlgui_test_discard_polygon_cache();
     Sdlgui_test_discard_polygon_cache();
@@ -482,7 +476,6 @@ static int check_dynamic_style_uses_cached_geometry(void)
     TEST_CHECK(vertices_have_color(&draws[0], 0xa1, 0xb2, 0xc3));
     TEST_CHECK(texture_lookups == 0);
     TEST_CHECK(stroke_count == 4);
-    TEST_CHECK(legacy_calls == 0);
     Sdlgui_test_discard_polygon_cache();
     return 0;
 }
@@ -514,7 +507,6 @@ static int check_hidden_outline_and_invisible_style(void)
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(texture_lookups == 0);
-    TEST_CHECK(legacy_calls == 0);
     Sdlgui_test_discard_polygon_cache();
     return 0;
 }
@@ -545,7 +537,6 @@ static int check_unfilled_hidden_default_gets_fallback_outline(void)
     TEST_CHECK(events[0] == TEST_EVENT_BLEND);
     TEST_CHECK(events[1] == TEST_EVENT_STROKE);
     TEST_CHECK(events[2] == TEST_EVENT_FLUSH);
-    TEST_CHECK(legacy_calls == 0);
     Sdlgui_test_discard_polygon_cache();
     return 0;
 }
@@ -588,7 +579,6 @@ static int check_implicit_closing_edge_and_scaled_widths(void)
     Gui_paint_polygon(1, 0, 0);
     TEST_CHECK(stroke_count == 1);
     TEST_CHECK(strokes[0].width == 1.0f);
-    TEST_CHECK(legacy_calls == 0);
     Sdlgui_test_discard_polygon_cache();
     return 0;
 }
@@ -614,7 +604,6 @@ static int check_scene_cache_is_all_or_nothing(void)
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(texture_lookups == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     num_polygons = 2;
     fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
@@ -637,7 +626,6 @@ static int check_actual_gui_init_uses_atomic_cache_builder(void)
     Gui_cleanup();
     TEST_CHECK(init_result == 0);
     TEST_CHECK(draw_count == 1);
-    TEST_CHECK(legacy_calls == 0);
 
     reset_scene();
     fail_allocation_attempt = 1;
@@ -653,7 +641,6 @@ static int check_actual_gui_init_uses_atomic_cache_builder(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -686,7 +673,6 @@ static int check_cache_allocation_failures_are_atomic_and_retryable(void)
         TEST_CHECK(draw_attempts == 0);
         TEST_CHECK(stroke_attempts == 0);
         TEST_CHECK(flush_attempts == 0);
-        TEST_CHECK(legacy_calls == 0);
 
         fail_allocation_attempt = 0;
         allocation_attempts = 0;
@@ -719,7 +705,6 @@ static int check_float_coordinate_collapse_is_sticky(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     Gui_paint_polygon(1, 0, 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
@@ -746,7 +731,6 @@ static int check_dynamic_offset_float_collapse_is_sticky(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     Gui_paint_polygon(0, 0, 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
@@ -756,7 +740,6 @@ static int check_dynamic_offset_float_collapse_is_sticky(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
     Sdlgui_test_discard_polygon_cache();
     return 0;
 }
@@ -775,7 +758,6 @@ static int check_invalid_dynamic_selectors_are_cpu_failures(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
     scene_polygons[0].style = 0;
@@ -787,7 +769,6 @@ static int check_invalid_dynamic_selectors_are_cpu_failures(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
     scene_polygon_styles[0].texture = -1;
@@ -798,7 +779,6 @@ static int check_invalid_dynamic_selectors_are_cpu_failures(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
     scene_polygon_styles[0].texture = 0;
@@ -810,7 +790,6 @@ static int check_invalid_dynamic_selectors_are_cpu_failures(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     reset_capture();
     fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
@@ -824,7 +803,6 @@ static int check_invalid_dynamic_selectors_are_cpu_failures(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     Sdlgui_test_discard_polygon_cache();
     return 0;
@@ -845,7 +823,6 @@ static int check_texture_state_failures_are_sticky_and_atomic(void)
     TEST_CHECK(texture_lookups == 1);
     TEST_CHECK(last_texture_index == 0);
     TEST_CHECK(flush_attempts == 1);
-    TEST_CHECK(legacy_calls == 0);
 
     reset_capture();
     texture_available = 1;
@@ -878,7 +855,6 @@ static int check_texture_state_failures_are_sticky_and_atomic(void)
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(texture_lookups == 1);
-    TEST_CHECK(legacy_calls == 0);
     Sdlgui_test_discard_polygon_cache();
     return 0;
 }
@@ -956,7 +932,6 @@ static int check_renderer_failures_are_sticky_and_ordered(void)
     TEST_CHECK(events[1] == TEST_EVENT_DRAW);
     TEST_CHECK(events[2] == TEST_EVENT_FLUSH);
     TEST_CHECK(stroke_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
     Sdlgui_test_discard_polygon_cache();
     return 0;
 }
@@ -977,7 +952,6 @@ static int check_actual_cleanup_discards_the_scene_cache(void)
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(texture_lookups == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -1090,7 +1064,7 @@ RendererStatus Renderer_stroke_path(
     return RENDERER_STATUS_OK;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(
+RendererStatus Sdl_renderer_flush(
     SdlRenderer *renderer)
 {
     flush_attempts++;
@@ -1115,48 +1089,6 @@ void warn(const char *format, ...)
 void error(const char *format, ...)
 {
     (void)format;
-}
-
-#define LEGACY_STUB(name, signature, body) \
-    void GLAPIENTRY name signature          \
-    {                                      \
-        body;                              \
-        legacy_calls++;                    \
-    }
-
-LEGACY_STUB(glMatrixMode, (GLenum mode), (void)mode)
-LEGACY_STUB(glPushMatrix, (void), (void)0)
-LEGACY_STUB(glPopMatrix, (void), (void)0)
-LEGACY_STUB(glLoadIdentity, (void), (void)0)
-LEGACY_STUB(glTranslatef, (GLfloat x, GLfloat y, GLfloat z),
-            ((void)x, (void)y, (void)z))
-LEGACY_STUB(glScalef, (GLfloat x, GLfloat y, GLfloat z),
-            ((void)x, (void)y, (void)z))
-LEGACY_STUB(glColor4ub,
-            (GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha),
-            ((void)red, (void)green, (void)blue, (void)alpha))
-LEGACY_STUB(glLineWidth, (GLfloat width), (void)width)
-LEGACY_STUB(glEnable, (GLenum capability), (void)capability)
-LEGACY_STUB(glDisable, (GLenum capability), (void)capability)
-LEGACY_STUB(glBlendFunc, (GLenum source, GLenum destination),
-            ((void)source, (void)destination))
-LEGACY_STUB(glNewList, (GLuint list, GLenum mode),
-            ((void)list, (void)mode))
-LEGACY_STUB(glEndList, (void), (void)0)
-LEGACY_STUB(glBegin, (GLenum mode), (void)mode)
-LEGACY_STUB(glEnd, (void), (void)0)
-LEGACY_STUB(glVertex2i, (GLint x, GLint y), ((void)x, (void)y))
-LEGACY_STUB(glTexCoord2f, (GLfloat u, GLfloat v), ((void)u, (void)v))
-LEGACY_STUB(glCallList, (GLuint list), (void)list)
-LEGACY_STUB(glDeleteLists, (GLuint list, GLsizei range),
-            ((void)list, (void)range))
-
-#undef LEGACY_STUB
-
-GLuint GLAPIENTRY glGenLists(GLsizei range)
-{
-    legacy_calls++;
-    return range > 0 ? 100U : 0U;
 }
 
 int main(void)

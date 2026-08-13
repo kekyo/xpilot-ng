@@ -9,8 +9,6 @@
 #include "spark_batch_test_support.h"
 #include "wreckshape.h"
 
-#include <GL/gl.h>
-
 #include <limits.h>
 #include <math.h>
 #include <stdint.h>
@@ -70,7 +68,6 @@ static int successful_draws;
 static int stroke_attempts;
 static int successful_strokes;
 static int flush_attempts;
-static int legacy_calls;
 static int realloc_attempts;
 static int fail_realloc_attempt;
 static RendererBlendMode current_blend;
@@ -198,7 +195,6 @@ static void reset_state(void)
     stroke_attempts = 0;
     successful_strokes = 0;
     flush_attempts = 0;
-    legacy_calls = 0;
     realloc_attempts = 0;
     fail_realloc_attempt = 0;
     current_blend = RENDERER_BLEND_OPAQUE;
@@ -451,7 +447,7 @@ RendererStatus Renderer_stroke_path(
     return RENDERER_STATUS_OK;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(
+RendererStatus Sdl_renderer_flush(
     SdlRenderer *renderer)
 {
     flush_attempts++;
@@ -465,48 +461,6 @@ other_t *Other_by_id(int id)
 {
     (void)id;
     return NULL;
-}
-
-void GLAPIENTRY glColor3ub(GLubyte red, GLubyte green, GLubyte blue)
-{
-    (void)red;
-    (void)green;
-    (void)blue;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glColor4ub(
-    GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha)
-{
-    (void)red;
-    (void)green;
-    (void)blue;
-    (void)alpha;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glPointSize(GLfloat size)
-{
-    (void)size;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glBegin(GLenum mode)
-{
-    (void)mode;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glVertex2i(GLint x, GLint y)
-{
-    (void)x;
-    (void)y;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glEnd(void)
-{
-    legacy_calls++;
 }
 
 void __wrap_Gui_paint_item_object(int type, int x, int y)
@@ -673,7 +627,6 @@ static int check_actual_traversal_geometry_color_order_and_release(void)
     TEST_CHECK(stroke_point_equal(9, 1047.0f, -402.0f));
     TEST_CHECK(stroke_point_equal(10, 1043.0f, -401.0f));
     TEST_CHECK(stroke_point_equal(11, 1045.0f, -399.0f));
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -697,7 +650,6 @@ static int check_wreck_has_deadly_color(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(stroke_point_equal(0, 91.0f, 205.0f));
     TEST_CHECK(stroke_point_equal(11, 95.0f, 201.0f));
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -709,7 +661,6 @@ static int check_wreck_has_no_commands(RendererStatus expected_status)
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(event_count == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -849,7 +800,6 @@ static int check_actual_wreck_failure_keeps_release_and_order(void)
     TEST_CHECK(successful_draws == 1);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 1);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -868,7 +818,6 @@ static int check_wreck_renderer_failures_are_sticky(void)
     TEST_CHECK(events[0] == TEST_EVENT_BLEND);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     reset_state();
     stroke_result = RENDERER_STATUS_OUT_OF_MEMORY;
@@ -882,7 +831,6 @@ static int check_wreck_renderer_failures_are_sticky(void)
     TEST_CHECK(events[1] == TEST_EVENT_STROKE);
     TEST_CHECK(successful_strokes == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     reset_state();
     flush_result = RENDERER_STATUS_BACKEND_ERROR;
@@ -897,7 +845,6 @@ static int check_wreck_renderer_failures_are_sticky(void)
     TEST_CHECK(events[2] == TEST_EVENT_FLUSH);
     TEST_CHECK(successful_strokes == 1);
     TEST_CHECK(flush_attempts == 1);
-    TEST_CHECK(legacy_calls == 0);
 
     previous_event_count = event_count;
     flush_result = RENDERER_STATUS_OK;
@@ -907,7 +854,6 @@ static int check_wreck_renderer_failures_are_sticky(void)
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(event_count == previous_event_count);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -926,7 +872,6 @@ static int check_standalone_spark_is_one_semantic_batch(void)
     TEST_CHECK(point_equal(
                    &captured_draw.points[0], 2.0f, 276.0f,
                    color_five));
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -943,7 +888,6 @@ static int check_empty_batch_is_a_noop_for_any_point_size(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(event_count == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -966,7 +910,6 @@ static int check_later_float_edge_collapse_is_cpu_atomic(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(event_count == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -988,7 +931,6 @@ static int check_later_invalid_entry_is_cpu_atomic(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(event_count == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     reset_state();
     sparkSize = 0;
@@ -998,7 +940,6 @@ static int check_later_invalid_entry_is_cpu_atomic(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(event_count == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -1021,7 +962,6 @@ static int check_actual_numeric_failure_keeps_all_release(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(event_count == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -1045,7 +985,6 @@ static int check_actual_realloc_failure_keeps_all_release(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(event_count == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -1065,7 +1004,6 @@ static int check_renderer_failures_are_sticky(void)
     TEST_CHECK(events[0] == TEST_EVENT_BLEND);
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     reset_state();
     draw_result = RENDERER_STATUS_OUT_OF_MEMORY;
@@ -1077,7 +1015,6 @@ static int check_renderer_failures_are_sticky(void)
     TEST_CHECK(events[1] == TEST_EVENT_DRAW);
     TEST_CHECK(successful_draws == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     reset_state();
     flush_result = RENDERER_STATUS_BACKEND_ERROR;
@@ -1090,14 +1027,12 @@ static int check_renderer_failures_are_sticky(void)
     TEST_CHECK(events[2] == TEST_EVENT_FLUSH);
     TEST_CHECK(successful_draws == 1);
     TEST_CHECK(flush_attempts == 1);
-    TEST_CHECK(legacy_calls == 0);
 
     previous_event_count = event_count;
     flush_result = RENDERER_STATUS_OK;
     TEST_CHECK(Sdlgui_test_paint_spark_batch(entries, 1)
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(event_count == previous_event_count);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -1123,7 +1058,6 @@ static int check_preexisting_failure_still_releases_actual_traversal(void)
     TEST_CHECK(realloc_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(event_count == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 

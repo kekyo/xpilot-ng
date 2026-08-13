@@ -113,8 +113,8 @@ RendererStatus Text_renderer_measure(const TextRenderer *text_renderer,
  * @return Operation status.
  *
  * @remarks This operation requires an active SDL renderer frame. A
- * successful nonempty draw is flushed through the transitional
- * legacy-state-preserving ordering barrier before this function returns.
+ * successful nonempty draw is flushed through the semantic ordering barrier
+ * before this function returns.
  */
 RendererStatus Text_renderer_draw(
     TextRenderer *text_renderer, const unsigned char *text,
@@ -172,8 +172,8 @@ RendererStatus Text_renderer_cache_metrics(
  * @return Operation status.
  *
  * @remarks This operation requires an active SDL renderer frame. A
- * successful nonempty draw is flushed through the transitional
- * legacy-state-preserving ordering barrier before this function returns.
+ * successful nonempty draw is flushed through the semantic ordering barrier
+ * before this function returns.
  */
 RendererStatus Text_renderer_draw_cached(
     TextRenderer *text_renderer, const TextRendererCache *cache,

@@ -825,7 +825,7 @@ static void Radar_paint( GLWidget *widget )
 finish:
     if (submitted > 0) {
 	RendererStatus flush_status =
-	    Sdl_renderer_flush_preserving_legacy(sdl_renderer);
+	    Sdl_renderer_flush(sdl_renderer);
 
 	status = Sdl_renderer_track_frame_result(
 	    sdl_renderer, flush_status);

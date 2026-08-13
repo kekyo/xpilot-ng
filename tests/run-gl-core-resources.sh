@@ -17,26 +17,11 @@ if test "${1:-}" != --inside-xvfb; then
         /bin/sh "$0" --inside-xvfb
 fi
 
-test_binary=${XPILOT_GL_TEST_BINARY:?XPILOT_GL_TEST_BINARY is required}
+test_binary=${XPILOT_GL_CORE_RESOURCE_TEST_BINARY:?
+XPILOT_GL_CORE_RESOURCE_TEST_BINARY is required}
 if test ! -x "$test_binary"; then
     echo "OpenGL test binary is missing: $test_binary" >&2
     exit 1
 fi
 
-"$test_binary"
-
-legacy_context_status=0
-MESA_GL_VERSION_OVERRIDE=1.5 \
-MESA_EXTENSION_OVERRIDE=-GL_ARB_texture_non_power_of_two \
-    "$test_binary" --context-log-gl-1.5 || legacy_context_status=$?
-
-case "$legacy_context_status" in
-    0)
-        ;;
-    77)
-        echo "SKIP: Mesa OpenGL 1.5 compatibility context is unavailable"
-        ;;
-    *)
-        exit "$legacy_context_status"
-        ;;
-esac
+exec "$test_binary"

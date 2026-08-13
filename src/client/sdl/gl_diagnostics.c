@@ -11,6 +11,8 @@
 
 #include "gl_diagnostics.h"
 
+#include <SDL_opengl.h>
+
 #include <ctype.h>
 
 static unsigned int total_errors;

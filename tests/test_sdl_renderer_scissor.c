@@ -11,10 +11,6 @@
 
 #define MAX_DRAWS 4
 
-/* Step 5 replaces the compatibility-state bridge with this semantic
- * ordering barrier. Keep the test independent of the retired API. */
-RendererStatus Sdl_renderer_flush(SdlRenderer *renderer);
-
 typedef struct CapturedDraw {
     int scissor_enabled;
     RendererRect scissor;
@@ -185,15 +181,6 @@ RendererStatus Renderer_gl_core_create(RendererGLProcLoader loader,
     *renderer = Renderer_backend_create(&fake_backend_interface, &backend);
     return *renderer != NULL
         ? RENDERER_STATUS_OK : RENDERER_STATUS_OUT_OF_MEMORY;
-}
-
-/* Preserve linkability until production selects the core factory. The
- * neutral flush assertions remain the behavioral RED gate. */
-RendererStatus Renderer_gl_legacy_create(RendererGLProcLoader loader,
-                                         void *userdata,
-                                         Renderer **renderer)
-{
-    return Renderer_gl_core_create(loader, userdata, renderer);
 }
 
 SDL_Window *SDLCALL SDL_GL_GetCurrentWindow(void)

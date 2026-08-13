@@ -8,8 +8,6 @@
 #include "sdlinit.h"
 #include "sdlrenderer.h"
 
-#include <GL/gl.h>
-
 #include <float.h>
 #include <limits.h>
 #include <math.h>
@@ -68,7 +66,6 @@ static int blend_attempts;
 static int draw_attempts;
 static int successful_draws;
 static int flush_attempts;
-static int legacy_calls;
 static int realloc_attempts;
 static int fail_realloc_attempt;
 static RendererBlendMode current_blend;
@@ -164,7 +161,6 @@ static void reset_state(void)
     draw_attempts = 0;
     successful_draws = 0;
     flush_attempts = 0;
-    legacy_calls = 0;
     realloc_attempts = 0;
     fail_realloc_attempt = 0;
     current_blend = RENDERER_BLEND_OPAQUE;
@@ -343,7 +339,7 @@ RendererStatus Renderer_draw_triangles(
     return RENDERER_STATUS_OK;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(
+RendererStatus Sdl_renderer_flush(
     SdlRenderer *renderer)
 {
     flush_attempts++;
@@ -351,47 +347,6 @@ RendererStatus Sdl_renderer_flush_preserving_legacy(
     if (renderer != &fake_sdl_renderer)
         return RENDERER_STATUS_INVALID_STATE;
     return flush_result;
-}
-
-void GLAPIENTRY glColor4ub(
-    GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha)
-{
-    (void)red;
-    (void)green;
-    (void)blue;
-    (void)alpha;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glEnable(GLenum capability)
-{
-    (void)capability;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glBlendFunc(GLenum source, GLenum destination)
-{
-    (void)source;
-    (void)destination;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glBegin(GLenum mode)
-{
-    (void)mode;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glVertex2i(GLint x, GLint y)
-{
-    (void)x;
-    (void)y;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glEnd(void)
-{
-    legacy_calls++;
 }
 
 void __wrap_Gui_paint_paused(int x, int y, int count)
@@ -503,12 +458,6 @@ static int check_quad(
     return 0;
 }
 
-static int check_no_legacy_calls(void)
-{
-    TEST_CHECK(legacy_calls == 0);
-    return 0;
-}
-
 static int check_successful_semantic_batch(size_t vertex_count)
 {
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
@@ -523,7 +472,7 @@ static int check_successful_semantic_batch(size_t vertex_count)
     TEST_CHECK(captured_draw.vertex_count == vertex_count);
     TEST_CHECK(captured_draw.blend == RENDERER_BLEND_ADDITIVE);
     TEST_CHECK(flush_attempts == 1);
-    return check_no_legacy_calls();
+    return 0;
 }
 
 static int set_actual_appearing_entries(
@@ -622,7 +571,6 @@ static int check_invalid_geometry_is_batch_atomic(void)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(successful_draws == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_legacy_calls() == 0);
 
     previous_render_event_count = render_event_count;
     previous_blend_attempts = blend_attempts;
@@ -635,7 +583,7 @@ static int check_invalid_geometry_is_batch_atomic(void)
     TEST_CHECK(blend_attempts == previous_blend_attempts);
     TEST_CHECK(draw_attempts == previous_draw_attempts);
     TEST_CHECK(flush_attempts == previous_flush_attempts);
-    return check_no_legacy_calls();
+    return 0;
 }
 
 static int check_actual_invalid_batch_keeps_traversal_and_cleanup(void)
@@ -665,7 +613,7 @@ static int check_actual_invalid_batch_keeps_traversal_and_cleanup(void)
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    return check_no_legacy_calls();
+    return 0;
 }
 
 static int check_invalid_numeric_inputs_are_sticky(void)
@@ -692,7 +640,6 @@ static int check_invalid_numeric_inputs_are_sticky(void)
         TEST_CHECK(draw_attempts == 0);
         TEST_CHECK(flush_attempts == 0);
         TEST_CHECK(lookup_count == 2);
-        TEST_CHECK(check_no_legacy_calls() == 0);
     }
     return 0;
 }
@@ -745,7 +692,6 @@ static int check_invalid_appeartime_inputs_do_not_mutate_bases(void)
         TEST_CHECK(blend_attempts == 0);
         TEST_CHECK(draw_attempts == 0);
         TEST_CHECK(flush_attempts == 0);
-        TEST_CHECK(check_no_legacy_calls() == 0);
     }
 
     reset_state();
@@ -760,7 +706,7 @@ static int check_invalid_appeartime_inputs_do_not_mutate_bases(void)
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    return check_no_legacy_calls();
+    return 0;
 }
 
 static int check_allocation_failure_is_sticky(void)
@@ -787,7 +733,6 @@ static int check_allocation_failure_is_sticky(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(homebases[0].appeartime == 1090);
     TEST_CHECK(homebases[1].appeartime == 1180);
-    TEST_CHECK(check_no_legacy_calls() == 0);
 
     previous_blend_attempts = blend_attempts;
     previous_draw_attempts = draw_attempts;
@@ -801,7 +746,7 @@ static int check_allocation_failure_is_sticky(void)
     TEST_CHECK(draw_attempts == previous_draw_attempts);
     TEST_CHECK(flush_attempts == previous_flush_attempts);
     TEST_CHECK(realloc_attempts == previous_realloc_attempts);
-    return check_no_legacy_calls();
+    return 0;
 }
 
 static int check_blend_failure_keeps_side_effects_and_is_sticky(void)
@@ -826,7 +771,6 @@ static int check_blend_failure_keeps_side_effects_and_is_sticky(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(homebases[0].appeartime == 1090);
     TEST_CHECK(homebases[1].appeartime == 1180);
-    TEST_CHECK(check_no_legacy_calls() == 0);
 
     previous_render_event_count = render_event_count;
     blend_result = RENDERER_STATUS_OK;
@@ -834,7 +778,7 @@ static int check_blend_failure_keeps_side_effects_and_is_sticky(void)
         entries, 1) == RENDERER_STATUS_RESOURCE_MISMATCH);
     TEST_CHECK(lookup_count == 6);
     TEST_CHECK(render_event_count == previous_render_event_count);
-    return check_no_legacy_calls();
+    return 0;
 }
 
 static int check_draw_and_flush_failures_are_sticky(void)
@@ -855,7 +799,6 @@ static int check_draw_and_flush_failures_are_sticky(void)
     TEST_CHECK(successful_draws == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(lookup_count == 2);
-    TEST_CHECK(check_no_legacy_calls() == 0);
 
     reset_state();
     flush_result = RENDERER_STATUS_BACKEND_ERROR;
@@ -870,7 +813,6 @@ static int check_draw_and_flush_failures_are_sticky(void)
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(successful_draws == 1);
     TEST_CHECK(flush_attempts == 1);
-    TEST_CHECK(check_no_legacy_calls() == 0);
 
     previous_render_event_count = render_event_count;
     flush_result = RENDERER_STATUS_OK;
@@ -878,7 +820,7 @@ static int check_draw_and_flush_failures_are_sticky(void)
         &entry, 1) == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(lookup_count == 4);
     TEST_CHECK(render_event_count == previous_render_event_count);
-    return check_no_legacy_calls();
+    return 0;
 }
 
 static int check_failed_frame_still_runs_actual_side_effects_and_cleanup(void)
@@ -908,7 +850,7 @@ static int check_failed_frame_still_runs_actual_side_effects_and_cleanup(void)
     TEST_CHECK(render_event_count == 0);
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    return check_no_legacy_calls();
+    return 0;
 }
 
 int main(void)

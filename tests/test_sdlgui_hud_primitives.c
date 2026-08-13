@@ -11,8 +11,6 @@
 #include "sdlrenderer.h"
 #include "text.h"
 
-#include <GL/gl.h>
-
 #include <float.h>
 #include <limits.h>
 #include <math.h>
@@ -177,17 +175,6 @@ static int hud_text_attempts;
 static int setup_moving_attempts;
 static int setup_stationary_attempts;
 static int fake_paint_setup_mode;
-static int legacy_begin_calls;
-static int legacy_vertex_calls;
-static int legacy_end_calls;
-static int legacy_color_calls;
-static int legacy_blend_calls;
-static int legacy_enable_calls;
-static int legacy_disable_calls;
-static int legacy_line_stipple_calls;
-static int legacy_line_width_calls;
-static int legacy_texture_bind_calls;
-static int legacy_light_calls;
 static RendererBlendMode current_blend;
 static RendererBlendMode blend_modes[MAX_EVENTS];
 static int blend_failure_attempt;
@@ -618,17 +605,6 @@ static void reset_frame(void)
     setup_moving_attempts = 0;
     setup_stationary_attempts = 0;
     fake_paint_setup_mode = STATIONARY_MODE;
-    legacy_begin_calls = 0;
-    legacy_vertex_calls = 0;
-    legacy_end_calls = 0;
-    legacy_color_calls = 0;
-    legacy_blend_calls = 0;
-    legacy_enable_calls = 0;
-    legacy_disable_calls = 0;
-    legacy_line_stipple_calls = 0;
-    legacy_line_width_calls = 0;
-    legacy_texture_bind_calls = 0;
-    legacy_light_calls = 0;
     current_blend = RENDERER_BLEND_OPAQUE;
     blend_failure_attempt = 0;
     blend_failure_result = RENDERER_STATUS_OK;
@@ -1002,7 +978,7 @@ RendererStatus Renderer_stroke_stippled_path(
     return RENDERER_STATUS_OK;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
+RendererStatus Sdl_renderer_flush(SdlRenderer *renderer)
 {
     flush_attempts++;
     operation_result_pending++;
@@ -1157,103 +1133,6 @@ bool Bms_test_state(msg_bms_t bms)
     return false;
 }
 
-void GLAPIENTRY glEnable(GLenum capability)
-{
-    (void)capability;
-    legacy_blend_calls++;
-    legacy_enable_calls++;
-}
-
-void GLAPIENTRY glDisable(GLenum capability)
-{
-    (void)capability;
-    legacy_blend_calls++;
-    legacy_disable_calls++;
-}
-
-void GLAPIENTRY glBlendFunc(GLenum source, GLenum destination)
-{
-    (void)source;
-    (void)destination;
-    legacy_blend_calls++;
-}
-
-void GLAPIENTRY glLineStipple(GLint factor, GLushort pattern)
-{
-    (void)factor;
-    (void)pattern;
-    legacy_line_stipple_calls++;
-}
-
-void GLAPIENTRY glLineWidth(GLfloat width)
-{
-    (void)width;
-    legacy_line_width_calls++;
-}
-
-void GLAPIENTRY glColor4ub(GLubyte red, GLubyte green,
-                          GLubyte blue, GLubyte alpha)
-{
-    (void)red;
-    (void)green;
-    (void)blue;
-    (void)alpha;
-    legacy_color_calls++;
-}
-
-void GLAPIENTRY glBegin(GLenum mode)
-{
-    (void)mode;
-    legacy_begin_calls++;
-}
-
-void GLAPIENTRY glVertex2i(GLint x, GLint y)
-{
-    (void)x;
-    (void)y;
-    legacy_vertex_calls++;
-}
-
-void GLAPIENTRY glVertex2d(GLdouble x, GLdouble y)
-{
-    (void)x;
-    (void)y;
-    legacy_vertex_calls++;
-}
-
-void GLAPIENTRY glEnd(void)
-{
-    legacy_end_calls++;
-}
-
-void GLAPIENTRY glBindTexture(GLenum target, GLuint texture)
-{
-    (void)target;
-    (void)texture;
-    legacy_texture_bind_calls++;
-}
-
-void GLAPIENTRY glLightfv(GLenum light, GLenum parameter,
-                          const GLfloat *values)
-{
-    (void)light;
-    (void)parameter;
-    (void)values;
-    legacy_light_calls++;
-}
-
-static int check_no_legacy_primitives(void)
-{
-    TEST_CHECK(legacy_begin_calls == 0);
-    TEST_CHECK(legacy_vertex_calls == 0);
-    TEST_CHECK(legacy_end_calls == 0);
-    TEST_CHECK(legacy_color_calls == 0);
-    TEST_CHECK(legacy_blend_calls == 0);
-    TEST_CHECK(legacy_line_stipple_calls == 0);
-    TEST_CHECK(legacy_line_width_calls == 0);
-    return 0;
-}
-
 typedef struct PaintOperationCounts {
     int event_count;
     int blend_attempts;
@@ -1272,17 +1151,6 @@ typedef struct PaintOperationCounts {
     int hud_text_attempts;
     int setup_moving_attempts;
     int setup_stationary_attempts;
-    int legacy_begin_calls;
-    int legacy_vertex_calls;
-    int legacy_end_calls;
-    int legacy_color_calls;
-    int legacy_blend_calls;
-    int legacy_enable_calls;
-    int legacy_disable_calls;
-    int legacy_line_stipple_calls;
-    int legacy_line_width_calls;
-    int legacy_texture_bind_calls;
-    int legacy_light_calls;
 } PaintOperationCounts;
 
 static PaintOperationCounts paint_operation_counts(void)
@@ -1305,17 +1173,6 @@ static PaintOperationCounts paint_operation_counts(void)
         hud_text_attempts,
         setup_moving_attempts,
         setup_stationary_attempts,
-        legacy_begin_calls,
-        legacy_vertex_calls,
-        legacy_end_calls,
-        legacy_color_calls,
-        legacy_blend_calls,
-        legacy_enable_calls,
-        legacy_disable_calls,
-        legacy_line_stipple_calls,
-        legacy_line_width_calls,
-        legacy_texture_bind_calls,
-        legacy_light_calls
     };
 
     return counts;
@@ -1345,17 +1202,6 @@ static int check_paint_operation_counts_unchanged(
     CHECK_OPERATION_COUNT(hud_text_attempts);
     CHECK_OPERATION_COUNT(setup_moving_attempts);
     CHECK_OPERATION_COUNT(setup_stationary_attempts);
-    CHECK_OPERATION_COUNT(legacy_begin_calls);
-    CHECK_OPERATION_COUNT(legacy_vertex_calls);
-    CHECK_OPERATION_COUNT(legacy_end_calls);
-    CHECK_OPERATION_COUNT(legacy_color_calls);
-    CHECK_OPERATION_COUNT(legacy_blend_calls);
-    CHECK_OPERATION_COUNT(legacy_enable_calls);
-    CHECK_OPERATION_COUNT(legacy_disable_calls);
-    CHECK_OPERATION_COUNT(legacy_line_stipple_calls);
-    CHECK_OPERATION_COUNT(legacy_line_width_calls);
-    CHECK_OPERATION_COUNT(legacy_texture_bind_calls);
-    CHECK_OPERATION_COUNT(legacy_light_calls);
 #undef CHECK_OPERATION_COUNT
     return 0;
 }
@@ -1462,7 +1308,7 @@ static int check_single_radar_dot_batch(PaintEvent primitive_event)
     TEST_CHECK(transform_attempts == 0);
     TEST_CHECK(scissor_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_radar_dot_shapes_are_semantic(void)
@@ -1602,8 +1448,6 @@ static int check_hud_radar_dot_noops_and_signed_boundaries(void)
         TEST_CHECK(draw_attempts == 0);
         TEST_CHECK(stroke_attempts == 0);
         TEST_CHECK(flush_attempts == 0);
-        if (check_no_legacy_primitives() != 0)
-            return 1;
     }
 
     reset_frame();
@@ -1683,8 +1527,6 @@ static int check_hud_radar_disabled_and_scan_only_paths(void)
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_frame();
     clData.scale = 0.5;
@@ -1719,7 +1561,7 @@ static int check_hud_radar_disabled_and_scan_only_paths(void)
     TEST_CHECK(strokes[0].blend == RENDERER_BLEND_OPAQUE);
     TEST_CHECK(strokes[1].blend == RENDERER_BLEND_OPAQUE);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_negative_odd_object_size_uses_shift_equivalent_half(void)
@@ -1764,7 +1606,7 @@ static int check_negative_odd_object_size_uses_shift_equivalent_half(void)
         0, expected_fill, 6, UINT32_C(0x99aabbcc),
         RENDERER_BLEND_ALPHA) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_late_invalid_scan_geometry_rejects_whole_scene(void)
@@ -1790,8 +1632,6 @@ static int check_late_invalid_scan_geometry_rejects_whole_scene(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     tbl_cos[invalid_table_index] = radar_ring_cosine[15];
     result = Sdlgui_test_paint_hud_radar_and_scans();
@@ -1804,7 +1644,7 @@ static int check_late_invalid_scan_geometry_rejects_whole_scene(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_radar_two_pass_order_and_scans(void)
@@ -1915,7 +1755,7 @@ static int check_hud_radar_two_pass_order_and_scans(void)
     TEST_CHECK(strokes[5].blend == RENDERER_BLEND_OPAQUE);
     TEST_CHECK(strokes[6].blend == RENDERER_BLEND_OPAQUE);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_radar_failure_flushes_only_accepted_prefix(void)
@@ -1963,8 +1803,6 @@ static int check_hud_radar_failure_flushes_only_accepted_prefix(void)
         RENDERER_BLEND_ALPHA) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
     result = Sdlgui_test_paint_hud_radar_and_scans();
@@ -1980,7 +1818,7 @@ static int check_hud_radar_failure_flushes_only_accepted_prefix(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_radar_object_overrides_are_independent(void)
@@ -2042,8 +1880,6 @@ static int check_hud_radar_object_overrides_are_independent(void)
         1, second_outline, 4, UINT32_C(0x99aabbcc), 1) == 0);
     TEST_CHECK(strokes[0].blend == RENDERER_BLEND_ALPHA);
     TEST_CHECK(strokes[1].blend == RENDERER_BLEND_ALPHA);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_frame();
     ext_view_width = 100;
@@ -2084,7 +1920,7 @@ static int check_hud_radar_object_overrides_are_independent(void)
         1, second_fill, 6, UINT32_C(0x55667788),
         RENDERER_BLEND_ALPHA) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_radar_draw_and_blend_failures_are_sticky(void)
@@ -2124,8 +1960,6 @@ static int check_hud_radar_draw_and_blend_failures_are_sticky(void)
         1, first_enemy, 3, UINT32_C(0x11223344), 1) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     draw_failure_result = RENDERER_STATUS_BACKEND_ERROR;
     result = Sdlgui_test_paint_hud_radar_and_scans();
@@ -2136,8 +1970,6 @@ static int check_hud_radar_draw_and_blend_failures_are_sticky(void)
     TEST_CHECK(stroke_attempts == 2);
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(flush_attempts == 1);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_full_hud_radar_fixture();
     blend_failure_attempt = 2;
@@ -2166,8 +1998,6 @@ static int check_hud_radar_draw_and_blend_failures_are_sticky(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     blend_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
     result = Sdlgui_test_paint_hud_radar_and_scans();
@@ -2180,7 +2010,7 @@ static int check_hud_radar_draw_and_blend_failures_are_sticky(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_invalid_hud_radar_math_is_sticky(void)
@@ -2206,8 +2036,6 @@ static int check_invalid_hud_radar_math_is_sticky(void)
     TEST_CHECK(result == RENDERER_STATUS_INVALID_ARGUMENT);
     TEST_CHECK(preflight_attempts == 3);
     TEST_CHECK(event_count == 0);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_full_hud_radar_fixture();
     fake_setup.width = 0;
@@ -2216,8 +2044,6 @@ static int check_invalid_hud_radar_math_is_sticky(void)
     TEST_CHECK(preflight_attempts == 2);
     TEST_CHECK(event_count == 0);
     TEST_CHECK(flush_attempts == 0);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_full_hud_radar_fixture();
     clData.scale = HUGE_VAL;
@@ -2228,7 +2054,7 @@ static int check_invalid_hud_radar_math_is_sticky(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_pointers_are_semantic(void)
@@ -2278,7 +2104,7 @@ static int check_hud_pointers_are_semantic(void)
     TEST_CHECK(check_stroke(
         1, direction_points, 2, UINT32_C(0x50607080), 1) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_pointer_visibility_conditions(void)
@@ -2302,8 +2128,6 @@ static int check_hud_pointer_visibility_conditions(void)
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_frame();
     selfVisible = 0;
@@ -2319,8 +2143,6 @@ static int check_hud_pointer_visibility_conditions(void)
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_frame();
     selfVisible = 1;
@@ -2334,8 +2156,6 @@ static int check_hud_pointer_visibility_conditions(void)
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_frame();
     selfVisible = 1;
@@ -2359,7 +2179,7 @@ static int check_hud_pointer_visibility_conditions(void)
     TEST_CHECK(check_stroke(
         0, speed_points, 2, UINT32_C(0x00000000), 1) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_pointer_failure_flushes_only_accepted_prefix(void)
@@ -2399,8 +2219,6 @@ static int check_pointer_failure_flushes_only_accepted_prefix(void)
         0, speed_points, 2, UINT32_C(0x10203040), 1) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
     result = Sdlgui_test_paint_hud_pointers();
@@ -2414,7 +2232,7 @@ static int check_pointer_failure_flushes_only_accepted_prefix(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_invalid_hud_pointer_geometry_is_rejected(void)
@@ -2436,8 +2254,6 @@ static int check_invalid_hud_pointer_geometry_is_rejected(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_frame();
     selfVisible = 1;
@@ -2454,8 +2270,6 @@ static int check_invalid_hud_pointer_geometry_is_rejected(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_frame();
     selfVisible = 1;
@@ -2472,8 +2286,6 @@ static int check_invalid_hud_pointer_geometry_is_rejected(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_frame();
     selfVisible = 1;
@@ -2490,8 +2302,6 @@ static int check_invalid_hud_pointer_geometry_is_rejected(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_frame();
     selfVisible = 1;
@@ -2508,8 +2318,6 @@ static int check_invalid_hud_pointer_geometry_is_rejected(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_frame();
     selfVisible = 1;
@@ -2526,7 +2334,7 @@ static int check_invalid_hud_pointer_geometry_is_rejected(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_null_selection_is_successful_noop(void)
@@ -2549,7 +2357,7 @@ static int check_null_selection_is_successful_noop(void)
     TEST_CHECK(transform_attempts == 0);
     TEST_CHECK(scissor_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_selection_outline_is_semantic(void)
@@ -2584,7 +2392,7 @@ static int check_selection_outline_is_semantic(void)
     TEST_CHECK(check_stroke(
         0, expected_points, 4, UINT32_C(0x89abcdef), 1) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_selection_requires_active_frame(void)
@@ -2607,7 +2415,7 @@ static int check_selection_requires_active_frame(void)
     TEST_CHECK(successful_strokes == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_selection_stroke_failure_is_sticky(void)
@@ -2634,8 +2442,6 @@ static int check_selection_stroke_failure_is_sticky(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
     result = Paint_select();
@@ -2649,7 +2455,7 @@ static int check_selection_stroke_failure_is_sticky(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_selection_flush_failure_is_sticky(void)
@@ -2676,8 +2482,6 @@ static int check_selection_flush_failure_is_sticky(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     flush_result = RENDERER_STATUS_OUT_OF_MEMORY;
     result = Paint_select();
@@ -2691,7 +2495,7 @@ static int check_selection_flush_failure_is_sticky(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static void reset_hud_frame_fixture(void)
@@ -2742,7 +2546,7 @@ static int check_hud_frame_paths_are_semantic(void)
     TEST_CHECK(transform_attempts == 0);
     TEST_CHECK(scissor_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_frame_visibility_conditions(void)
@@ -2780,8 +2584,6 @@ static int check_hud_frame_visibility_conditions(void)
         }
     }
     TEST_CHECK(flush_attempts == 1);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_hud_frame_fixture();
     hudHLineColorRGBA = 0;
@@ -2805,8 +2607,6 @@ static int check_hud_frame_visibility_conditions(void)
         }
     }
     TEST_CHECK(flush_attempts == 1);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_hud_frame_fixture();
     hudHLineColorRGBA = 0;
@@ -2823,7 +2623,7 @@ static int check_hud_frame_visibility_conditions(void)
     TEST_CHECK(transform_attempts == 0);
     TEST_CHECK(scissor_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_frame_partial_failure_flushes_accepted_prefix(void)
@@ -2861,8 +2661,6 @@ static int check_hud_frame_partial_failure_flushes_accepted_prefix(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     stippled_stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
     result = Sdlgui_test_paint_hud_frame(100, 60);
@@ -2876,7 +2674,7 @@ static int check_hud_frame_partial_failure_flushes_accepted_prefix(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_frame_first_operation_failures_are_sticky(void)
@@ -2904,8 +2702,6 @@ static int check_hud_frame_first_operation_failures_are_sticky(void)
     TEST_CHECK(preflight_attempts == 2);
     TEST_CHECK(event_count == 1);
     TEST_CHECK(blend_attempts == 1);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_hud_frame_fixture();
     stippled_stroke_failure_attempt = 1;
@@ -2931,7 +2727,7 @@ static int check_hud_frame_first_operation_failures_are_sticky(void)
     TEST_CHECK(event_count == 2);
     TEST_CHECK(stippled_stroke_attempts == 1);
     TEST_CHECK(flush_attempts == 0);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_frame_flush_failure_is_sticky(void)
@@ -2957,8 +2753,6 @@ static int check_hud_frame_flush_failure_is_sticky(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     flush_result = RENDERER_STATUS_OUT_OF_MEMORY;
     result = Sdlgui_test_paint_hud_frame(100, 60);
@@ -2972,7 +2766,7 @@ static int check_hud_frame_flush_failure_is_sticky(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static void reset_hud_status_fixture(void)
@@ -3042,7 +2836,7 @@ static int check_hud_lose_item_outline_precedes_count_text(void)
     TEST_CHECK(transform_attempts == 0);
     TEST_CHECK(scissor_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_item_visibility_and_active_side_effects(void)
@@ -3065,8 +2859,6 @@ static int check_hud_item_visibility_and_active_side_effects(void)
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(lose_item_active == 0);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_hud_status_fixture();
     lose_item = ITEM_MINE;
@@ -3079,8 +2871,6 @@ static int check_hud_item_visibility_and_active_side_effects(void)
     TEST_CHECK(preflight_attempts == 0);
     TEST_CHECK(lastNumItems[ITEM_MINE] == 0);
     TEST_CHECK(lose_item_active == -2);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_hud_status_fixture();
     numItems[ITEM_MINE] = 3;
@@ -3094,8 +2884,6 @@ static int check_hud_item_visibility_and_active_side_effects(void)
     TEST_CHECK(stroke_attempts == 1);
     TEST_CHECK(successful_strokes == 1);
     TEST_CHECK(lose_item_active == 0);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_hud_status_fixture();
     instruments.showItems = false;
@@ -3120,7 +2908,7 @@ static int check_hud_item_visibility_and_active_side_effects(void)
     TEST_CHECK(numItemsTime[ITEM_MINE] == 0);
     TEST_CHECK(image_attempts == 1);
     TEST_CHECK(lose_item_active == 1);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_item_failures_stop_later_work(void)
@@ -3146,8 +2934,6 @@ static int check_hud_item_failures_stop_later_work(void)
     TEST_CHECK(lose_item_active == -1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_hud_status_fixture();
     show_test_lose_item();
@@ -3165,8 +2951,6 @@ static int check_hud_item_failures_stop_later_work(void)
     TEST_CHECK(hud_text_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_hud_status_fixture();
     show_test_lose_item();
@@ -3180,7 +2964,7 @@ static int check_hud_item_failures_stop_later_work(void)
     TEST_CHECK(hud_text_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_fuel_visibility_table(void)
@@ -3226,8 +3010,6 @@ static int check_hud_fuel_visibility_table(void)
         TEST_CHECK(fill_attempts == cases[case_index].visible);
         TEST_CHECK(flush_attempts == cases[case_index].visible);
         TEST_CHECK(fuelTime == cases[case_index].time);
-        if (check_no_legacy_primitives() != 0)
-            return 1;
     }
     return 0;
 }
@@ -3270,8 +3052,6 @@ static int check_hud_fuel_exact_and_unbounded_geometry(void)
     TEST_CHECK(last_fill.scissor_token == 83);
     TEST_CHECK(transform_attempts == 0);
     TEST_CHECK(scissor_attempts == 0);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_hud_status_fixture();
     fuelTime = 1.0;
@@ -3286,8 +3066,6 @@ static int check_hud_fuel_exact_and_unbounded_geometry(void)
     TEST_CHECK(last_fill.y == 165.0f);
     TEST_CHECK(last_fill.width == 8.0f);
     TEST_CHECK(last_fill.height == 32.0f);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_hud_status_fixture();
     fuelTime = 1.0;
@@ -3302,8 +3080,6 @@ static int check_hud_fuel_exact_and_unbounded_geometry(void)
     TEST_CHECK(last_fill.y == -27.0f);
     TEST_CHECK(last_fill.width == 8.0f);
     TEST_CHECK(last_fill.height == 192.0f);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_hud_status_fixture();
     fuelTime = 1.0;
@@ -3319,7 +3095,7 @@ static int check_hud_fuel_exact_and_unbounded_geometry(void)
     TEST_CHECK(fill_attempts == 0);
     TEST_CHECK(successful_fills == 0);
     TEST_CHECK(flush_attempts == 1);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_hud_fuel_invalid_math_and_partial_failure(void)
@@ -3372,8 +3148,6 @@ static int check_hud_fuel_invalid_math_and_partial_failure(void)
         TEST_CHECK(result == RENDERER_STATUS_INVALID_ARGUMENT);
         TEST_CHECK(preflight_attempts == 3);
         TEST_CHECK(event_count == 0);
-        if (check_no_legacy_primitives() != 0)
-            return 1;
     }
 
     reset_hud_status_fixture();
@@ -3399,8 +3173,6 @@ static int check_hud_fuel_invalid_math_and_partial_failure(void)
         0, outline_points, 4, UINT32_C(0x13579bdf), 1) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     fill_result = RENDERER_STATUS_BACKEND_ERROR;
     TEST_CHECK(Sdlgui_test_paint_hud_fuel_gauge(100, 60)
@@ -3410,8 +3182,6 @@ static int check_hud_fuel_invalid_math_and_partial_failure(void)
     TEST_CHECK(stroke_attempts == 1);
     TEST_CHECK(fill_attempts == 1);
     TEST_CHECK(flush_attempts == 1);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_hud_status_fixture();
     fuelTime = 1.0;
@@ -3430,8 +3200,6 @@ static int check_hud_fuel_invalid_math_and_partial_failure(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     flush_result = RENDERER_STATUS_OUT_OF_MEMORY;
     TEST_CHECK(Sdlgui_test_paint_hud_fuel_gauge(100, 60)
@@ -3441,7 +3209,7 @@ static int check_hud_fuel_invalid_math_and_partial_failure(void)
     TEST_CHECK(stroke_attempts == 1);
     TEST_CHECK(fill_attempts == 1);
     TEST_CHECK(flush_attempts == 1);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_fuel_meter_fill_uses_inherited_hud_state(void)
@@ -3471,7 +3239,7 @@ static int check_fuel_meter_fill_uses_inherited_hud_state(void)
     TEST_CHECK(last_fill.transform_token == 71);
     TEST_CHECK(last_fill.scissor_token == 83);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_negative_and_empty_meter_fills(void)
@@ -3489,8 +3257,6 @@ static int check_negative_and_empty_meter_fills(void)
     TEST_CHECK(last_fill.height == 9.0f);
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     reset_frame();
     fuelSum = 0.0;
@@ -3501,7 +3267,7 @@ static int check_negative_and_empty_meter_fills(void)
     TEST_CHECK(successful_fills == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_extreme_meter_value_avoids_signed_overflow(void)
@@ -3521,7 +3287,7 @@ static int check_extreme_meter_value_avoids_signed_overflow(void)
     TEST_CHECK(last_fill.height == 9.0f);
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_meter_fill_flushes_before_its_label(void)
@@ -3542,7 +3308,7 @@ static int check_meter_fill_flushes_before_its_label(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(text_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_meter_border_and_ticks_are_semantic(void)
@@ -3608,7 +3374,7 @@ static int check_meter_border_and_ticks_are_semantic(void)
     TEST_CHECK(last_text.y == 79);
     TEST_CHECK(last_text.on_hud);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_tick_failure_flushes_only_accepted_meter_primitives(void)
@@ -3647,8 +3413,6 @@ static int check_tick_failure_flushes_only_accepted_meter_primitives(void)
         0, border_points, 4, 0x89abcdef, 1) == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
     Paint_meters();
@@ -3664,7 +3428,7 @@ static int check_tick_failure_flushes_only_accepted_meter_primitives(void)
     TEST_CHECK(text_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_first_failure_blocks_later_same_frame_meter(void)
@@ -3696,7 +3460,7 @@ static int check_first_failure_blocks_later_same_frame_meter(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_label_failure_blocks_later_same_frame_meters(void)
@@ -3730,8 +3494,6 @@ static int check_label_failure_blocks_later_same_frame_meters(void)
     TEST_CHECK(last_text.texture == &meter_texs[0]);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    if (check_no_legacy_primitives() != 0)
-        return 1;
 
     text_result = RENDERER_STATUS_BACKEND_ERROR;
     Paint_meters();
@@ -3747,17 +3509,6 @@ static int check_label_failure_blocks_later_same_frame_meters(void)
     TEST_CHECK(text_attempts == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_OUT_OF_MEMORY);
-    return check_no_legacy_primitives();
-}
-
-static int check_no_world_legacy_state(void)
-{
-    if (check_no_legacy_primitives() != 0)
-        return 1;
-    TEST_CHECK(legacy_enable_calls == 0);
-    TEST_CHECK(legacy_disable_calls == 0);
-    TEST_CHECK(legacy_texture_bind_calls == 0);
-    TEST_CHECK(legacy_light_calls == 0);
     return 0;
 }
 
@@ -3784,7 +3535,7 @@ static int check_world_alpha_stroke_batch(int expected_stroke_count)
     TEST_CHECK(scissor_attempts == 0);
     TEST_CHECK(setup_moving_attempts == 0);
     TEST_CHECK(setup_stationary_attempts == 0);
-    return check_no_world_legacy_state();
+    return 0;
 }
 
 static int check_world_stippled_batch(void)
@@ -3805,7 +3556,7 @@ static int check_world_stippled_batch(void)
     TEST_CHECK(scissor_attempts == 0);
     TEST_CHECK(setup_moving_attempts == 0);
     TEST_CHECK(setup_stationary_attempts == 0);
-    return check_no_world_legacy_state();
+    return 0;
 }
 
 static int check_world_decor_paths_are_semantic(void)
@@ -3945,7 +3696,6 @@ static int check_world_border_rectangles_are_semantic(void)
     TEST_CHECK(check_world_stroke(
         0, rectangle_points, 4, UINT32_C(0x8090a0b0), 1,
         RENDERER_BLEND_ALPHA, 72) == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     blueRGBA = UINT32_C(0x40506070);
@@ -4007,7 +3757,7 @@ static int check_world_wall_paths_and_fuel_precedence(void)
         0, closed_line, 2, color, 0, RENDERER_BLEND_ALPHA, 71);
 }
 
-static int check_world_stippled_lines_use_no_legacy_smoothing_state(void)
+static int check_world_stippled_lines_are_semantic(void)
 {
     static const float points[][2] = {
         {-100.0f, 250.0f}, {300.0f, -450.0f}
@@ -4051,7 +3801,7 @@ static int check_world_line_preflight_only_noop(void)
     TEST_CHECK(scissor_attempts == 0);
     TEST_CHECK(setup_moving_attempts == 0);
     TEST_CHECK(setup_stationary_attempts == 0);
-    return check_no_world_legacy_state();
+    return 0;
 }
 
 static int check_world_line_empty_geometry_is_successful_noop(void)
@@ -4115,7 +3865,6 @@ static int check_invalid_world_line_result_is_sticky(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(setup_moving_attempts == 0);
     TEST_CHECK(setup_stationary_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     before_blocked_leaf = paint_operation_counts();
     Gui_paint_border(10, 20, 30, 40);
@@ -4204,7 +3953,6 @@ static int check_world_line_failures_preserve_prefix_and_sticky_status(void)
     TEST_CHECK(check_world_stroke(
         1, second_wall_line, 2, UINT32_C(0x12345678), 0,
         RENDERER_BLEND_ALPHA, 71) == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     before_blocked_leaf = paint_operation_counts();
     stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
@@ -4225,7 +3973,6 @@ static int check_world_line_failures_preserve_prefix_and_sticky_status(void)
     TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
     TEST_CHECK(stippled_stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     stippled_stroke_failure_attempt = 1;
@@ -4240,7 +3987,6 @@ static int check_world_line_failures_preserve_prefix_and_sticky_status(void)
     TEST_CHECK(stippled_stroke_attempts == 1);
     TEST_CHECK(successful_stippled_strokes == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     wallColorRGBA = UINT32_C(0xabcdef12);
@@ -4258,7 +4004,7 @@ static int check_world_line_failures_preserve_prefix_and_sticky_status(void)
     TEST_CHECK(check_world_stroke(
         0, border_points, 2, UINT32_C(0xabcdef12), 0,
         RENDERER_BLEND_ALPHA, 71) == 0);
-    return check_no_world_legacy_state();
+    return 0;
 }
 
 static int check_directional_gravity_geometry_and_order(void)
@@ -4331,7 +4077,7 @@ static int check_directional_gravity_geometry_and_order(void)
             (int)direction, direction_sections[direction],
             section_colors) == 0);
     }
-    return check_no_world_legacy_state();
+    return 0;
 }
 
 static int check_directional_gravity_phase_boundaries_and_negative(void)
@@ -4378,7 +4124,6 @@ static int check_directional_gravity_phase_boundaries_and_negative(void)
         0, phase_17_sections, phase_17_colors) == 0);
     TEST_CHECK(check_directional_gravity_draw(
         1, phase_18_sections, phase_18_colors) == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     redRGBA = UINT32_C(0x77889900);
@@ -4392,7 +4137,6 @@ static int check_directional_gravity_phase_boundaries_and_negative(void)
     TEST_CHECK(successful_draws == 2);
     TEST_CHECK(flush_attempts == 2);
     TEST_CHECK(check_directional_gravity_draws_equal(0, 1) == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     normalized_extreme = LONG_MIN % (long)BLOCK_SZ;
     if (normalized_extreme < 0)
@@ -4409,7 +4153,6 @@ static int check_directional_gravity_phase_boundaries_and_negative(void)
     TEST_CHECK(successful_draws == 2);
     TEST_CHECK(flush_attempts == 2);
     TEST_CHECK(check_directional_gravity_draws_equal(0, 1) == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     normalized_extreme = LONG_MAX % (long)BLOCK_SZ;
     reset_frame();
@@ -4424,7 +4167,7 @@ static int check_directional_gravity_phase_boundaries_and_negative(void)
     TEST_CHECK(successful_draws == 2);
     TEST_CHECK(flush_attempts == 2);
     TEST_CHECK(check_directional_gravity_draws_equal(0, 1) == 0);
-    return check_no_world_legacy_state();
+    return 0;
 }
 
 static int check_invalid_directional_gravity_result_is_sticky(void)
@@ -4438,7 +4181,6 @@ static int check_invalid_directional_gravity_result_is_sticky(void)
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     before_blocked_leaf = paint_operation_counts();
     Gui_paint_setup_down_grav(10, 20);
@@ -4486,7 +4228,6 @@ static int check_directional_gravity_failures_are_sticky(void)
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
     before_blocked_leaf = paint_operation_counts();
     prior_preflight_attempts = preflight_attempts;
     Gui_paint_setup_right_grav(100, 200);
@@ -4509,7 +4250,6 @@ static int check_directional_gravity_failures_are_sticky(void)
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(successful_draws == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     loops = 5;
@@ -4526,7 +4266,6 @@ static int check_directional_gravity_failures_are_sticky(void)
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(successful_draws == 1);
     TEST_CHECK(flush_attempts == 1);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     preset_sticky_frame_failure();
@@ -4539,7 +4278,7 @@ static int check_directional_gravity_failures_are_sticky(void)
     TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
     TEST_CHECK(check_paint_operation_counts_unchanged(
         before_blocked_leaf) == 0);
-    return check_no_world_legacy_state();
+    return 0;
 }
 
 static int check_textured_ball_branch_and_style_tint(void)
@@ -4565,7 +4304,6 @@ static int check_textured_ball_branch_and_style_tint(void)
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     Sdlgui_test_set_textured_balls(1);
@@ -4588,7 +4326,7 @@ static int check_textured_ball_branch_and_style_tint(void)
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    return check_no_world_legacy_state();
+    return 0;
 }
 
 static int check_untextured_ball_outline_stroke(uint32_t color)
@@ -4622,7 +4360,7 @@ static int check_untextured_ball_outline_stroke(uint32_t color)
     TEST_CHECK(check_world_stroke(
         0, expected_points, NELEM(expected_points), color, 1,
         RENDERER_BLEND_ADDITIVE, 71) == 0);
-    return check_no_world_legacy_state();
+    return 0;
 }
 
 static int check_untextured_ball_outline_is_semantic(void)
@@ -4662,7 +4400,6 @@ static int check_invalid_untextured_ball_result_is_sticky(void)
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(stippled_stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     before_blocked_leaf = paint_operation_counts();
     prior_preflight_attempts = preflight_attempts;
@@ -4733,7 +4470,6 @@ static int check_untextured_ball_failures_are_sticky(void)
     TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
     before_blocked_leaf = paint_operation_counts();
     prior_preflight_attempts = preflight_attempts;
     Gui_paint_ball(100, 200, -1);
@@ -4755,7 +4491,6 @@ static int check_untextured_ball_failures_are_sticky(void)
     TEST_CHECK(stroke_attempts == 1);
     TEST_CHECK(successful_strokes == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
     before_blocked_leaf = paint_operation_counts();
     prior_preflight_attempts = preflight_attempts;
     Gui_paint_ball(100, 200, -1);
@@ -4777,7 +4512,6 @@ static int check_untextured_ball_failures_are_sticky(void)
     TEST_CHECK(stroke_attempts == 1);
     TEST_CHECK(successful_strokes == 1);
     TEST_CHECK(flush_attempts == 1);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
     before_blocked_leaf = paint_operation_counts();
     prior_preflight_attempts = preflight_attempts;
     Gui_paint_ball(100, 200, -1);
@@ -4796,7 +4530,7 @@ static int check_untextured_ball_failures_are_sticky(void)
     TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
     TEST_CHECK(check_paint_operation_counts_unchanged(
         before_blocked_leaf) == 0);
-    return check_no_world_legacy_state();
+    return 0;
 }
 
 static int check_ball_connector_stroke(
@@ -4817,7 +4551,7 @@ static int check_ball_connector_stroke(
     TEST_CHECK(check_world_stroke(
         0, expected_points, 2, expected_color, 0,
         RENDERER_BLEND_ADDITIVE, 71) == 0);
-    return check_no_world_legacy_state();
+    return 0;
 }
 
 static int check_item_outline_and_ball_connector_are_semantic(void)
@@ -4855,7 +4589,6 @@ static int check_item_outline_and_ball_connector_are_semantic(void)
     TEST_CHECK(check_world_stroke(
         0, item_points, 3, UINT32_C(0x50607080), 1,
         RENDERER_BLEND_ALPHA, 71) == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     connColorRGBA = UINT32_C(0x90abcdef);
@@ -4880,7 +4613,6 @@ static int check_invalid_item_outline_result_is_sticky(
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(stippled_stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     before_blocked_leaf = paint_operation_counts();
     Gui_paint_ball_connector(10, 20, 30, 40);
@@ -4908,7 +4640,6 @@ static int check_item_outline_and_ball_connector_boundaries(void)
     TEST_CHECK(stippled_stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(image_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     connColorRGBA = UINT32_C(0x01020304);
@@ -4956,7 +4687,6 @@ static int check_simple_world_object_failures_are_sticky(void)
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
     before_blocked_leaf = paint_operation_counts();
     Gui_paint_ball_connector(10, 20, 30, 40);
     TEST_CHECK(check_paint_operation_counts_unchanged(
@@ -4977,7 +4707,6 @@ static int check_simple_world_object_failures_are_sticky(void)
     TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
     before_blocked_leaf = paint_operation_counts();
     Gui_paint_ball_connector(10, 20, 30, 40);
     TEST_CHECK(check_paint_operation_counts_unchanged(
@@ -4998,7 +4727,6 @@ static int check_simple_world_object_failures_are_sticky(void)
     TEST_CHECK(stroke_attempts == 1);
     TEST_CHECK(successful_strokes == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
     before_blocked_leaf = paint_operation_counts();
     Gui_paint_item_object(3, 20, 30);
     TEST_CHECK(check_paint_operation_counts_unchanged(
@@ -5020,7 +4748,6 @@ static int check_simple_world_object_failures_are_sticky(void)
     TEST_CHECK(stroke_attempts == 1);
     TEST_CHECK(successful_strokes == 1);
     TEST_CHECK(flush_attempts == 1);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
     before_blocked_leaf = paint_operation_counts();
     Gui_paint_item_object(3, 20, 30);
     TEST_CHECK(check_paint_operation_counts_unchanged(
@@ -5052,7 +4779,6 @@ static int check_visible_border_setup_failures_restore_safely(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_paint_setup_mode == STATIONARY_MODE);
     TEST_CHECK(fake_renderer.transform_token == 71);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     hudColorRGBA = UINT32_C(0x12345678);
@@ -5074,7 +4800,6 @@ static int check_visible_border_setup_failures_restore_safely(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_paint_setup_mode == STATIONARY_MODE);
     TEST_CHECK(fake_renderer.transform_token == 71);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     hudColorRGBA = UINT32_C(0x12345678);
@@ -5099,7 +4824,6 @@ static int check_visible_border_setup_failures_restore_safely(void)
     TEST_CHECK(check_world_stroke(
         0, rectangle_points, 4, UINT32_C(0x12345678), 1,
         RENDERER_BLEND_ALPHA, 72) == 0);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     blend_failure_attempt = 1;
@@ -5117,7 +4841,6 @@ static int check_visible_border_setup_failures_restore_safely(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(fake_paint_setup_mode == STATIONARY_MODE);
     TEST_CHECK(fake_renderer.transform_token == 71);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     flush_result = RENDERER_STATUS_BACKEND_ERROR;
@@ -5135,7 +4858,6 @@ static int check_visible_border_setup_failures_restore_safely(void)
     TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(fake_paint_setup_mode == STATIONARY_MODE);
     TEST_CHECK(fake_renderer.transform_token == 71);
-    TEST_CHECK(check_no_world_legacy_state() == 0);
 
     reset_frame();
     stroke_failure_attempt = 1;
@@ -5154,7 +4876,7 @@ static int check_visible_border_setup_failures_restore_safely(void)
     TEST_CHECK(stroke_attempts == 1);
     TEST_CHECK(successful_strokes == 0);
     TEST_CHECK(flush_attempts == 0);
-    return check_no_world_legacy_state();
+    return 0;
 }
 
 static int check_laser_stroke(
@@ -5234,7 +4956,7 @@ static int check_laser_batch_is_semantic(void)
         4, third_points, 5.0f, UINT32_C(0x77889900)) == 0);
     TEST_CHECK(check_laser_stroke(
         5, third_points, 1.0f, UINT32_C(0x77889980)) == 0);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_empty_and_first_failure_laser_batches(void)
@@ -5248,7 +4970,6 @@ static int check_empty_and_first_failure_laser_batches(void)
     TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_legacy_primitives() == 0);
 
     reset_frame();
     blend_failure_attempt = 1;
@@ -5261,7 +4982,6 @@ static int check_empty_and_first_failure_laser_batches(void)
     TEST_CHECK(event_count == 1);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_legacy_primitives() == 0);
 
     reset_frame();
     tbl_cos[7] = 0.75;
@@ -5277,7 +4997,7 @@ static int check_empty_and_first_failure_laser_batches(void)
     TEST_CHECK(stroke_attempts == 1);
     TEST_CHECK(successful_strokes == 0);
     TEST_CHECK(flush_attempts == 0);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_laser_failure_flushes_accepted_prefix(void)
@@ -5327,7 +5047,7 @@ static int check_laser_failure_flushes_accepted_prefix(void)
     TEST_CHECK(blend_attempts == prior_blend_attempts);
     TEST_CHECK(stroke_attempts == prior_stroke_attempts);
     TEST_CHECK(flush_attempts == prior_flush_attempts);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_laser_flush_failure_is_sticky(void)
@@ -5363,7 +5083,7 @@ static int check_laser_flush_failure_is_sticky(void)
     TEST_CHECK(event_count == prior_event_count);
     TEST_CHECK(stroke_attempts == prior_stroke_attempts);
     TEST_CHECK(flush_attempts == prior_flush_attempts);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_invalid_laser_geometry_is_sticky(void)
@@ -5382,7 +5102,6 @@ static int check_invalid_laser_geometry_is_sticky(void)
     TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_legacy_primitives() == 0);
 
     reset_frame();
     redRGBA = UINT32_C(0x112233ff);
@@ -5394,7 +5113,6 @@ static int check_invalid_laser_geometry_is_sticky(void)
     TEST_CHECK(event_count == 1);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_legacy_primitives() == 0);
 
     reset_frame();
     redRGBA = UINT32_C(0x112233ff);
@@ -5408,7 +5126,6 @@ static int check_invalid_laser_geometry_is_sticky(void)
     TEST_CHECK(event_count == 1);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_legacy_primitives() == 0);
 
     reset_frame();
     redRGBA = UINT32_C(0x112233ff);
@@ -5422,7 +5139,7 @@ static int check_invalid_laser_geometry_is_sticky(void)
     TEST_CHECK(event_count == 1);
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_single_map_fill(
@@ -5443,7 +5160,7 @@ static int check_single_map_fill(
     TEST_CHECK(scissor_attempts == 0);
     TEST_CHECK(check_draw(
         0, expected_points, 6, rgba, RENDERER_BLEND_ALPHA) == 0);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_map_constant_fills_are_semantic(void)
@@ -5528,7 +5245,6 @@ static int check_map_fill_failures_are_sticky(void)
     TEST_CHECK(event_count == 1);
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_legacy_primitives() == 0);
 
     reset_frame();
     wallColorRGBA = UINT32_C(0x12345600);
@@ -5548,7 +5264,6 @@ static int check_map_fill_failures_are_sticky(void)
     TEST_CHECK(event_count == 2);
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(flush_attempts == 0);
-    TEST_CHECK(check_no_legacy_primitives() == 0);
 
     reset_frame();
     wallColorRGBA = UINT32_C(0x12345600);
@@ -5568,7 +5283,7 @@ static int check_map_fill_failures_are_sticky(void)
     TEST_CHECK(event_count == 3);
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(flush_attempts == 1);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_target_image(void)
@@ -5618,7 +5333,7 @@ static int check_target_primitives(
         expected_fill_y, expected_fill_height, color) == 0);
     TEST_CHECK(transform_attempts == 0);
     TEST_CHECK(scissor_attempts == 0);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_target_full_order_and_geometry(void)
@@ -5694,7 +5409,7 @@ static int check_target_optional_paths_and_own_color(void)
     TEST_CHECK(fill_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(check_target_image() == 0);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_target_unbounded_finite_damage(void)
@@ -5722,7 +5437,6 @@ static int check_target_unbounded_finite_damage(void)
     TEST_CHECK(strokes[0].points[3].y == -1.0f);
     TEST_CHECK(check_target_fill(
         -4.0f, 3.0f, UINT32_C(0x55667788)) == 0);
-    TEST_CHECK(check_no_legacy_primitives() == 0);
 
     reset_frame();
     whiteRGBA = UINT32_C(0x11223344);
@@ -5739,7 +5453,6 @@ static int check_target_unbounded_finite_damage(void)
     TEST_CHECK(fill_attempts == 0);
     TEST_CHECK(check_target_image() == 0);
     TEST_CHECK(check_target_outline(UINT32_C(0x55667788)) == 0);
-    TEST_CHECK(check_no_legacy_primitives() == 0);
 
     reset_frame();
     whiteRGBA = UINT32_C(0x11223344);
@@ -5802,7 +5515,6 @@ static int check_target_invalid_damage_is_sticky(void)
         TEST_CHECK(event_count == 1);
         TEST_CHECK(image_attempts == 1);
         TEST_CHECK(blend_attempts == 0);
-        TEST_CHECK(check_no_legacy_primitives() == 0);
     }
     return 0;
 }
@@ -5825,7 +5537,6 @@ static int check_target_int_coordinate_overflow_is_sticky(void)
     Gui_paint_setup_target(10, 20, 0, 125.0, false);
     TEST_CHECK(event_count == 1);
     TEST_CHECK(image_attempts == 1);
-    TEST_CHECK(check_no_legacy_primitives() == 0);
 
     reset_frame();
     whiteRGBA = UINT32_C(0x11223344);
@@ -5873,7 +5584,7 @@ static int check_target_int_coordinate_overflow_is_sticky(void)
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(fill_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_target_float_extent_collapse_is_sticky(void)
@@ -5918,7 +5629,7 @@ static int check_target_float_extent_collapse_is_sticky(void)
     TEST_CHECK(event_count == 2);
     TEST_CHECK(image_attempts == 1);
     TEST_CHECK(map_text_attempts == 1);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_failed_target_stage_is_sticky(
@@ -5936,7 +5647,6 @@ static int check_failed_target_stage_is_sticky(
     TEST_CHECK(fake_sdl_renderer.frame_result == expected_result);
     TEST_CHECK(event_count > 0);
     TEST_CHECK(events[event_count - 1] == expected_last_event);
-    TEST_CHECK(check_no_legacy_primitives() == 0);
 
     prior_event_count = event_count;
     prior_image_attempts = image_attempts;
@@ -5954,7 +5664,7 @@ static int check_failed_target_stage_is_sticky(
     TEST_CHECK(stroke_attempts == prior_stroke_attempts);
     TEST_CHECK(fill_attempts == prior_fill_attempts);
     TEST_CHECK(flush_attempts == prior_flush_attempts);
-    return check_no_legacy_primitives();
+    return 0;
 }
 
 static int check_target_failures_stop_later_work(void)
@@ -6059,7 +5769,7 @@ int main(void)
         return 1;
     if (check_world_wall_paths_and_fuel_precedence() != 0)
         return 1;
-    if (check_world_stippled_lines_use_no_legacy_smoothing_state() != 0)
+    if (check_world_stippled_lines_are_semantic() != 0)
         return 1;
     if (check_world_line_empty_geometry_is_successful_noop() != 0)
         return 1;

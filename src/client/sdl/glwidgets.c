@@ -93,7 +93,7 @@ static RendererStatus Fill_semantic_widget_bounds(
     if (status == RENDERER_STATUS_OK) {
 	status = Track_semantic_widget(
 	    sdl_renderer,
-	    Sdl_renderer_flush_preserving_legacy(sdl_renderer));
+	    Sdl_renderer_flush(sdl_renderer));
     }
     return status;
 }
@@ -156,7 +156,7 @@ static RendererStatus Finish_semantic_widget_batch(
 	return RENDERER_STATUS_INVALID_ARGUMENT;
     if (!batch->has_accepted_commands || batch->sdl_renderer == NULL)
 	return batch->status;
-    flush_status = Sdl_renderer_flush_preserving_legacy(
+    flush_status = Sdl_renderer_flush(
 	batch->sdl_renderer);
     batch->has_accepted_commands = 0;
     return Track_semantic_widget_batch(batch, flush_status);
@@ -752,7 +752,7 @@ static void Paint_ArrowWidget( GLWidget *widget )
     if (status == RENDERER_STATUS_OK) {
 	status = Track_semantic_widget(
 	    sdl_renderer,
-	    Sdl_renderer_flush_preserving_legacy(sdl_renderer));
+	    Sdl_renderer_flush(sdl_renderer));
     }
     if (status != RENDERER_STATUS_OK)
 	warn("Could not draw arrow widget");
@@ -965,7 +965,7 @@ static void Paint_SlideWidget( GLWidget *widget )
     if (status == RENDERER_STATUS_OK) {
 	status = Track_semantic_widget(
 	    sdl_renderer,
-	    Sdl_renderer_flush_preserving_legacy(sdl_renderer));
+	    Sdl_renderer_flush(sdl_renderer));
     }
     if (status != RENDERER_STATUS_OK)
 	warn("Could not draw slide widget");
@@ -1095,7 +1095,7 @@ static void motion_ScrollbarWidget( Sint16 xrel, Sint16 yrel, Uint16 x, Uint16 y
     GLWidget *slide;
     int *coord1;
     int coord2 = 0, min, max, size, move;
-    GLfloat oldpos;
+    float oldpos;
 
     if (!data) return;
 
@@ -1137,7 +1137,7 @@ static void motion_ScrollbarWidget( Sint16 xrel, Sint16 yrel, Uint16 x, Uint16 y
     *coord1 = coord2;
 
     oldpos = wid_info->pos;
-    wid_info->pos = ((GLfloat)(*coord1 - min))/((GLfloat)(max - min));
+    wid_info->pos = ((float)(*coord1 - min))/((float)(max - min));
     
     if ( (oldpos != wid_info->pos) && wid_info->poschange )
     	wid_info->poschange(wid_info->pos,wid_info->poschangedata);
@@ -1155,7 +1155,7 @@ static void release_ScrollbarWidget( void *releasedata )
     wid_info->oldmoves = 0;
 }
 
-void ScrollbarWidget_SetSlideSize( GLWidget *widget, GLfloat size )
+void ScrollbarWidget_SetSlideSize( GLWidget *widget, float size )
 {
     ScrollbarWidget *sb;
     
@@ -1174,8 +1174,9 @@ void ScrollbarWidget_SetSlideSize( GLWidget *widget, GLfloat size )
     SetBounds_ScrollbarWidget(widget,&(widget->bounds));
 }
 
-GLWidget *Init_ScrollbarWidget( bool locked, GLfloat pos, GLfloat size, ScrollWidget_dir_t dir,
-    	    	    	    	void (*poschange)( GLfloat pos , void *poschangedata),
+GLWidget *Init_ScrollbarWidget( bool locked, float pos, float size,
+				ScrollWidget_dir_t dir,
+				void (*poschange)( float pos , void *poschangedata),
 				void *poschangedata )
 {
     ScrollbarWidget *wid_info;
@@ -3298,10 +3299,10 @@ GLWidget *Init_ListWidget( Uint16 x, Uint16 y, Uint32 *bg1, Uint32 *bg2, Uint32 
 /****************************/
 /* Begin: ScrollPaneWidget  */
 /****************************/
-static void ScrollPaneWidget_poschange( GLfloat pos , void *data );
+static void ScrollPaneWidget_poschange( float pos , void *data );
 static void SetBounds_ScrollPaneWidget( GLWidget *widget, SDL_Rect *b );
 
-static void ScrollPaneWidget_poschange( GLfloat pos , void *data )
+static void ScrollPaneWidget_poschange( float pos , void *data )
 {
     GLWidget *widget;
     GLWidget *masque;
@@ -3352,7 +3353,7 @@ static void SetBounds_ScrollPaneWidget(GLWidget *widget, SDL_Rect *b )
 {
     ScrollPaneWidget *wid_info;
     SDL_Rect bounds;
-    GLfloat pos;
+    float pos;
     int i;
     
     if (!widget) return;
@@ -3476,7 +3477,7 @@ static void SetBounds_ScrollPaneWidget(GLWidget *widget, SDL_Rect *b )
 	}
     
 	if (wid_info->hori_scroller) {
-	    ScrollbarWidget_SetSlideSize(wid_info->hori_scroller,MIN(((GLfloat)wid_info->masque->bounds.w)/((GLfloat)bounds.w),1.0f));
+	    ScrollbarWidget_SetSlideSize(wid_info->hori_scroller,MIN(((float)wid_info->masque->bounds.w)/((float)bounds.w),1.0f));
     	    pos = MIN( ((ScrollbarWidget *)(wid_info->hori_scroller->wid_info))->pos, 1.0f - ((ScrollbarWidget *)(wid_info->hori_scroller->wid_info))->size);
     	    bounds.x = (Sint16)(wid_info->masque->bounds.x - pos*(wid_info->content->bounds.x));
 	} else {
@@ -3484,7 +3485,7 @@ static void SetBounds_ScrollPaneWidget(GLWidget *widget, SDL_Rect *b )
 	}
 	
 	if (wid_info->vert_scroller) {
-	    ScrollbarWidget_SetSlideSize(wid_info->vert_scroller,MIN(((GLfloat)wid_info->masque->bounds.h)/((GLfloat)bounds.h),1.0f));
+	    ScrollbarWidget_SetSlideSize(wid_info->vert_scroller,MIN(((float)wid_info->masque->bounds.h)/((float)bounds.h),1.0f));
     	    pos = MIN( ((ScrollbarWidget *)(wid_info->vert_scroller->wid_info))->pos, 1.0f - ((ScrollbarWidget *)(wid_info->vert_scroller->wid_info))->size);
     	    bounds.y = (Sint16)(wid_info->masque->bounds.y - pos*(wid_info->content->bounds.h));
 	} else {

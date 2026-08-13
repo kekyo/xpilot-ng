@@ -106,7 +106,7 @@ RendererStatus Sdl_ui_image_pair_init(SdlUiImagePair *pair,
                                       SDL_Surface *second_surface);
 
 /**
- * Draw an image into a destination rectangle and restore legacy GL state.
+ * Draw an image into a destination rectangle and flush accepted commands.
  *
  * @param sdl_renderer Active SDL renderer facade.
  * @param image Image owned by the facade's frontend renderer.

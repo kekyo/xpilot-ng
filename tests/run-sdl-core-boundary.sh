@@ -90,10 +90,10 @@ production_objects=$(awk -v extension="$object_extension" '
     collecting {
         continued = $0 ~ /\\[[:space:]]*$/
         gsub(/\\/, " ")
-        for (index = 1; index <= NF; index++) {
-            if ($index ~ /\.\$\(OBJEXT\)$/) {
-                sub(/\.\$\(OBJEXT\)$/, "." extension, $index)
-                print $index
+        for (field_number = 1; field_number <= NF; field_number++) {
+            if ($field_number ~ /\.\$\(OBJEXT\)$/) {
+                sub(/\.\$\(OBJEXT\)$/, "." extension, $field_number)
+                print $field_number
             }
         }
         if (!continued)

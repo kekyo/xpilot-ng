@@ -382,7 +382,7 @@ static void Image_draw(image_t *image, int frame, RendererRect area,
     status = Sdl_renderer_track_frame_result(sdl_renderer, status);
     if (status != RENDERER_STATUS_OK)
         goto failure;
-    status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
+    status = Sdl_renderer_flush(sdl_renderer);
     status = Sdl_renderer_track_frame_result(sdl_renderer, status);
     if (status == RENDERER_STATUS_OK)
         return;

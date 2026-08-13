@@ -10,8 +10,6 @@
 #include "sdlrenderer.h"
 #include "text.h"
 
-#include <GL/gl.h>
-
 #include <float.h>
 #include <limits.h>
 #include <math.h>
@@ -118,7 +116,6 @@ static int successful_stippled_strokes;
 static int flush_attempts;
 static int name_attempts;
 static int life_attempts;
-static int legacy_calls;
 static RendererBlendMode current_blend;
 static RendererStatus image_result;
 static RendererStatus blend_result;
@@ -321,7 +318,6 @@ static void reset_state(void)
     flush_attempts = 0;
     name_attempts = 0;
     life_attempts = 0;
-    legacy_calls = 0;
     current_blend = RENDERER_BLEND_OPAQUE;
     image_result = RENDERER_STATUS_OK;
     blend_result = RENDERER_STATUS_OK;
@@ -582,7 +578,7 @@ RendererStatus Renderer_stroke_stippled_path(
     return RENDERER_STATUS_OK;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(
+RendererStatus Sdl_renderer_flush(
     SdlRenderer *renderer)
 {
     flush_attempts++;
@@ -693,66 +689,6 @@ RendererStatus mapprint(
     return status;
 }
 
-void GLAPIENTRY glEnable(GLenum capability)
-{
-    (void)capability;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glDisable(GLenum capability)
-{
-    (void)capability;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glBlendFunc(GLenum source, GLenum destination)
-{
-    (void)source;
-    (void)destination;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glLineWidth(GLfloat width)
-{
-    (void)width;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glLineStipple(GLint factor, GLushort pattern)
-{
-    (void)factor;
-    (void)pattern;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glColor4ub(
-    GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha)
-{
-    (void)red;
-    (void)green;
-    (void)blue;
-    (void)alpha;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glBegin(GLenum mode)
-{
-    (void)mode;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glVertex2d(GLdouble x, GLdouble y)
-{
-    (void)x;
-    (void)y;
-    legacy_calls++;
-}
-
-void GLAPIENTRY glEnd(void)
-{
-    legacy_calls++;
-}
-
 void __wrap_Gui_paint_paused(int x, int y, int count)
 {
     (void)x;
@@ -852,7 +788,6 @@ static int check_solid_outline(
     TEST_CHECK(color_equal(captured_stroke.color, color));
     TEST_CHECK(captured_stroke.closed == 1);
     TEST_CHECK(captured_stroke.blend == RENDERER_BLEND_ALPHA);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -949,7 +884,7 @@ static int check_shield_outline_and_name_order(void)
     TEST_CHECK(captured_name.maximum_length == maxCharsInNames);
     TEST_CHECK(strcmp(captured_name.text, "TARGET") == 0);
     TEST_CHECK(life_attempts == 0);
-    return legacy_calls == 0 ? 0 : 1;
+    return 0;
 }
 
 static int check_stippled_outline(int cloak, int phased)
@@ -984,7 +919,7 @@ static int check_stippled_outline(int cloak, int phased)
                == RENDERER_BLEND_ALPHA);
     TEST_CHECK(check_triangle_points(
         captured_stippled_stroke.points) == 0);
-    return legacy_calls == 0 ? 0 : 1;
+    return 0;
 }
 
 static int check_solid_cloaked_and_phased_outlines(void)
@@ -1035,7 +970,6 @@ static int check_textured_image(
     TEST_CHECK(stippled_stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(name_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -1100,7 +1034,6 @@ static int check_invalid_ship_is_cpu_atomic(void)
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(name_attempts == 0);
     TEST_CHECK(life_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -1229,7 +1162,6 @@ static int check_degenerate_outline_is_a_noop(void)
     TEST_CHECK(captured_name.y == 200 - SHIP_SZ);
     TEST_CHECK(captured_name.maximum_length == maxCharsInNames);
     TEST_CHECK(strcmp(captured_name.text, "TARGET") == 0);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -1244,7 +1176,6 @@ static int check_renderer_failure_is_sticky(
     TEST_CHECK(events[expected_events - 1] == final_event);
     TEST_CHECK(name_attempts == 0);
     TEST_CHECK(life_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     previous_event_count = event_count;
     image_result = RENDERER_STATUS_OK;
@@ -1258,7 +1189,6 @@ static int check_renderer_failure_is_sticky(
     TEST_CHECK(events[previous_event_count]
                == TEST_EVENT_SHIP_LOOKUP);
     TEST_CHECK(fake_sdl_renderer.frame_result == expected);
-    TEST_CHECK(legacy_calls == 0);
     return 0;
 }
 
@@ -1322,7 +1252,6 @@ static int check_shield_and_name_failures_are_sticky(void)
     TEST_CHECK(stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(name_attempts == 0);
-    TEST_CHECK(legacy_calls == 0);
 
     reset_state();
     shipNameColorRGBA = UINT32_C(0xabcdefe0);
@@ -1338,7 +1267,6 @@ static int check_shield_and_name_failures_are_sticky(void)
     TEST_CHECK(events[3] == TEST_EVENT_FLUSH);
     TEST_CHECK(events[4] == TEST_EVENT_NAME);
     TEST_CHECK(name_attempts == 1);
-    TEST_CHECK(legacy_calls == 0);
     previous_event_count = event_count;
     name_result = RENDERER_STATUS_OK;
     Gui_paint_ship(
@@ -1347,7 +1275,7 @@ static int check_shield_and_name_failures_are_sticky(void)
     TEST_CHECK(events[previous_event_count]
                == TEST_EVENT_SHIP_LOOKUP);
     TEST_CHECK(name_attempts == 1);
-    return legacy_calls == 0 ? 0 : 1;
+    return 0;
 }
 
 static int check_preexisting_failure_still_traverses_and_releases(void)
@@ -1377,7 +1305,7 @@ static int check_preexisting_failure_still_traverses_and_releases(void)
     TEST_CHECK(stippled_stroke_attempts == 0);
     TEST_CHECK(flush_attempts == 0);
     TEST_CHECK(name_attempts == 0);
-    return legacy_calls == 0 ? 0 : 1;
+    return 0;
 }
 
 int main(void)
@@ -1390,7 +1318,7 @@ int main(void)
         return EXIT_FAILURE;
     }
 
-    /* Stop on the intended legacy-vs-semantic RED before invalid inputs. */
+    /* Stop on a traversal-order regression before checking invalid inputs. */
     failed = check_actual_traversal_orders_appearance_ship_and_release();
     if (failed)
         return EXIT_FAILURE;

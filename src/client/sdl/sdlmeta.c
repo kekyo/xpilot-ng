@@ -116,7 +116,7 @@ typedef struct {
 } PlayerListWidget;
 
 
-static void Scroll_PlayerListWidget(GLfloat pos, void *data)
+static void Scroll_PlayerListWidget(float pos, void *data)
 {
     PlayerListWidget *info;
     GLWidget *widget, *row;
@@ -148,7 +148,7 @@ static void SetBounds_PlayerListWidget(GLWidget *widget, SDL_Rect *b)
     int y;
     GLWidget *row;
     PlayerListWidget *info;
-    GLfloat list_height;
+    float list_height;
     SDL_Rect *wb, sb, rb, hb;
 
     if (widget->WIDGET != PLAYERLISTWIDGET) {
@@ -180,7 +180,7 @@ static void SetBounds_PlayerListWidget(GLWidget *widget, SDL_Rect *b)
 
     if (list_height > b->h) {
 	info->scrollbar = 
-	    Init_ScrollbarWidget(false, 0.0f, ((GLfloat)b->h) / list_height, 
+	    Init_ScrollbarWidget(false, 0.0f, ((float)b->h) / list_height,
 				 SB_VERTICAL, Scroll_PlayerListWidget, widget);
 	if (info->scrollbar != NULL) {
 	    wb = &(widget->bounds);
@@ -251,7 +251,7 @@ static RendererStatus Paint_meta_background(int x, int y, int width,
     if (status == RENDERER_STATUS_OK) {
 	status = Sdl_renderer_track_frame_result(
 	    sdl_renderer,
-	    Sdl_renderer_flush_preserving_legacy(sdl_renderer));
+	    Sdl_renderer_flush(sdl_renderer));
     }
     return status;
 }
@@ -749,7 +749,7 @@ static GLWidget *Init_MetaHeaderWidget(void)
     return tmp;    
 }
 
-static void Scroll_MetaTableWidget(GLfloat pos, void *data)
+static void Scroll_MetaTableWidget(float pos, void *data)
 {
     MetaTableWidget *info;
     GLWidget *widget, *row;
@@ -781,7 +781,7 @@ static void SetBounds_MetaTableWidget(GLWidget *widget, SDL_Rect *b)
     int y;
     GLWidget *row;
     MetaTableWidget *info;
-    GLfloat table_height;
+    float table_height;
     SDL_Rect *wb, sb, rb, hb;
 
     if (widget->WIDGET != METATABLEWIDGET) {
@@ -813,7 +813,7 @@ static void SetBounds_MetaTableWidget(GLWidget *widget, SDL_Rect *b)
 
     if (table_height > b->h) {
 	info->scrollbar = 
-	    Init_ScrollbarWidget(false, 0.0f, ((GLfloat)b->h) / table_height, 
+	    Init_ScrollbarWidget(false, 0.0f, ((float)b->h) / table_height,
 				 SB_VERTICAL, Scroll_MetaTableWidget, widget);
 	if (info->scrollbar != NULL) {
 	    wb = &(widget->bounds);

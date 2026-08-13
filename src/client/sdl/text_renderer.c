@@ -218,7 +218,7 @@ static RendererStatus Text_renderer_draw_measured(
         return Sdl_renderer_track_frame_result(
             text_renderer->sdl_renderer, status);
     }
-    status = Sdl_renderer_flush_preserving_legacy(
+    status = Sdl_renderer_flush(
         text_renderer->sdl_renderer);
     return Sdl_renderer_track_frame_result(
         text_renderer->sdl_renderer, status);

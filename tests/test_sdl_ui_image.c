@@ -6,7 +6,6 @@
 #include "glwidgets.h"
 
 #include <SDL.h>
-#include <GL/gl.h>
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -66,10 +65,9 @@ static int texture_update_calls;
 static int resource_calls_during_frame;
 static int blend_calls;
 static int sprite_calls;
-static int preserving_flush_calls;
-static RendererStatus preserving_flush_result = RENDERER_STATUS_OK;
+static int flush_calls;
+static RendererStatus flush_result = RENDERER_STATUS_OK;
 static int renderer_track_calls;
-static int legacy_texture_calls;
 static char events[MAX_EVENTS];
 static int event_count;
 static unsigned int integration_first_draw_calls;
@@ -315,83 +313,13 @@ RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
         ? renderer->frame_result : RENDERER_STATUS_INVALID_ARGUMENT;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
+RendererStatus Sdl_renderer_flush(SdlRenderer *renderer)
 {
     if (renderer != &fake_sdl_renderer || !fake_renderer.frame_active)
         return RENDERER_STATUS_INVALID_STATE;
-    preserving_flush_calls++;
+    flush_calls++;
     record_event('F');
-    return preserving_flush_result;
-}
-
-void GLAPIENTRY glGenTextures(GLsizei count, GLuint *textures)
-{
-    (void)count;
-    (void)textures;
-    legacy_texture_calls++;
-}
-
-void GLAPIENTRY glDeleteTextures(GLsizei count, const GLuint *textures)
-{
-    (void)count;
-    (void)textures;
-    legacy_texture_calls++;
-}
-
-void GLAPIENTRY glBindTexture(GLenum target, GLuint texture)
-{
-    (void)target;
-    (void)texture;
-    legacy_texture_calls++;
-}
-
-void GLAPIENTRY glTexImage2D(GLenum target, GLint level,
-                            GLint internal_format, GLsizei width,
-                            GLsizei height, GLint border, GLenum format,
-                            GLenum type, const GLvoid *pixels)
-{
-    (void)target;
-    (void)level;
-    (void)internal_format;
-    (void)width;
-    (void)height;
-    (void)border;
-    (void)format;
-    (void)type;
-    (void)pixels;
-    legacy_texture_calls++;
-}
-
-void GLAPIENTRY glTexParameterf(GLenum target, GLenum name, GLfloat value)
-{
-    (void)target;
-    (void)name;
-    (void)value;
-    legacy_texture_calls++;
-}
-
-void GLAPIENTRY glEnable(GLenum capability)
-{
-    (void)capability;
-}
-
-void GLAPIENTRY glDisable(GLenum capability)
-{
-    (void)capability;
-}
-
-void GLAPIENTRY glBlendFunc(GLenum source, GLenum destination)
-{
-    (void)source;
-    (void)destination;
-}
-
-void GLAPIENTRY glScissor(GLint x, GLint y, GLsizei width, GLsizei height)
-{
-    (void)x;
-    (void)y;
-    (void)width;
-    (void)height;
+    return flush_result;
 }
 
 static int check_atomic_single_image(SDL_Surface *surface,
@@ -442,7 +370,7 @@ static int check_semantic_draw(const SdlUiImage *image)
                == RENDERER_STATUS_OK);
     TEST_CHECK(blend_calls == 1);
     TEST_CHECK(sprite_calls == 1);
-    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(flush_calls == 1);
     TEST_CHECK(event_count == 3);
     TEST_CHECK(events[0] == 'B' && events[1] == 'S' && events[2] == 'F');
     TEST_CHECK(last_sprite.texture == image->texture);
@@ -455,7 +383,6 @@ static int check_semantic_draw(const SdlUiImage *image)
     TEST_CHECK(float_equal(last_sprite.u1, 3.0f / 4.0f));
     TEST_CHECK(float_equal(last_sprite.v1, 1.0f));
     TEST_CHECK(color_equal(last_sprite.tint, tint));
-    TEST_CHECK(legacy_texture_calls == 0);
     fake_renderer.frame_active = 0;
     return 0;
 }
@@ -476,8 +403,8 @@ static int check_draw_state_latches_failure(const SdlUiImage *image)
 
     blend_before = blend_calls;
     sprite_before = sprite_calls;
-    flush_before = preserving_flush_calls;
-    preserving_flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    flush_before = flush_calls;
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
     TEST_CHECK(Sdl_ui_image_draw_tracked(
                    &state, &fake_sdl_renderer, image, &bounds, tint)
                == RENDERER_STATUS_BACKEND_ERROR);
@@ -486,7 +413,7 @@ static int check_draw_state_latches_failure(const SdlUiImage *image)
     TEST_CHECK(Sdl_ui_draw_state_successful_draws(&state) == 0);
     TEST_CHECK(blend_calls == blend_before + 1);
     TEST_CHECK(sprite_calls == sprite_before + 1);
-    TEST_CHECK(preserving_flush_calls == flush_before + 1);
+    TEST_CHECK(flush_calls == flush_before + 1);
 
     /* Once ordering cannot be preserved, later image draws must be skipped
      * and report the first failure until the next frame resets the state. */
@@ -495,10 +422,10 @@ static int check_draw_state_latches_failure(const SdlUiImage *image)
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(blend_calls == blend_before + 1);
     TEST_CHECK(sprite_calls == sprite_before + 1);
-    TEST_CHECK(preserving_flush_calls == flush_before + 1);
+    TEST_CHECK(flush_calls == flush_before + 1);
     TEST_CHECK(Sdl_ui_draw_state_successful_draws(&state) == 0);
 
-    preserving_flush_result = RENDERER_STATUS_OK;
+    flush_result = RENDERER_STATUS_OK;
     Sdl_ui_draw_state_init(&state);
     TEST_CHECK(Sdl_ui_draw_state_successful_draws(&state) == 0);
     TEST_CHECK(Sdl_ui_image_draw_tracked(
@@ -512,7 +439,7 @@ static int check_draw_state_latches_failure(const SdlUiImage *image)
     TEST_CHECK(Sdl_ui_draw_state_successful_draws(&state) == 2);
     TEST_CHECK(blend_calls == blend_before + 3);
     TEST_CHECK(sprite_calls == sprite_before + 3);
-    TEST_CHECK(preserving_flush_calls == flush_before + 3);
+    TEST_CHECK(flush_calls == flush_before + 3);
     Sdl_ui_draw_state_init(&state);
     TEST_CHECK(Sdl_ui_draw_state_successful_draws(&state) == 0);
     fake_renderer.frame_active = 0;
@@ -610,7 +537,7 @@ static int check_widget_failure_aborts_frame(const SdlUiImage *image)
     integration_first_draw_calls = 0;
     integration_second_draw_calls = 0;
     integration_swap_calls = 0;
-    preserving_flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
     Sdl_ui_draw_state_init(&draw_state);
     Sdl_meta_frame_state_init(&frame_state);
 
@@ -627,7 +554,7 @@ static int check_widget_failure_aborts_frame(const SdlUiImage *image)
     TEST_CHECK(Sdl_meta_frame_cleanup_allowed(&frame_state));
     TEST_CHECK(!fake_renderer.frame_active);
 
-    preserving_flush_result = RENDERER_STATUS_OK;
+    flush_result = RENDERER_STATUS_OK;
     integration_draw_state = NULL;
     integration_image = NULL;
     return 0;
@@ -755,7 +682,6 @@ int main(void)
     if (check_pair_rollback_and_cleanup(first_surface, second_surface) != 0)
         goto cleanup;
     TEST_CHECK(texture_update_calls == 0);
-    TEST_CHECK(legacy_texture_calls == 0);
     result = 0;
 
 cleanup:

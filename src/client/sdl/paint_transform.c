@@ -1,4 +1,4 @@
-/* Coordinate transforms shared by legacy and semantic SDL rendering. */
+/* Coordinate transforms for semantic SDL rendering. */
 
 #include "paint_transform.h"
 

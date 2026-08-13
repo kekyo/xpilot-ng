@@ -25,7 +25,6 @@ struct RendererTexture {
 
 struct SdlRenderer {
     Renderer *frontend;
-    unsigned int preserved_state;
     int frame_active;
     RendererStatus frame_result;
 };
@@ -56,7 +55,6 @@ typedef struct FixtureState {
 static Renderer fake_renderer;
 static SdlRenderer fake_sdl_renderer = {
     &fake_renderer,
-    0x51a7e123u,
     0,
     RENDERER_STATUS_OK
 };
@@ -70,21 +68,12 @@ static int texture_destroy_calls;
 static int draw_count;
 static int draw_attempts;
 static int blend_attempts;
-static int preserving_flush_calls;
+static int flush_calls;
 static int tracked_result_calls;
 static int pending_draws;
-static int prepare_legacy_calls;
-static int legacy_draw_calls;
-static unsigned int next_legacy_texture = 1001;
-static int legacy_texture_generate_calls;
-static int legacy_texture_bind_calls;
-static int legacy_texture_upload_calls;
-static int legacy_texture_parameter_calls;
-static int legacy_texture_delete_calls;
-static int legacy_error_query_calls;
 static RendererStatus draw_result = RENDERER_STATUS_OK;
 static RendererStatus blend_result = RENDERER_STATUS_OK;
-static RendererStatus preserving_flush_result = RENDERER_STATUS_OK;
+static RendererStatus flush_result = RENDERER_STATUS_OK;
 
 static int float_equal(float actual, float expected)
 {
@@ -425,28 +414,14 @@ RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
         ? renderer->frame_result : RENDERER_STATUS_INVALID_ARGUMENT;
 }
 
-RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
+RendererStatus Sdl_renderer_flush(SdlRenderer *renderer)
 {
-    unsigned int original_state;
-
     if (renderer != &fake_sdl_renderer || !renderer->frame_active)
         return RENDERER_STATUS_INVALID_ARGUMENT;
-    original_state = renderer->preserved_state;
-    preserving_flush_calls++;
-    if (renderer->preserved_state != original_state)
-        return RENDERER_STATUS_BACKEND_ERROR;
-    if (preserving_flush_result != RENDERER_STATUS_OK)
-        return preserving_flush_result;
+    flush_calls++;
+    if (flush_result != RENDERER_STATUS_OK)
+        return flush_result;
     pending_draws = 0;
-    return RENDERER_STATUS_OK;
-}
-
-RendererStatus Sdl_renderer_prepare_legacy(
-    SdlRenderer *renderer, SdlRendererLegacyOrigin origin)
-{
-    (void)renderer;
-    (void)origin;
-    prepare_legacy_calls++;
     return RENDERER_STATUS_OK;
 }
 
@@ -476,162 +451,6 @@ void fatal(const char *format, ...)
     (void)format;
 }
 
-void set_alphacolor(Uint32 color)
-{
-    (void)color;
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glGenTextures(GLsizei count, GLuint *textures)
-{
-    GLsizei index;
-
-    legacy_texture_generate_calls++;
-    for (index = 0; index < count; index++)
-        textures[index] = next_legacy_texture++;
-}
-
-void GLAPIENTRY glDeleteTextures(GLsizei count, const GLuint *textures)
-{
-    (void)count;
-    (void)textures;
-    legacy_texture_delete_calls++;
-}
-
-void GLAPIENTRY glBindTexture(GLenum target, GLuint texture)
-{
-    (void)target;
-    (void)texture;
-    legacy_texture_bind_calls++;
-}
-
-void GLAPIENTRY glTexImage2D(GLenum target, GLint level,
-                            GLint internal_format, GLsizei width,
-                            GLsizei height, GLint border, GLenum format,
-                            GLenum type, const GLvoid *pixels)
-{
-    (void)target;
-    (void)level;
-    (void)internal_format;
-    (void)width;
-    (void)height;
-    (void)border;
-    (void)format;
-    (void)type;
-    (void)pixels;
-    legacy_texture_upload_calls++;
-}
-
-GLenum GLAPIENTRY glGetError(void)
-{
-    legacy_error_query_calls++;
-    return GL_NO_ERROR;
-}
-
-void GLAPIENTRY glTexParameterf(GLenum target, GLenum name, GLfloat value)
-{
-    (void)target;
-    (void)name;
-    (void)value;
-    legacy_texture_parameter_calls++;
-}
-
-void GLAPIENTRY glTexParameteri(GLenum target, GLenum name, GLint value)
-{
-    (void)target;
-    (void)name;
-    (void)value;
-    legacy_texture_parameter_calls++;
-}
-
-void GLAPIENTRY glEnable(GLenum capability)
-{
-    (void)capability;
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glDisable(GLenum capability)
-{
-    (void)capability;
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glBlendFunc(GLenum source, GLenum destination)
-{
-    (void)source;
-    (void)destination;
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glBegin(GLenum mode)
-{
-    (void)mode;
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glEnd(void)
-{
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glTexCoord2f(GLfloat u, GLfloat v)
-{
-    (void)u;
-    (void)v;
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glVertex2i(GLint x, GLint y)
-{
-    (void)x;
-    (void)y;
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glVertex2f(GLfloat x, GLfloat y)
-{
-    (void)x;
-    (void)y;
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glPushMatrix(void)
-{
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glPopMatrix(void)
-{
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glTranslatef(GLfloat x, GLfloat y, GLfloat z)
-{
-    (void)x;
-    (void)y;
-    (void)z;
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glRotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z)
-{
-    (void)angle;
-    (void)x;
-    (void)y;
-    (void)z;
-    legacy_draw_calls++;
-}
-
-void GLAPIENTRY glColor4ub(GLubyte red, GLubyte green,
-                          GLubyte blue, GLubyte alpha)
-{
-    (void)red;
-    (void)green;
-    (void)blue;
-    (void)alpha;
-    legacy_draw_calls++;
-}
-
 static void reset_active_frame_capture(void)
 {
     memset(fake_draws, 0, sizeof(fake_draws));
@@ -641,12 +460,12 @@ static void reset_active_frame_capture(void)
     draw_count = 0;
     draw_attempts = 0;
     blend_attempts = 0;
-    preserving_flush_calls = 0;
+    flush_calls = 0;
     tracked_result_calls = 0;
     pending_draws = 0;
     draw_result = RENDERER_STATUS_OK;
     blend_result = RENDERER_STATUS_OK;
-    preserving_flush_result = RENDERER_STATUS_OK;
+    flush_result = RENDERER_STATUS_OK;
 }
 
 static void finish_active_frame(void)
@@ -744,12 +563,6 @@ static int check_registration_prepare_and_pixels(int *ordinary_id,
     TEST_CHECK(texture_create_attempts == attempts_after_prepare);
     TEST_CHECK(fixture_state.picture_init_calls == loads_after_prepare);
     TEST_CHECK(texture_destroy_calls == first_attempt_destroy_count);
-    TEST_CHECK(legacy_texture_generate_calls == 0);
-    TEST_CHECK(legacy_texture_bind_calls == 0);
-    TEST_CHECK(legacy_texture_upload_calls == 0);
-    TEST_CHECK(legacy_texture_parameter_calls == 0);
-    TEST_CHECK(legacy_texture_delete_calls == 0);
-    TEST_CHECK(legacy_error_query_calls == 0);
     return 0;
 }
 
@@ -784,12 +597,11 @@ static int check_semantic_world_and_hud_draws(int ordinary_id)
     const RendererColor tint = {17, 34, 51, 68};
     FakeDraw *world;
     FakeDraw *hud;
-    int legacy_before = legacy_draw_calls;
-    int flushes_before = preserving_flush_calls;
+    int flushes_before = flush_calls;
 
     Image_paint(ordinary_id, 10, 20, 1, 0x11223344);
     TEST_CHECK(draw_count == 1);
-    TEST_CHECK(preserving_flush_calls == flushes_before + 1);
+    TEST_CHECK(flush_calls == flushes_before + 1);
     world = &fake_draws[0];
     TEST_CHECK(world->vertex_count == 6);
     TEST_CHECK(vertex_equal(&world->vertices[0], 10.0f, 23.0f,
@@ -803,7 +615,7 @@ static int check_semantic_world_and_hud_draws(int ordinary_id)
 
     Image_paint_hud(ordinary_id, 30, 40, 0, 0x11223344);
     TEST_CHECK(draw_count == 2);
-    TEST_CHECK(preserving_flush_calls == flushes_before + 2);
+    TEST_CHECK(flush_calls == flushes_before + 2);
     hud = &fake_draws[1];
     TEST_CHECK(vertex_equal(&hud->vertices[0], 30.0f, 40.0f,
                             0.0f, 0.0f, tint));
@@ -813,9 +625,6 @@ static int check_semantic_world_and_hud_draws(int ordinary_id)
                             3.0f / 6.0f, 3.0f / 3.0f, tint));
     TEST_CHECK(vertex_equal(&hud->vertices[5], 30.0f, 43.0f,
                             0.0f, 3.0f / 3.0f, tint));
-    TEST_CHECK(legacy_draw_calls == legacy_before);
-    TEST_CHECK(prepare_legacy_calls == 0);
-    TEST_CHECK(fake_sdl_renderer.preserved_state == 0x51a7e123u);
     return 0;
 }
 
@@ -826,7 +635,7 @@ static int check_area_and_rotated_draws(int ordinary_id, int rotatable_id)
     irec_t area = {1, 1, 2, 1};
     FakeDraw *area_draw;
     FakeDraw *rotated;
-    int flushes_before = preserving_flush_calls;
+    int flushes_before = flush_calls;
 
     Image_paint_area(ordinary_id, 4, 5, 0, &area, 0xa0b0c0d0);
     TEST_CHECK(draw_count == 3);
@@ -847,7 +656,7 @@ static int check_area_and_rotated_draws(int ordinary_id, int rotatable_id)
                             3.0f / 12.0f, 1.0f, rotate_tint));
     TEST_CHECK(vertex_equal(&rotated->vertices[5], 11.0f, 18.5f,
                             0.0f, 1.0f, rotate_tint));
-    TEST_CHECK(preserving_flush_calls == flushes_before + 2);
+    TEST_CHECK(flush_calls == flushes_before + 2);
     return 0;
 }
 
@@ -864,12 +673,12 @@ static int check_image_draw_failures_are_frame_sticky(int ordinary_id)
     TEST_CHECK(tracked_result_calls == 2);
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(draw_attempts == 0);
-    TEST_CHECK(preserving_flush_calls == 0);
+    TEST_CHECK(flush_calls == 0);
     Image_paint(ordinary_id, 30, 40, 0, 0x55667788);
     TEST_CHECK(tracked_result_calls == 3);
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(draw_attempts == 0);
-    TEST_CHECK(preserving_flush_calls == 0);
+    TEST_CHECK(flush_calls == 0);
 
     reset_active_frame_capture();
     image = Image_get(ordinary_id);
@@ -883,7 +692,7 @@ static int check_image_draw_failures_are_frame_sticky(int ordinary_id)
     TEST_CHECK(tracked_result_calls == 2);
     TEST_CHECK(blend_attempts == 0);
     TEST_CHECK(draw_attempts == 0);
-    TEST_CHECK(preserving_flush_calls == 0);
+    TEST_CHECK(flush_calls == 0);
 
     reset_active_frame_capture();
     blend_result = RENDERER_STATUS_RESOURCE_MISMATCH;
@@ -897,7 +706,7 @@ static int check_image_draw_failures_are_frame_sticky(int ordinary_id)
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(draw_count == 0);
     TEST_CHECK(pending_draws == 0);
-    TEST_CHECK(preserving_flush_calls == 0);
+    TEST_CHECK(flush_calls == 0);
 
     tracked_before_retry = tracked_result_calls;
     blend_result = RENDERER_STATUS_BACKEND_ERROR;
@@ -908,7 +717,7 @@ static int check_image_draw_failures_are_frame_sticky(int ordinary_id)
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(draw_attempts == 0);
     TEST_CHECK(draw_count == 0);
-    TEST_CHECK(preserving_flush_calls == 0);
+    TEST_CHECK(flush_calls == 0);
 
     reset_active_frame_capture();
     draw_result = RENDERER_STATUS_OUT_OF_MEMORY;
@@ -922,7 +731,7 @@ static int check_image_draw_failures_are_frame_sticky(int ordinary_id)
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(draw_count == 0);
     TEST_CHECK(pending_draws == 0);
-    TEST_CHECK(preserving_flush_calls == 0);
+    TEST_CHECK(flush_calls == 0);
 
     tracked_before_retry = tracked_result_calls;
     draw_result = RENDERER_STATUS_BACKEND_ERROR;
@@ -933,10 +742,10 @@ static int check_image_draw_failures_are_frame_sticky(int ordinary_id)
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(draw_count == 0);
-    TEST_CHECK(preserving_flush_calls == 0);
+    TEST_CHECK(flush_calls == 0);
 
     reset_active_frame_capture();
-    preserving_flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
 
     Image_paint(ordinary_id, 10, 20, 0, 0x11223344);
 
@@ -947,10 +756,10 @@ static int check_image_draw_failures_are_frame_sticky(int ordinary_id)
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(draw_count == 1);
     TEST_CHECK(pending_draws == 1);
-    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(flush_calls == 1);
 
     tracked_before_retry = tracked_result_calls;
-    preserving_flush_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    flush_result = RENDERER_STATUS_OUT_OF_MEMORY;
     Image_paint(ordinary_id, 30, 40, 0, 0x55667788);
     TEST_CHECK(Sdl_renderer_frame_result(&fake_sdl_renderer)
                == RENDERER_STATUS_BACKEND_ERROR);
@@ -959,12 +768,12 @@ static int check_image_draw_failures_are_frame_sticky(int ordinary_id)
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(draw_count == 1);
     TEST_CHECK(pending_draws == 1);
-    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(flush_calls == 1);
 
-    preserving_flush_result = RENDERER_STATUS_OK;
-    TEST_CHECK(Sdl_renderer_flush_preserving_legacy(&fake_sdl_renderer)
+    flush_result = RENDERER_STATUS_OK;
+    TEST_CHECK(Sdl_renderer_flush(&fake_sdl_renderer)
                == RENDERER_STATUS_OK);
-    TEST_CHECK(preserving_flush_calls == 2);
+    TEST_CHECK(flush_calls == 2);
     TEST_CHECK(pending_draws == 0);
     TEST_CHECK(Sdl_renderer_frame_result(&fake_sdl_renderer)
                == RENDERER_STATUS_BACKEND_ERROR);
@@ -981,17 +790,10 @@ static int check_cleanup_is_exact(void)
         TEST_CHECK(fake_textures[index].destroy_count == 1);
     TEST_CHECK(fixture_state.picture_cleanup_calls
                == fixture_state.picture_init_successes);
-    TEST_CHECK(legacy_texture_generate_calls == 0);
-    TEST_CHECK(legacy_texture_bind_calls == 0);
-    TEST_CHECK(legacy_texture_upload_calls == 0);
-    TEST_CHECK(legacy_texture_parameter_calls == 0);
-    TEST_CHECK(legacy_texture_delete_calls == 0);
-    TEST_CHECK(legacy_error_query_calls == 0);
     destroys_after_first_cleanup = texture_destroy_calls;
 
     Images_cleanup();
     TEST_CHECK(texture_destroy_calls == destroys_after_first_cleanup);
-    TEST_CHECK(legacy_texture_delete_calls == 0);
     TEST_CHECK(Bitmap_add("registry-reset", 1, false) == 0);
     Images_cleanup();
     Images_test_reset_hooks();

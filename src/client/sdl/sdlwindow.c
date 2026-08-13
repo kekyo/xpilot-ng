@@ -307,7 +307,7 @@ RendererStatus sdl_window_paint(
 	    sdl_renderer, operation_status);
     }
     if (accepted_commands) {
-	operation_status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
+	operation_status = Sdl_renderer_flush(sdl_renderer);
 	status = Sdl_renderer_track_frame_result(
 	    sdl_renderer, operation_status);
     }

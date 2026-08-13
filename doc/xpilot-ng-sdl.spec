@@ -11,7 +11,7 @@ License: 	GPL
 Group: 		Amusements/Games
 Vendor: 	XPilot
 AutoReq: 	0
-BuildRequires: 	pkgconfig, expat-devel, zlib-devel, SDL2-devel >= 2.0.9, SDL2_image-devel >= 2.0.0, SDL2_ttf-devel >= 2.0.12, mesa-libGL-devel, mesa-libGLU-devel
+BuildRequires: 	pkgconfig, expat-devel, zlib-devel, SDL2-devel >= 2.0.9, SDL2_image-devel >= 2.0.0, SDL2_ttf-devel >= 2.0.12, mesa-libGL-devel
 Requires: 	expat, SDL2 >= 2.0.9, SDL2_image >= 2.0.0, SDL2_ttf >= 2.0.12, libpng
 %description
 FEATURES

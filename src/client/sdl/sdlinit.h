@@ -23,7 +23,11 @@
 
 #include "sdlrenderer.h"
 
-/** Initialize SDL2, the application window, and its OpenGL context. */
+/**
+ * Initialize SDL2, the application window, and an OpenGL 3.3 core context.
+ *
+ * @return 0 on success, or -1 when initialization fails.
+ */
 int Init_window(void);
 
 /**

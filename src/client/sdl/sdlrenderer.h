@@ -1,4 +1,4 @@
-/* SDL window and compatibility OpenGL renderer coordination. */
+/* SDL window and OpenGL core renderer coordination. */
 
 #ifndef SDLRENDERER_H
 #define SDLRENDERER_H
@@ -10,16 +10,8 @@
 /** Renderer facade borrowing one SDL OpenGL window and its current context. */
 typedef struct SdlRenderer SdlRenderer;
 
-/** Coordinate origin restored for transitional fixed-function drawing. */
-typedef enum SdlRendererLegacyOrigin {
-    /** Logical coordinates start at the bottom-left and increase upward. */
-    SDL_RENDERER_LEGACY_BOTTOM_LEFT,
-    /** Logical coordinates start at the top-left and increase downward. */
-    SDL_RENDERER_LEGACY_TOP_LEFT
-} SdlRendererLegacyOrigin;
-
 /**
- * Create a compatibility renderer for the current SDL OpenGL context.
+ * Create a semantic renderer for the current SDL OpenGL core context.
  *
  * @param window Borrowed SDL window owning the current context.
  * @param renderer Receives the new facade on success.
@@ -97,8 +89,8 @@ RendererStatus Sdl_renderer_set_transform_2d(
  * Begin and clear a frame using the window's current drawable dimensions.
  *
  * @param renderer Renderer facade.
- * @param logical_width SDL logical window width used by legacy drawing.
- * @param logical_height SDL logical window height used by legacy drawing.
+ * @param logical_width SDL logical window width used for coordinate scaling.
+ * @param logical_height SDL logical window height used for coordinate scaling.
  * @param clear_color Clear color for the whole drawable.
  * @return Operation status.
  */
@@ -123,33 +115,14 @@ RendererStatus Sdl_renderer_set_logical_scissor(
     SdlRenderer *renderer, const RendererRect *scissor);
 
 /**
- * Flush semantic commands and restore deterministic fixed-function state.
+ * Flush pending semantic commands.
  *
  * @param renderer Renderer facade with an active frame.
- * @param origin Logical-coordinate origin to establish.
- * @return Operation status.
+ * @return Operation status. Pending commands remain retryable after failure.
  *
- * @remarks This is the ordering barrier used while semantic renderer calls
- * and direct compatibility OpenGL calls coexist. It is removed once all
- * production drawing uses the semantic renderer.
+ * @remarks This is an ordering barrier. It does not finish the active frame.
  */
-RendererStatus Sdl_renderer_prepare_legacy(
-    SdlRenderer *renderer, SdlRendererLegacyOrigin origin);
-
-/**
- * Flush semantic commands without changing compatibility OpenGL draw state.
- *
- * @param renderer Renderer facade with an active frame.
- * @return Operation status. On failure, compatibility state is restored and
- *         pending renderer commands retain their normal retry semantics.
- *
- * @remarks This transitional ordering barrier is only available with the
- * compatibility renderer. It preserves stackable server state, every
- * fixed-function matrix stack, the active texture unit, and the current
- * shader program so existing direct OpenGL drawing can continue unchanged.
- */
-RendererStatus Sdl_renderer_flush_preserving_legacy(
-    SdlRenderer *renderer);
+RendererStatus Sdl_renderer_flush(SdlRenderer *renderer);
 
 /**
  * Flush pending semantic commands and finish the active frame.

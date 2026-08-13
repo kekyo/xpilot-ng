@@ -1,4 +1,4 @@
-/* Coordinate transforms shared by legacy and semantic SDL rendering. */
+/* Coordinate transforms for semantic SDL rendering. */
 
 #ifndef PAINT_TRANSFORM_H
 #define PAINT_TRANSFORM_H
@@ -29,7 +29,7 @@ int Paint_transform_hud(int logical_width, int logical_height,
  * @param logical_height Logical SDL window height.
  * @param drawable_width OpenGL drawable width in pixels.
  * @param drawable_height OpenGL drawable height in pixels.
- * @param rounded_translation Nonzero to round only the legacy camera
+ * @param rounded_translation Nonzero to round the camera
  * translation, or zero to preserve the fractional translation.
  * @param transform Receives a column-major local-to-framebuffer transform.
  * @return 0 on success, or -1 for invalid or non-finite input.

@@ -192,7 +192,7 @@ static bool Ensure_cached_text(font_data *font, const char *text,
     return render_text(font, text, cache);
 }
 
-static GLubyte get_alpha(Uint32 color)
+static Uint8 get_alpha(Uint32 color)
 {
     return (color & 255);
 }
@@ -471,7 +471,7 @@ static RendererStatus Finish_semantic_world_line_batch(
 	return RENDERER_STATUS_INVALID_ARGUMENT;
     if (!batch->has_accepted_commands || batch->sdl_renderer == NULL)
 	return batch->status;
-    flush_status = Sdl_renderer_flush_preserving_legacy(
+    flush_status = Sdl_renderer_flush(
 	batch->sdl_renderer);
     batch->has_accepted_commands = 0;
     return Track_semantic_world_line_batch(batch, flush_status);
@@ -1331,7 +1331,7 @@ void Gui_paint_visible_border(int x, int y, int xi, int yi)
 	    Renderer_color_from_rgba32(hudColorRGBA), path->closed);
     }
 
-    /* Restore the legacy setup before making any raw renderer failure sticky. */
+    /* Restore the stationary setup before retaining any renderer failure. */
     stationary_status = setupPaint_stationary_cleanup();
     (void)Track_semantic_world_line_batch(&batch, blend_status);
     if (stroke_attempted) {
@@ -1654,7 +1654,7 @@ static RendererStatus Paint_semantic_map_quad(
 	sdl_renderer, operation_status);
     if (operation_status != RENDERER_STATUS_OK)
 	return status;
-    operation_status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
+    operation_status = Sdl_renderer_flush(sdl_renderer);
     return Sdl_renderer_track_frame_result(
 	sdl_renderer, operation_status);
 }
@@ -1871,7 +1871,7 @@ void Gui_paint_setup_target(int x, int y, int team, double damage, bool own)
     }
 
     if (has_accepted_commands) {
-	operation_status = Sdl_renderer_flush_preserving_legacy(
+	operation_status = Sdl_renderer_flush(
 	    sdl_renderer);
 	(void)Sdl_renderer_track_frame_result(
 	    sdl_renderer, operation_status);
@@ -2585,7 +2585,7 @@ void Gui_paint_sparks_end(void)
 		batch->point_size);
 	    if (Track_semantic_spark_batch(batch, status)
 		== RENDERER_STATUS_OK) {
-		status = Sdl_renderer_flush_preserving_legacy(
+		status = Sdl_renderer_flush(
 		    batch->sdl_renderer);
 		(void)Track_semantic_spark_batch(batch, status);
 	    }
@@ -3054,7 +3054,7 @@ void Gui_paint_asteroids_end(void)
 		    batch->vertex_count);
 		if (Track_semantic_asteroid_batch(batch, status)
 		    == RENDERER_STATUS_OK) {
-		    status = Sdl_renderer_flush_preserving_legacy(
+		    status = Sdl_renderer_flush(
 			batch->sdl_renderer);
 		    (void)Track_semantic_asteroid_batch(batch, status);
 		}
@@ -3238,7 +3238,7 @@ void Gui_paint_lasers_end(void)
 
     if (!batch->has_accepted_commands || batch->sdl_renderer == NULL)
 	return;
-    flush_status = Sdl_renderer_flush_preserving_legacy(
+    flush_status = Sdl_renderer_flush(
 	batch->sdl_renderer);
     batch->has_accepted_commands = 0;
     (void)Track_semantic_laser_batch(batch, flush_status);
@@ -3493,7 +3493,7 @@ void Gui_paint_appearing_end(void)
 		batch->vertex_count);
 	    if (Track_semantic_appearing_batch(batch, status)
 		== RENDERER_STATUS_OK) {
-		status = Sdl_renderer_flush_preserving_legacy(
+		status = Sdl_renderer_flush(
 		    batch->sdl_renderer);
 		(void)Track_semantic_appearing_batch(batch, status);
 	    }
@@ -4046,7 +4046,7 @@ RendererStatus Paint_select(void)
     status = Sdl_renderer_track_frame_result(sdl_renderer, status);
     if (status != RENDERER_STATUS_OK)
 	return status;
-    status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
+    status = Sdl_renderer_flush(sdl_renderer);
     return Sdl_renderer_track_frame_result(sdl_renderer, status);
 }
 
@@ -4060,7 +4060,7 @@ void Paint_HUD_values(void)
     x = draw_width - 20;
     /* Better make sure it's below the meters */
     y = draw_height
-	- 9 * (MAX((GLuint)meterHeight, gamefont.requested_height) + 6);
+	- 9 * (MAX((unsigned int)meterHeight, gamefont.requested_height) + 6);
 
     HUDprint(&gamefont,hudColorRGBA,RIGHT,DOWN,x,y,"FPS: %.3f",clientFPS);
     HUDprint(&gamefont,hudColorRGBA,RIGHT,DOWN,x,y-20,"CL.LAG : %.1f ms", clData.clientLag);
@@ -4193,7 +4193,7 @@ static RendererStatus Finish_semantic_hud_batch(
 	return RENDERER_STATUS_INVALID_ARGUMENT;
     if (!batch->has_accepted_commands || batch->sdl_renderer == NULL)
 	return batch->status;
-    flush_status = Sdl_renderer_flush_preserving_legacy(
+    flush_status = Sdl_renderer_flush(
 	batch->sdl_renderer);
     batch->has_accepted_commands = 0;
     return Track_semantic_hud_batch(batch, flush_status);
@@ -4605,7 +4605,7 @@ static void Paint_meter(int xoff, int y, string_tex_t *tex, int val, int max,
 
 void Paint_meters(void)
 {
-    int spacing = MAX((GLuint)meterHeight, gamefont.requested_height) + 6;
+    int spacing = MAX((unsigned int)meterHeight, gamefont.requested_height) + 6;
     int y = spacing, color;
 
     (void)Ensure_cached_text(&gamefont, "Fuel", &meter_texs[0]);
