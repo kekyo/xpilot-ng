@@ -1543,145 +1543,263 @@ void Paint_HUD_values(void)
     HUDprint(&gamefont,hudColorRGBA,RIGHT,DOWN,x,y-20,"CL.LAG : %.1f ms", clData.clientLag);
 }
 
-static RendererStatus Paint_semantic_meter_fill(
-    int x, int y, int value, int maximum, int height, Uint32 rgba)
-{
+typedef struct SemanticMeterBatch {
     SdlRenderer *sdl_renderer;
     Renderer *renderer;
     RendererStatus status;
+    int has_accepted_commands;
+} SemanticMeterBatch;
+
+typedef struct SemanticMeterGeometry {
+    float fill_x;
+    float fill_y;
+    float fill_width;
+    float fill_height;
+    RendererPoint2D border[4];
+    RendererPoint2D ticks[5][2];
+    int draw_fill;
+    int text_x;
+    int text_y;
+} SemanticMeterGeometry;
+
+static RendererStatus Begin_semantic_meter_batch(SemanticMeterBatch *batch)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    batch->sdl_renderer = Get_sdl_renderer();
+    batch->renderer = NULL;
+    batch->status = RENDERER_STATUS_INVALID_STATE;
+    batch->has_accepted_commands = 0;
+    if (batch->sdl_renderer == NULL)
+	return batch->status;
+    batch->status = Sdl_renderer_track_frame_result(
+	batch->sdl_renderer, RENDERER_STATUS_OK);
+    if (batch->status != RENDERER_STATUS_OK)
+	return batch->status;
+    batch->renderer = Sdl_renderer_frontend(batch->sdl_renderer);
+    if (batch->renderer == NULL) {
+	batch->status = Sdl_renderer_track_frame_result(
+	    batch->sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    }
+    return batch->status;
+}
+
+static RendererStatus Track_semantic_meter_batch(
+    SemanticMeterBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (batch->sdl_renderer == NULL) {
+	batch->status = status;
+	return batch->status;
+    }
+    batch->status = Sdl_renderer_track_frame_result(
+	batch->sdl_renderer, status);
+    return batch->status;
+}
+
+static RendererStatus Accept_semantic_meter_command(
+    SemanticMeterBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (status == RENDERER_STATUS_OK)
+	batch->has_accepted_commands = 1;
+    return Track_semantic_meter_batch(batch, status);
+}
+
+static RendererStatus Finish_semantic_meter_batch(
+    SemanticMeterBatch *batch)
+{
+    RendererStatus flush_status;
+
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!batch->has_accepted_commands || batch->sdl_renderer == NULL)
+	return batch->status;
+    flush_status = Sdl_renderer_flush_preserving_legacy(
+	batch->sdl_renderer);
+    batch->has_accepted_commands = 0;
+    return Track_semantic_meter_batch(batch, flush_status);
+}
+
+static int Semantic_meter_float(int64_t value, float *result)
+{
+    if (result == NULL || (double)value < -(double)FLT_MAX
+	|| (double)value > (double)FLT_MAX) {
+	return 0;
+    }
+    *result = (float)value;
+    return isfinite(*result);
+}
+
+static RendererStatus Build_semantic_meter_geometry(
+    int xoff, int y, int value, int maximum,
+    SemanticMeterGeometry *geometry, int *x_alignment)
+{
+    static const int tick_top_offsets[5] = {-4, -4, -3, -1, -1};
+    static const int tick_bottom_offsets[5] = {4, 4, 3, 1, 1};
+    int64_t tick_x_offsets[5];
     int64_t divisor;
     int64_t product;
-    int64_t left;
     int64_t width;
-    float renderer_x;
-    float renderer_y;
-    float renderer_width;
-    float renderer_height;
+    int64_t fill_left;
+    int64_t fill_height;
+    int64_t x;
+    int64_t xstr;
+    int64_t text_y;
+    int64_t border_right;
+    int64_t border_bottom;
+    int tick_index;
 
-    sdl_renderer = Get_sdl_renderer();
-    if (sdl_renderer == NULL)
-	return RENDERER_STATUS_INVALID_STATE;
-    status = Sdl_renderer_track_frame_result(
-	sdl_renderer, RENDERER_STATUS_OK);
-    if (status != RENDERER_STATUS_OK)
-	return status;
-    renderer = Sdl_renderer_frontend(sdl_renderer);
-    if (renderer == NULL) {
-	return Sdl_renderer_track_frame_result(
-	    sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    if (geometry == NULL || x_alignment == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+
+    if (xoff >= 0) {
+	x = (int64_t)xoff;
+	xstr = x + (int64_t)meterWidth + INT64_C(5);
+	*x_alignment = LEFT;
+    } else {
+	x = (int64_t)draw_width
+	    - ((int64_t)meterWidth - (int64_t)xoff);
+	xstr = x - INT64_C(5);
+	*x_alignment = RIGHT;
     }
+    text_y = (int64_t)draw_height - (int64_t)y
+	- (int64_t)(meterHeight / 2);
+    if (xstr < INT_MIN || xstr > INT_MAX
+	|| text_y < INT_MIN || text_y > INT_MAX) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    geometry->text_x = (int)xstr;
+    geometry->text_y = (int)text_y;
 
     divisor = maximum != 0 ? (int64_t)maximum : INT64_C(1);
     product = (int64_t)meterWidth * (int64_t)value;
-    if (product == INT64_MIN && divisor == INT64_C(-1)) {
-	return Sdl_renderer_track_frame_result(
-	    sdl_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
-    }
+    if (product == INT64_MIN && divisor == INT64_C(-1))
+	return RENDERER_STATUS_INVALID_ARGUMENT;
     width = product / divisor;
-    if (width == 0 || height <= 0)
-	return RENDERER_STATUS_OK;
-    left = (int64_t)x;
+    fill_left = x;
     if (width < 0) {
-	if (width == INT64_MIN || left < INT64_MIN - width) {
-	    return Sdl_renderer_track_frame_result(
-		sdl_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
-	}
-	left += width;
+	if (width == INT64_MIN || fill_left < INT64_MIN - width)
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	fill_left += width;
 	width = -width;
     }
-    if ((double)left < -(double)FLT_MAX
-	|| (double)left > (double)FLT_MAX
-	|| (double)width > (double)FLT_MAX
-	|| (double)y < -(double)FLT_MAX
-	|| (double)y > (double)FLT_MAX
-	|| (double)height > (double)FLT_MAX) {
-	return Sdl_renderer_track_frame_result(
-	    sdl_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
-    }
-    renderer_x = (float)left;
-    renderer_y = (float)y;
-    renderer_width = (float)width;
-    renderer_height = (float)height;
-    if (!isfinite(renderer_x) || !isfinite(renderer_y)
-	|| !isfinite(renderer_width) || !isfinite(renderer_height)) {
-	return Sdl_renderer_track_frame_result(
-	    sdl_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
+    fill_height = (int64_t)meterHeight - INT64_C(1);
+    geometry->draw_fill = width != 0 && fill_height > 0;
+    if (geometry->draw_fill
+	&& (!Semantic_meter_float(fill_left, &geometry->fill_x)
+	    || !Semantic_meter_float((int64_t)y, &geometry->fill_y)
+	    || !Semantic_meter_float(width, &geometry->fill_width)
+	    || !Semantic_meter_float(fill_height,
+		&geometry->fill_height))) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
     }
 
-    status = Sdl_renderer_track_frame_result(
-	sdl_renderer,
-	Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA));
-    if (status == RENDERER_STATUS_OK) {
-	status = Sdl_renderer_track_frame_result(
-	    sdl_renderer,
-	    Renderer_fill_rect(
-		renderer, renderer_x, renderer_y,
-		renderer_width, renderer_height,
-		Renderer_color_from_rgba32(rgba)));
+    border_right = x + (int64_t)meterWidth;
+    border_bottom = (int64_t)y + (int64_t)meterHeight;
+    if (!Semantic_meter_float(x, &geometry->border[0].x)
+	|| !Semantic_meter_float((int64_t)y, &geometry->border[0].y)
+	|| !Semantic_meter_float(x, &geometry->border[1].x)
+	|| !Semantic_meter_float(border_bottom, &geometry->border[1].y)
+	|| !Semantic_meter_float(border_right, &geometry->border[2].x)
+	|| !Semantic_meter_float(border_bottom, &geometry->border[2].y)
+	|| !Semantic_meter_float(border_right, &geometry->border[3].x)
+	|| !Semantic_meter_float((int64_t)y, &geometry->border[3].y)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
     }
-    if (status == RENDERER_STATUS_OK) {
-	status = Sdl_renderer_track_frame_result(
-	    sdl_renderer,
-	    Sdl_renderer_flush_preserving_legacy(sdl_renderer));
+
+    tick_x_offsets[0] = 0;
+    tick_x_offsets[1] = (int64_t)meterWidth;
+    tick_x_offsets[2] = (int64_t)meterWidth / INT64_C(2);
+    tick_x_offsets[3] = (int64_t)meterWidth / INT64_C(4);
+    tick_x_offsets[4] = (INT64_C(3) * (int64_t)meterWidth)
+	/ INT64_C(4);
+    for (tick_index = 0; tick_index < 5; tick_index++) {
+	int64_t tick_x = x + tick_x_offsets[tick_index];
+	int64_t tick_top = (int64_t)y + tick_top_offsets[tick_index];
+	int64_t tick_bottom = border_bottom
+	    + tick_bottom_offsets[tick_index];
+
+	if (!Semantic_meter_float(
+		tick_x, &geometry->ticks[tick_index][0].x)
+	    || !Semantic_meter_float(
+		tick_top, &geometry->ticks[tick_index][0].y)
+	    || !Semantic_meter_float(
+		tick_x, &geometry->ticks[tick_index][1].x)
+	    || !Semantic_meter_float(
+		tick_bottom, &geometry->ticks[tick_index][1].y)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
     }
-    return status;
+    return RENDERER_STATUS_OK;
 }
 
 static void Paint_meter(int xoff, int y, string_tex_t *tex, int val, int max,
 			int meter_color)
 {
-    int	mw1_4 = meterWidth/4,
-    	mw2_4 = meterWidth/2,
-    	mw3_4 = 3*meterWidth/4,
-    	mw4_4 = meterWidth,
-    	BORDER = 5;
-    int		x, xstr;
+    SemanticMeterBatch batch;
+    SemanticMeterGeometry geometry;
+    RendererColor border_color;
+    RendererStatus operation_status;
     int x_alignment;
     int color;
+    int tick_index;
 
-    if (xoff >= 0) {
-	x = xoff;
-        xstr = x + meterWidth + BORDER;
-	x_alignment = LEFT;
-    } else {
-	x = draw_width - (meterWidth - xoff);
-        xstr = x - BORDER;
-	x_alignment = RIGHT;
+    if (Begin_semantic_meter_batch(&batch) != RENDERER_STATUS_OK)
+	return;
+    operation_status = Build_semantic_meter_geometry(
+	xoff, y, val, max, &geometry, &x_alignment);
+    if (operation_status != RENDERER_STATUS_OK) {
+	Track_semantic_meter_batch(&batch, operation_status);
+	return;
     }
-
-    if (Paint_semantic_meter_fill(
-	    x, y, val, max,
-	    meterHeight - 1, (Uint32)meter_color) != RENDERER_STATUS_OK) {
+    if (Track_semantic_meter_batch(
+	    &batch,
+	    Renderer_set_blend(
+		batch.renderer, RENDERER_BLEND_ALPHA))
+	!= RENDERER_STATUS_OK) {
 	return;
     }
 
-    /* meterBorderColorRGBA = 0 obviously means no meter borders are drawn */
-    if (meterBorderColorRGBA) {
-    	color = meterBorderColorRGBA;
-
-	set_alphacolor(color);
-	glBegin( GL_LINE_LOOP );
-	    glVertex2i(x,y);
-	    glVertex2i(x,y + meterHeight);
-	    glVertex2i(x + meterWidth,y + meterHeight);
-	    glVertex2i(x + meterWidth,y);
-	glEnd();
-
-	glBegin( GL_LINES );
-	    glVertex2i(x,       y-4);glVertex2i(x,       y+meterHeight+4);
-	    glVertex2i(x+mw4_4, y-4);glVertex2i(x+mw4_4, y+meterHeight+4);
-	    glVertex2i(x+mw2_4, y-3);glVertex2i(x+mw2_4, y+meterHeight+3);
-	    glVertex2i(x+mw1_4, y-1);glVertex2i(x+mw1_4, y+meterHeight+1);
-	    glVertex2i(x+mw3_4, y-1);glVertex2i(x+mw3_4, y+meterHeight+1);
-	glEnd();
+    if (geometry.draw_fill) {
+	operation_status = Renderer_fill_rect(
+	    batch.renderer,
+	    geometry.fill_x, geometry.fill_y,
+	    geometry.fill_width, geometry.fill_height,
+	    Renderer_color_from_rgba32((Uint32)meter_color));
+	Accept_semantic_meter_command(&batch, operation_status);
     }
 
-    if (!meterBorderColorRGBA)
-	color = meter_color;
+    /* meterBorderColorRGBA = 0 obviously means no meter borders are drawn */
+    if (batch.status == RENDERER_STATUS_OK && meterBorderColorRGBA) {
+	border_color = Renderer_color_from_rgba32(meterBorderColorRGBA);
+	operation_status = Renderer_stroke_path(
+	    batch.renderer, geometry.border, 4, 1.0f,
+	    border_color, 1);
+	Accept_semantic_meter_command(&batch, operation_status);
+    }
+    for (tick_index = 0;
+	 batch.status == RENDERER_STATUS_OK
+	 && meterBorderColorRGBA && tick_index < 5;
+	 tick_index++) {
+	operation_status = Renderer_stroke_path(
+	    batch.renderer, geometry.ticks[tick_index], 2, 1.0f,
+	    border_color, 0);
+	Accept_semantic_meter_command(&batch, operation_status);
+    }
+    if (Finish_semantic_meter_batch(&batch) != RENDERER_STATUS_OK)
+	return;
+
+    color = meterBorderColorRGBA ? meterBorderColorRGBA : meter_color;
 
     if (tex->cache != NULL) {
-	disp_text(tex, color, x_alignment, CENTER, xstr,
-		  draw_height - y - meterHeight / 2, true);
+	operation_status = disp_text(
+	    tex, color, x_alignment, CENTER,
+	    geometry.text_x, geometry.text_y, true);
+	if (operation_status != RENDERER_STATUS_OK)
+	    Track_semantic_meter_batch(&batch, operation_status);
     }
 }
 
@@ -1704,8 +1822,6 @@ void Paint_meters(void)
 			     &meter_texs[10]);
     (void)Ensure_cached_text(&gamefont, "SHUTDOWN", &meter_texs[11]);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     if (fuelMeterColorRGBA)
 	Paint_meter(-10, y += spacing, &meter_texs[0],
 		    (int)fuelSum, (int)fuelMax, fuelMeterColorRGBA);
@@ -1784,7 +1900,6 @@ void Paint_meters(void)
 			&meter_texs[11], shutdown_count, shutdown_delay,
 			temporaryMeterColorRGBA);
     }
-    glDisable(GL_BLEND);
 }
 
 static void Paint_lock(int hud_pos_x, int hud_pos_y)

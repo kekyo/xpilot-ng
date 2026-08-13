@@ -13,7 +13,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#define MAX_EVENTS 8
+#define MAX_EVENTS 16
+#define MAX_STROKES 6
+#define MAX_STROKE_POINTS 4
 
 struct Renderer {
     int frame_active;
@@ -29,6 +31,7 @@ struct SdlRenderer {
 typedef enum PaintEvent {
     PAINT_EVENT_BLEND,
     PAINT_EVENT_FILL,
+    PAINT_EVENT_STROKE,
     PAINT_EVENT_FLUSH,
     PAINT_EVENT_TEXT
 } PaintEvent;
@@ -43,6 +46,24 @@ typedef struct FakeFill {
     int scissor_token;
 } FakeFill;
 
+typedef struct FakeStroke {
+    RendererPoint2D points[MAX_STROKE_POINTS];
+    size_t point_count;
+    float width;
+    RendererColor color;
+    int closed;
+} FakeStroke;
+
+typedef struct FakeText {
+    string_tex_t *texture;
+    int color;
+    int horizontal_alignment;
+    int vertical_alignment;
+    int x;
+    int y;
+    bool on_hud;
+} FakeText;
+
 static Renderer fake_renderer;
 static SdlRenderer fake_sdl_renderer = {
     &fake_renderer,
@@ -50,12 +71,16 @@ static SdlRenderer fake_sdl_renderer = {
 };
 static PaintEvent events[MAX_EVENTS];
 static FakeFill last_fill;
+static FakeStroke strokes[MAX_STROKES];
+static FakeText last_text;
 static int event_count;
 static int operation_result_pending;
 static int preflight_attempts;
 static int blend_attempts;
 static int fill_attempts;
 static int successful_fills;
+static int stroke_attempts;
+static int successful_strokes;
 static int flush_attempts;
 static int transform_attempts;
 static int scissor_attempts;
@@ -66,7 +91,10 @@ static int legacy_end_calls;
 static int legacy_color_calls;
 static RendererStatus blend_result;
 static RendererStatus fill_result;
+static int stroke_failure_attempt;
+static RendererStatus stroke_failure_result;
 static RendererStatus flush_result;
+static RendererStatus text_result;
 
 static setup_t fake_setup = {
     .frames_per_second = 60
@@ -114,6 +142,31 @@ static int color_equal(RendererColor actual, RendererColor expected)
         && actual.blue == expected.blue && actual.alpha == expected.alpha;
 }
 
+static int check_stroke(
+    int stroke_index, const float expected_points[][2],
+    size_t expected_point_count, uint32_t rgba, int closed)
+{
+    const FakeStroke *stroke;
+    size_t point_index;
+
+    TEST_CHECK(stroke_index >= 0);
+    TEST_CHECK(stroke_index < successful_strokes);
+    stroke = &strokes[stroke_index];
+    TEST_CHECK(stroke->point_count == expected_point_count);
+    TEST_CHECK(stroke->width == 1.0f);
+    TEST_CHECK(color_equal(
+        stroke->color, Renderer_color_from_rgba32(rgba)));
+    TEST_CHECK(stroke->closed == closed);
+    for (point_index = 0; point_index < expected_point_count;
+         point_index++) {
+        TEST_CHECK(stroke->points[point_index].x
+                   == expected_points[point_index][0]);
+        TEST_CHECK(stroke->points[point_index].y
+                   == expected_points[point_index][1]);
+    }
+    return 0;
+}
+
 static void record_event(PaintEvent event)
 {
     if (event_count < MAX_EVENTS)
@@ -137,6 +190,8 @@ static void reset_frame(void)
 {
     memset(events, 0, sizeof(events));
     memset(&last_fill, 0, sizeof(last_fill));
+    memset(strokes, 0, sizeof(strokes));
+    memset(&last_text, 0, sizeof(last_text));
     memset(&gamefont, 0, sizeof(gamefont));
     memset(&meter_texs[0], 0,
            MAX_METERS * sizeof(meter_texs[0]));
@@ -146,6 +201,8 @@ static void reset_frame(void)
     blend_attempts = 0;
     fill_attempts = 0;
     successful_fills = 0;
+    stroke_attempts = 0;
+    successful_strokes = 0;
     flush_attempts = 0;
     transform_attempts = 0;
     scissor_attempts = 0;
@@ -156,7 +213,10 @@ static void reset_frame(void)
     legacy_color_calls = 0;
     blend_result = RENDERER_STATUS_OK;
     fill_result = RENDERER_STATUS_OK;
+    stroke_failure_attempt = 0;
+    stroke_failure_result = RENDERER_STATUS_OK;
     flush_result = RENDERER_STATUS_OK;
+    text_result = RENDERER_STATUS_OK;
     fake_renderer.frame_active = 1;
     fake_renderer.transform_token = 71;
     fake_renderer.scissor_token = 83;
@@ -290,6 +350,36 @@ RendererStatus Renderer_fill_rect(Renderer *renderer,
     return RENDERER_STATUS_OK;
 }
 
+RendererStatus Renderer_stroke_path(
+    Renderer *renderer, const RendererPoint2D *points,
+    size_t point_count, float width, RendererColor color, int closed)
+{
+    FakeStroke *stroke;
+
+    stroke_attempts++;
+    operation_result_pending = 1;
+    record_event(PAINT_EVENT_STROKE);
+    if (renderer != &fake_renderer || !renderer->frame_active
+        || points == NULL || point_count < 2
+        || point_count > MAX_STROKE_POINTS || width <= 0.0f) {
+        return RENDERER_STATUS_INVALID_STATE;
+    }
+    if (stroke_failure_attempt == stroke_attempts
+        && stroke_failure_result != RENDERER_STATUS_OK) {
+        return stroke_failure_result;
+    }
+    if (successful_strokes >= MAX_STROKES)
+        return RENDERER_STATUS_OUT_OF_MEMORY;
+    stroke = &strokes[successful_strokes++];
+    memcpy(stroke->points, points,
+           point_count * sizeof(stroke->points[0]));
+    stroke->point_count = point_count;
+    stroke->width = width;
+    stroke->color = color;
+    stroke->closed = closed;
+    return RENDERER_STATUS_OK;
+}
+
 RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
 {
     flush_attempts++;
@@ -316,16 +406,17 @@ RendererStatus disp_text(string_tex_t *texture, int color,
                          int vertical_alignment, int x, int y,
                          bool on_hud)
 {
-    (void)texture;
-    (void)color;
-    (void)horizontal_alignment;
-    (void)vertical_alignment;
-    (void)x;
-    (void)y;
-    (void)on_hud;
     text_attempts++;
+    operation_result_pending = 1;
     record_event(PAINT_EVENT_TEXT);
-    return RENDERER_STATUS_OK;
+    last_text.texture = texture;
+    last_text.color = color;
+    last_text.horizontal_alignment = horizontal_alignment;
+    last_text.vertical_alignment = vertical_alignment;
+    last_text.x = x;
+    last_text.y = y;
+    last_text.on_hud = on_hud;
+    return text_result;
 }
 
 void GLAPIENTRY glEnable(GLenum capability)
@@ -482,6 +573,128 @@ static int check_meter_fill_flushes_before_its_label(void)
     return check_no_legacy_primitives();
 }
 
+static int check_meter_border_and_ticks_are_semantic(void)
+{
+    static const float border_points[][2] = {
+        {130.0f, 36.0f},
+        {130.0f, 46.0f},
+        {190.0f, 46.0f},
+        {190.0f, 36.0f}
+    };
+    static const float tick_points[][2][2] = {
+        {{130.0f, 32.0f}, {130.0f, 50.0f}},
+        {{190.0f, 32.0f}, {190.0f, 50.0f}},
+        {{160.0f, 33.0f}, {160.0f, 49.0f}},
+        {{145.0f, 35.0f}, {145.0f, 47.0f}},
+        {{175.0f, 35.0f}, {175.0f, 47.0f}}
+    };
+    int tick_index;
+
+    reset_frame();
+    meterBorderColorRGBA = 0x89abcdef;
+    meter_texs[0].cache = (TextRendererCache *)&fake_renderer;
+    meter_texs[0].text = "Fuel";
+
+    Paint_meters();
+
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 10);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_FILL);
+    for (tick_index = 0; tick_index < 6; tick_index++)
+        TEST_CHECK(events[2 + tick_index] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[8] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(events[9] == PAINT_EVENT_TEXT);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(last_fill.x == 130.0f);
+    TEST_CHECK(last_fill.y == 36.0f);
+    TEST_CHECK(last_fill.width == 15.0f);
+    TEST_CHECK(last_fill.height == 9.0f);
+    TEST_CHECK(color_equal(
+        last_fill.color,
+        Renderer_color_from_rgba32(0x12345678)));
+    TEST_CHECK(stroke_attempts == 6);
+    TEST_CHECK(successful_strokes == 6);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(text_attempts == 1);
+    if (check_stroke(0, border_points, 4, 0x89abcdef, 1) != 0)
+        return 1;
+    for (tick_index = 0; tick_index < 5; tick_index++) {
+        if (check_stroke(
+                tick_index + 1, tick_points[tick_index], 2,
+                0x89abcdef, 0) != 0) {
+            return 1;
+        }
+    }
+    TEST_CHECK(last_text.texture == &meter_texs[0]);
+    TEST_CHECK(last_text.color == (int)UINT32_C(0x89abcdef));
+    TEST_CHECK(last_text.horizontal_alignment == RIGHT);
+    TEST_CHECK(last_text.vertical_alignment == CENTER);
+    TEST_CHECK(last_text.x == 125);
+    TEST_CHECK(last_text.y == 79);
+    TEST_CHECK(last_text.on_hud);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    return check_no_legacy_primitives();
+}
+
+static int check_tick_failure_flushes_only_accepted_meter_primitives(void)
+{
+    static const float border_points[][2] = {
+        {130.0f, 36.0f},
+        {130.0f, 46.0f},
+        {190.0f, 46.0f},
+        {190.0f, 36.0f}
+    };
+
+    reset_frame();
+    meterBorderColorRGBA = 0x89abcdef;
+    meter_texs[0].cache = (TextRendererCache *)&fake_renderer;
+    meter_texs[0].text = "Fuel";
+    stroke_failure_attempt = 2;
+    stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+
+    Paint_meters();
+
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 5);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_FILL);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[4] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(stroke_attempts == 2);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(text_attempts == 0);
+    TEST_CHECK(check_stroke(
+        0, border_points, 4, 0x89abcdef, 1) == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+    Paint_meters();
+
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 5);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(stroke_attempts == 2);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(text_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    return check_no_legacy_primitives();
+}
+
 static int check_first_failure_blocks_later_same_frame_meter(void)
 {
     reset_frame();
@@ -514,6 +727,57 @@ static int check_first_failure_blocks_later_same_frame_meter(void)
     return check_no_legacy_primitives();
 }
 
+static int check_label_failure_blocks_later_same_frame_meters(void)
+{
+    reset_frame();
+    meterBorderColorRGBA = 0x89abcdef;
+    powerMeterColorRGBA = 0x23456789;
+    displayedPower = 50.0;
+    meter_texs[0].cache = (TextRendererCache *)&fake_renderer;
+    meter_texs[0].text = "Fuel";
+    meter_texs[1].cache = (TextRendererCache *)&fake_renderer;
+    meter_texs[1].text = "Power";
+    text_result = RENDERER_STATUS_OUT_OF_MEMORY;
+
+    Paint_meters();
+
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 10);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_FILL);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[8] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(events[9] == PAINT_EVENT_TEXT);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(stroke_attempts == 6);
+    TEST_CHECK(successful_strokes == 6);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(text_attempts == 1);
+    TEST_CHECK(last_text.texture == &meter_texs[0]);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    text_result = RENDERER_STATUS_BACKEND_ERROR;
+    Paint_meters();
+
+    TEST_CHECK(preflight_attempts == 4);
+    TEST_CHECK(event_count == 10);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(stroke_attempts == 6);
+    TEST_CHECK(successful_strokes == 6);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(text_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    return check_no_legacy_primitives();
+}
+
 int main(void)
 {
     if (check_fuel_meter_fill_uses_inherited_hud_state() != 0)
@@ -524,5 +788,11 @@ int main(void)
         return 1;
     if (check_meter_fill_flushes_before_its_label() != 0)
         return 1;
-    return check_first_failure_blocks_later_same_frame_meter();
+    if (check_meter_border_and_ticks_are_semantic() != 0)
+        return 1;
+    if (check_tick_failure_flushes_only_accepted_meter_primitives() != 0)
+        return 1;
+    if (check_first_failure_blocks_later_same_frame_meter() != 0)
+        return 1;
+    return check_label_failure_blocks_later_same_frame_meters();
 }
