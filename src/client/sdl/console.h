@@ -34,7 +34,15 @@ int Console_init(void);
  * @remarks This function must be called outside an active renderer frame.
  */
 int Console_prepare(Renderer *renderer);
-void Console_paint(void);
+/**
+ * Draw the visible console and its frame in the active renderer frame.
+ *
+ * @return The renderer status, or RENDERER_STATUS_OK when hidden.
+ *
+ * @remarks A failure is retained by the SDL renderer and the containing
+ * frame must not be presented.
+ */
+RendererStatus Console_paint(void);
 void Console_show(void);
 void Console_hide(void);
 int Console_isVisible(void);

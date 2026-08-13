@@ -98,14 +98,18 @@ int sdl_window_resize(sdl_window_t *win, int w, int h);
 void sdl_window_refresh(sdl_window_t *win);
 
 /**
- * Draw a prepared off-screen window as an alpha-blended HUD sprite.
+ * Draw a prepared off-screen window and its colored frame.
  *
  * @param win Prepared off-screen window.
+ * @param background Optional color drawn behind the sprite and frame.
+ * @return The operation status or the first failure retained for the frame.
  *
- * @remarks Drawing requires an active renderer frame and immediately flushes
- * semantic commands while preserving transitional compatibility state.
+ * @remarks Drawing requires an active renderer frame. All accepted semantic
+ * commands are flushed together while preserving transitional compatibility
+ * state, including commands accepted before a later operation fails.
  */
-void sdl_window_paint(sdl_window_t *win);
+RendererStatus sdl_window_paint(
+    sdl_window_t *win, const RendererColor *background);
 
 /**
  * Release an off-screen window surface and texture.

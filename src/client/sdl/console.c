@@ -79,23 +79,13 @@ int Console_prepare(Renderer *renderer)
     return sdl_window_prepare(&console_window, renderer);
 }
 
-void Console_paint(void)
+RendererStatus Console_paint(void)
 {
-    if (!Console_isVisible()) return;
+    if (!Console_isVisible())
+	return RENDERER_STATUS_OK;
     console_window.x = (draw_width - console_window.w) / 2;
     console_window.y = (draw_height - console_window.h) / 2;
-    sdl_window_paint(&console_window);
-    glBegin(GL_LINE_LOOP);
-    glColor4ub(0, 0, 0, 0xff);
-    glVertex2i(console_window.x, console_window.y + console_window.h + 2);    
-    glColor4ub(0, 0x90, 0x00, 0xff);
-    glVertex2i(console_window.x, console_window.y);
-    glColor4ub(0, 0, 0, 0xff);
-    glVertex2i(console_window.x + console_window.w, console_window.y);
-    glColor4ub(0, 0x90, 0x00, 0xff);
-    glVertex2i(console_window.x + console_window.w, 
-	       console_window.y + console_window.h + 2);
-    glEnd();
+    return sdl_window_paint(&console_window, NULL);
 }
 
 void Console_show(void)

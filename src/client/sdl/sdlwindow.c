@@ -217,30 +217,74 @@ void sdl_window_refresh(sdl_window_t *win)
 	win->dirty = 1;
 }
 
-void sdl_window_paint(sdl_window_t *win)
+RendererStatus sdl_window_paint(
+    sdl_window_t *win, const RendererColor *background)
 {
     SdlRenderer *sdl_renderer;
     Renderer *renderer;
     RendererColor white = {255, 255, 255, 255};
+    RendererColor black = {0, 0, 0, 255};
+    RendererColor green = {0, 144, 0, 255};
+    RendererPoint2D border_points[4];
+    RendererColor border_colors[4];
     RendererStatus status;
+    RendererStatus operation_status;
+    int accepted_commands = 0;
 
-    if (win == NULL || win->surface == NULL || win->texture == NULL)
-	return;
+    if (win == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
 
     sdl_renderer = Get_sdl_renderer();
-    if (sdl_renderer == NULL) {
-	warn("failed to find renderer for off-screen window");
-	return;
+    if (sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    if (win->surface == NULL || win->texture == NULL
+	|| win->renderer == NULL || win->w <= 0 || win->h <= 0) {
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_STATE);
     }
     renderer = Sdl_renderer_frontend(sdl_renderer);
-    if (renderer == NULL || renderer != win->renderer) {
-	warn("failed to find renderer for off-screen window");
-	return;
-    }
+    if (renderer == NULL)
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    if (renderer != win->renderer)
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_RESOURCE_MISMATCH);
 
-    status = Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA);
+    border_points[0] = (RendererPoint2D){
+	(float)win->x, (float)win->y + (float)win->h + 2.0f};
+    border_points[1] = (RendererPoint2D){
+	(float)win->x, (float)win->y};
+    border_points[2] = (RendererPoint2D){
+	(float)win->x + (float)win->w, (float)win->y};
+    border_points[3] = (RendererPoint2D){
+	(float)win->x + (float)win->w,
+	(float)win->y + (float)win->h + 2.0f};
+    border_colors[0] = black;
+    border_colors[1] = green;
+    border_colors[2] = black;
+    border_colors[3] = green;
+
+    operation_status = Renderer_set_blend(
+	renderer, RENDERER_BLEND_ALPHA);
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, operation_status);
+    if (status == RENDERER_STATUS_OK && background != NULL) {
+	operation_status = Renderer_fill_rect(
+	    renderer,
+	    (float)win->x, (float)win->y,
+	    (float)win->w, (float)win->h + 2.0f,
+	    *background);
+	if (operation_status == RENDERER_STATUS_OK)
+	    accepted_commands = 1;
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, operation_status);
+    }
     if (status == RENDERER_STATUS_OK) {
-	status = Renderer_draw_sprite(
+	operation_status = Renderer_draw_sprite(
 	    renderer, win->texture,
 	    (float)win->x, (float)win->y,
 	    (float)win->x + (float)win->w,
@@ -249,11 +293,25 @@ void sdl_window_paint(sdl_window_t *win)
 	    (float)win->w / (float)win->surface->w,
 	    (float)win->h / (float)win->surface->h,
 	    white);
+	if (operation_status == RENDERER_STATUS_OK)
+	    accepted_commands = 1;
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, operation_status);
     }
-    if (status == RENDERER_STATUS_OK)
-	status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
-    if (status != RENDERER_STATUS_OK)
-	warn("failed to draw off-screen window");
+    if (status == RENDERER_STATUS_OK) {
+	operation_status = Renderer_stroke_colored_path(
+	    renderer, border_points, border_colors, 4, 1.0f, 1);
+	if (operation_status == RENDERER_STATUS_OK)
+	    accepted_commands = 1;
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, operation_status);
+    }
+    if (accepted_commands) {
+	operation_status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, operation_status);
+    }
+    return status;
 }
 
 void sdl_window_destroy(sdl_window_t *win)

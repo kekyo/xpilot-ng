@@ -15,6 +15,7 @@
 #include <string.h>
 
 #define MAX_TEXTURES 16
+#define MAX_PAINT_EVENTS 8
 #define FLOAT_TOLERANCE 0.0001f
 
 struct Renderer {
@@ -27,6 +28,7 @@ struct RendererTexture {
 
 struct SdlRenderer {
     Renderer *frontend;
+    RendererStatus frame_result;
 };
 
 typedef struct FakeTexture {
@@ -50,19 +52,63 @@ typedef struct FakeSprite {
     RendererColor tint;
 } FakeSprite;
 
+typedef struct FakeFill {
+    float x;
+    float y;
+    float width;
+    float height;
+    RendererColor color;
+} FakeFill;
+
+typedef struct FakeColoredStroke {
+    RendererPoint2D points[4];
+    RendererColor colors[4];
+    size_t point_count;
+    float width;
+    int closed;
+} FakeColoredStroke;
+
+typedef enum PaintEvent {
+    PAINT_EVENT_BLEND,
+    PAINT_EVENT_FILL,
+    PAINT_EVENT_SPRITE,
+    PAINT_EVENT_STROKE,
+    PAINT_EVENT_FLUSH
+} PaintEvent;
+
 static Renderer fake_renderer;
-static SdlRenderer fake_sdl_renderer = {&fake_renderer};
+static Renderer foreign_renderer;
+static SdlRenderer fake_sdl_renderer = {
+    &fake_renderer, RENDERER_STATUS_OK
+};
 static FakeTexture fake_textures[MAX_TEXTURES];
 static FakeSprite last_sprite;
+static FakeFill last_fill;
+static FakeColoredStroke last_stroke;
+static PaintEvent paint_events[MAX_PAINT_EVENTS];
+static int paint_event_count;
 static int texture_create_attempts;
 static int texture_create_successes;
 static int fail_texture_create_attempt;
 static int texture_update_calls;
 static int texture_destroy_calls;
 static int resource_calls_during_frame;
-static int blend_calls;
-static int sprite_calls;
-static int preserving_flush_calls;
+static int operation_result_pending;
+static int preflight_attempts;
+static int tracked_operation_results;
+static int blend_attempts;
+static int fill_attempts;
+static int successful_fills;
+static int sprite_attempts;
+static int successful_sprites;
+static int stroke_attempts;
+static int successful_strokes;
+static int flush_attempts;
+static RendererStatus blend_result;
+static RendererStatus fill_result;
+static RendererStatus sprite_result;
+static RendererStatus stroke_result;
+static RendererStatus flush_result;
 static int legacy_calls;
 
 static int float_equal(float actual, float expected)
@@ -77,6 +123,42 @@ static int color_equal(RendererColor actual, RendererColor expected)
 {
     return actual.red == expected.red && actual.green == expected.green
         && actual.blue == expected.blue && actual.alpha == expected.alpha;
+}
+
+static void record_paint_event(PaintEvent event)
+{
+    if (paint_event_count < MAX_PAINT_EVENTS)
+        paint_events[paint_event_count++] = event;
+}
+
+static void reset_paint_frame(void)
+{
+    memset(&last_sprite, 0, sizeof(last_sprite));
+    memset(&last_fill, 0, sizeof(last_fill));
+    memset(&last_stroke, 0, sizeof(last_stroke));
+    memset(paint_events, 0, sizeof(paint_events));
+    paint_event_count = 0;
+    operation_result_pending = 0;
+    preflight_attempts = 0;
+    tracked_operation_results = 0;
+    blend_attempts = 0;
+    fill_attempts = 0;
+    successful_fills = 0;
+    sprite_attempts = 0;
+    successful_sprites = 0;
+    stroke_attempts = 0;
+    successful_strokes = 0;
+    flush_attempts = 0;
+    blend_result = RENDERER_STATUS_OK;
+    fill_result = RENDERER_STATUS_OK;
+    sprite_result = RENDERER_STATUS_OK;
+    stroke_result = RENDERER_STATUS_OK;
+    flush_result = RENDERER_STATUS_OK;
+    legacy_calls = 0;
+    fake_renderer.frame_active = 1;
+    foreign_renderer.frame_active = 1;
+    fake_sdl_renderer.frontend = &fake_renderer;
+    fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
 }
 
 static FakeTexture *fake_texture_from_handle(RendererTexture *texture)
@@ -189,11 +271,34 @@ RendererStatus Renderer_texture_destroy(Renderer *renderer,
 RendererStatus Renderer_set_blend(Renderer *renderer,
                                   RendererBlendMode blend)
 {
+    blend_attempts++;
+    operation_result_pending = 1;
+    record_paint_event(PAINT_EVENT_BLEND);
     if (renderer != &fake_renderer || !renderer->frame_active
         || blend != RENDERER_BLEND_ALPHA) {
         return RENDERER_STATUS_INVALID_STATE;
     }
-    blend_calls++;
+    return blend_result;
+}
+
+RendererStatus Renderer_fill_rect(Renderer *renderer,
+                                  float x, float y,
+                                  float width, float height,
+                                  RendererColor color)
+{
+    fill_attempts++;
+    operation_result_pending = 1;
+    record_paint_event(PAINT_EVENT_FILL);
+    if (renderer != &fake_renderer || !renderer->frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (fill_result != RENDERER_STATUS_OK)
+        return fill_result;
+    last_fill.x = x;
+    last_fill.y = y;
+    last_fill.width = width;
+    last_fill.height = height;
+    last_fill.color = color;
+    successful_fills++;
     return RENDERER_STATUS_OK;
 }
 
@@ -206,10 +311,15 @@ RendererStatus Renderer_draw_sprite(Renderer *renderer,
 {
     FakeTexture *record = fake_texture_from_handle(texture);
 
+    sprite_attempts++;
+    operation_result_pending = 1;
+    record_paint_event(PAINT_EVENT_SPRITE);
     if (renderer != &fake_renderer || !renderer->frame_active
         || record == NULL || record->destroy_count != 0) {
         return RENDERER_STATUS_INVALID_STATE;
     }
+    if (sprite_result != RENDERER_STATUS_OK)
+        return sprite_result;
     last_sprite.texture = texture;
     last_sprite.left = left;
     last_sprite.top = top;
@@ -220,7 +330,32 @@ RendererStatus Renderer_draw_sprite(Renderer *renderer,
     last_sprite.u1 = u1;
     last_sprite.v1 = v1;
     last_sprite.tint = tint;
-    sprite_calls++;
+    successful_sprites++;
+    return RENDERER_STATUS_OK;
+}
+
+RendererStatus Renderer_stroke_colored_path(
+    Renderer *renderer, const RendererPoint2D *points,
+    const RendererColor *colors, size_t point_count,
+    float width, int closed)
+{
+    stroke_attempts++;
+    operation_result_pending = 1;
+    record_paint_event(PAINT_EVENT_STROKE);
+    if (renderer != &fake_renderer || !renderer->frame_active
+        || points == NULL || colors == NULL || point_count != 4) {
+        return RENDERER_STATUS_INVALID_STATE;
+    }
+    if (stroke_result != RENDERER_STATUS_OK)
+        return stroke_result;
+    memcpy(last_stroke.points, points,
+           point_count * sizeof(*last_stroke.points));
+    memcpy(last_stroke.colors, colors,
+           point_count * sizeof(*last_stroke.colors));
+    last_stroke.point_count = point_count;
+    last_stroke.width = width;
+    last_stroke.closed = closed;
+    successful_strokes++;
     return RENDERER_STATUS_OK;
 }
 
@@ -234,12 +369,42 @@ Renderer *Sdl_renderer_frontend(SdlRenderer *renderer)
     return renderer == &fake_sdl_renderer ? renderer->frontend : NULL;
 }
 
+RendererStatus Sdl_renderer_track_frame_result(
+    SdlRenderer *renderer, RendererStatus status)
+{
+    if (operation_result_pending) {
+        operation_result_pending = 0;
+        tracked_operation_results++;
+    } else if (status == RENDERER_STATUS_OK) {
+        preflight_attempts++;
+    }
+    if (renderer == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (renderer->frontend == NULL || !renderer->frontend->frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (renderer->frame_result == RENDERER_STATUS_OK
+        && status != RENDERER_STATUS_OK) {
+        renderer->frame_result = status;
+    }
+    return renderer->frame_result;
+}
+
+RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
+{
+    return renderer == NULL ? RENDERER_STATUS_INVALID_ARGUMENT
+                            : renderer->frame_result;
+}
+
 RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
 {
-    if (renderer != &fake_sdl_renderer || !fake_renderer.frame_active)
+    flush_attempts++;
+    operation_result_pending = 1;
+    record_paint_event(PAINT_EVENT_FLUSH);
+    if (renderer != &fake_sdl_renderer || renderer->frontend == NULL
+        || !renderer->frontend->frame_active) {
         return RENDERER_STATUS_INVALID_STATE;
-    preserving_flush_calls++;
-    return RENDERER_STATUS_OK;
+    }
+    return flush_result;
 }
 
 void warn(const char *format, ...)
@@ -419,25 +584,36 @@ static int check_dirty_refresh_and_semantic_paint(
     Uint32 changed;
     int attempts_before;
     int destroys_before;
-    int legacy_before;
     FakeTexture *texture;
     const RendererColor white = {255, 255, 255, 255};
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor green = {0, 144, 0, 255};
 
     changed = SDL_MapRGBA(window->surface->format, 101, 102, 103, 104);
     TEST_CHECK(SDL_FillRect(window->surface, &changed_rect, changed) == 0);
     attempts_before = texture_create_attempts;
     destroys_before = texture_destroy_calls;
-    fake_renderer.frame_active = 1;
+    reset_paint_frame();
     sdl_window_refresh(window);
     TEST_CHECK(texture_create_attempts == attempts_before);
     TEST_CHECK(texture_update_calls == 0);
     TEST_CHECK(texture_destroy_calls == destroys_before);
 
-    legacy_before = legacy_calls;
-    sdl_window_paint(window);
-    TEST_CHECK(sprite_calls == 1);
-    TEST_CHECK(blend_calls == 1);
-    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(sdl_window_paint(window, NULL) == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(tracked_operation_results == 4);
+    TEST_CHECK(paint_event_count == 4);
+    TEST_CHECK(paint_events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(paint_events[1] == PAINT_EVENT_SPRITE);
+    TEST_CHECK(paint_events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(paint_events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(sprite_attempts == 1);
+    TEST_CHECK(successful_sprites == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(last_sprite.texture == old_texture);
     TEST_CHECK(float_equal(last_sprite.left, 7.0f));
     TEST_CHECK(float_equal(last_sprite.top, 9.0f));
@@ -448,7 +624,23 @@ static int check_dirty_refresh_and_semantic_paint(
     TEST_CHECK(float_equal(last_sprite.u1, 5.0f / 8.0f));
     TEST_CHECK(float_equal(last_sprite.v1, 3.0f / 4.0f));
     TEST_CHECK(color_equal(last_sprite.tint, white));
-    TEST_CHECK(legacy_calls == legacy_before);
+    TEST_CHECK(last_stroke.point_count == 4);
+    TEST_CHECK(float_equal(last_stroke.points[0].x, 7.0f));
+    TEST_CHECK(float_equal(last_stroke.points[0].y, 14.0f));
+    TEST_CHECK(float_equal(last_stroke.points[1].x, 7.0f));
+    TEST_CHECK(float_equal(last_stroke.points[1].y, 9.0f));
+    TEST_CHECK(float_equal(last_stroke.points[2].x, 12.0f));
+    TEST_CHECK(float_equal(last_stroke.points[2].y, 9.0f));
+    TEST_CHECK(float_equal(last_stroke.points[3].x, 12.0f));
+    TEST_CHECK(float_equal(last_stroke.points[3].y, 14.0f));
+    TEST_CHECK(color_equal(last_stroke.colors[0], black));
+    TEST_CHECK(color_equal(last_stroke.colors[1], green));
+    TEST_CHECK(color_equal(last_stroke.colors[2], black));
+    TEST_CHECK(color_equal(last_stroke.colors[3], green));
+    TEST_CHECK(float_equal(last_stroke.width, 1.0f));
+    TEST_CHECK(last_stroke.closed == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(legacy_calls == 0);
     TEST_CHECK(texture_create_attempts == attempts_before);
     TEST_CHECK(texture_update_calls == 0);
     TEST_CHECK(texture_destroy_calls == destroys_before);
@@ -518,18 +710,192 @@ static int check_atomic_resize_and_retry(sdl_window_t *window,
     return 0;
 }
 
+static int check_paint_preconditions_and_sticky_preflight(
+    sdl_window_t *window)
+{
+    sdl_window_t unprepared = *window;
+
+    reset_paint_frame();
+    TEST_CHECK(sdl_window_paint(NULL, NULL)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(preflight_attempts == 0);
+    TEST_CHECK(paint_event_count == 0);
+
+    unprepared.renderer = NULL;
+    unprepared.texture = NULL;
+    reset_paint_frame();
+    TEST_CHECK(sdl_window_paint(&unprepared, NULL)
+               == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK(paint_event_count == 0);
+
+    reset_paint_frame();
+    fake_sdl_renderer.frontend = &foreign_renderer;
+    TEST_CHECK(sdl_window_paint(window, NULL)
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(paint_event_count == 0);
+
+    reset_paint_frame();
+    fake_renderer.frame_active = 0;
+    TEST_CHECK(sdl_window_paint(window, NULL)
+               == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(paint_event_count == 0);
+
+    reset_paint_frame();
+    fake_sdl_renderer.frame_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    TEST_CHECK(sdl_window_paint(window, NULL)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(tracked_operation_results == 0);
+    TEST_CHECK(paint_event_count == 0);
+    TEST_CHECK(legacy_calls == 0);
+    return 0;
+}
+
+static int check_paint_failures_and_preserving_flush(sdl_window_t *window)
+{
+    const RendererColor background = {35, 69, 103, 137};
+
+    reset_paint_frame();
+    blend_result = RENDERER_STATUS_BACKEND_ERROR;
+    TEST_CHECK(sdl_window_paint(window, &background)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(tracked_operation_results == 1);
+    TEST_CHECK(paint_event_count == 1);
+    TEST_CHECK(paint_events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(sprite_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+
+    reset_paint_frame();
+    fill_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    TEST_CHECK(sdl_window_paint(window, &background)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(tracked_operation_results == 2);
+    TEST_CHECK(paint_event_count == 2);
+    TEST_CHECK(paint_events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(paint_events[1] == PAINT_EVENT_FILL);
+    TEST_CHECK(successful_fills == 0);
+    TEST_CHECK(sprite_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+
+    reset_paint_frame();
+    sprite_result = RENDERER_STATUS_BACKEND_ERROR;
+    TEST_CHECK(sdl_window_paint(window, NULL)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(tracked_operation_results == 2);
+    TEST_CHECK(paint_event_count == 2);
+    TEST_CHECK(paint_events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(paint_events[1] == PAINT_EVENT_SPRITE);
+    TEST_CHECK(successful_sprites == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+
+    reset_paint_frame();
+    sprite_result = RENDERER_STATUS_BACKEND_ERROR;
+    flush_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    TEST_CHECK(sdl_window_paint(window, &background)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(tracked_operation_results == 4);
+    TEST_CHECK(paint_event_count == 4);
+    TEST_CHECK(paint_events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(paint_events[1] == PAINT_EVENT_FILL);
+    TEST_CHECK(paint_events[2] == PAINT_EVENT_SPRITE);
+    TEST_CHECK(paint_events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(successful_sprites == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+
+    reset_paint_frame();
+    stroke_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    TEST_CHECK(sdl_window_paint(window, NULL)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(tracked_operation_results == 4);
+    TEST_CHECK(paint_event_count == 4);
+    TEST_CHECK(paint_events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(paint_events[1] == PAINT_EVENT_SPRITE);
+    TEST_CHECK(paint_events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(paint_events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(successful_sprites == 1);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+
+    reset_paint_frame();
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    TEST_CHECK(sdl_window_paint(window, &background)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(tracked_operation_results == 5);
+    TEST_CHECK(paint_event_count == 5);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(successful_sprites == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+
+    flush_result = RENDERER_STATUS_OK;
+    TEST_CHECK(sdl_window_paint(window, &background)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(tracked_operation_results == 5);
+    TEST_CHECK(paint_event_count == 5);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(sprite_attempts == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(legacy_calls == 0);
+    return 0;
+}
+
 static int check_move_paint_and_exact_cleanup(sdl_window_t *window,
                                               RendererTexture *texture)
 {
+    const RendererColor background = {35, 69, 103, 137};
     int destroys_before;
-    int legacy_before;
 
     sdl_window_move(window, 20, 30);
-    fake_renderer.frame_active = 1;
-    legacy_before = legacy_calls;
-    sdl_window_paint(window);
-    TEST_CHECK(sprite_calls == 2);
-    TEST_CHECK(preserving_flush_calls == 2);
+    reset_paint_frame();
+    TEST_CHECK(sdl_window_paint(window, &background) == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(tracked_operation_results == 5);
+    TEST_CHECK(paint_event_count == 5);
+    TEST_CHECK(paint_events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(paint_events[1] == PAINT_EVENT_FILL);
+    TEST_CHECK(paint_events[2] == PAINT_EVENT_SPRITE);
+    TEST_CHECK(paint_events[3] == PAINT_EVENT_STROKE);
+    TEST_CHECK(paint_events[4] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(float_equal(last_fill.x, 20.0f));
+    TEST_CHECK(float_equal(last_fill.y, 30.0f));
+    TEST_CHECK(float_equal(last_fill.width, 7.0f));
+    TEST_CHECK(float_equal(last_fill.height, 7.0f));
+    TEST_CHECK(color_equal(last_fill.color, background));
+    TEST_CHECK(sprite_attempts == 1);
+    TEST_CHECK(successful_sprites == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
     TEST_CHECK(last_sprite.texture == texture);
     TEST_CHECK(float_equal(last_sprite.left, 20.0f));
     TEST_CHECK(float_equal(last_sprite.top, 30.0f));
@@ -537,7 +903,15 @@ static int check_move_paint_and_exact_cleanup(sdl_window_t *window,
     TEST_CHECK(float_equal(last_sprite.bottom, 35.0f));
     TEST_CHECK(float_equal(last_sprite.u1, 7.0f / 8.0f));
     TEST_CHECK(float_equal(last_sprite.v1, 5.0f / 8.0f));
-    TEST_CHECK(legacy_calls == legacy_before);
+    TEST_CHECK(float_equal(last_stroke.points[0].x, 20.0f));
+    TEST_CHECK(float_equal(last_stroke.points[0].y, 37.0f));
+    TEST_CHECK(float_equal(last_stroke.points[1].x, 20.0f));
+    TEST_CHECK(float_equal(last_stroke.points[1].y, 30.0f));
+    TEST_CHECK(float_equal(last_stroke.points[2].x, 27.0f));
+    TEST_CHECK(float_equal(last_stroke.points[2].y, 30.0f));
+    TEST_CHECK(float_equal(last_stroke.points[3].x, 27.0f));
+    TEST_CHECK(float_equal(last_stroke.points[3].y, 37.0f));
+    TEST_CHECK(legacy_calls == 0);
     fake_renderer.frame_active = 0;
 
     destroys_before = texture_destroy_calls;
@@ -583,6 +957,10 @@ int main(void)
             &window, refreshed_texture, &resized_texture) != 0) {
         goto cleanup;
     }
+    if (check_paint_preconditions_and_sticky_preflight(&window) != 0)
+        goto cleanup;
+    if (check_paint_failures_and_preserving_flush(&window) != 0)
+        goto cleanup;
     if (check_move_paint_and_exact_cleanup(
             &window, resized_texture) != 0) {
         goto cleanup;
