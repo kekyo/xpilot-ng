@@ -95,6 +95,8 @@ test_gl_legacy_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
 
 test_renderer_commands_SOURCES = test_renderer_commands.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
+test_renderer_commands_LDFLAGS = $(AM_LDFLAGS) \
+	-Wl,--wrap=malloc -Wl,--wrap=calloc
 
 test_renderer_geometry_SOURCES = test_renderer_geometry.c \
 	$(top_srcdir)/src/client/sdl/renderer.c

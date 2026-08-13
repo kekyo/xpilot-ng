@@ -290,6 +290,35 @@ RendererStatus Renderer_stroke_colored_path(
     const RendererColor *colors, size_t point_count, float width, int closed);
 
 /**
+ * Queue a screen-space stippled path as independent butt-capped quads.
+ *
+ * The path is transformed before its segments are measured and expanded, so
+ * @p width and @p factor are physical screen-pixel distances. Pattern bit zero
+ * is consumed first and every bit is repeated for @p factor pixels. Pattern
+ * phase starts at zero for each call, continues across every nonzero segment
+ * and the optional closing segment, and is not advanced by zero-length
+ * segments. Adjacent enabled pattern intervals within a segment are emitted
+ * as one run.
+ *
+ * @param renderer Renderer with an active frame.
+ * @param points Path positions, copied before this function returns.
+ * @param point_count Number of positions; must be at least two.
+ * @param width Positive stroke width in pixels.
+ * @param color Vertex color.
+ * @param closed Nonzero to append the final-to-first segment.
+ * @param factor Number of pixels represented by each pattern bit, from one
+ *        through 256 inclusive.
+ * @param pattern Sixteen-bit on/off pattern, consumed least-significant bit
+ *        first. Zero queues no command after validating all arguments.
+ * @return Operation status. A path whose possible output cannot fit one
+ *         backend command reports RENDERER_STATUS_OUT_OF_MEMORY.
+ */
+RendererStatus Renderer_stroke_stippled_path(
+    Renderer *renderer, const RendererPoint2D *points, size_t point_count,
+    float width, RendererColor color, int closed, unsigned int factor,
+    uint16_t pattern);
+
+/**
  * Queue a square point centered at the supplied position.
  *
  * @param renderer Renderer with an active frame.

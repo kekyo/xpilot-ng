@@ -3,6 +3,8 @@
 #include "renderer.h"
 #include "renderer_backend.h"
 
+#include <float.h>
+#include <limits.h>
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
@@ -192,6 +194,12 @@ static RendererVertex2D transform_vertex(RendererVertex2D vertex,
     vertex.x = transform.m[0] * x + transform.m[3] * y + transform.m[6];
     vertex.y = transform.m[1] * x + transform.m[4] * y + transform.m[7];
     return vertex;
+}
+
+static int transform_equal(RendererTransform2D left,
+                           RendererTransform2D right)
+{
+    return memcmp(left.m, right.m, sizeof(left.m)) == 0;
 }
 
 static int axis_aligned_quad_equal(const RendererVertex2D *vertices,
@@ -699,6 +707,290 @@ static int check_extremely_short_colored_stroke(void)
     return 0;
 }
 
+static int check_stippled_screen_geometry_and_phase(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor color = {30, 60, 90, 120};
+    const RendererTransform2D scaled = {
+        {2.0f, 0.0f, 0.0f,
+         0.0f, 3.0f, 0.0f,
+         4.0f, 5.0f, 1.0f}
+    };
+    const RendererTransform2D identity = {
+        {1.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f,
+         0.0f, 0.0f, 1.0f}
+    };
+    const RendererPoint2D points[] = {
+        {1.0f, 2.0f},
+        {3.5f, 2.0f},
+        {3.5f, 2.0f},
+        {3.5f, 4.0f}
+    };
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+    const captured_draw_t *draw;
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 40, 40, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_transform_2d(renderer, scaled)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, points, 4, 2.0f, color, 0, 2,
+                   UINT16_C(0x0005)) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 1);
+
+    draw = &backend.draws[0];
+    TEST_CHECK(transform_equal(draw->transform, identity));
+    TEST_CHECK(draw->vertex_count == 18);
+    TEST_CHECK(axis_aligned_quad_equal(draw->vertices,
+                                       6.0f, 10.0f, 8.0f, 12.0f, color));
+    TEST_CHECK(axis_aligned_quad_equal(draw->vertices + 6,
+                                       10.0f, 10.0f, 11.0f, 12.0f,
+                                       color));
+    TEST_CHECK(axis_aligned_quad_equal(draw->vertices + 12,
+                                       10.0f, 11.0f, 12.0f, 12.0f,
+                                       color));
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
+static int check_stippled_closing_phase_and_call_reset(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor color = {130, 140, 150, 160};
+    const RendererPoint2D square[] = {
+        {2.0f, 2.0f},
+        {4.0f, 2.0f},
+        {4.0f, 4.0f},
+        {2.0f, 4.0f}
+    };
+    const RendererPoint2D line[] = {
+        {0.0f, 6.0f}, {3.0f, 6.0f}
+    };
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 40, 40, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, square, 4, 2.0f, color, 1, 1,
+                   UINT16_C(0x0080)) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, line, 2, 2.0f, color, 0, 1,
+                   UINT16_C(0x0002)) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, line, 2, 2.0f, color, 0, 1,
+                   UINT16_C(0x0002)) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 3);
+
+    TEST_CHECK(backend.draws[0].vertex_count == 6);
+    TEST_CHECK(axis_aligned_quad_equal(backend.draws[0].vertices,
+                                       1.0f, 2.0f, 3.0f, 3.0f, color));
+    TEST_CHECK(backend.draws[1].vertex_count == 6);
+    TEST_CHECK(axis_aligned_quad_equal(backend.draws[1].vertices,
+                                       1.0f, 5.0f, 2.0f, 7.0f, color));
+    TEST_CHECK(backend.draws[2].vertex_count == 6);
+    TEST_CHECK(memcmp(backend.draws[1].vertices,
+                      backend.draws[2].vertices,
+                      6 * sizeof(*backend.draws[1].vertices)) == 0);
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
+static int check_stippled_enabled_run_merging(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor color = {180, 170, 160, 150};
+    const RendererPoint2D continuous[] = {
+        {0.0f, 10.0f}, {40.0f, 10.0f}
+    };
+    const RendererPoint2D cycle_boundary[] = {
+        {0.0f, 14.0f}, {34.0f, 14.0f}
+    };
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 50, 30, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, continuous, 2, 2.0f, color, 0, 1,
+                   UINT16_C(0xffff)) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, cycle_boundary, 2, 2.0f, color, 0, 2,
+                   UINT16_C(0x8001)) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 2);
+
+    TEST_CHECK(backend.draws[0].vertex_count == 6);
+    TEST_CHECK(axis_aligned_quad_equal(backend.draws[0].vertices,
+                                       0.0f, 9.0f, 40.0f, 11.0f, color));
+    TEST_CHECK(backend.draws[1].vertex_count == 12);
+    TEST_CHECK(axis_aligned_quad_equal(backend.draws[1].vertices,
+                                       0.0f, 13.0f, 2.0f, 15.0f, color));
+    TEST_CHECK(axis_aligned_quad_equal(backend.draws[1].vertices + 6,
+                                       30.0f, 13.0f, 34.0f, 15.0f,
+                                       color));
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
+static int check_stippled_noop_and_validation(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor color = {80, 90, 100, 110};
+    const RendererTransform2D overflowing_transform = {
+        {FLT_MAX, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f,
+         0.0f, 0.0f, 1.0f}
+    };
+    const RendererTransform2D identity = {
+        {1.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f,
+         0.0f, 0.0f, 1.0f}
+    };
+    const RendererPoint2D line[] = {{0.0f, 0.0f}, {1.0f, 0.0f}};
+    const RendererPoint2D duplicates[] = {
+        {2.0f, 2.0f}, {2.0f, 2.0f}, {2.0f, 2.0f}
+    };
+    const RendererPoint2D invalid_x[] = {{0.0f, 0.0f}, {NAN, 0.0f}};
+    const RendererPoint2D invalid_y[] = {{0.0f, 0.0f}, {0.0f, INFINITY}};
+    const RendererPoint2D overflowing_length[] = {
+        {-FLT_MAX, 0.0f}, {FLT_MAX, 0.0f}
+    };
+    const RendererPoint2D excessive_runs[] = {
+        {0.0f, 0.0f}, {1.0e9f, 0.0f}
+    };
+    const RendererPoint2D overflowing_transform_points[] = {
+        {2.0f, 0.0f}, {3.0f, 0.0f}
+    };
+    const RendererPoint2D overflowing_expansion[] = {
+        {0.0f, FLT_MAX}, {1.0f, FLT_MAX}
+    };
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 40, 40, black)
+               == RENDERER_STATUS_OK);
+
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, NULL, 2, 2.0f, color, 0, 1, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, line, 1, 2.0f, color, 0, 1, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, line, 2, 0.0f, color, 0, 1, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, line, 2, NAN, color, 0, 1, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, line, 2, INFINITY, color, 0, 1, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, line, 2, 2.0f, color, 0, 0, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, line, 2, 2.0f, color, 0, 257, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, invalid_x, 2, 2.0f, color, 0, 1, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, invalid_y, 2, 2.0f, color, 0, 1, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, line, SIZE_MAX, 2.0f, color, 0, 1,
+                   UINT16_C(0x0001)) == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, line, (size_t)INT_MAX / 6 + 2, 2.0f,
+                   color, 0, 1, UINT16_C(0x0001))
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, excessive_runs, 2, 2.0f, color, 0, 1,
+                   UINT16_C(0x5555))
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, overflowing_length, 2, 2.0f, color, 0, 1,
+                   UINT16_C(0x0001))
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, overflowing_expansion, 2, FLT_MAX, color, 0,
+                   1, UINT16_C(0x0001))
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+
+    TEST_CHECK(Renderer_set_transform_2d(renderer, overflowing_transform)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, overflowing_transform_points, 2, 2.0f,
+                   color, 0, 1, UINT16_C(0x0001))
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_set_transform_2d(renderer, identity)
+               == RENDERER_STATUS_OK);
+
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, line, 2, 2.0f, color, 0, 1, 0)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, line, 2, 2.0f, color, 0, 1,
+                   UINT16_C(0x8000)) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, duplicates, 3, 2.0f, color, 1, 1,
+                   UINT16_C(0x0001)) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 0);
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
+static int check_extremely_short_stippled_stroke(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor color = {20, 40, 60, 80};
+    const float smallest_positive = nextafterf(0.0f, 1.0f);
+    const RendererPoint2D points[] = {
+        {0.0f, 0.0f}, {smallest_positive, 0.0f}
+    };
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 20, 20, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, points, 2, 2.0f, color, 0, 256,
+                   UINT16_C(0x0001)) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(backend.draws[0].vertex_count == 6);
+    TEST_CHECK(vertex_equal(backend.draws[0].vertices[0],
+                            0.0f, -1.0f, 0.0f, 0.0f, color));
+    TEST_CHECK(vertex_equal(backend.draws[0].vertices[2],
+                            smallest_positive, 1.0f,
+                            0.0f, 0.0f, color));
+    TEST_CHECK(vertex_equal(backend.draws[0].vertices[5],
+                            0.0f, 1.0f, 0.0f, 0.0f, color));
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(check_quad_triangulation() == 0);
@@ -711,5 +1003,10 @@ int main(void)
     TEST_CHECK(check_colored_stroke_geometry() == 0);
     TEST_CHECK(check_colored_stroke_validation() == 0);
     TEST_CHECK(check_extremely_short_colored_stroke() == 0);
+    TEST_CHECK(check_stippled_screen_geometry_and_phase() == 0);
+    TEST_CHECK(check_stippled_closing_phase_and_call_reset() == 0);
+    TEST_CHECK(check_stippled_enabled_run_merging() == 0);
+    TEST_CHECK(check_stippled_noop_and_validation() == 0);
+    TEST_CHECK(check_extremely_short_stippled_stroke() == 0);
     return 0;
 }

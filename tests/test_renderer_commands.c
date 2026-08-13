@@ -4,10 +4,35 @@
 #include "renderer_backend.h"
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define MAX_DRAWS 16
 #define MAX_VERTICES 32
+
+static int fail_next_malloc;
+static int fail_next_calloc;
+
+void *__real_malloc(size_t size);
+void *__real_calloc(size_t count, size_t size);
+
+void *__wrap_malloc(size_t size)
+{
+    if (fail_next_malloc) {
+        fail_next_malloc = 0;
+        return NULL;
+    }
+    return __real_malloc(size);
+}
+
+void *__wrap_calloc(size_t count, size_t size)
+{
+    if (fail_next_calloc) {
+        fail_next_calloc = 0;
+        return NULL;
+    }
+    return __real_calloc(count, size);
+}
 
 typedef struct captured_draw {
     RendererTransform2D transform;
@@ -67,6 +92,44 @@ static int transform_equal(RendererTransform2D left,
                            RendererTransform2D right)
 {
     return memcmp(left.m, right.m, sizeof(left.m)) == 0;
+}
+
+static int axis_aligned_draw_equal(const captured_draw_t *draw,
+                                   float min_x, float min_y,
+                                   float max_x, float max_y,
+                                   RendererColor color)
+{
+    unsigned int corner_mask = 0;
+    size_t index;
+
+    if (draw->vertex_count != 6 || draw->texture != NULL
+            || draw->mesh != NULL) {
+        return 0;
+    }
+    for (index = 0; index < draw->vertex_count; index++) {
+        const RendererVertex2D *vertex = &draw->vertices[index];
+        int x_side;
+        int y_side;
+
+        if (vertex->x == min_x)
+            x_side = 0;
+        else if (vertex->x == max_x)
+            x_side = 1;
+        else
+            return 0;
+        if (vertex->y == min_y)
+            y_side = 0;
+        else if (vertex->y == max_y)
+            y_side = 1;
+        else
+            return 0;
+        if (vertex->u != 0.0f || vertex->v != 0.0f
+                || !color_equal(vertex->color, color)) {
+            return 0;
+        }
+        corner_mask |= 1U << (y_side * 2 + x_side);
+    }
+    return corner_mask == 0x0fU;
 }
 
 static RendererStatus fake_begin_frame(void *context, int width, int height,
@@ -903,6 +966,150 @@ static int check_flush_failure_does_not_redeliver_draws(void)
     return 0;
 }
 
+static int check_stippled_command_state_copy_order_and_retry(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor first_color = {10, 20, 30, 40};
+    const RendererColor second_color = {50, 60, 70, 80};
+    const RendererTransform2D transform = {
+        {2.0f, 0.0f, 0.0f,
+         0.0f, 3.0f, 0.0f,
+         4.0f, 5.0f, 1.0f}
+    };
+    const RendererTransform2D identity = {
+        {1.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f,
+         0.0f, 0.0f, 1.0f}
+    };
+    const RendererRect scissor = {2, 3, 14, 12};
+    RendererPoint2D first_points[] = {{1.0f, 2.0f}, {4.0f, 2.0f}};
+    RendererPoint2D second_points[] = {{1.0f, 5.0f}, {4.0f, 5.0f}};
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 32, 32, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_transform_2d(renderer, transform)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_scissor(renderer, &scissor)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, first_points, 2, 2.0f, first_color, 0, 1,
+                   UINT16_C(0xffff)) == RENDERER_STATUS_OK);
+
+    first_points[0].x = 99.0f;
+    first_points[1].x = 99.0f;
+    TEST_CHECK(Renderer_set_blend(renderer, RENDERER_BLEND_ADDITIVE)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_scissor(renderer, NULL)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, second_points, 2, 2.0f, second_color, 0, 1,
+                   UINT16_C(0xffff)) == RENDERER_STATUS_OK);
+    second_points[0].x = 88.0f;
+    second_points[1].x = 88.0f;
+
+    backend.fail_draw_attempt = 2;
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(backend.draw_attempt_count == 2);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(axis_aligned_draw_equal(&backend.draws[0],
+                                       6.0f, 10.0f, 12.0f, 12.0f,
+                                       first_color));
+    TEST_CHECK(transform_equal(backend.draws[0].transform, identity));
+    TEST_CHECK(backend.draws[0].blend == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(backend.draws[0].scissor_enabled);
+    TEST_CHECK(rect_equal(backend.draws[0].scissor, scissor));
+    TEST_CHECK(backend.flush_count == 0);
+
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, first_points, 2, 2.0f, first_color, 0, 1,
+                   UINT16_C(0xffff)) == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_attempt_count == 3);
+    TEST_CHECK(backend.draw_count == 2);
+    TEST_CHECK(axis_aligned_draw_equal(&backend.draws[1],
+                                       6.0f, 19.0f, 12.0f, 21.0f,
+                                       second_color));
+    TEST_CHECK(transform_equal(backend.draws[1].transform, identity));
+    TEST_CHECK(backend.draws[1].blend == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(!backend.draws[1].scissor_enabled);
+    TEST_CHECK(backend.flush_count == 1);
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
+static int check_stippled_allocation_failure_is_atomic(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor color = {90, 100, 110, 120};
+    const RendererPoint2D first[] = {{1.0f, 2.0f}, {4.0f, 2.0f}};
+    const RendererPoint2D second[] = {{1.0f, 5.0f}, {4.0f, 5.0f}};
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 32, 32, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, first, 2, 2.0f, color, 0, 1,
+                   UINT16_C(0xffff)) == RENDERER_STATUS_OK);
+
+    fail_next_malloc = 1;
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, second, 2, 2.0f, color, 0, 1,
+                   UINT16_C(0xffff)) == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(fail_next_malloc == 0);
+    TEST_CHECK(backend.draw_attempt_count == 0);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(axis_aligned_draw_equal(&backend.draws[0],
+                                       1.0f, 1.0f, 4.0f, 3.0f, color));
+
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, first, 2, 2.0f, color, 0, 1,
+                   UINT16_C(0xffff)) == RENDERER_STATUS_OK);
+    fail_next_calloc = 1;
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, second, 2, 2.0f, color, 0, 1,
+                   UINT16_C(0xffff)) == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(fail_next_calloc == 0);
+    TEST_CHECK(backend.draw_attempt_count == 1);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 2);
+    TEST_CHECK(axis_aligned_draw_equal(&backend.draws[1],
+                                       1.0f, 1.0f, 4.0f, 3.0f, color));
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
+static int check_stippled_rejects_inactive_renderer(void)
+{
+    const RendererColor color = {90, 100, 110, 120};
+    const RendererPoint2D points[] = {{1.0f, 2.0f}, {4.0f, 2.0f}};
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   NULL, points, 2, 2.0f, color, 0, 1,
+                   UINT16_C(0xffff)) == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_stroke_stippled_path(
+                   renderer, points, 2, 2.0f, color, 0, 1,
+                   UINT16_C(0xffff)) == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK(backend.draw_attempt_count == 0);
+
+    Renderer_destroy(renderer);
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(check_color_conversion() == 0);
@@ -916,5 +1123,8 @@ int main(void)
     TEST_CHECK(check_textured_triangle_state_and_retry() == 0);
     TEST_CHECK(check_textured_mesh_state_and_retry() == 0);
     TEST_CHECK(check_flush_failure_does_not_redeliver_draws() == 0);
+    TEST_CHECK(check_stippled_command_state_copy_order_and_retry() == 0);
+    TEST_CHECK(check_stippled_allocation_failure_is_atomic() == 0);
+    TEST_CHECK(check_stippled_rejects_inactive_renderer() == 0);
     return 0;
 }

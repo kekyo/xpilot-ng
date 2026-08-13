@@ -203,6 +203,8 @@ am_test_renderer_commands_OBJECTS = test_renderer_commands.$(OBJEXT) \
 	renderer.$(OBJEXT)
 test_renderer_commands_OBJECTS = $(am_test_renderer_commands_OBJECTS)
 test_renderer_commands_LDADD = $(LDADD)
+test_renderer_commands_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(test_renderer_commands_LDFLAGS) $(LDFLAGS) -o $@
 am_test_renderer_geometry_OBJECTS = test_renderer_geometry.$(OBJEXT) \
 	renderer.$(OBJEXT)
 test_renderer_geometry_OBJECTS = $(am_test_renderer_geometry_OBJECTS)
@@ -892,6 +894,8 @@ test_gl_legacy_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
 
 test_renderer_commands_SOURCES = test_renderer_commands.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
+test_renderer_commands_LDFLAGS = $(AM_LDFLAGS) \
+	-Wl,--wrap=malloc -Wl,--wrap=calloc
 
 test_renderer_geometry_SOURCES = test_renderer_geometry.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
@@ -1123,7 +1127,7 @@ test-radar-renderer$(EXEEXT): $(test_radar_renderer_OBJECTS) $(test_radar_render
 
 test-renderer-commands$(EXEEXT): $(test_renderer_commands_OBJECTS) $(test_renderer_commands_DEPENDENCIES) $(EXTRA_test_renderer_commands_DEPENDENCIES)
 	@rm -f test-renderer-commands$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(test_renderer_commands_OBJECTS) $(test_renderer_commands_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(test_renderer_commands_LINK) $(test_renderer_commands_OBJECTS) $(test_renderer_commands_LDADD) $(LIBS)
 
 test-renderer-geometry$(EXEEXT): $(test_renderer_geometry_OBJECTS) $(test_renderer_geometry_DEPENDENCIES) $(EXTRA_test_renderer_geometry_DEPENDENCIES)
 	@rm -f test-renderer-geometry$(EXEEXT)

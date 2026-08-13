@@ -651,6 +651,378 @@ RendererStatus Renderer_stroke_colored_path(
                              NULL, closed);
 }
 
+typedef struct StippleSegment {
+    RendererPoint2D first;
+    RendererPoint2D second;
+    float dx;
+    float dy;
+    float length;
+} StippleSegment;
+
+static int Stipple_bit_enabled(uint16_t pattern, unsigned int bit)
+{
+    return (pattern & (uint16_t)(UINT16_C(1) << bit)) != 0;
+}
+
+static double Stipple_advance_phase(double phase, float length,
+                                    double cycle_length)
+{
+    double length_phase = fmod((double)length, cycle_length);
+
+    return fmod(phase + length_phase, cycle_length);
+}
+
+static RendererStatus Stipple_prepare_segment(
+    RendererTransform2D transform, RendererPoint2D first,
+    RendererPoint2D second, StippleSegment *segment)
+{
+    if (!isfinite(first.x) || !isfinite(first.y)
+        || !isfinite(second.x) || !isfinite(second.y)) {
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    segment->first = Transform_point(transform, first);
+    segment->second = Transform_point(transform, second);
+    if (!isfinite(segment->first.x) || !isfinite(segment->first.y)
+        || !isfinite(segment->second.x) || !isfinite(segment->second.y)) {
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    segment->dx = segment->second.x - segment->first.x;
+    segment->dy = segment->second.y - segment->first.y;
+    if (segment->dx == 0.0f && segment->dy == 0.0f) {
+        segment->length = 0.0f;
+        return RENDERER_STATUS_OK;
+    }
+    segment->length = hypotf(segment->dx, segment->dy);
+    if (!isfinite(segment->length) || segment->length <= 0.0f)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Stipple_count_segment_runs(
+    uint16_t pattern, unsigned int factor, double phase, float length,
+    size_t maximum_runs, size_t *run_count)
+{
+    double cycle_length = (double)factor * 16.0;
+    unsigned int first_bit = (unsigned int)(phase / (double)factor);
+    unsigned int bit;
+
+    if (Stipple_bit_enabled(pattern, first_bit)) {
+        if (*run_count == maximum_runs)
+            return RENDERER_STATUS_OUT_OF_MEMORY;
+        (*run_count)++;
+    }
+
+    for (bit = 0; bit < 16; bit++) {
+        unsigned int previous_bit = (bit + 15) % 16;
+        double boundary;
+        double distance;
+        double occurrences;
+
+        if (!Stipple_bit_enabled(pattern, bit)
+            || Stipple_bit_enabled(pattern, previous_bit)) {
+            continue;
+        }
+        boundary = (double)bit * (double)factor;
+        distance = boundary - phase;
+        if (distance <= 0.0)
+            distance += cycle_length;
+        if (distance >= (double)length)
+            continue;
+
+        occurrences = ceil(((double)length - distance) / cycle_length);
+        if (!isfinite(occurrences)
+            || occurrences > (double)(maximum_runs - *run_count)) {
+            return RENDERER_STATUS_OUT_OF_MEMORY;
+        }
+        *run_count += (size_t)occurrences;
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Stipple_count_path_runs(
+    Renderer *renderer, const RendererPoint2D *points,
+    size_t point_count, size_t segment_count, int closed,
+    unsigned int factor, uint16_t pattern, size_t maximum_runs,
+    size_t *run_count)
+{
+    double cycle_length = (double)factor * 16.0;
+    double phase = 0.0;
+    size_t segment_index;
+
+    *run_count = 0;
+    for (segment_index = 0; segment_index < segment_count;
+         segment_index++) {
+        size_t second_index = segment_index + 1;
+        StippleSegment segment;
+        RendererStatus status;
+
+        if (second_index == point_count) {
+            if (!closed)
+                return RENDERER_STATUS_INVALID_ARGUMENT;
+            second_index = 0;
+        }
+        status = Stipple_prepare_segment(renderer->transform,
+                                         points[segment_index],
+                                         points[second_index], &segment);
+        if (status != RENDERER_STATUS_OK)
+            return status;
+        if (segment.length == 0.0f)
+            continue;
+        status = Stipple_count_segment_runs(
+            pattern, factor, phase, segment.length,
+            maximum_runs, run_count);
+        if (status != RENDERER_STATUS_OK)
+            return status;
+        phase = Stipple_advance_phase(phase, segment.length, cycle_length);
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Stipple_append_run(
+    const StippleSegment *segment, double start_distance,
+    double end_distance, float half_width, RendererColor color,
+    RendererVertex2D *vertices, size_t maximum_runs, size_t *run_count)
+{
+    RendererPoint2D start;
+    RendererPoint2D end;
+    float direction_x = segment->dx / segment->length;
+    float direction_y = segment->dy / segment->length;
+    float normal_x = -direction_y * half_width;
+    float normal_y = direction_x * half_width;
+    float start_minus_x;
+    float start_minus_y;
+    float start_plus_x;
+    float start_plus_y;
+    float end_minus_x;
+    float end_minus_y;
+    float end_plus_x;
+    float end_plus_y;
+    size_t vertex_index;
+
+    if (*run_count >= maximum_runs
+        || !isfinite(direction_x) || !isfinite(direction_y)
+        || !isfinite(normal_x) || !isfinite(normal_y)) {
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    if (start_distance == 0.0) {
+        start = segment->first;
+    } else {
+        start.x = segment->first.x
+            + direction_x * (float)start_distance;
+        start.y = segment->first.y
+            + direction_y * (float)start_distance;
+    }
+    if (end_distance == (double)segment->length) {
+        end = segment->second;
+    } else {
+        end.x = segment->first.x + direction_x * (float)end_distance;
+        end.y = segment->first.y + direction_y * (float)end_distance;
+    }
+    start_minus_x = start.x - normal_x;
+    start_minus_y = start.y - normal_y;
+    start_plus_x = start.x + normal_x;
+    start_plus_y = start.y + normal_y;
+    end_minus_x = end.x - normal_x;
+    end_minus_y = end.y - normal_y;
+    end_plus_x = end.x + normal_x;
+    end_plus_y = end.y + normal_y;
+    if (!isfinite(start.x) || !isfinite(start.y)
+        || !isfinite(end.x) || !isfinite(end.y)
+        || !isfinite(start_minus_x) || !isfinite(start_minus_y)
+        || !isfinite(start_plus_x) || !isfinite(start_plus_y)
+        || !isfinite(end_minus_x) || !isfinite(end_minus_y)
+        || !isfinite(end_plus_x) || !isfinite(end_plus_y)) {
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+
+    if (vertices != NULL) {
+        vertex_index = *run_count * 6;
+        Set_vertex(&vertices[vertex_index++], start_minus_x, start_minus_y,
+                   0.0f, 0.0f, color);
+        Set_vertex(&vertices[vertex_index++], end_minus_x, end_minus_y,
+                   0.0f, 0.0f, color);
+        Set_vertex(&vertices[vertex_index++], end_plus_x, end_plus_y,
+                   0.0f, 0.0f, color);
+        Set_vertex(&vertices[vertex_index++], start_minus_x, start_minus_y,
+                   0.0f, 0.0f, color);
+        Set_vertex(&vertices[vertex_index++], end_plus_x, end_plus_y,
+                   0.0f, 0.0f, color);
+        Set_vertex(&vertices[vertex_index], start_plus_x, start_plus_y,
+                   0.0f, 0.0f, color);
+    }
+    (*run_count)++;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Stipple_process_segment(
+    const StippleSegment *segment, double phase, unsigned int factor,
+    uint16_t pattern, float half_width, RendererColor color,
+    RendererVertex2D *vertices, size_t maximum_runs, size_t *run_count)
+{
+    double cycle_length = (double)factor * 16.0;
+    double cursor = 0.0;
+    double segment_phase = phase;
+    double run_start = 0.0;
+    int run_active = 0;
+
+    if (pattern == 0)
+        return RENDERER_STATUS_OK;
+    if (pattern == UINT16_MAX) {
+        return Stipple_append_run(
+            segment, 0.0, (double)segment->length, half_width, color,
+            vertices, maximum_runs, run_count);
+    }
+
+    while (cursor < (double)segment->length) {
+        unsigned int bit =
+            (unsigned int)(segment_phase / (double)factor);
+        double bit_end = (double)(bit + 1) * (double)factor;
+        double to_boundary = bit_end - segment_phase;
+        double remaining = (double)segment->length - cursor;
+        int enabled = Stipple_bit_enabled(pattern, bit);
+
+        if (!isfinite(to_boundary) || to_boundary <= 0.0)
+            return RENDERER_STATUS_INVALID_ARGUMENT;
+        if (enabled && !run_active) {
+            run_start = cursor;
+            run_active = 1;
+        }
+
+        if (to_boundary >= remaining) {
+            cursor = (double)segment->length;
+        } else {
+            double next_cursor = cursor + to_boundary;
+
+            if (next_cursor <= cursor)
+                return RENDERER_STATUS_INVALID_ARGUMENT;
+            cursor = next_cursor;
+            segment_phase = bit_end;
+            if (segment_phase >= cycle_length)
+                segment_phase = 0.0;
+        }
+
+        if (run_active) {
+            int run_finished = cursor == (double)segment->length;
+
+            if (!run_finished) {
+                unsigned int next_bit =
+                    (unsigned int)(segment_phase / (double)factor);
+
+                run_finished = !Stipple_bit_enabled(pattern, next_bit);
+            }
+            if (run_finished) {
+                RendererStatus status = Stipple_append_run(
+                    segment, run_start, cursor, half_width, color,
+                    vertices, maximum_runs, run_count);
+
+                if (status != RENDERER_STATUS_OK)
+                    return status;
+                run_active = 0;
+            }
+        }
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Stipple_process_path(
+    Renderer *renderer, const RendererPoint2D *points,
+    size_t point_count, size_t segment_count, int closed,
+    float half_width, RendererColor color, unsigned int factor,
+    uint16_t pattern, RendererVertex2D *vertices, size_t expected_runs)
+{
+    double cycle_length = (double)factor * 16.0;
+    double phase = 0.0;
+    size_t run_count = 0;
+    size_t segment_index;
+
+    for (segment_index = 0; segment_index < segment_count;
+         segment_index++) {
+        size_t second_index = segment_index + 1;
+        StippleSegment segment;
+        RendererStatus status;
+
+        if (second_index == point_count) {
+            if (!closed)
+                return RENDERER_STATUS_INVALID_ARGUMENT;
+            second_index = 0;
+        }
+        status = Stipple_prepare_segment(renderer->transform,
+                                         points[segment_index],
+                                         points[second_index], &segment);
+        if (status != RENDERER_STATUS_OK)
+            return status;
+        if (segment.length == 0.0f)
+            continue;
+        status = Stipple_process_segment(
+            &segment, phase, factor, pattern, half_width, color,
+            vertices, expected_runs, &run_count);
+        if (status != RENDERER_STATUS_OK)
+            return status;
+        phase = Stipple_advance_phase(phase, segment.length, cycle_length);
+    }
+    return run_count == expected_runs ? RENDERER_STATUS_OK
+                                      : RENDERER_STATUS_INVALID_ARGUMENT;
+}
+
+RendererStatus Renderer_stroke_stippled_path(
+    Renderer *renderer, const RendererPoint2D *points, size_t point_count,
+    float width, RendererColor color, int closed, unsigned int factor,
+    uint16_t pattern)
+{
+    RendererStatus status = Check_draw_state(renderer);
+    RendererVertex2D *vertices;
+    size_t maximum_vertex_count;
+    size_t maximum_runs;
+    size_t segment_count;
+    size_t run_count;
+    size_t vertex_count;
+    float half_width;
+
+    if (status != RENDERER_STATUS_OK)
+        return status;
+    if (points == NULL || point_count < 2 || !isfinite(width)
+        || width <= 0.0f || factor == 0 || factor > 256) {
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+
+    maximum_vertex_count = SIZE_MAX / sizeof(*vertices);
+    if (maximum_vertex_count > (size_t)INT_MAX)
+        maximum_vertex_count = (size_t)INT_MAX;
+    maximum_runs = maximum_vertex_count / 6;
+    segment_count = point_count - 1 + (closed != 0);
+    if (segment_count > maximum_runs)
+        return RENDERER_STATUS_OUT_OF_MEMORY;
+
+    status = Stipple_count_path_runs(
+        renderer, points, point_count, segment_count, closed != 0,
+        factor, pattern, maximum_runs, &run_count);
+    if (status != RENDERER_STATUS_OK)
+        return status;
+    if (run_count == 0)
+        return RENDERER_STATUS_OK;
+
+    half_width = width * 0.5f;
+    status = Stipple_process_path(
+        renderer, points, point_count, segment_count, closed != 0,
+        half_width, color, factor, pattern, NULL, run_count);
+    if (status != RENDERER_STATUS_OK)
+        return status;
+
+    vertex_count = run_count * 6;
+    vertices = malloc(vertex_count * sizeof(*vertices));
+    if (vertices == NULL)
+        return RENDERER_STATUS_OUT_OF_MEMORY;
+    status = Stipple_process_path(
+        renderer, points, point_count, segment_count, closed != 0,
+        half_width, color, factor, pattern, vertices, run_count);
+    if (status != RENDERER_STATUS_OK) {
+        free(vertices);
+        return status;
+    }
+    return Queue_command(renderer, vertices, vertex_count, NULL, NULL,
+                         identity_transform);
+}
+
 RendererStatus Renderer_draw_point(Renderer *renderer, float x, float y,
                                    float size, RendererColor color)
 {
