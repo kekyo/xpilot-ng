@@ -1074,68 +1074,178 @@ void Gui_paint_setup_neg_grav(int x, int y)
     Image_paint(IMG_MINUSGRAVITY, x, y, 0, whiteRGBA);
 }
 
+static void Set_semantic_map_vertex(
+    RendererVertex2D *vertex, RendererPoint2D point, RendererColor color);
+
+typedef struct SemanticDirectionalGravityGeometry {
+    RendererVertex2D vertices[18];
+} SemanticDirectionalGravityGeometry;
+
+static RendererStatus Build_semantic_directional_gravity_geometry(
+    int x, int y, int dir, SemanticDirectionalGravityGeometry *geometry)
+{
+    static const unsigned char section_indices[18] = {
+	0, 0, 1, 0, 1, 1,
+	1, 1, 2, 1, 2, 2,
+	2, 2, 3, 2, 3, 3
+    };
+    static const unsigned char side_indices[18] = {
+	0, 1, 1, 0, 1, 0,
+	0, 1, 1, 0, 1, 0,
+	0, 1, 1, 0, 1, 0
+    };
+    const int size = BLOCK_SZ;
+    long phase;
+    int first_phase;
+    int second_phase;
+    int swap;
+    int64_t section_coordinates[4][2][2];
+    RendererPoint2D section_points[4][2];
+    uint32_t base_color;
+    uint32_t section_colors[4];
+    size_t section;
+    size_t side;
+    size_t vertex_index;
+    RendererStatus status;
+
+    if (geometry == NULL || dir < 0 || dir > 3 || size <= 0)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    phase = loops % (long)size;
+    if (phase < 0)
+	phase += size;
+    first_phase = (int)phase;
+    second_phase = first_phase + size / 2;
+    if (second_phase >= size)
+	second_phase -= size;
+
+    base_color = (uint32_t)redRGBA & UINT32_C(0xffffff00);
+    if (first_phase < second_phase) {
+	section_colors[0] = base_color
+	    | (uint32_t)(first_phase * 128 / (size / 2));
+	section_colors[1] = base_color;
+	section_colors[2] = base_color | UINT32_C(128);
+    } else {
+	section_colors[0] = base_color
+	    | (uint32_t)((size - first_phase) * 128 / (size / 2));
+	section_colors[1] = base_color | UINT32_C(128);
+	section_colors[2] = base_color;
+	swap = first_phase;
+	first_phase = second_phase;
+	second_phase = swap;
+    }
+    section_colors[3] = section_colors[0];
+
+    for (section = 0; section < 4; section++) {
+	int offset = section == 0 ? 0
+	    : section == 1 ? first_phase
+	    : section == 2 ? second_phase : size;
+	int64_t low_x = (int64_t)x;
+	int64_t low_y = (int64_t)y;
+	int64_t high_x = low_x + (int64_t)size;
+	int64_t high_y = low_y + (int64_t)size;
+
+	switch (dir) {
+	case 0: /* up */
+	    low_y += offset;
+	    high_y = low_y;
+	    break;
+	case 1: /* right */
+	    low_x += offset;
+	    high_x = low_x;
+	    break;
+	case 2: /* down */
+	    high_y -= offset;
+	    low_y = high_y;
+	    break;
+	case 3: /* left */
+	    high_x -= offset;
+	    low_x = high_x;
+	    break;
+	}
+	section_coordinates[section][0][0] = low_x;
+	section_coordinates[section][0][1] = low_y;
+	section_coordinates[section][1][0] = high_x;
+	section_coordinates[section][1][1] = high_y;
+    }
+
+    for (section = 0; section < 4; section++) {
+	for (side = 0; side < 2; side++) {
+	    status = Set_semantic_world_line_point(
+		&section_points[section][side],
+		section_coordinates[section][side][0],
+		section_coordinates[section][side][1]);
+	    if (status != RENDERER_STATUS_OK)
+		return status;
+	}
+	if (!Semantic_world_line_extent_preserved(
+		section_coordinates[section][0][0],
+		section_coordinates[section][1][0],
+		section_points[section][0].x,
+		section_points[section][1].x)
+	    || !Semantic_world_line_extent_preserved(
+		section_coordinates[section][0][1],
+		section_coordinates[section][1][1],
+		section_points[section][0].y,
+		section_points[section][1].y)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+    }
+    for (section = 0; section < 3; section++) {
+	for (side = 0; side < 2; side++) {
+	    /* Equal animation sections are intentional at phase boundaries. */
+	    if (!Semantic_world_line_extent_preserved(
+		    section_coordinates[section][side][0],
+		    section_coordinates[section + 1][side][0],
+		    section_points[section][side].x,
+		    section_points[section + 1][side].x)
+		|| !Semantic_world_line_extent_preserved(
+		    section_coordinates[section][side][1],
+		    section_coordinates[section + 1][side][1],
+		    section_points[section][side].y,
+		    section_points[section + 1][side].y)) {
+		return RENDERER_STATUS_INVALID_ARGUMENT;
+	    }
+	}
+    }
+
+    for (vertex_index = 0;
+	 vertex_index < NELEM(geometry->vertices); vertex_index++) {
+	section = section_indices[vertex_index];
+	side = side_indices[vertex_index];
+	Set_semantic_map_vertex(
+	    &geometry->vertices[vertex_index], section_points[section][side],
+	    Renderer_color_from_rgba32(section_colors[section]));
+    }
+    return RENDERER_STATUS_OK;
+}
+
 static void paint_dir_grav(int x, int y, int dir)
 {
-    const int sz = BLOCK_SZ;
-    int cb, c0, c1, c2, p1, p2, swp;
+    SemanticWorldLineBatch batch;
+    SemanticDirectionalGravityGeometry geometry;
+    SdlRenderer *sdl_renderer;
+    RendererStatus status;
 
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+    status = Build_semantic_directional_gravity_geometry(
+	x, y, dir, &geometry);
+    if (status != RENDERER_STATUS_OK) {
+	sdl_renderer = Get_sdl_renderer();
+	if (sdl_renderer != NULL) {
+	    (void)Sdl_renderer_track_frame_result(sdl_renderer, status);
+	}
 	return;
-
-    cb = redRGBA - 255;
-    p1 = loops % sz;
-    p2 = (loops + sz / 2) % sz;
-
-    if (p1 < p2) {
-	c0 = cb + p1 * 128 / (sz / 2);
-	c1 = cb;
-	c2 = cb + 128;
-    } else {
-	c0 = cb + (sz - p1) * 128 / (sz / 2);
-	c1 = cb + 128;
-	c2 = cb;
-	swp = p1; p1 = p2; p2 = swp;
     }
-
-    glEnable(GL_BLEND);
-
-#define GRAV(x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,x7,y7) \
-    glBegin(GL_QUAD_STRIP);\
-    set_alphacolor(c0); glVertex2i(x+x0,y+y0); glVertex2i(x+x1,y+y1);\
-    set_alphacolor(c1); glVertex2i(x+x2,y+y2); glVertex2i(x+x3,y+y3);\
-    set_alphacolor(c2); glVertex2i(x+x4,y+y4); glVertex2i(x+x5,y+y5);\
-    set_alphacolor(c0); glVertex2i(x+x6,y+y6); glVertex2i(x+x7,y+y7);\
-    glEnd();
-
-    switch(dir) {
-    case 0: /* up */
-	GRAV( 0,  0, sz,  0,
-	      0, p1, sz, p1,
-	      0, p2, sz, p2,
-	      0, sz, sz, sz);
-	break;
-    case 1: /* right */
-	GRAV( 0,  0,  0, sz,
-	     p1,  0, p1, sz,
-	     p2,  0, p2, sz,
-	     sz,  0, sz, sz);
-	break;
-    case 2: /* down */
-	GRAV( 0,    sz, sz,    sz,
-	      0, sz-p1, sz, sz-p1,
-	      0, sz-p2, sz, sz-p2,
-	      0,     0, sz,     0);
-	break;
-    case 3: /* left */
-	GRAV(   sz, 0,    sz, sz,
-	     sz-p1, 0, sz-p1, sz,
-	     sz-p2, 0, sz-p2, sz,
-	        0,  0,     0, sz);
-	break;
+    if (Begin_semantic_world_line_batch(&batch) != RENDERER_STATUS_OK)
+	return;
+    status = Renderer_set_blend(batch.renderer, RENDERER_BLEND_ALPHA);
+    if (Track_semantic_world_line_batch(&batch, status)
+	!= RENDERER_STATUS_OK) {
+	return;
     }
-#undef GRAV
-
-    glDisable(GL_BLEND);
+    status = Renderer_draw_triangles(
+	batch.renderer, NULL, geometry.vertices, NELEM(geometry.vertices));
+    (void)Accept_semantic_world_line_command(&batch, status);
+    (void)Finish_semantic_world_line_batch(&batch);
 }
 
 void Gui_paint_setup_up_grav(int x, int y)

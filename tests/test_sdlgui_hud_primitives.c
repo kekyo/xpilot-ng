@@ -269,6 +269,7 @@ double fuelCritical;
 double fuelWarning;
 double fuelNotify;
 long loopsSlow;
+long loops;
 
 static int bms_ball_state;
 static int bms_cover_state;
@@ -470,6 +471,82 @@ static int check_draw(
     return 0;
 }
 
+static int check_directional_gravity_draw(
+    int draw_index, const float section_points[4][2][2],
+    const uint32_t section_colors[4])
+{
+    static const unsigned char section_indices[18] = {
+        0, 0, 1, 0, 1, 1,
+        1, 1, 2, 1, 2, 2,
+        2, 2, 3, 2, 3, 3
+    };
+    static const unsigned char side_indices[18] = {
+        0, 1, 1, 0, 1, 0,
+        0, 1, 1, 0, 1, 0,
+        0, 1, 1, 0, 1, 0
+    };
+    const FakeDraw *draw;
+    size_t vertex_index;
+
+    TEST_CHECK(draw_index >= 0);
+    TEST_CHECK(draw_index < successful_draws);
+    draw = &draws[draw_index];
+    TEST_CHECK(draw->texture == NULL);
+    TEST_CHECK(draw->vertex_count == NELEM(section_indices));
+    TEST_CHECK(draw->blend == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(draw->transform_token == 71);
+    TEST_CHECK(draw->scissor_token == 83);
+    for (vertex_index = 0; vertex_index < NELEM(section_indices);
+         vertex_index++) {
+        size_t section = section_indices[vertex_index];
+        size_t side = side_indices[vertex_index];
+
+        TEST_CHECK(draw->vertices[vertex_index].x
+                   == section_points[section][side][0]);
+        TEST_CHECK(draw->vertices[vertex_index].y
+                   == section_points[section][side][1]);
+        TEST_CHECK(draw->vertices[vertex_index].u == 0.0f);
+        TEST_CHECK(draw->vertices[vertex_index].v == 0.0f);
+        TEST_CHECK(color_equal(
+            draw->vertices[vertex_index].color,
+            Renderer_color_from_rgba32(section_colors[section])));
+    }
+    return 0;
+}
+
+static int check_directional_gravity_draws_equal(
+    int first_index, int second_index)
+{
+    const FakeDraw *first;
+    const FakeDraw *second;
+    size_t vertex_index;
+
+    TEST_CHECK(first_index >= 0 && first_index < successful_draws);
+    TEST_CHECK(second_index >= 0 && second_index < successful_draws);
+    first = &draws[first_index];
+    second = &draws[second_index];
+    TEST_CHECK(first->texture == second->texture);
+    TEST_CHECK(first->vertex_count == second->vertex_count);
+    TEST_CHECK(first->blend == second->blend);
+    TEST_CHECK(first->transform_token == second->transform_token);
+    TEST_CHECK(first->scissor_token == second->scissor_token);
+    for (vertex_index = 0; vertex_index < first->vertex_count;
+         vertex_index++) {
+        TEST_CHECK(first->vertices[vertex_index].x
+                   == second->vertices[vertex_index].x);
+        TEST_CHECK(first->vertices[vertex_index].y
+                   == second->vertices[vertex_index].y);
+        TEST_CHECK(first->vertices[vertex_index].u
+                   == second->vertices[vertex_index].u);
+        TEST_CHECK(first->vertices[vertex_index].v
+                   == second->vertices[vertex_index].v);
+        TEST_CHECK(color_equal(
+            first->vertices[vertex_index].color,
+            second->vertices[vertex_index].color));
+    }
+    return 0;
+}
+
 static void record_event(PaintEvent event)
 {
     if (event_count < MAX_EVENTS)
@@ -629,6 +706,7 @@ static void reset_frame(void)
     fuelWarning = 60.0;
     fuelNotify = 100.0;
     loopsSlow = 0;
+    loops = 0;
     hudColorRGBA = 0;
     hudHLineColorRGBA = 0;
     hudVLineColorRGBA = 0;
@@ -4245,6 +4323,287 @@ static int check_world_line_failures_preserve_prefix_and_sticky_status(void)
     return check_no_world_legacy_state();
 }
 
+static int check_directional_gravity_geometry_and_order(void)
+{
+    static const float direction_sections[4][4][2][2] = {
+        {
+            {{100.0f, 200.0f}, {135.0f, 200.0f}},
+            {{100.0f, 205.0f}, {135.0f, 205.0f}},
+            {{100.0f, 222.0f}, {135.0f, 222.0f}},
+            {{100.0f, 235.0f}, {135.0f, 235.0f}}
+        },
+        {
+            {{100.0f, 235.0f}, {135.0f, 235.0f}},
+            {{100.0f, 230.0f}, {135.0f, 230.0f}},
+            {{100.0f, 213.0f}, {135.0f, 213.0f}},
+            {{100.0f, 200.0f}, {135.0f, 200.0f}}
+        },
+        {
+            {{100.0f, 200.0f}, {100.0f, 235.0f}},
+            {{105.0f, 200.0f}, {105.0f, 235.0f}},
+            {{122.0f, 200.0f}, {122.0f, 235.0f}},
+            {{135.0f, 200.0f}, {135.0f, 235.0f}}
+        },
+        {
+            {{135.0f, 200.0f}, {135.0f, 235.0f}},
+            {{130.0f, 200.0f}, {130.0f, 235.0f}},
+            {{113.0f, 200.0f}, {113.0f, 235.0f}},
+            {{100.0f, 200.0f}, {100.0f, 235.0f}}
+        }
+    };
+    static const uint32_t section_colors[4] = {
+        UINT32_C(0x11223325),
+        UINT32_C(0x11223300),
+        UINT32_C(0x11223380),
+        UINT32_C(0x11223325)
+    };
+    static void (*const painters[4])(int, int) = {
+        Gui_paint_setup_up_grav,
+        Gui_paint_setup_down_grav,
+        Gui_paint_setup_right_grav,
+        Gui_paint_setup_left_grav
+    };
+    size_t direction;
+
+    reset_frame();
+    loops = 5;
+    /* The animated alpha replaces, rather than borrows from, packed alpha. */
+    redRGBA = UINT32_C(0x11223300);
+    for (direction = 0; direction < NELEM(painters); direction++)
+        painters[direction](100, 200);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 4);
+    TEST_CHECK(event_count == 12);
+    TEST_CHECK(blend_attempts == 4);
+    TEST_CHECK(draw_attempts == 4);
+    TEST_CHECK(successful_draws == 4);
+    TEST_CHECK(flush_attempts == 4);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    for (direction = 0; direction < NELEM(painters); direction++) {
+        size_t event = direction * 3;
+
+        TEST_CHECK(events[event] == PAINT_EVENT_BLEND);
+        TEST_CHECK(events[event + 1] == PAINT_EVENT_TRIANGLES);
+        TEST_CHECK(events[event + 2] == PAINT_EVENT_FLUSH);
+        TEST_CHECK(blend_modes[direction] == RENDERER_BLEND_ALPHA);
+        TEST_CHECK(check_directional_gravity_draw(
+            (int)direction, direction_sections[direction],
+            section_colors) == 0);
+    }
+    return check_no_world_legacy_state();
+}
+
+static int check_directional_gravity_phase_boundaries_and_negative(void)
+{
+    static const float phase_17_sections[4][2][2] = {
+        {{100.0f, 200.0f}, {135.0f, 200.0f}},
+        {{100.0f, 217.0f}, {135.0f, 217.0f}},
+        {{100.0f, 234.0f}, {135.0f, 234.0f}},
+        {{100.0f, 235.0f}, {135.0f, 235.0f}}
+    };
+    static const uint32_t phase_17_colors[4] = {
+        UINT32_C(0x44556680),
+        UINT32_C(0x44556600),
+        UINT32_C(0x44556680),
+        UINT32_C(0x44556680)
+    };
+    static const float phase_18_sections[4][2][2] = {
+        {{100.0f, 200.0f}, {135.0f, 200.0f}},
+        {{100.0f, 200.0f}, {135.0f, 200.0f}},
+        {{100.0f, 218.0f}, {135.0f, 218.0f}},
+        {{100.0f, 235.0f}, {135.0f, 235.0f}}
+    };
+    static const uint32_t phase_18_colors[4] = {
+        UINT32_C(0x44556680),
+        UINT32_C(0x44556680),
+        UINT32_C(0x44556600),
+        UINT32_C(0x44556680)
+    };
+    long normalized_extreme;
+
+    reset_frame();
+    redRGBA = UINT32_C(0x44556600);
+    loops = 17;
+    Gui_paint_setup_up_grav(100, 200);
+    loops = 18;
+    Gui_paint_setup_up_grav(100, 200);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(draw_attempts == 2);
+    TEST_CHECK(successful_draws == 2);
+    TEST_CHECK(flush_attempts == 2);
+    TEST_CHECK(check_directional_gravity_draw(
+        0, phase_17_sections, phase_17_colors) == 0);
+    TEST_CHECK(check_directional_gravity_draw(
+        1, phase_18_sections, phase_18_colors) == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    redRGBA = UINT32_C(0x77889900);
+    loops = -1;
+    Gui_paint_setup_right_grav(100, 200);
+    loops = 34;
+    Gui_paint_setup_right_grav(100, 200);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(successful_draws == 2);
+    TEST_CHECK(flush_attempts == 2);
+    TEST_CHECK(check_directional_gravity_draws_equal(0, 1) == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    normalized_extreme = LONG_MIN % (long)BLOCK_SZ;
+    if (normalized_extreme < 0)
+        normalized_extreme += BLOCK_SZ;
+    reset_frame();
+    redRGBA = UINT32_C(0xaabbcc00);
+    loops = LONG_MIN;
+    Gui_paint_setup_down_grav(100, 200);
+    loops = normalized_extreme;
+    Gui_paint_setup_down_grav(100, 200);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(successful_draws == 2);
+    TEST_CHECK(flush_attempts == 2);
+    TEST_CHECK(check_directional_gravity_draws_equal(0, 1) == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    normalized_extreme = LONG_MAX % (long)BLOCK_SZ;
+    reset_frame();
+    redRGBA = UINT32_C(0xddeeff00);
+    loops = LONG_MAX;
+    Gui_paint_setup_left_grav(100, 200);
+    loops = normalized_extreme;
+    Gui_paint_setup_left_grav(100, 200);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(successful_draws == 2);
+    TEST_CHECK(flush_attempts == 2);
+    TEST_CHECK(check_directional_gravity_draws_equal(0, 1) == 0);
+    return check_no_world_legacy_state();
+}
+
+static int check_invalid_directional_gravity_result_is_sticky(void)
+{
+    PaintOperationCounts before_blocked_leaf;
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    before_blocked_leaf = paint_operation_counts();
+    Gui_paint_setup_down_grav(10, 20);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+    return fake_sdl_renderer.frame_result == RENDERER_STATUS_INVALID_ARGUMENT
+        ? 0 : 1;
+}
+
+static int check_directional_gravity_numeric_boundaries_are_checked(void)
+{
+    reset_frame();
+    Gui_paint_setup_up_grav(INT_MAX, 20);
+    TEST_CHECK(check_invalid_directional_gravity_result_is_sticky() == 0);
+
+    reset_frame();
+    Gui_paint_setup_right_grav(20, INT_MAX);
+    TEST_CHECK(check_invalid_directional_gravity_result_is_sticky() == 0);
+
+    /* These remain in int range but lose a 35-unit extent as float. */
+    reset_frame();
+    Gui_paint_setup_down_grav(INT_MIN, 20);
+    TEST_CHECK(check_invalid_directional_gravity_result_is_sticky() == 0);
+
+    reset_frame();
+    Gui_paint_setup_left_grav(20, INT_MIN);
+    return check_invalid_directional_gravity_result_is_sticky();
+}
+
+static int check_directional_gravity_failures_are_sticky(void)
+{
+    PaintOperationCounts before_blocked_leaf;
+    int prior_preflight_attempts;
+
+    reset_frame();
+    loops = 5;
+    blend_failure_attempt = 1;
+    blend_failure_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    Gui_paint_setup_up_grav(100, 200);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+    before_blocked_leaf = paint_operation_counts();
+    prior_preflight_attempts = preflight_attempts;
+    Gui_paint_setup_right_grav(100, 200);
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+
+    reset_frame();
+    loops = 5;
+    draw_failure_attempt = 1;
+    draw_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    Gui_paint_setup_down_grav(100, 200);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_TRIANGLES);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(successful_draws == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    loops = 5;
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    Gui_paint_setup_left_grav(100, 200);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_TRIANGLES);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(successful_draws == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    preset_sticky_frame_failure();
+    before_blocked_leaf = paint_operation_counts();
+    prior_preflight_attempts = preflight_attempts;
+    Gui_paint_setup_up_grav(100, 200);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+    return check_no_world_legacy_state();
+}
+
 static int check_visible_border_setup_failures_restore_safely(void)
 {
     static const float rectangle_points[][2] = {
@@ -5249,6 +5608,14 @@ int main(void)
     if (check_sticky_failure_gates_inactive_asteroid_batch() != 0)
         return 1;
     if (check_asteroid_batch_cleanup_survives_sticky_failure() != 0)
+        return 1;
+    if (check_directional_gravity_geometry_and_order() != 0)
+        return 1;
+    if (check_directional_gravity_phase_boundaries_and_negative() != 0)
+        return 1;
+    if (check_directional_gravity_numeric_boundaries_are_checked() != 0)
+        return 1;
+    if (check_directional_gravity_failures_are_sticky() != 0)
         return 1;
     if (check_world_decor_paths_are_semantic() != 0)
         return 1;
