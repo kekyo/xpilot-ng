@@ -177,6 +177,7 @@ static void Paint_debris(int x_areas, int y_areas, int areas, int max_)
 	  (color))
 #endif
 
+    Gui_paint_sparks_begin();
     for (i = 0; i < max_; i++) {
 	if (num_debris[i] > 0) {
 	    x = BASE_X(i);
@@ -190,6 +191,7 @@ static void Paint_debris(int x_areas, int y_areas, int areas, int max_)
 	    RELEASE(debris_ptr[i], num_debris[i], max_debris[i]);
 	}
     }
+    Gui_paint_sparks_end();
 }
 
 

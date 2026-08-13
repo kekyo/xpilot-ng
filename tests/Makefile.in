@@ -105,7 +105,8 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-glwidgets-primitives$(EXEEXT) \
 	test-sdlmeta-primitives$(EXEEXT) \
 	test-sdlgui-appearing$(EXEEXT) \
-	test-sdlgui-hud-primitives$(EXEEXT) test-text-geometry$(EXEEXT) \
+	test-sdlgui-hud-primitives$(EXEEXT) \
+	test-sdlgui-sparks$(EXEEXT) test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
 	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT)
 TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
@@ -124,7 +125,8 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-glwidgets-primitives$(EXEEXT) \
 	test-sdlmeta-primitives$(EXEEXT) \
 	test-sdlgui-appearing$(EXEEXT) \
-	test-sdlgui-hud-primitives$(EXEEXT) test-text-geometry$(EXEEXT) \
+	test-sdlgui-hud-primitives$(EXEEXT) \
+	test-sdlgui-sparks$(EXEEXT) test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
 	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT) \
 	run-renderer-gl-backends.sh run-e2e.sh
@@ -305,6 +307,14 @@ test_sdlgui_hud_primitives_DEPENDENCIES =
 test_sdlgui_hud_primitives_LINK = $(CCLD) \
 	$(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) \
 	$(test_sdlgui_hud_primitives_LDFLAGS) $(LDFLAGS) -o $@
+am_test_sdlgui_sparks_OBJECTS =  \
+	test_sdlgui_sparks-test_sdlgui_sparks.$(OBJEXT) \
+	test_sdlgui_sparks-sdlgui.$(OBJEXT) \
+	test_sdlgui_sparks-paintobjects.$(OBJEXT)
+test_sdlgui_sparks_OBJECTS = $(am_test_sdlgui_sparks_OBJECTS)
+test_sdlgui_sparks_DEPENDENCIES =
+test_sdlgui_sparks_LINK = $(CCLD) $(test_sdlgui_sparks_CFLAGS) \
+	$(CFLAGS) $(test_sdlgui_sparks_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdlpaint_stage_OBJECTS =  \
 	test_sdlpaint_stage-test_sdlpaint_stage.$(OBJEXT) \
 	test_sdlpaint_stage-sdlpaint.$(OBJEXT)
@@ -423,6 +433,9 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po \
 	./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po \
+	./$(DEPDIR)/test_sdlgui_sparks-paintobjects.Po \
+	./$(DEPDIR)/test_sdlgui_sparks-sdlgui.Po \
+	./$(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Po \
 	./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po \
 	./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po \
 	./$(DEPDIR)/test_surface_rgba8.Po \
@@ -472,6 +485,7 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_sdlmeta_primitives_SOURCES) \
 	$(test_sdlgui_appearing_SOURCES) \
 	$(test_sdlgui_hud_primitives_SOURCES) \
+	$(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlpaint_stage_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
 	$(test_text_cache_adapter_SOURCES) \
@@ -495,6 +509,7 @@ DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_sdlmeta_primitives_SOURCES) \
 	$(test_sdlgui_appearing_SOURCES) \
 	$(test_sdlgui_hud_primitives_SOURCES) \
+	$(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlpaint_stage_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
 	$(test_text_cache_adapter_SOURCES) \
@@ -1076,6 +1091,38 @@ test_sdlgui_hud_primitives_CFLAGS = $(AM_CFLAGS) \
 
 test_sdlgui_hud_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdlgui_hud_primitives_LDADD = @SDL2_LIBS@
+test_sdlgui_sparks_SOURCES = test_sdlgui_sparks.c \
+	$(top_srcdir)/src/client/sdl/sdlgui.c \
+	$(top_srcdir)/src/client/sdl/spark_batch_test_support.h \
+	$(top_srcdir)/src/client/paintobjects.c
+
+test_sdlgui_sparks_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_SPARK_BATCH_TEST_HOOKS
+
+test_sdlgui_sparks_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+
+test_sdlgui_sparks_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=realloc \
+	-Wl,--wrap=Gui_paint_item_object \
+	-Wl,--wrap=Gui_paint_ball \
+	-Wl,--wrap=Gui_paint_ball_connector \
+	-Wl,--wrap=Gui_paint_mine \
+	-Wl,--wrap=Gui_paint_wreck \
+	-Wl,--wrap=Gui_paint_asteroids_begin \
+	-Wl,--wrap=Gui_paint_asteroids_end \
+	-Wl,--wrap=Gui_paint_asteroid \
+	-Wl,--wrap=Gui_paint_setup_worm \
+	-Wl,--wrap=Gui_paint_fastshot \
+	-Wl,--wrap=Gui_paint_teamshot \
+	-Wl,--wrap=Gui_paint_missiles_begin \
+	-Wl,--wrap=Gui_paint_missiles_end \
+	-Wl,--wrap=Gui_paint_missile \
+	-Wl,--wrap=Gui_paint_lasers_begin \
+	-Wl,--wrap=Gui_paint_lasers_end \
+	-Wl,--wrap=Gui_paint_laser
+
+test_sdlgui_sparks_LDADD = @SDL2_LIBS@
 test_text_geometry_SOURCES = test_text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.h
@@ -1267,6 +1314,10 @@ test-sdlgui-hud-primitives$(EXEEXT): $(test_sdlgui_hud_primitives_OBJECTS) $(tes
 	@rm -f test-sdlgui-hud-primitives$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_hud_primitives_LINK) $(test_sdlgui_hud_primitives_OBJECTS) $(test_sdlgui_hud_primitives_LDADD) $(LIBS)
 
+test-sdlgui-sparks$(EXEEXT): $(test_sdlgui_sparks_OBJECTS) $(test_sdlgui_sparks_DEPENDENCIES) $(EXTRA_test_sdlgui_sparks_DEPENDENCIES)
+	@rm -f test-sdlgui-sparks$(EXEEXT)
+	$(AM_V_CCLD)$(test_sdlgui_sparks_LINK) $(test_sdlgui_sparks_OBJECTS) $(test_sdlgui_sparks_LDADD) $(LIBS)
+
 test-sdlpaint-stage$(EXEEXT): $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_stage_DEPENDENCIES) $(EXTRA_test_sdlpaint_stage_DEPENDENCIES)
 	@rm -f test-sdlpaint-stage$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlpaint_stage_LINK) $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_stage_LDADD) $(LIBS)
@@ -1371,6 +1422,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_sparks-paintobjects.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_sparks-sdlgui.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_rgba8.Po@am__quote@ # am--include-marker
@@ -2177,6 +2231,48 @@ test_sdlgui_hud_primitives-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
 
+test_sdlgui_sparks-test_sdlgui_sparks.o: test_sdlgui_sparks.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -MT test_sdlgui_sparks-test_sdlgui_sparks.o -MD -MP -MF $(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Tpo -c -o test_sdlgui_sparks-test_sdlgui_sparks.o `test -f 'test_sdlgui_sparks.c' || echo '$(srcdir)/'`test_sdlgui_sparks.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Tpo $(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlgui_sparks.c' object='test_sdlgui_sparks-test_sdlgui_sparks.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -c -o test_sdlgui_sparks-test_sdlgui_sparks.o `test -f 'test_sdlgui_sparks.c' || echo '$(srcdir)/'`test_sdlgui_sparks.c
+
+test_sdlgui_sparks-test_sdlgui_sparks.obj: test_sdlgui_sparks.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -MT test_sdlgui_sparks-test_sdlgui_sparks.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Tpo -c -o test_sdlgui_sparks-test_sdlgui_sparks.obj `if test -f 'test_sdlgui_sparks.c'; then $(CYGPATH_W) 'test_sdlgui_sparks.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_sparks.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Tpo $(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlgui_sparks.c' object='test_sdlgui_sparks-test_sdlgui_sparks.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -c -o test_sdlgui_sparks-test_sdlgui_sparks.obj `if test -f 'test_sdlgui_sparks.c'; then $(CYGPATH_W) 'test_sdlgui_sparks.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_sparks.c'; fi`
+
+test_sdlgui_sparks-sdlgui.o: $(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -MT test_sdlgui_sparks-sdlgui.o -MD -MP -MF $(DEPDIR)/test_sdlgui_sparks-sdlgui.Tpo -c -o test_sdlgui_sparks-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_sparks-sdlgui.Tpo $(DEPDIR)/test_sdlgui_sparks-sdlgui.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_sparks-sdlgui.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -c -o test_sdlgui_sparks-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+
+test_sdlgui_sparks-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -MT test_sdlgui_sparks-sdlgui.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_sparks-sdlgui.Tpo -c -o test_sdlgui_sparks-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_sparks-sdlgui.Tpo $(DEPDIR)/test_sdlgui_sparks-sdlgui.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_sparks-sdlgui.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -c -o test_sdlgui_sparks-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+
+test_sdlgui_sparks-paintobjects.o: $(top_srcdir)/src/client/paintobjects.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -MT test_sdlgui_sparks-paintobjects.o -MD -MP -MF $(DEPDIR)/test_sdlgui_sparks-paintobjects.Tpo -c -o test_sdlgui_sparks-paintobjects.o `test -f '$(top_srcdir)/src/client/paintobjects.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/paintobjects.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_sparks-paintobjects.Tpo $(DEPDIR)/test_sdlgui_sparks-paintobjects.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/paintobjects.c' object='test_sdlgui_sparks-paintobjects.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -c -o test_sdlgui_sparks-paintobjects.o `test -f '$(top_srcdir)/src/client/paintobjects.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/paintobjects.c
+
+test_sdlgui_sparks-paintobjects.obj: $(top_srcdir)/src/client/paintobjects.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -MT test_sdlgui_sparks-paintobjects.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_sparks-paintobjects.Tpo -c -o test_sdlgui_sparks-paintobjects.obj `if test -f '$(top_srcdir)/src/client/paintobjects.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/paintobjects.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/paintobjects.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_sparks-paintobjects.Tpo $(DEPDIR)/test_sdlgui_sparks-paintobjects.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/paintobjects.c' object='test_sdlgui_sparks-paintobjects.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_sparks_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_sparks_CFLAGS) $(CFLAGS) -c -o test_sdlgui_sparks-paintobjects.obj `if test -f '$(top_srcdir)/src/client/paintobjects.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/paintobjects.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/paintobjects.c'; fi`
+
 test_sdlpaint_stage-test_sdlpaint_stage.o: test_sdlpaint_stage.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlpaint_stage_CPPFLAGS) $(CPPFLAGS) $(test_sdlpaint_stage_CFLAGS) $(CFLAGS) -MT test_sdlpaint_stage-test_sdlpaint_stage.o -MD -MP -MF $(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Tpo -c -o test_sdlpaint_stage-test_sdlpaint_stage.o `test -f 'test_sdlpaint_stage.c' || echo '$(srcdir)/'`test_sdlpaint_stage.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Tpo $(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
@@ -2706,6 +2802,13 @@ test-sdlgui-hud-primitives.log: test-sdlgui-hud-primitives$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-sdlgui-sparks.log: test-sdlgui-sparks$(EXEEXT)
+	@p='test-sdlgui-sparks$(EXEEXT)'; \
+	b='test-sdlgui-sparks'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdlpaint-stage.log: test-sdlpaint-stage$(EXEEXT)
 	@p='test-sdlpaint-stage$(EXEEXT)'; \
 	b='test-sdlpaint-stage'; \
@@ -2916,6 +3019,9 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_sparks-paintobjects.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_sparks-sdlgui.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
@@ -3046,6 +3152,9 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_sparks-paintobjects.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_sparks-sdlgui.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_sparks-test_sdlgui_sparks.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po

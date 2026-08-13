@@ -40,6 +40,9 @@
 #ifdef XPILOT_APPEARING_BATCH_TEST_HOOKS
 #include "appearing_batch_test_support.h"
 #endif
+#ifdef XPILOT_SPARK_BATCH_TEST_HOOKS
+#include "spark_batch_test_support.h"
+#endif
 
 #include <float.h>
 #include <limits.h>
@@ -1806,25 +1809,242 @@ void Gui_paint_mine(int x, int y, int teammine, char *name)
     }
 }
 
+typedef struct SemanticSparkBatch {
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    RendererColoredPoint2D *points;
+    size_t point_count;
+    size_t point_capacity;
+    float point_size;
+    int active;
+} SemanticSparkBatch;
+
+static SemanticSparkBatch semantic_spark_batch;
+
+static size_t Maximum_semantic_spark_points(void)
+{
+    size_t maximum_points = SIZE_MAX / sizeof(RendererColoredPoint2D);
+    size_t maximum_vertices = SIZE_MAX / sizeof(RendererVertex2D);
+    size_t pointer_points = (size_t)PTRDIFF_MAX
+	/ sizeof(RendererColoredPoint2D);
+    size_t pointer_vertices = (size_t)PTRDIFF_MAX
+	/ sizeof(RendererVertex2D);
+
+    if (maximum_points > pointer_points)
+	maximum_points = pointer_points;
+    if (maximum_vertices > pointer_vertices)
+	maximum_vertices = pointer_vertices;
+    if (maximum_vertices > (size_t)INT_MAX)
+	maximum_vertices = (size_t)INT_MAX;
+    if (maximum_points > maximum_vertices / 6)
+	maximum_points = maximum_vertices / 6;
+    return maximum_points;
+}
+
+static RendererStatus Track_semantic_spark_batch(
+    SemanticSparkBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (batch->sdl_renderer == NULL) {
+	if (batch->status == RENDERER_STATUS_OK)
+	    batch->status = status;
+	return batch->status;
+    }
+    batch->status = Sdl_renderer_track_frame_result(
+	batch->sdl_renderer, status);
+    return batch->status;
+}
+
+static RendererStatus Build_semantic_spark_point(
+    int color, int x, int y, float point_size,
+    RendererColoredPoint2D *point)
+{
+    int64_t point_x;
+    int64_t point_y;
+    float half_size;
+    float left;
+    float top;
+    float right;
+    float bottom;
+
+    if (point == NULL || color < 0 || color >= 8
+	|| !isfinite(point_size) || point_size <= 0.0f) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    point_x = (int64_t)x + (int64_t)world.x;
+    point_y = (int64_t)world.y + (int64_t)ext_view_height - (int64_t)y;
+    if (point_x < INT_MIN || point_x > INT_MAX
+	|| point_y < INT_MIN || point_y > INT_MAX) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    point->position.x = (float)point_x;
+    point->position.y = (float)point_y;
+    half_size = point_size * 0.5f;
+    left = point->position.x - half_size;
+    top = point->position.y - half_size;
+    right = point->position.x + half_size;
+    bottom = point->position.y + half_size;
+    if (!isfinite(point->position.x) || !isfinite(point->position.y)
+	|| !isfinite(half_size) || !isfinite(left) || !isfinite(top)
+	|| !isfinite(right) || !isfinite(bottom)
+	|| left == right || top == bottom) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    point->color.red = (uint8_t)(255 * (color + 1) / 8);
+    point->color.green = (uint8_t)(255 * color * color / 64);
+    point->color.blue = 0;
+    point->color.alpha = 255;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Reserve_semantic_spark_points(
+    SemanticSparkBatch *batch, size_t additional_points)
+{
+    const size_t maximum_points = Maximum_semantic_spark_points();
+    RendererColoredPoint2D *replacement;
+    size_t needed;
+    size_t capacity;
+
+    if (batch == NULL || batch->point_count > maximum_points
+	|| additional_points > maximum_points - batch->point_count) {
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    }
+    needed = batch->point_count + additional_points;
+    if (needed <= batch->point_capacity)
+	return RENDERER_STATUS_OK;
+    capacity = batch->point_capacity == 0 ? 16 : batch->point_capacity;
+    if (capacity > maximum_points)
+	capacity = maximum_points;
+    while (capacity < needed) {
+	if (capacity > maximum_points / 2) {
+	    capacity = maximum_points;
+	    break;
+	}
+	capacity *= 2;
+    }
+    if (capacity < needed
+	|| capacity > SIZE_MAX / sizeof(*batch->points)
+	|| capacity > (size_t)PTRDIFF_MAX / sizeof(*batch->points)) {
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    }
+    replacement = realloc(batch->points, capacity * sizeof(*batch->points));
+    if (replacement == NULL)
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    batch->points = replacement;
+    batch->point_capacity = capacity;
+    return RENDERER_STATUS_OK;
+}
+
+void Gui_paint_sparks_begin(void)
+{
+    SemanticSparkBatch *batch = &semantic_spark_batch;
+
+    if (batch->active)
+	Gui_paint_sparks_end();
+    free(batch->points);
+    memset(batch, 0, sizeof(*batch));
+    batch->active = 1;
+    batch->status = RENDERER_STATUS_INVALID_STATE;
+    batch->sdl_renderer = Get_sdl_renderer();
+    if (batch->sdl_renderer == NULL)
+	return;
+    batch->status = Sdl_renderer_track_frame_result(
+	batch->sdl_renderer, RENDERER_STATUS_OK);
+    if (batch->status != RENDERER_STATUS_OK)
+	return;
+    batch->point_size = (float)sparkSize;
+    batch->renderer = Sdl_renderer_frontend(batch->sdl_renderer);
+    if (batch->renderer == NULL) {
+	(void)Track_semantic_spark_batch(
+	    batch, RENDERER_STATUS_INVALID_STATE);
+    }
+}
+
 void Gui_paint_spark(int color, int x, int y)
 {
-    /*
-    Image_paint(IMG_SPARKS,
-		x + world.x,
-		world.y + ext_view_height - y,
-		color);
-    */
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
-	return;
+    SemanticSparkBatch *batch = &semantic_spark_batch;
+    RendererColoredPoint2D point;
+    RendererStatus status = RENDERER_STATUS_OK;
+    int standalone = !batch->active;
 
-    glColor3ub(255 * (color + 1) / 8,
-	       255 * color * color / 64,
-	       0);
-    glPointSize(sparkSize);
-    glBegin(GL_POINTS);
-    glVertex2i(x + world.x, world.y + ext_view_height - y);
-    glEnd();
+    if (standalone)
+	Gui_paint_sparks_begin();
+    if (batch->status == RENDERER_STATUS_OK) {
+	status = Build_semantic_spark_point(
+	    color, x, y, batch->point_size, &point);
+    }
+    if (status == RENDERER_STATUS_OK && batch->status == RENDERER_STATUS_OK)
+	status = Reserve_semantic_spark_points(batch, 1);
+    if (status == RENDERER_STATUS_OK && batch->status == RENDERER_STATUS_OK) {
+	batch->points[batch->point_count] = point;
+	batch->point_count++;
+    } else if (status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_spark_batch(batch, status);
+    }
+    if (standalone)
+	Gui_paint_sparks_end();
 }
+
+void Gui_paint_sparks_end(void)
+{
+    SemanticSparkBatch *batch = &semantic_spark_batch;
+    RendererStatus status;
+
+    if (!batch->active)
+	return;
+    if (batch->status == RENDERER_STATUS_OK && batch->point_count != 0) {
+	status = Renderer_set_blend(batch->renderer, RENDERER_BLEND_ALPHA);
+	if (Track_semantic_spark_batch(batch, status) == RENDERER_STATUS_OK) {
+	    status = Renderer_draw_colored_points(
+		batch->renderer, batch->points, batch->point_count,
+		batch->point_size);
+	    if (Track_semantic_spark_batch(batch, status)
+		== RENDERER_STATUS_OK) {
+		status = Sdl_renderer_flush_preserving_legacy(
+		    batch->sdl_renderer);
+		(void)Track_semantic_spark_batch(batch, status);
+	    }
+	}
+    }
+    free(batch->points);
+    batch->points = NULL;
+    batch->point_count = 0;
+    batch->point_capacity = 0;
+    batch->active = 0;
+    batch->renderer = NULL;
+    batch->sdl_renderer = NULL;
+}
+
+#ifdef XPILOT_SPARK_BATCH_TEST_HOOKS
+RendererStatus Sdlgui_test_paint_spark_batch(
+    const SdlguiTestSpark *entries, size_t entry_count)
+{
+    SdlRenderer *renderer;
+    size_t entry_index;
+
+    renderer = Get_sdl_renderer();
+    if (renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    if (entries == NULL && entry_count != 0) {
+	return Sdl_renderer_track_frame_result(
+	    renderer, RENDERER_STATUS_INVALID_ARGUMENT);
+    }
+    if (entry_count > Maximum_semantic_spark_points()) {
+	return Sdl_renderer_track_frame_result(
+	    renderer, RENDERER_STATUS_OUT_OF_MEMORY);
+    }
+    Gui_paint_sparks_begin();
+    for (entry_index = 0; entry_index < entry_count; entry_index++) {
+	Gui_paint_spark(
+	    entries[entry_index].color,
+	    entries[entry_index].x, entries[entry_index].y);
+    }
+    Gui_paint_sparks_end();
+    return Sdl_renderer_frame_result(renderer);
+}
+#endif
 
 void Gui_paint_wreck(int x, int y, bool deadly, int wtype, int rot, int size)
 {

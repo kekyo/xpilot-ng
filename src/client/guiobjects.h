@@ -32,7 +32,28 @@ void Gui_paint_ball_connector(int x_1, int y_1, int x_2, int y_2);
 
 void Gui_paint_mine(int x, int y, int teammine, char *name);
 
+/**
+ * Begin a contiguous group of spark particles.
+ *
+ * @remarks Always pair this call with Gui_paint_sparks_end(), including when
+ *          no spark is appended. Backends may combine the group while
+ *          retaining traversal order.
+ */
+void Gui_paint_sparks_begin(void);
+/**
+ * Paint one spark particle.
+ *
+ * @param color Client spark color selector in the range 0 through 7.
+ * @param x Horizontal screen-relative coordinate.
+ * @param y Vertical screen-relative coordinate with an upward-positive axis.
+ *
+ * @remarks A standalone call is valid. Calls bracketed by
+ *          Gui_paint_sparks_begin() and Gui_paint_sparks_end() belong to one
+ *          contiguous traversal group.
+ */
 void Gui_paint_spark(int color, int x, int y);
+/** End and submit a group begun by Gui_paint_sparks_begin(). */
+void Gui_paint_sparks_end(void);
 
 void Gui_paint_wreck(int x, int y, bool deadly, int wtype, int rot, int size);
 

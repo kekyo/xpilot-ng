@@ -293,6 +293,11 @@ void Gui_paint_mine(int x, int y, int teammine, char *name)
 }
 
 
+void Gui_paint_sparks_begin(void)
+{
+}
+
+
 void Gui_paint_spark(int color, int x, int y)
 {
     color = spark_color[color];
@@ -302,6 +307,11 @@ void Gui_paint_spark(int color, int x, int y)
 		  y - sparkSize/2,
 		  sparkSize, sparkSize);
 
+}
+
+
+void Gui_paint_sparks_end(void)
+{
 }
 
 
