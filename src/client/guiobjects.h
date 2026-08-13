@@ -48,8 +48,31 @@ void Gui_paint_missiles_begin(void);
 void Gui_paint_missiles_end(void);
 void Gui_paint_missile(int x, int y, int len, int dir);
 
+/**
+ * Prepare to paint a contiguous group of lasers.
+ *
+ * @remarks Always pair this call with Gui_paint_lasers_end(), including when
+ * no laser is appended.
+ */
 void Gui_paint_lasers_begin(void);
+/**
+ * Finish the current laser group and restore backend drawing state.
+ *
+ * @remarks Call exactly once after each Gui_paint_lasers_begin().
+ */
 void Gui_paint_lasers_end(void);
+/**
+ * Append one backend-specific laser to the current laser group.
+ *
+ * @param color Client color selector.
+ * @param x_1 Horizontal start coordinate.
+ * @param y_1 Vertical start coordinate.
+ * @param len Laser length.
+ * @param dir Direction lookup-table index.
+ *
+ * @remarks Gui_paint_lasers_begin() must have been called. The caller must
+ * provide @p dir in the range [0, TABLE_SIZE).
+ */
 void Gui_paint_laser(int color, int x_1, int y_1, int len, int dir);
 
 void Gui_paint_paused(int x, int y, int count);

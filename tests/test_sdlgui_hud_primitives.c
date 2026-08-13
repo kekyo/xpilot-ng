@@ -2,6 +2,7 @@
 
 #include "xpclient_sdl.h"
 
+#include "guiobjects.h"
 #include "renderer.h"
 #include "images.h"
 #include "sdlinit.h"
@@ -160,6 +161,7 @@ static int legacy_end_calls;
 static int legacy_color_calls;
 static int legacy_blend_calls;
 static int legacy_line_stipple_calls;
+static int legacy_line_width_calls;
 static RendererBlendMode current_blend;
 static RendererBlendMode blend_modes[MAX_EVENTS];
 static int blend_failure_attempt;
@@ -263,6 +265,9 @@ extern Uint32 packetDropMeterColorRGBA;
 extern Uint32 packetLagMeterColorRGBA;
 extern Uint32 temporaryMeterColorRGBA;
 extern Uint32 selectionColorRGBA;
+extern Uint32 whiteRGBA;
+extern Uint32 blueRGBA;
+extern Uint32 redRGBA;
 extern Uint32 hudColorRGBA;
 extern Uint32 hudHLineColorRGBA;
 extern Uint32 hudVLineColorRGBA;
@@ -435,6 +440,7 @@ static void reset_frame(void)
     legacy_color_calls = 0;
     legacy_blend_calls = 0;
     legacy_line_stipple_calls = 0;
+    legacy_line_width_calls = 0;
     current_blend = RENDERER_BLEND_OPAQUE;
     blend_failure_attempt = 0;
     blend_failure_result = RENDERER_STATUS_OK;
@@ -885,6 +891,12 @@ void GLAPIENTRY glLineStipple(GLint factor, GLushort pattern)
     legacy_line_stipple_calls++;
 }
 
+void GLAPIENTRY glLineWidth(GLfloat width)
+{
+    (void)width;
+    legacy_line_width_calls++;
+}
+
 void GLAPIENTRY glColor4ub(GLubyte red, GLubyte green,
                           GLubyte blue, GLubyte alpha)
 {
@@ -921,6 +933,7 @@ static int check_no_legacy_primitives(void)
     TEST_CHECK(legacy_color_calls == 0);
     TEST_CHECK(legacy_blend_calls == 0);
     TEST_CHECK(legacy_line_stipple_calls == 0);
+    TEST_CHECK(legacy_line_width_calls == 0);
     return 0;
 }
 
@@ -3231,8 +3244,286 @@ static int check_label_failure_blocks_later_same_frame_meters(void)
     return check_no_legacy_primitives();
 }
 
+static int check_laser_stroke(
+    int stroke_index, const float expected_points[][2],
+    float expected_width, uint32_t rgba)
+{
+    const FakeStroke *stroke;
+
+    TEST_CHECK(stroke_index >= 0);
+    TEST_CHECK(stroke_index < successful_strokes);
+    stroke = &strokes[stroke_index];
+    TEST_CHECK(stroke->point_count == 2);
+    TEST_CHECK(stroke->points[0].x == expected_points[0][0]);
+    TEST_CHECK(stroke->points[0].y == expected_points[0][1]);
+    TEST_CHECK(stroke->points[1].x == expected_points[1][0]);
+    TEST_CHECK(stroke->points[1].y == expected_points[1][1]);
+    TEST_CHECK(stroke->width == expected_width);
+    TEST_CHECK(color_equal(
+        stroke->color, Renderer_color_from_rgba32(rgba)));
+    TEST_CHECK(stroke->closed == 0);
+    TEST_CHECK(stroke->blend == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(stroke->transform_token == 71);
+    TEST_CHECK(stroke->scissor_token == 83);
+    return 0;
+}
+
+static int check_laser_batch_is_semantic(void)
+{
+    static const float first_points[][2] = {
+        {10.0f, 20.0f}, {15.0f, 16.0f}
+    };
+    static const float second_points[][2] = {
+        {-2.0f, 3.0f}, {-5.0f, 5.0f}
+    };
+    static const float third_points[][2] = {
+        {0.0f, 0.0f}, {3.0f, -2.0f}
+    };
+
+    reset_frame();
+    redRGBA = UINT32_C(0x112233ff);
+    blueRGBA = UINT32_C(0x445566aa);
+    whiteRGBA = UINT32_C(0x77889980);
+    tbl_cos[7] = 0.75;
+    tbl_sin[7] = -0.5;
+
+    Gui_paint_lasers_begin();
+    Gui_paint_laser(RED, 10, 20, 7, 7);
+    Gui_paint_laser(BLUE, -2, 3, -5, 7);
+    Gui_paint_laser(99, 0, 0, 4, 7);
+    Gui_paint_lasers_end();
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 8);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[4] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[5] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[6] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[7] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(stroke_attempts == 6);
+    TEST_CHECK(successful_strokes == 6);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(check_laser_stroke(
+        0, first_points, 5.0f, UINT32_C(0x1122337f)) == 0);
+    TEST_CHECK(check_laser_stroke(
+        1, first_points, 1.0f, UINT32_C(0x112233ff)) == 0);
+    TEST_CHECK(check_laser_stroke(
+        2, second_points, 5.0f, UINT32_C(0x4455662a)) == 0);
+    TEST_CHECK(check_laser_stroke(
+        3, second_points, 1.0f, UINT32_C(0x445566aa)) == 0);
+    TEST_CHECK(check_laser_stroke(
+        4, third_points, 5.0f, UINT32_C(0x77889900)) == 0);
+    TEST_CHECK(check_laser_stroke(
+        5, third_points, 1.0f, UINT32_C(0x77889980)) == 0);
+    return check_no_legacy_primitives();
+}
+
+static int check_empty_and_first_failure_laser_batches(void)
+{
+    reset_frame();
+    Gui_paint_lasers_begin();
+    Gui_paint_lasers_end();
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_legacy_primitives() == 0);
+
+    reset_frame();
+    blend_failure_attempt = 1;
+    blend_failure_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    Gui_paint_lasers_begin();
+    Gui_paint_laser(RED, 10, 20, 7, 7);
+    Gui_paint_lasers_end();
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_legacy_primitives() == 0);
+
+    reset_frame();
+    tbl_cos[7] = 0.75;
+    tbl_sin[7] = -0.5;
+    stroke_failure_attempt = 1;
+    stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+    Gui_paint_lasers_begin();
+    Gui_paint_laser(RED, 10, 20, 7, 7);
+    Gui_paint_lasers_end();
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    return check_no_legacy_primitives();
+}
+
+static int check_laser_failure_flushes_accepted_prefix(void)
+{
+    static const float points[][2] = {
+        {10.0f, 20.0f}, {15.0f, 16.0f}
+    };
+    int prior_event_count;
+    int prior_blend_attempts;
+    int prior_stroke_attempts;
+    int prior_flush_attempts;
+
+    reset_frame();
+    redRGBA = UINT32_C(0x112233ff);
+    tbl_cos[7] = 0.75;
+    tbl_sin[7] = -0.5;
+    stroke_failure_attempt = 2;
+    stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+
+    Gui_paint_lasers_begin();
+    Gui_paint_laser(RED, 10, 20, 7, 7);
+    Gui_paint_lasers_end();
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(check_laser_stroke(
+        0, points, 5.0f, UINT32_C(0x1122337f)) == 0);
+
+    prior_event_count = event_count;
+    prior_blend_attempts = blend_attempts;
+    prior_stroke_attempts = stroke_attempts;
+    prior_flush_attempts = flush_attempts;
+    Gui_paint_lasers_begin();
+    Gui_paint_laser(RED, 10, 20, 7, 7);
+    Gui_paint_lasers_end();
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == prior_event_count);
+    TEST_CHECK(blend_attempts == prior_blend_attempts);
+    TEST_CHECK(stroke_attempts == prior_stroke_attempts);
+    TEST_CHECK(flush_attempts == prior_flush_attempts);
+    return check_no_legacy_primitives();
+}
+
+static int check_laser_flush_failure_is_sticky(void)
+{
+    int prior_event_count;
+    int prior_stroke_attempts;
+    int prior_flush_attempts;
+
+    reset_frame();
+    redRGBA = UINT32_C(0x112233ff);
+    tbl_cos[7] = 0.75;
+    tbl_sin[7] = -0.5;
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+
+    Gui_paint_lasers_begin();
+    Gui_paint_laser(RED, 10, 20, 7, 7);
+    Gui_paint_lasers_end();
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(successful_strokes == 2);
+    TEST_CHECK(flush_attempts == 1);
+
+    prior_event_count = event_count;
+    prior_stroke_attempts = stroke_attempts;
+    prior_flush_attempts = flush_attempts;
+    Gui_paint_lasers_begin();
+    Gui_paint_laser(RED, 10, 20, 7, 7);
+    Gui_paint_lasers_end();
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == prior_event_count);
+    TEST_CHECK(stroke_attempts == prior_stroke_attempts);
+    TEST_CHECK(flush_attempts == prior_flush_attempts);
+    return check_no_legacy_primitives();
+}
+
+static int check_invalid_laser_geometry_is_sticky(void)
+{
+    reset_frame();
+    redRGBA = UINT32_C(0x112233ff);
+
+    Gui_paint_lasers_begin();
+    Gui_paint_laser(RED, 10, 20, 7, -1);
+    Gui_paint_lasers_end();
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_legacy_primitives() == 0);
+
+    reset_frame();
+    redRGBA = UINT32_C(0x112233ff);
+    Gui_paint_lasers_begin();
+    Gui_paint_laser(RED, 10, 20, 7, TABLE_SIZE);
+    Gui_paint_lasers_end();
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_legacy_primitives() == 0);
+
+    reset_frame();
+    redRGBA = UINT32_C(0x112233ff);
+    tbl_cos[7] = 1.0;
+    tbl_sin[7] = 0.0;
+    Gui_paint_lasers_begin();
+    Gui_paint_laser(RED, INT_MAX, 20, INT_MAX, 7);
+    Gui_paint_lasers_end();
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_legacy_primitives() == 0);
+
+    reset_frame();
+    redRGBA = UINT32_C(0x112233ff);
+    tbl_cos[7] = NAN;
+    tbl_sin[7] = 0.0;
+    Gui_paint_lasers_begin();
+    Gui_paint_laser(RED, 10, 20, 7, 7);
+    Gui_paint_lasers_end();
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    return check_no_legacy_primitives();
+}
+
 int main(void)
 {
+    if (check_laser_batch_is_semantic() != 0)
+        return 1;
+    if (check_empty_and_first_failure_laser_batches() != 0)
+        return 1;
+    if (check_laser_failure_flushes_accepted_prefix() != 0)
+        return 1;
+    if (check_laser_flush_failure_is_sticky() != 0)
+        return 1;
+    if (check_invalid_laser_geometry_is_sticky() != 0)
+        return 1;
     if (check_hud_radar_dot_shapes_are_semantic() != 0)
         return 1;
     if (check_hud_radar_dot_noops_and_signed_boundaries() != 0)

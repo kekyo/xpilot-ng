@@ -1072,43 +1072,148 @@ void Gui_paint_missile(int x, int y, int len, int dir)
     Image_paint_rotated(IMG_MISSILE, x - 16, y - 16, dir, whiteRGBA);
 }
 
+typedef struct SemanticLaserBatch {
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    int has_accepted_commands;
+} SemanticLaserBatch;
+
+typedef struct SemanticLaserGeometry {
+    RendererPoint2D points[2];
+} SemanticLaserGeometry;
+
+static SemanticLaserBatch semantic_laser_batch;
+
+static RendererStatus Track_semantic_laser_batch(
+    SemanticLaserBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (batch->sdl_renderer == NULL) {
+	batch->status = status;
+	return batch->status;
+    }
+    batch->status = Sdl_renderer_track_frame_result(
+	batch->sdl_renderer, status);
+    return batch->status;
+}
+
+static RendererStatus Accept_semantic_laser_command(
+    SemanticLaserBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (status == RENDERER_STATUS_OK)
+	batch->has_accepted_commands = 1;
+    return Track_semantic_laser_batch(batch, status);
+}
+
+static RendererStatus Build_semantic_laser_geometry(
+    int x, int y, int length, int direction,
+    SemanticLaserGeometry *geometry)
+{
+    double cosine;
+    double sine;
+    double end_x;
+    double end_y;
+    int integer_end_x;
+    int integer_end_y;
+
+    if (geometry == NULL || direction < 0 || direction >= TABLE_SIZE)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    cosine = tbl_cos[direction];
+    sine = tbl_sin[direction];
+    if (!isfinite(cosine) || !isfinite(sine))
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    end_x = (double)x + (double)length * cosine;
+    end_y = (double)y + (double)length * sine;
+    if (!isfinite(end_x) || !isfinite(end_y)
+	|| end_x < (double)INT_MIN || end_x > (double)INT_MAX
+	|| end_y < (double)INT_MIN || end_y > (double)INT_MAX) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    integer_end_x = (int)end_x;
+    integer_end_y = (int)end_y;
+    geometry->points[0].x = (float)x;
+    geometry->points[0].y = (float)y;
+    geometry->points[1].x = (float)integer_end_x;
+    geometry->points[1].y = (float)integer_end_y;
+    return RENDERER_STATUS_OK;
+}
+
 void Gui_paint_lasers_begin(void)
 {
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    if (smoothLines) glEnable(GL_LINE_SMOOTH);
+    SemanticLaserBatch *batch = &semantic_laser_batch;
+    RendererStatus operation_status;
+
+    /* Semantic strokes use the same backend-independent quad coverage as
+     * other migrated lines; legacy GL_LINE_SMOOTH state is not mirrored. */
+    batch->sdl_renderer = Get_sdl_renderer();
+    batch->renderer = NULL;
+    batch->status = RENDERER_STATUS_INVALID_STATE;
+    batch->has_accepted_commands = 0;
+    if (batch->sdl_renderer == NULL)
+	return;
+    batch->status = Sdl_renderer_track_frame_result(
+	batch->sdl_renderer, RENDERER_STATUS_OK);
+    if (batch->status != RENDERER_STATUS_OK)
+	return;
+    batch->renderer = Sdl_renderer_frontend(batch->sdl_renderer);
+    if (batch->renderer == NULL) {
+	(void)Track_semantic_laser_batch(
+	    batch, RENDERER_STATUS_INVALID_STATE);
+	return;
+    }
+    operation_status = Renderer_set_blend(
+	batch->renderer, RENDERER_BLEND_ALPHA);
+    (void)Track_semantic_laser_batch(batch, operation_status);
 }
 
 void Gui_paint_lasers_end(void)
 {
-    glDisable(GL_BLEND);
-    if (smoothLines) glDisable(GL_LINE_SMOOTH);
+    SemanticLaserBatch *batch = &semantic_laser_batch;
+    RendererStatus flush_status;
+
+    if (!batch->has_accepted_commands || batch->sdl_renderer == NULL)
+	return;
+    flush_status = Sdl_renderer_flush_preserving_legacy(
+	batch->sdl_renderer);
+    batch->has_accepted_commands = 0;
+    (void)Track_semantic_laser_batch(batch, flush_status);
 }
 
 void Gui_paint_laser(int color, int x_1, int y_1, int len, int dir)
 {
-    int	x_2, y_2, rgba;
-    x_2 = (int)(x_1 + len * tcos(dir));
-    y_2 = (int)(y_1 + len * tsin(dir));
+    SemanticLaserBatch *batch = &semantic_laser_batch;
+    SemanticLaserGeometry geometry;
+    RendererStatus operation_status;
+    Uint32 rgba;
 
-    rgba = 
+    if (batch->status != RENDERER_STATUS_OK)
+	return;
+    operation_status = Build_semantic_laser_geometry(
+	x_1, y_1, len, dir, &geometry);
+    if (operation_status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_laser_batch(batch, operation_status);
+	return;
+    }
+    rgba =
 	(color == RED) ? redRGBA :
-	(color == BLUE) ? blueRGBA : 
+	(color == BLUE) ? blueRGBA :
 	whiteRGBA;
 
-    set_alphacolor(rgba - 128);
-    glLineWidth(5);
-    glBegin(GL_LINES);
-    glVertex2i(x_1, y_1);
-    glVertex2i(x_2, y_2);
-    glEnd();
-
-    set_alphacolor(rgba);
-    glLineWidth(1);
-    glBegin(GL_LINES);
-    glVertex2i(x_1, y_1);
-    glVertex2i(x_2, y_2);
-    glEnd();
+    operation_status = Renderer_stroke_path(
+	batch->renderer, geometry.points, NELEM(geometry.points), 5.0f,
+	Renderer_color_from_rgba32(rgba - UINT32_C(128)), 0);
+    if (Accept_semantic_laser_command(batch, operation_status)
+	!= RENDERER_STATUS_OK) {
+	return;
+    }
+    operation_status = Renderer_stroke_path(
+	batch->renderer, geometry.points, NELEM(geometry.points), 1.0f,
+	Renderer_color_from_rgba32(rgba), 0);
+    (void)Accept_semantic_laser_command(batch, operation_status);
 }
 
 void Gui_paint_paused(int x, int y, int count)
