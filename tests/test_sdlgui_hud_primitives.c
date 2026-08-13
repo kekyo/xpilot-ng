@@ -23,6 +23,7 @@
 #define MAX_DRAW_VERTICES 42
 #define MAX_STROKES 10
 #define MAX_STROKE_POINTS 16
+#define MAX_STIPPLED_STROKES 4
 
 struct Renderer {
     int frame_active;
@@ -40,6 +41,7 @@ typedef enum PaintEvent {
     PAINT_EVENT_TRIANGLES,
     PAINT_EVENT_FILL,
     PAINT_EVENT_STROKE,
+    PAINT_EVENT_STIPPLED_STROKE,
     PAINT_EVENT_FLUSH,
     PAINT_EVENT_TEXT,
     PAINT_EVENT_IMAGE,
@@ -78,6 +80,19 @@ typedef struct FakeStroke {
     int scissor_token;
 } FakeStroke;
 
+typedef struct FakeStippledStroke {
+    RendererPoint2D points[2];
+    size_t point_count;
+    float width;
+    RendererColor color;
+    int closed;
+    unsigned int factor;
+    uint16_t pattern;
+    RendererBlendMode blend;
+    int transform_token;
+    int scissor_token;
+} FakeStippledStroke;
+
 typedef struct FakeText {
     string_tex_t *texture;
     int color;
@@ -115,6 +130,7 @@ static PaintEvent events[MAX_EVENTS];
 static FakeDraw draws[MAX_DRAWS];
 static FakeFill last_fill;
 static FakeStroke strokes[MAX_STROKES];
+static FakeStippledStroke stippled_strokes[MAX_STIPPLED_STROKES];
 static FakeText last_text;
 static FakeImage last_image;
 static FakeHudText last_hud_text;
@@ -129,6 +145,8 @@ static int fill_attempts;
 static int successful_fills;
 static int stroke_attempts;
 static int successful_strokes;
+static int stippled_stroke_attempts;
+static int successful_stippled_strokes;
 static int flush_attempts;
 static int transform_attempts;
 static int scissor_attempts;
@@ -141,6 +159,7 @@ static int legacy_vertex_calls;
 static int legacy_end_calls;
 static int legacy_color_calls;
 static int legacy_blend_calls;
+static int legacy_line_stipple_calls;
 static RendererBlendMode current_blend;
 static RendererBlendMode blend_modes[MAX_EVENTS];
 static int blend_failure_attempt;
@@ -150,6 +169,8 @@ static RendererStatus draw_failure_result;
 static RendererStatus fill_result;
 static int stroke_failure_attempt;
 static RendererStatus stroke_failure_result;
+static int stippled_stroke_failure_attempt;
+static RendererStatus stippled_stroke_failure_result;
 static RendererStatus flush_result;
 static RendererStatus text_result;
 static RendererStatus measure_result;
@@ -243,6 +264,8 @@ extern Uint32 packetLagMeterColorRGBA;
 extern Uint32 temporaryMeterColorRGBA;
 extern Uint32 selectionColorRGBA;
 extern Uint32 hudColorRGBA;
+extern Uint32 hudHLineColorRGBA;
+extern Uint32 hudVLineColorRGBA;
 extern Uint32 dirPtrColorRGBA;
 extern Uint32 hudRadarEnemyColorRGBA;
 extern Uint32 hudRadarOtherColorRGBA;
@@ -281,6 +304,34 @@ static int check_stroke(
     TEST_CHECK(stroke->scissor_token == 83);
     for (point_index = 0; point_index < expected_point_count;
          point_index++) {
+        TEST_CHECK(stroke->points[point_index].x
+                   == expected_points[point_index][0]);
+        TEST_CHECK(stroke->points[point_index].y
+                   == expected_points[point_index][1]);
+    }
+    return 0;
+}
+
+static int check_stippled_stroke(
+    int stroke_index, const float expected_points[][2], uint32_t rgba)
+{
+    const FakeStippledStroke *stroke;
+    size_t point_index;
+
+    TEST_CHECK(stroke_index >= 0);
+    TEST_CHECK(stroke_index < successful_stippled_strokes);
+    stroke = &stippled_strokes[stroke_index];
+    TEST_CHECK(stroke->point_count == 2);
+    TEST_CHECK(stroke->width == 1.0f);
+    TEST_CHECK(color_equal(
+        stroke->color, Renderer_color_from_rgba32(rgba)));
+    TEST_CHECK(stroke->closed == 0);
+    TEST_CHECK(stroke->factor == 4);
+    TEST_CHECK(stroke->pattern == UINT16_C(0xAAAA));
+    TEST_CHECK(stroke->blend == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stroke->transform_token == 71);
+    TEST_CHECK(stroke->scissor_token == 83);
+    for (point_index = 0; point_index < 2; point_index++) {
         TEST_CHECK(stroke->points[point_index].x
                    == expected_points[point_index][0]);
         TEST_CHECK(stroke->points[point_index].y
@@ -348,6 +399,7 @@ static void reset_frame(void)
     memset(draws, 0, sizeof(draws));
     memset(&last_fill, 0, sizeof(last_fill));
     memset(strokes, 0, sizeof(strokes));
+    memset(stippled_strokes, 0, sizeof(stippled_strokes));
     memset(&last_text, 0, sizeof(last_text));
     memset(&last_image, 0, sizeof(last_image));
     memset(&last_hud_text, 0, sizeof(last_hud_text));
@@ -368,6 +420,8 @@ static void reset_frame(void)
     successful_fills = 0;
     stroke_attempts = 0;
     successful_strokes = 0;
+    stippled_stroke_attempts = 0;
+    successful_stippled_strokes = 0;
     flush_attempts = 0;
     transform_attempts = 0;
     scissor_attempts = 0;
@@ -380,6 +434,7 @@ static void reset_frame(void)
     legacy_end_calls = 0;
     legacy_color_calls = 0;
     legacy_blend_calls = 0;
+    legacy_line_stipple_calls = 0;
     current_blend = RENDERER_BLEND_OPAQUE;
     blend_failure_attempt = 0;
     blend_failure_result = RENDERER_STATUS_OK;
@@ -388,6 +443,8 @@ static void reset_frame(void)
     fill_result = RENDERER_STATUS_OK;
     stroke_failure_attempt = 0;
     stroke_failure_result = RENDERER_STATUS_OK;
+    stippled_stroke_failure_attempt = 0;
+    stippled_stroke_failure_result = RENDERER_STATUS_OK;
     flush_result = RENDERER_STATUS_OK;
     text_result = RENDERER_STATUS_OK;
     measure_result = RENDERER_STATUS_OK;
@@ -456,6 +513,8 @@ static void reset_frame(void)
     fuelNotify = 100.0;
     loopsSlow = 0;
     hudColorRGBA = 0;
+    hudHLineColorRGBA = 0;
+    hudVLineColorRGBA = 0;
     dirPtrColorRGBA = 0;
     hudRadarEnemyColorRGBA = 0;
     hudRadarOtherColorRGBA = 0;
@@ -656,6 +715,42 @@ RendererStatus Renderer_stroke_path(
     return RENDERER_STATUS_OK;
 }
 
+RendererStatus Renderer_stroke_stippled_path(
+    Renderer *renderer, const RendererPoint2D *points,
+    size_t point_count, float width, RendererColor color, int closed,
+    unsigned int factor, uint16_t pattern)
+{
+    FakeStippledStroke *stroke;
+
+    stippled_stroke_attempts++;
+    operation_result_pending = 1;
+    record_event(PAINT_EVENT_STIPPLED_STROKE);
+    if (renderer != &fake_renderer || !renderer->frame_active
+        || points == NULL || point_count != 2 || width <= 0.0f
+        || factor == 0 || factor > 256) {
+        return RENDERER_STATUS_INVALID_STATE;
+    }
+    if (stippled_stroke_failure_attempt == stippled_stroke_attempts
+        && stippled_stroke_failure_result != RENDERER_STATUS_OK) {
+        return stippled_stroke_failure_result;
+    }
+    if (successful_stippled_strokes >= MAX_STIPPLED_STROKES)
+        return RENDERER_STATUS_OUT_OF_MEMORY;
+    stroke = &stippled_strokes[successful_stippled_strokes++];
+    memcpy(stroke->points, points,
+           point_count * sizeof(stroke->points[0]));
+    stroke->point_count = point_count;
+    stroke->width = width;
+    stroke->color = color;
+    stroke->closed = closed;
+    stroke->factor = factor;
+    stroke->pattern = pattern;
+    stroke->blend = current_blend;
+    stroke->transform_token = renderer->transform_token;
+    stroke->scissor_token = renderer->scissor_token;
+    return RENDERER_STATUS_OK;
+}
+
 RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
 {
     flush_attempts++;
@@ -783,6 +878,13 @@ void GLAPIENTRY glBlendFunc(GLenum source, GLenum destination)
     legacy_blend_calls++;
 }
 
+void GLAPIENTRY glLineStipple(GLint factor, GLushort pattern)
+{
+    (void)factor;
+    (void)pattern;
+    legacy_line_stipple_calls++;
+}
+
 void GLAPIENTRY glColor4ub(GLubyte red, GLubyte green,
                           GLubyte blue, GLubyte alpha)
 {
@@ -818,6 +920,7 @@ static int check_no_legacy_primitives(void)
     TEST_CHECK(legacy_end_calls == 0);
     TEST_CHECK(legacy_color_calls == 0);
     TEST_CHECK(legacy_blend_calls == 0);
+    TEST_CHECK(legacy_line_stipple_calls == 0);
     return 0;
 }
 
@@ -2072,6 +2175,287 @@ static int check_selection_flush_failure_is_sticky(void)
     return check_no_legacy_primitives();
 }
 
+static void reset_hud_frame_fixture(void)
+{
+    reset_frame();
+    hudHLineColorRGBA = UINT32_C(0x11223344);
+    hudVLineColorRGBA = UINT32_C(0xa1b2c3d4);
+}
+
+static int check_hud_frame_paths_are_semantic(void)
+{
+    static const float frame_paths[][2][2] = {
+        {{50.0f, 30.0f}, {150.0f, 30.0f}},
+        {{50.0f, 90.0f}, {150.0f, 90.0f}},
+        {{70.0f, 10.0f}, {70.0f, 110.0f}},
+        {{130.0f, 10.0f}, {130.0f, 110.0f}}
+    };
+    static const uint32_t frame_colors[] = {
+        UINT32_C(0x11223344), UINT32_C(0x11223344),
+        UINT32_C(0xa1b2c3d4), UINT32_C(0xa1b2c3d4)
+    };
+    RendererStatus result;
+    int path_index;
+
+    reset_hud_frame_fixture();
+
+    result = Sdlgui_test_paint_hud_frame(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    for (path_index = 0; path_index < 4; path_index++)
+        TEST_CHECK(events[path_index + 1] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[5] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stippled_stroke_attempts == 4);
+    TEST_CHECK(successful_stippled_strokes == 4);
+    for (path_index = 0; path_index < 4; path_index++) {
+        if (check_stippled_stroke(
+                path_index, frame_paths[path_index],
+                frame_colors[path_index]) != 0) {
+            return 1;
+        }
+    }
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    return check_no_legacy_primitives();
+}
+
+static int check_hud_frame_visibility_conditions(void)
+{
+    static const float horizontal_paths[][2][2] = {
+        {{50.0f, 30.0f}, {150.0f, 30.0f}},
+        {{50.0f, 90.0f}, {150.0f, 90.0f}}
+    };
+    static const float vertical_paths[][2][2] = {
+        {{70.0f, 10.0f}, {70.0f, 110.0f}},
+        {{130.0f, 10.0f}, {130.0f, 110.0f}}
+    };
+    RendererStatus result;
+    int path_index;
+
+    reset_hud_frame_fixture();
+    hudVLineColorRGBA = 0;
+
+    result = Sdlgui_test_paint_hud_frame(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(stippled_stroke_attempts == 2);
+    TEST_CHECK(successful_stippled_strokes == 2);
+    for (path_index = 0; path_index < 2; path_index++) {
+        if (check_stippled_stroke(
+                path_index, horizontal_paths[path_index],
+                UINT32_C(0x11223344)) != 0) {
+            return 1;
+        }
+    }
+    TEST_CHECK(flush_attempts == 1);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_hud_frame_fixture();
+    hudHLineColorRGBA = 0;
+
+    result = Sdlgui_test_paint_hud_frame(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(stippled_stroke_attempts == 2);
+    TEST_CHECK(successful_stippled_strokes == 2);
+    for (path_index = 0; path_index < 2; path_index++) {
+        if (check_stippled_stroke(
+                path_index, vertical_paths[path_index],
+                UINT32_C(0xa1b2c3d4)) != 0) {
+            return 1;
+        }
+    }
+    TEST_CHECK(flush_attempts == 1);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_hud_frame_fixture();
+    hudHLineColorRGBA = 0;
+    hudVLineColorRGBA = 0;
+
+    result = Sdlgui_test_paint_hud_frame(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 0);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    return check_no_legacy_primitives();
+}
+
+static int check_hud_frame_partial_failure_flushes_accepted_prefix(void)
+{
+    static const float accepted_paths[][2][2] = {
+        {{50.0f, 30.0f}, {150.0f, 30.0f}},
+        {{50.0f, 90.0f}, {150.0f, 90.0f}}
+    };
+    RendererStatus result;
+    int path_index;
+
+    reset_hud_frame_fixture();
+    stippled_stroke_failure_attempt = 3;
+    stippled_stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+
+    result = Sdlgui_test_paint_hud_frame(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 5);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[4] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(stippled_stroke_attempts == 3);
+    TEST_CHECK(successful_stippled_strokes == 2);
+    for (path_index = 0; path_index < 2; path_index++) {
+        if (check_stippled_stroke(
+                path_index, accepted_paths[path_index],
+                UINT32_C(0x11223344)) != 0) {
+            return 1;
+        }
+    }
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    stippled_stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+    result = Sdlgui_test_paint_hud_frame(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 5);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(stippled_stroke_attempts == 3);
+    TEST_CHECK(successful_stippled_strokes == 2);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    return check_no_legacy_primitives();
+}
+
+static int check_hud_frame_first_operation_failures_are_sticky(void)
+{
+    RendererStatus result;
+
+    reset_hud_frame_fixture();
+    blend_failure_attempt = 1;
+    blend_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+
+    result = Sdlgui_test_paint_hud_frame(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    blend_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+    result = Sdlgui_test_paint_hud_frame(100, 60);
+    TEST_CHECK(result == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(blend_attempts == 1);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_hud_frame_fixture();
+    stippled_stroke_failure_attempt = 1;
+    stippled_stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+
+    result = Sdlgui_test_paint_hud_frame(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(stippled_stroke_attempts == 1);
+    TEST_CHECK(successful_stippled_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    stippled_stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    result = Sdlgui_test_paint_hud_frame(100, 60);
+    TEST_CHECK(result == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(stippled_stroke_attempts == 1);
+    TEST_CHECK(flush_attempts == 0);
+    return check_no_legacy_primitives();
+}
+
+static int check_hud_frame_flush_failure_is_sticky(void)
+{
+    RendererStatus result;
+
+    reset_hud_frame_fixture();
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+
+    result = Sdlgui_test_paint_hud_frame(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[4] == PAINT_EVENT_STIPPLED_STROKE);
+    TEST_CHECK(events[5] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(stippled_stroke_attempts == 4);
+    TEST_CHECK(successful_stippled_strokes == 4);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    flush_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    result = Sdlgui_test_paint_hud_frame(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(stippled_stroke_attempts == 4);
+    TEST_CHECK(successful_stippled_strokes == 4);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    return check_no_legacy_primitives();
+}
+
 static void reset_hud_status_fixture(void)
 {
     reset_frame();
@@ -2886,6 +3270,16 @@ int main(void)
     if (check_selection_stroke_failure_is_sticky() != 0)
         return 1;
     if (check_selection_flush_failure_is_sticky() != 0)
+        return 1;
+    if (check_hud_frame_paths_are_semantic() != 0)
+        return 1;
+    if (check_hud_frame_visibility_conditions() != 0)
+        return 1;
+    if (check_hud_frame_partial_failure_flushes_accepted_prefix() != 0)
+        return 1;
+    if (check_hud_frame_first_operation_failures_are_sticky() != 0)
+        return 1;
+    if (check_hud_frame_flush_failure_is_sticky() != 0)
         return 1;
     if (check_hud_lose_item_outline_precedes_count_text() != 0)
         return 1;

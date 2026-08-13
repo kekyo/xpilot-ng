@@ -1583,6 +1583,11 @@ typedef struct SemanticHudPointerGeometry {
     int draw_direction;
 } SemanticHudPointerGeometry;
 
+typedef struct SemanticHudFrameGeometry {
+    RendererPoint2D horizontal[2][2];
+    RendererPoint2D vertical[2][2];
+} SemanticHudFrameGeometry;
+
 #define SEMANTIC_HUD_RADAR_RING_POINTS 16
 #define SEMANTIC_HUD_RADAR_FILL_VERTICES \
     ((SEMANTIC_HUD_RADAR_RING_POINTS - 2) * 3)
@@ -1821,6 +1826,113 @@ static int Semantic_hud_integer_float(int64_t value, float *result)
     }
     *result = (float)value;
     return isfinite(*result);
+}
+
+static RendererStatus Build_semantic_hud_frame_geometry(
+    int hud_pos_x, int hud_pos_y, SemanticHudFrameGeometry *geometry)
+{
+    int64_t left;
+    int64_t right;
+    int64_t top;
+    int64_t bottom;
+    int64_t horizontal_top;
+    int64_t horizontal_bottom;
+    int64_t vertical_left;
+    int64_t vertical_right;
+
+    if (geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+
+    left = (int64_t)hud_pos_x - (int64_t)hudSize;
+    right = (int64_t)hud_pos_x + (int64_t)hudSize;
+    top = (int64_t)hud_pos_y - (int64_t)hudSize;
+    bottom = (int64_t)hud_pos_y + (int64_t)hudSize;
+    horizontal_top = top + (int64_t)HUD_OFFSET;
+    horizontal_bottom = bottom - (int64_t)HUD_OFFSET;
+    vertical_left = left + (int64_t)HUD_OFFSET;
+    vertical_right = right - (int64_t)HUD_OFFSET;
+
+    if (!Semantic_hud_integer_float(
+	    left, &geometry->horizontal[0][0].x)
+	|| !Semantic_hud_integer_float(
+	    horizontal_top, &geometry->horizontal[0][0].y)
+	|| !Semantic_hud_integer_float(
+	    right, &geometry->horizontal[0][1].x)
+	|| !Semantic_hud_integer_float(
+	    horizontal_top, &geometry->horizontal[0][1].y)
+	|| !Semantic_hud_integer_float(
+	    left, &geometry->horizontal[1][0].x)
+	|| !Semantic_hud_integer_float(
+	    horizontal_bottom, &geometry->horizontal[1][0].y)
+	|| !Semantic_hud_integer_float(
+	    right, &geometry->horizontal[1][1].x)
+	|| !Semantic_hud_integer_float(
+	    horizontal_bottom, &geometry->horizontal[1][1].y)
+	|| !Semantic_hud_integer_float(
+	    vertical_left, &geometry->vertical[0][0].x)
+	|| !Semantic_hud_integer_float(
+	    top, &geometry->vertical[0][0].y)
+	|| !Semantic_hud_integer_float(
+	    vertical_left, &geometry->vertical[0][1].x)
+	|| !Semantic_hud_integer_float(
+	    bottom, &geometry->vertical[0][1].y)
+	|| !Semantic_hud_integer_float(
+	    vertical_right, &geometry->vertical[1][0].x)
+	|| !Semantic_hud_integer_float(
+	    top, &geometry->vertical[1][0].y)
+	|| !Semantic_hud_integer_float(
+	    vertical_right, &geometry->vertical[1][1].x)
+	|| !Semantic_hud_integer_float(
+	    bottom, &geometry->vertical[1][1].y)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Paint_semantic_hud_frame(
+    int hud_pos_x, int hud_pos_y)
+{
+    SemanticHudBatch batch;
+    SemanticHudFrameGeometry geometry;
+    RendererColor color;
+    RendererStatus operation_status;
+    int path_index;
+
+    if (!hudHLineColorRGBA && !hudVLineColorRGBA)
+	return RENDERER_STATUS_OK;
+    if (Begin_semantic_hud_batch(&batch) != RENDERER_STATUS_OK)
+	return batch.status;
+    operation_status = Build_semantic_hud_frame_geometry(
+	hud_pos_x, hud_pos_y, &geometry);
+    if (operation_status != RENDERER_STATUS_OK)
+	return Track_semantic_hud_batch(&batch, operation_status);
+
+    operation_status = Renderer_set_blend(
+	batch.renderer, RENDERER_BLEND_ADDITIVE);
+    Track_semantic_hud_batch(&batch, operation_status);
+
+    color = Renderer_color_from_rgba32(hudHLineColorRGBA);
+    for (path_index = 0;
+	 batch.status == RENDERER_STATUS_OK
+	     && hudHLineColorRGBA && path_index < 2;
+	 path_index++) {
+	operation_status = Renderer_stroke_stippled_path(
+	    batch.renderer, geometry.horizontal[path_index], 2, 1.0f,
+	    color, 0, 4, UINT16_C(0xAAAA));
+	Accept_semantic_hud_command(&batch, operation_status);
+    }
+
+    color = Renderer_color_from_rgba32(hudVLineColorRGBA);
+    for (path_index = 0;
+	 batch.status == RENDERER_STATUS_OK
+	     && hudVLineColorRGBA && path_index < 2;
+	 path_index++) {
+	operation_status = Renderer_stroke_stippled_path(
+	    batch.renderer, geometry.vertical[path_index], 2, 1.0f,
+	    color, 0, 4, UINT16_C(0xAAAA));
+	Accept_semantic_hud_command(&batch, operation_status);
+    }
+    return Finish_semantic_hud_batch(&batch);
 }
 
 static RendererStatus Build_semantic_meter_geometry(
@@ -2933,6 +3045,12 @@ RendererStatus Sdlgui_test_paint_hud_fuel_gauge(
 {
     return Paint_semantic_hud_fuel_gauge(hud_pos_x, hud_pos_y);
 }
+
+RendererStatus Sdlgui_test_paint_hud_frame(
+    int hud_pos_x, int hud_pos_y)
+{
+    return Paint_semantic_hud_frame(hud_pos_x, hud_pos_y);
+}
 #endif
 
 RendererStatus Paint_HUD_checked(void)
@@ -2953,8 +3071,6 @@ RendererStatus Paint_HUD_checked(void)
     if (status != RENDERER_STATUS_OK)
 	return status;
     tex_index = 0;
-    /* The remaining compatibility HUD is additive and still needs blending. */
-    glEnable(GL_BLEND);
 
     /*
      * Display the HUD
@@ -2962,31 +3078,9 @@ RendererStatus Paint_HUD_checked(void)
     hud_pos_x = (int)(draw_width / 2 - hud_move_fact * selfVel.x);
     hud_pos_y = (int)(draw_height / 2 + hud_move_fact * selfVel.y);
 
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-    /* HUD frame */
-    glLineStipple(4, 0xAAAA);
-    glEnable(GL_LINE_STIPPLE);
-    if (hudHLineColorRGBA) {
-    	set_alphacolor(hudHLineColorRGBA);
-    	glBegin(GL_LINES);
-    	    glVertex2i(hud_pos_x - hudSize,hud_pos_y - hudSize + HUD_OFFSET);
-	    glVertex2i(hud_pos_x + hudSize,hud_pos_y - hudSize + HUD_OFFSET);
-
-	    glVertex2i(hud_pos_x - hudSize,hud_pos_y + hudSize - HUD_OFFSET);
-	    glVertex2i(hud_pos_x + hudSize,hud_pos_y + hudSize - HUD_OFFSET);
-    	glEnd();
-    }
-    if (hudVLineColorRGBA) {
-    	set_alphacolor(hudVLineColorRGBA);
-    	glBegin(GL_LINES);
-    	    glVertex2i(hud_pos_x - hudSize + HUD_OFFSET,hud_pos_y - hudSize);
-	    glVertex2i(hud_pos_x - hudSize + HUD_OFFSET,hud_pos_y + hudSize);
-
-	    glVertex2i(hud_pos_x + hudSize - HUD_OFFSET,hud_pos_y - hudSize);
-	    glVertex2i(hud_pos_x + hudSize - HUD_OFFSET,hud_pos_y + hudSize);
-    	glEnd();
-    }
-    glDisable(GL_LINE_STIPPLE);
+    status = Paint_semantic_hud_frame(hud_pos_x, hud_pos_y);
+    if (status != RENDERER_STATUS_OK)
+	goto finish_hud;
 
     if (hudItemsColorRGBA) {
 	status = Paint_HUD_items(hud_pos_x, hud_pos_y);
@@ -3113,7 +3207,6 @@ RendererStatus Paint_HUD_checked(void)
     status = Paint_semantic_hud_fuel_gauge(hud_pos_x, hud_pos_y);
 
 finish_hud:
-    glDisable(GL_BLEND);
     return status;
 }
 

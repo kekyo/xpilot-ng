@@ -76,8 +76,7 @@ extern RendererStatus Paint_select(void);
  * Draw the SDL HUD and report semantic renderer failures.
  *
  * @return The sticky result for the active renderer frame.
- * @remarks Compatibility OpenGL blend state is cleaned up before every
- *          return after HUD compatibility drawing begins. The generic
+ * @remarks HUD drawing uses semantic renderer operations. The generic
  *          Paint_HUD() entry point remains available as a void wrapper for
  *          the shared client paint interface.
  */
@@ -119,6 +118,21 @@ extern RendererStatus Sdlgui_test_paint_hud_radar_dot(
  *          state and is available only to the SDL GUI primitive test target.
  */
 extern RendererStatus Sdlgui_test_paint_hud_radar_and_scans(void);
+
+/**
+ * Draw only the semantic dashed horizontal and vertical HUD frame lines.
+ *
+ * @param hud_pos_x Horizontal HUD center in inherited HUD coordinates.
+ * @param hud_pos_y Vertical HUD center in inherited HUD coordinates.
+ * @return The sticky result for the active renderer frame, or
+ *         RENDERER_STATUS_OK when both frame colors are disabled.
+ * @remarks This hook exercises the production HUD frame visibility and
+ *          geometry while preserving the renderer's current transform and
+ *          scissor state. It is available only to the SDL GUI primitive test
+ *          target.
+ */
+extern RendererStatus Sdlgui_test_paint_hud_frame(
+    int hud_pos_x, int hud_pos_y);
 
 /**
  * Paint the real HUD item list, including the semantic lose-item outline.
