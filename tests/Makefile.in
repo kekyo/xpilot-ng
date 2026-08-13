@@ -101,7 +101,8 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) \
-	test-glwidgets-primitives$(EXEEXT) test-text-geometry$(EXEEXT) \
+	test-glwidgets-primitives$(EXEEXT) \
+	test-sdlmeta-primitives$(EXEEXT) test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
 	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT)
 TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
@@ -116,7 +117,8 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) \
-	test-glwidgets-primitives$(EXEEXT) test-text-geometry$(EXEEXT) \
+	test-glwidgets-primitives$(EXEEXT) \
+	test-sdlmeta-primitives$(EXEEXT) test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
 	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT) \
 	run-renderer-gl-backends.sh run-e2e.sh
@@ -262,6 +264,15 @@ am_test_sdl_window_OBJECTS = test_sdl_window.$(OBJEXT) \
 	sdlwindow.$(OBJEXT)
 test_sdl_window_OBJECTS = $(am_test_sdl_window_OBJECTS)
 test_sdl_window_DEPENDENCIES =
+am_test_sdlmeta_primitives_OBJECTS =  \
+	test_sdlmeta_primitives-test_sdlmeta_primitives.$(OBJEXT) \
+	test_sdlmeta_primitives-sdlmeta.$(OBJEXT)
+test_sdlmeta_primitives_OBJECTS =  \
+	$(am_test_sdlmeta_primitives_OBJECTS)
+test_sdlmeta_primitives_DEPENDENCIES =
+test_sdlmeta_primitives_LINK = $(CCLD) \
+	$(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) \
+	$(test_sdlmeta_primitives_LDFLAGS) $(LDFLAGS) -o $@
 am_test_surface_rgba8_OBJECTS = test_surface_rgba8.$(OBJEXT) \
 	surface_rgba8.$(OBJEXT) sdlcompat.$(OBJEXT)
 test_surface_rgba8_OBJECTS = $(am_test_surface_rgba8_OBJECTS)
@@ -364,6 +375,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_sdl_ui_image-surface_rgba8.Po \
 	./$(DEPDIR)/test_sdl_ui_image-test_sdl_ui_image.Po \
 	./$(DEPDIR)/test_sdl_window.Po \
+	./$(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po \
+	./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po \
 	./$(DEPDIR)/test_surface_rgba8.Po \
 	./$(DEPDIR)/test_text_atlas.Po \
 	./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po \
@@ -407,8 +420,9 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdl_keys_SOURCES) $(test_sdl_meta_frame_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
-	$(test_sdl_window_SOURCES) $(test_surface_rgba8_SOURCES) \
-	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
+	$(test_sdl_window_SOURCES) $(test_sdlmeta_primitives_SOURCES) \
+	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
+	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES)
 DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
@@ -425,8 +439,9 @@ DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdl_keys_SOURCES) $(test_sdl_meta_frame_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
-	$(test_sdl_window_SOURCES) $(test_surface_rgba8_SOURCES) \
-	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
+	$(test_sdl_window_SOURCES) $(test_sdlmeta_primitives_SOURCES) \
+	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
+	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES)
 am__can_run_installinfo = \
@@ -946,6 +961,17 @@ test_glwidgets_primitives_CFLAGS = $(AM_CFLAGS) \
 
 test_glwidgets_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_glwidgets_primitives_LDADD = @SDL2_LIBS@
+test_sdlmeta_primitives_SOURCES = test_sdlmeta_primitives.c \
+	$(top_srcdir)/src/client/sdl/sdlmeta.c
+
+test_sdlmeta_primitives_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_SDLMETA_TEST_HOOKS
+
+test_sdlmeta_primitives_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+
+test_sdlmeta_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_sdlmeta_primitives_LDADD = @SDL2_LIBS@
 test_text_geometry_SOURCES = test_text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.h
@@ -1121,6 +1147,10 @@ test-sdl-window$(EXEEXT): $(test_sdl_window_OBJECTS) $(test_sdl_window_DEPENDENC
 	@rm -f test-sdl-window$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_window_OBJECTS) $(test_sdl_window_LDADD) $(LIBS)
 
+test-sdlmeta-primitives$(EXEEXT): $(test_sdlmeta_primitives_OBJECTS) $(test_sdlmeta_primitives_DEPENDENCIES) $(EXTRA_test_sdlmeta_primitives_DEPENDENCIES)
+	@rm -f test-sdlmeta-primitives$(EXEEXT)
+	$(AM_V_CCLD)$(test_sdlmeta_primitives_LINK) $(test_sdlmeta_primitives_OBJECTS) $(test_sdlmeta_primitives_LDADD) $(LIBS)
+
 test-surface-rgba8$(EXEEXT): $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_DEPENDENCIES) $(EXTRA_test_surface_rgba8_DEPENDENCIES)
 	@rm -f test-surface-rgba8$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_LDADD) $(LIBS)
@@ -1212,6 +1242,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_ui_image-surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_ui_image-test_sdl_ui_image.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_window.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po@am__quote@ # am--include-marker
@@ -1890,6 +1922,34 @@ sdlwindow.obj: $(top_srcdir)/src/client/sdl/sdlwindow.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdlwindow.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlwindow.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlwindow.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlwindow.c'; fi`
 
+test_sdlmeta_primitives-test_sdlmeta_primitives.o: test_sdlmeta_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -MT test_sdlmeta_primitives-test_sdlmeta_primitives.o -MD -MP -MF $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Tpo -c -o test_sdlmeta_primitives-test_sdlmeta_primitives.o `test -f 'test_sdlmeta_primitives.c' || echo '$(srcdir)/'`test_sdlmeta_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Tpo $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlmeta_primitives.c' object='test_sdlmeta_primitives-test_sdlmeta_primitives.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-test_sdlmeta_primitives.o `test -f 'test_sdlmeta_primitives.c' || echo '$(srcdir)/'`test_sdlmeta_primitives.c
+
+test_sdlmeta_primitives-test_sdlmeta_primitives.obj: test_sdlmeta_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -MT test_sdlmeta_primitives-test_sdlmeta_primitives.obj -MD -MP -MF $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Tpo -c -o test_sdlmeta_primitives-test_sdlmeta_primitives.obj `if test -f 'test_sdlmeta_primitives.c'; then $(CYGPATH_W) 'test_sdlmeta_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlmeta_primitives.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Tpo $(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlmeta_primitives.c' object='test_sdlmeta_primitives-test_sdlmeta_primitives.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-test_sdlmeta_primitives.obj `if test -f 'test_sdlmeta_primitives.c'; then $(CYGPATH_W) 'test_sdlmeta_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlmeta_primitives.c'; fi`
+
+test_sdlmeta_primitives-sdlmeta.o: $(top_srcdir)/src/client/sdl/sdlmeta.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -MT test_sdlmeta_primitives-sdlmeta.o -MD -MP -MF $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Tpo -c -o test_sdlmeta_primitives-sdlmeta.o `test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlmeta.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Tpo $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlmeta.c' object='test_sdlmeta_primitives-sdlmeta.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-sdlmeta.o `test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlmeta.c
+
+test_sdlmeta_primitives-sdlmeta.obj: $(top_srcdir)/src/client/sdl/sdlmeta.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -MT test_sdlmeta_primitives-sdlmeta.obj -MD -MP -MF $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Tpo -c -o test_sdlmeta_primitives-sdlmeta.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlmeta.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlmeta.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Tpo $(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlmeta.c' object='test_sdlmeta_primitives-sdlmeta.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-sdlmeta.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlmeta.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlmeta.c'; fi`
+
 surface_rgba8.o: $(top_srcdir)/src/client/sdl/surface_rgba8.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT surface_rgba8.o -MD -MP -MF $(DEPDIR)/surface_rgba8.Tpo -c -o surface_rgba8.o `test -f '$(top_srcdir)/src/client/sdl/surface_rgba8.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/surface_rgba8.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/surface_rgba8.Tpo $(DEPDIR)/surface_rgba8.Po
@@ -2370,6 +2430,13 @@ test-glwidgets-primitives.log: test-glwidgets-primitives$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-sdlmeta-primitives.log: test-sdlmeta-primitives$(EXEEXT)
+	@p='test-sdlmeta-primitives$(EXEEXT)'; \
+	b='test-sdlmeta-primitives'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-text-geometry.log: test-text-geometry$(EXEEXT)
 	@p='test-text-geometry$(EXEEXT)'; \
 	b='test-text-geometry'; \
@@ -2557,6 +2624,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-test_sdl_ui_image.Po
 	-rm -f ./$(DEPDIR)/test_sdl_window.Po
+	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po
+	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po
@@ -2676,6 +2745,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-test_sdl_ui_image.Po
 	-rm -f ./$(DEPDIR)/test_sdl_window.Po
+	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-sdlmeta.Po
+	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po

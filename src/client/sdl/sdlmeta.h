@@ -25,4 +25,23 @@
 
 int Meta_window(Connect_param_t *conpar);
 
+#ifdef XPILOT_SDLMETA_TEST_HOOKS
+/**
+ * Paint a player-list background through the production widget painter.
+ *
+ * @param bounds Widget bounds in logical top-left coordinates.
+ */
+void Sdl_meta_test_paint_player_list(SDL_Rect bounds);
+
+/**
+ * Paint a metadata row through the production widget painter.
+ *
+ * @param bounds Widget bounds in logical top-left coordinates.
+ * @param background Packed 0xRRGGBBAA background for an unselected row.
+ * @param selected Whether to use the selected-row background instead.
+ */
+void Sdl_meta_test_paint_row(SDL_Rect bounds, Uint32 background,
+                             bool selected);
+#endif
+
 #endif

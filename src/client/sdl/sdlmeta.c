@@ -217,6 +217,45 @@ static list_t create_player_list(char *players_str)
     return players;
 }
 
+static RendererStatus Paint_meta_background(int x, int y, int width,
+					     int height, Uint32 rgba)
+{
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+    Renderer *renderer;
+    RendererStatus status;
+
+    if (sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    renderer = Sdl_renderer_frontend(sdl_renderer);
+    if (renderer == NULL) {
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    }
+    if (width <= 0 || height <= 0)
+	return RENDERER_STATUS_OK;
+
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer,
+	Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA));
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer,
+	    Renderer_fill_rect(
+		renderer, (float)x, (float)y, (float)width, (float)height,
+		Renderer_color_from_rgba32(rgba)));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer,
+	    Sdl_renderer_flush_preserving_legacy(sdl_renderer));
+    }
+    return status;
+}
+
 static void Close_PlayerListWidget(GLWidget *widget) 
 {
     PlayerListWidget *info;
@@ -236,13 +275,13 @@ static void Close_PlayerListWidget(GLWidget *widget)
 static void Paint_PlayerListWidget(GLWidget *widget)
 {
     SDL_Rect *b = &(widget->bounds);
-    set_alphacolor(PLIST_ITEM_BG);
-    glBegin(GL_QUADS);
-    glVertex2i(b->x, b->y);
-    glVertex2i(b->x + b->w - 10, b->y);
-    glVertex2i(b->x + b->w - 10, b->y + b->h);
-    glVertex2i(b->x, b->y + b->h);
-    glEnd();
+    int width = b->w > 10 ? b->w - 10 : 0;
+
+    if (Paint_meta_background(
+	    b->x, b->y, width, b->h, PLIST_ITEM_BG)
+	!= RENDERER_STATUS_OK) {
+	warn("Could not draw player-list background");
+    }
 }
 
 static GLWidget *Init_PlayerListWidget(server_info_t *sip)
@@ -509,15 +548,40 @@ static void Paint_MetaRowWidget(GLWidget *widget)
 
     b = &(widget->bounds);
     row = (MetaRowWidget*)widget->wid_info;
-    set_alphacolor(row->is_selected ? SELECTED_BG : row->bg);
-
-    glBegin(GL_QUADS);
-    glVertex2i(b->x, b->y);
-    glVertex2i(b->x + b->w, b->y);
-    glVertex2i(b->x + b->w, b->y + b->h);
-    glVertex2i(b->x, b->y + b->h);
-    glEnd();
+    if (Paint_meta_background(
+	    b->x, b->y, b->w, b->h,
+	    row->is_selected ? SELECTED_BG : row->bg)
+	!= RENDERER_STATUS_OK) {
+	warn("Could not draw metaserver row background");
+    }
 }
+
+#ifdef XPILOT_SDLMETA_TEST_HOOKS
+void Sdl_meta_test_paint_player_list(SDL_Rect bounds)
+{
+    PlayerListWidget info = {0};
+    GLWidget widget = {0};
+
+    widget.WIDGET = PLAYERLISTWIDGET;
+    widget.wid_info = &info;
+    widget.bounds = bounds;
+    Paint_PlayerListWidget(&widget);
+}
+
+void Sdl_meta_test_paint_row(SDL_Rect bounds, Uint32 background,
+                             bool selected)
+{
+    MetaRowWidget row = {0};
+    GLWidget widget = {0};
+
+    row.bg = background;
+    row.is_selected = selected;
+    widget.WIDGET = METAROWWIDGET;
+    widget.wid_info = &row;
+    widget.bounds = bounds;
+    Paint_MetaRowWidget(&widget);
+}
+#endif
 
 static void SetBounds_MetaRowWidget(GLWidget *row, SDL_Rect *rb)
 {

@@ -13,6 +13,7 @@ check_PROGRAMS = test-meta-environment \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
 	test-sdl-meta-frame test-sdl-game-frame test-sdl-renderer-scissor \
 	test-glwidgets-scissor test-glwidgets-primitives \
+	test-sdlmeta-primitives \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
 TESTS = test-meta-environment \
@@ -24,7 +25,8 @@ TESTS = test-meta-environment \
 	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
 	test-sdl-game-frame \
 	test-sdl-renderer-scissor test-glwidgets-scissor \
-	test-glwidgets-primitives test-text-geometry \
+	test-glwidgets-primitives test-sdlmeta-primitives \
+	test-text-geometry \
 	test-text-atlas test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
 	run-renderer-gl-backends.sh run-e2e.sh
@@ -169,6 +171,15 @@ test_glwidgets_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_glwidgets_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_glwidgets_primitives_LDADD = @SDL2_LIBS@
+
+test_sdlmeta_primitives_SOURCES = test_sdlmeta_primitives.c \
+	$(top_srcdir)/src/client/sdl/sdlmeta.c
+test_sdlmeta_primitives_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_SDLMETA_TEST_HOOKS
+test_sdlmeta_primitives_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_sdlmeta_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_sdlmeta_primitives_LDADD = @SDL2_LIBS@
 
 test_text_geometry_SOURCES = test_text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c \
