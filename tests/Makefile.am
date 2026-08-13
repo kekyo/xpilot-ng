@@ -29,7 +29,8 @@ TESTS = test-meta-environment \
 	test-image-geometry test-polygon-geometry test-gfx2d-picture \
 	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
 	test-sdl-game-frame \
-	test-sdlpaint-stage test-paintmap-vdecor \
+	test-sdlpaint-stage run-sdlpaint-matrix-boundary.sh \
+	test-paintmap-vdecor \
 	test-sdl-renderer-scissor test-glwidgets-scissor \
 	test-glwidgets-primitives test-sdlmeta-primitives \
 	test-sdlgui-appearing test-sdlgui-hud-primitives \
@@ -98,7 +99,7 @@ test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=glGenTextures -Wl,--wrap=TTF_OpenFont \
 	-Wl,--wrap=TTF_CloseFont
 test_gl_legacy_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
-	@GLU_LIBS@ @GL_LIBS@
+	@GL_LIBS@
 
 test_renderer_commands_SOURCES = test_renderer_commands.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
@@ -285,8 +286,7 @@ test_sdlgui_polygons_CFLAGS = $(AM_CFLAGS) \
 test_sdlgui_polygons_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc
 test_sdlgui_polygons_LDADD = \
-	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL2_LIBS@ \
-	@GLU_LIBS@ @GL_LIBS@
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL2_LIBS@
 
 test_sdlgui_sparks_SOURCES = test_sdlgui_sparks.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
@@ -379,7 +379,8 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_RENDERER_GL_TEST_BINARY;
 
 EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-legacy.sh \
-	run-renderer-gl-backends.sh test_helpers.h
+	run-renderer-gl-backends.sh run-sdlpaint-matrix-boundary.sh \
+	test_helpers.h
 
 .PHONY: e2e-install
 run-e2e.log: e2e-install

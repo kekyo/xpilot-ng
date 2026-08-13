@@ -123,7 +123,8 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-images$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
-	test-sdlpaint-stage$(EXEEXT) test-paintmap-vdecor$(EXEEXT) \
+	test-sdlpaint-stage$(EXEEXT) run-sdlpaint-matrix-boundary.sh \
+	test-paintmap-vdecor$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) \
 	test-glwidgets-primitives$(EXEEXT) \
@@ -999,7 +1000,7 @@ test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=TTF_CloseFont
 
 test_gl_legacy_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
-	@GLU_LIBS@ @GL_LIBS@
+	@GL_LIBS@
 
 test_renderer_commands_SOURCES = test_renderer_commands.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
@@ -1199,8 +1200,7 @@ test_sdlgui_polygons_CFLAGS = $(AM_CFLAGS) \
 test_sdlgui_polygons_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc
 test_sdlgui_polygons_LDADD = \
-	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL2_LIBS@ \
-	@GLU_LIBS@ @GL_LIBS@
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL2_LIBS@
 test_sdlgui_sparks_SOURCES = test_sdlgui_sparks.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/spark_batch_test_support.h \
@@ -1299,7 +1299,8 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_RENDERER_GL_TEST_BINARY;
 
 EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-legacy.sh \
-	run-renderer-gl-backends.sh test_helpers.h
+	run-renderer-gl-backends.sh run-sdlpaint-matrix-boundary.sh \
+	test_helpers.h
 
 all: all-am
 
