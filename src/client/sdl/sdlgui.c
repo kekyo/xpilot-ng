@@ -845,6 +845,138 @@ static RendererStatus Build_semantic_ball_outline_geometry(
     return RENDERER_STATUS_OK;
 }
 
+static int Floor_divide_semantic_wreck_value_by_256(int value)
+{
+    int quotient = value / 256;
+
+    /* C99 division truncates toward zero; legacy GCC signed shifts floored. */
+    if (value < 0 && value % 256 != 0)
+	quotient--;
+    return quotient;
+}
+
+static RendererStatus Scale_semantic_wreck_component(
+    float component, int size, int *offset)
+{
+    float product;
+    int truncated_product;
+
+    if (offset == NULL || !isfinite(component))
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    product = component * (float)size;
+    if (!isfinite(product)
+	|| (double)product < (double)INT_MIN
+	|| (double)product > (double)INT_MAX) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+
+    /* The cast preserves the legacy C99 truncation before division. */
+    truncated_product = (int)product;
+    *offset = Floor_divide_semantic_wreck_value_by_256(
+	truncated_product);
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Build_semantic_wreck_outline_geometry(
+    int x, int y, int wtype, int rot, int size,
+    SemanticWorldLineGeometry *geometry)
+{
+    SemanticWorldLinePath *path;
+    RendererPoint2D center;
+    int64_t point_x_coordinates[NUM_WRECKAGE_POINTS];
+    int64_t point_y_coordinates[NUM_WRECKAGE_POINTS];
+    int64_t first_x = 0;
+    int64_t first_y = 0;
+    int has_extent = 0;
+    int edge_index;
+    int point_index;
+    RendererStatus status;
+
+    if (geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    geometry->path_count = 0;
+    if (wtype < 0 || wtype >= NUM_WRECKAGE_SHAPES
+	|| rot < 0 || rot >= RES
+	|| size < 0 || size > 255
+	|| NUM_WRECKAGE_POINTS > SEMANTIC_WORLD_LINE_MAX_POINTS) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    status = Set_semantic_world_line_point(
+	&center, (int64_t)x, (int64_t)y);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+
+    path = &geometry->paths[0];
+    for (point_index = 0;
+	 point_index < NUM_WRECKAGE_POINTS;
+	 point_index++) {
+	position_t *rotated_points = wreckageShapes[wtype][point_index];
+	int x_offset;
+	int y_offset;
+	int64_t point_x;
+	int64_t point_y;
+
+	if (rotated_points == NULL)
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	status = Scale_semantic_wreck_component(
+	    rotated_points[rot].x, size, &x_offset);
+	if (status == RENDERER_STATUS_OK) {
+	    status = Scale_semantic_wreck_component(
+		rotated_points[rot].y, size, &y_offset);
+	}
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+
+	point_x = (int64_t)x + (int64_t)x_offset;
+	point_y = (int64_t)y + (int64_t)y_offset;
+	status = Set_semantic_world_line_point(
+	    &path->points[point_index], point_x, point_y);
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+	point_x_coordinates[point_index] = point_x;
+	point_y_coordinates[point_index] = point_y;
+
+	if (point_index == 0) {
+	    first_x = point_x;
+	    first_y = point_y;
+	} else if (point_x != first_x || point_y != first_y) {
+	    has_extent = 1;
+	}
+    }
+    if (!has_extent)
+	return RENDERER_STATUS_OK;
+
+    for (edge_index = 0;
+	 edge_index < NUM_WRECKAGE_POINTS;
+	 edge_index++) {
+	int next_index = (edge_index + 1) % NUM_WRECKAGE_POINTS;
+
+	if (!Semantic_world_line_extent_preserved(
+		x, point_x_coordinates[edge_index],
+		center.x, path->points[edge_index].x)
+	    || !Semantic_world_line_extent_preserved(
+		y, point_y_coordinates[edge_index],
+		center.y, path->points[edge_index].y)
+	    || !Semantic_world_line_extent_preserved(
+		point_x_coordinates[edge_index],
+		point_x_coordinates[next_index],
+		path->points[edge_index].x,
+		path->points[next_index].x)
+	    || !Semantic_world_line_extent_preserved(
+		point_y_coordinates[edge_index],
+		point_y_coordinates[next_index],
+		path->points[edge_index].y,
+		path->points[next_index].y)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+    }
+
+    path->point_count = NUM_WRECKAGE_POINTS;
+    path->closed = 1;
+    geometry->path_count = 1;
+    return RENDERER_STATUS_OK;
+}
+
 static RendererStatus Semantic_world_decor_mask(int type, int *mask)
 {
     if (mask == NULL || type < 0
@@ -2104,19 +2236,21 @@ RendererStatus Sdlgui_test_paint_spark_batch(
 
 void Gui_paint_wreck(int x, int y, bool deadly, int wtype, int rot, int size)
 {
-    int cnt, tx, ty;
+    SemanticWorldLineBatch batch;
+    SemanticWorldLineGeometry geometry;
+    RendererStatus status;
 
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+    if (Begin_semantic_world_line_batch(&batch) != RENDERER_STATUS_OK)
 	return;
-
-    set_alphacolor(deadly ? whiteRGBA : redRGBA);
-    glBegin(GL_LINE_LOOP);
-    for (cnt = 0; cnt < NUM_WRECKAGE_POINTS; cnt++) {
-	tx = (int)(wreckageShapes[wtype][cnt][rot].x * size) >> 8;
-	ty = (int)(wreckageShapes[wtype][cnt][rot].y * size) >> 8;
-	glVertex2i(x + tx, y + ty);
+    status = Build_semantic_wreck_outline_geometry(
+	x, y, wtype, rot, size, &geometry);
+    if (status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_world_line_batch(&batch, status);
+	return;
     }
-    glEnd();
+    (void)Paint_semantic_world_line_geometry(
+	&batch, &geometry, deadly ? whiteRGBA : redRGBA,
+	RENDERER_BLEND_ALPHA);
 }
 
 void Gui_paint_asteroids_begin(void)

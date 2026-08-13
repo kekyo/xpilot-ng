@@ -245,7 +245,6 @@ test_sdlgui_sparks_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_ball \
 	-Wl,--wrap=Gui_paint_ball_connector \
 	-Wl,--wrap=Gui_paint_mine \
-	-Wl,--wrap=Gui_paint_wreck \
 	-Wl,--wrap=Gui_paint_asteroids_begin \
 	-Wl,--wrap=Gui_paint_asteroids_end \
 	-Wl,--wrap=Gui_paint_asteroid \

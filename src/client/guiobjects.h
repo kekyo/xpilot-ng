@@ -55,6 +55,16 @@ void Gui_paint_spark(int color, int x, int y);
 /** End and submit a group begun by Gui_paint_sparks_begin(). */
 void Gui_paint_sparks_end(void);
 
+/**
+ * Paint a wreckage outline.
+ *
+ * @param x Horizontal center coordinate.
+ * @param y Vertical center coordinate.
+ * @param deadly Whether the wreckage is deadly.
+ * @param wtype Wreckage shape index in the range [0, NUM_WRECKAGE_SHAPES).
+ * @param rot Rotation lookup-table index in the range [0, RES).
+ * @param size Scale value in the range [0, 255].
+ */
 void Gui_paint_wreck(int x, int y, bool deadly, int wtype, int rot, int size);
 
 void Gui_paint_asteroids_begin(void);
