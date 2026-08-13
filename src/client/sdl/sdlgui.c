@@ -552,7 +552,7 @@ void Gui_paint_base(int x, int y, int id, int team, int type)
 }
 
 #define SEMANTIC_WORLD_LINE_MAX_PATHS 5
-#define SEMANTIC_WORLD_LINE_MAX_POINTS 4
+#define SEMANTIC_WORLD_LINE_MAX_POINTS 16
 #define SEMANTIC_WORLD_DECOR_TYPE_COUNT 256
 
 typedef struct SemanticWorldLinePath {
@@ -788,6 +788,58 @@ static RendererStatus Build_semantic_item_outline_geometry(
 	return RENDERER_STATUS_INVALID_ARGUMENT;
     }
     path->point_count = 3;
+    path->closed = 1;
+    geometry->path_count = 1;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Build_semantic_ball_outline_geometry(
+    int x, int y, SemanticWorldLineGeometry *geometry)
+{
+    SemanticWorldLinePath *path;
+    float center_x;
+    float center_y;
+    int angle;
+    int point_index;
+
+    if (geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    geometry->path_count = 0;
+    path = &geometry->paths[0];
+    center_x = (float)x;
+    center_y = (float)y;
+    if (!isfinite(center_x) || !isfinite(center_y))
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    angle = RES / (int)NELEM(path->points);
+    for (point_index = 0;
+	 point_index < (int)NELEM(path->points);
+	 point_index++) {
+	double cosine = tcos(point_index * angle);
+	double sine = tsin(point_index * angle);
+	double point_x;
+	double point_y;
+
+	if (!isfinite(cosine) || !isfinite(sine))
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	point_x = (double)x + cosine * (double)BALL_RADIUS;
+	point_y = (double)y + sine * (double)BALL_RADIUS;
+	if (!isfinite(point_x) || !isfinite(point_y)
+	    || point_x < (double)INT_MIN || point_x > (double)INT_MAX
+	    || point_y < (double)INT_MIN || point_y > (double)INT_MAX) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+	path->points[point_index].x = (float)point_x;
+	path->points[point_index].y = (float)point_y;
+	if (!isfinite(path->points[point_index].x)
+	    || !isfinite(path->points[point_index].y)
+	    || (point_x != (double)x
+		&& path->points[point_index].x == center_x)
+	    || (point_y != (double)y
+		&& path->points[point_index].y == center_y)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+    }
+    path->point_count = NELEM(path->points);
     path->closed = 1;
     geometry->path_count = 1;
     return RENDERER_STATUS_OK;
@@ -1750,8 +1802,18 @@ void Gui_paint_item_object(int type, int x, int y)
 	&batch, &geometry, blueRGBA, RENDERER_BLEND_ALPHA);
 }
 
+#ifdef XPILOT_SDLGUI_TEST_HOOKS
+void Sdlgui_test_set_textured_balls(int enabled)
+{
+    texturedBalls = enabled != 0;
+}
+#endif
+
 void Gui_paint_ball(int x, int y, int style)
 {
+    SemanticWorldLineBatch batch;
+    SemanticWorldLineGeometry geometry;
+    RendererStatus status;
     int rgba = ballColorRGBA;
 
     if (style >= 0 && style < num_polygon_styles)
@@ -1760,21 +1822,15 @@ void Gui_paint_ball(int x, int y, int style)
     if (texturedBalls)
 	Image_paint(IMG_BALL, x - BALL_RADIUS, y - BALL_RADIUS, 0, rgba);
     else {
-	int i, numvert = 16, ang = RES / numvert;
-
-	if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	if (Begin_semantic_world_line_batch(&batch) != RENDERER_STATUS_OK)
 	    return;
-	/* kps hack, feel free to improve */
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	set_alphacolor(ballColorRGBA);
-	if (smoothLines) glEnable(GL_LINE_SMOOTH);
-	glBegin(GL_LINE_LOOP);
-	for (i = 0; i < numvert; i++)
-	    glVertex2d((double)x + tcos(i * ang) * BALL_RADIUS,
-		       (double)y + tsin(i * ang) * BALL_RADIUS);
-	glEnd();
-	if (smoothLines) glDisable(GL_LINE_SMOOTH);
+	status = Build_semantic_ball_outline_geometry(x, y, &geometry);
+	if (status != RENDERER_STATUS_OK) {
+	    (void)Track_semantic_world_line_batch(&batch, status);
+	    return;
+	}
+	(void)Paint_semantic_world_line_geometry(
+	    &batch, &geometry, ballColorRGBA, RENDERER_BLEND_ADDITIVE);
     }
 }
 

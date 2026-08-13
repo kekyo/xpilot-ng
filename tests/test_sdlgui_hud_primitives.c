@@ -270,6 +270,10 @@ double fuelWarning;
 double fuelNotify;
 long loopsSlow;
 long loops;
+static polygon_style_t fake_polygon_styles[2];
+polygon_style_t *polygon_styles = fake_polygon_styles;
+int num_polygon_styles;
+int max_polygon_styles;
 
 static int bms_ball_state;
 static int bms_cover_state;
@@ -304,6 +308,7 @@ extern Uint32 wallColorRGBA;
 extern Uint32 decorColorRGBA;
 extern Uint32 fuelColorRGBA;
 extern Uint32 connColorRGBA;
+extern Uint32 ballColorRGBA;
 extern Uint32 hudColorRGBA;
 extern Uint32 hudHLineColorRGBA;
 extern Uint32 hudVLineColorRGBA;
@@ -586,6 +591,7 @@ static void reset_frame(void)
     memset(blend_modes, 0, sizeof(blend_modes));
     memset(tbl_sin, 0, sizeof(tbl_sin));
     memset(tbl_cos, 0, sizeof(tbl_cos));
+    memset(fake_polygon_styles, 0, sizeof(fake_polygon_styles));
     memset(&meter_texs[0], 0,
            MAX_METERS * sizeof(meter_texs[0]));
     event_count = 0;
@@ -707,6 +713,9 @@ static void reset_frame(void)
     fuelNotify = 100.0;
     loopsSlow = 0;
     loops = 0;
+    num_polygon_styles = 0;
+    max_polygon_styles = NELEM(fake_polygon_styles);
+    Sdlgui_test_set_textured_balls(0);
     hudColorRGBA = 0;
     hudHLineColorRGBA = 0;
     hudVLineColorRGBA = 0;
@@ -1200,6 +1209,13 @@ void GLAPIENTRY glBegin(GLenum mode)
 }
 
 void GLAPIENTRY glVertex2i(GLint x, GLint y)
+{
+    (void)x;
+    (void)y;
+    legacy_vertex_calls++;
+}
+
+void GLAPIENTRY glVertex2d(GLdouble x, GLdouble y)
 {
     (void)x;
     (void)y;
@@ -4604,6 +4620,263 @@ static int check_directional_gravity_failures_are_sticky(void)
     return check_no_world_legacy_state();
 }
 
+static int check_textured_ball_branch_and_style_tint(void)
+{
+    reset_frame();
+    Sdlgui_test_set_textured_balls(1);
+    ballColorRGBA = UINT32_C(0x50607080);
+    fake_polygon_styles[0].rgb = 0x123456;
+    num_polygon_styles = 1;
+
+    Gui_paint_ball(25, 35, 0);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(last_image.index == IMG_BALL);
+    TEST_CHECK(last_image.x == 15);
+    TEST_CHECK(last_image.y == 25);
+    TEST_CHECK(last_image.frame == 0);
+    TEST_CHECK(last_image.color == (int)UINT32_C(0x123456ff));
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    Sdlgui_test_set_textured_balls(1);
+    ballColorRGBA = UINT32_C(0x50607080);
+    fake_polygon_styles[0].rgb = 0x123456;
+    num_polygon_styles = 1;
+
+    Gui_paint_ball(25, 35, 0xff);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(last_image.index == IMG_BALL);
+    TEST_CHECK(last_image.x == 15);
+    TEST_CHECK(last_image.y == 25);
+    TEST_CHECK(last_image.frame == 0);
+    TEST_CHECK(last_image.color == (int)UINT32_C(0x50607080));
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    return check_no_world_legacy_state();
+}
+
+static int check_untextured_ball_outline_stroke(uint32_t color)
+{
+    static const float expected_points[][2] = {
+        {110.0f, 200.0f}, {108.75f, 203.75f},
+        {107.5f, 207.5f}, {103.75f, 208.75f},
+        {100.0f, 210.0f}, {96.25f, 208.75f},
+        {92.5f, 207.5f}, {91.25f, 203.75f},
+        {90.0f, 200.0f}, {91.25f, 196.25f},
+        {92.5f, 192.5f}, {96.25f, 191.25f},
+        {100.0f, 190.0f}, {103.75f, 191.25f},
+        {107.5f, 192.5f}, {108.75f, 196.25f}
+    };
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(image_attempts == 0);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    TEST_CHECK(check_world_stroke(
+        0, expected_points, NELEM(expected_points), color, 1,
+        RENDERER_BLEND_ADDITIVE, 71) == 0);
+    return check_no_world_legacy_state();
+}
+
+static int check_untextured_ball_outline_is_semantic(void)
+{
+    reset_frame();
+    ballColorRGBA = UINT32_C(0x50607080);
+    fake_polygon_styles[0].rgb = 0x123456;
+    num_polygon_styles = 1;
+
+    Gui_paint_ball(100, 200, 0);
+
+    TEST_CHECK(check_untextured_ball_outline_stroke(
+        UINT32_C(0x50607080)) == 0);
+
+    reset_frame();
+    ballColorRGBA = UINT32_C(0x50607080);
+    fake_polygon_styles[0].rgb = 0x123456;
+    num_polygon_styles = 1;
+
+    Gui_paint_ball(100, 200, -1);
+
+    return check_untextured_ball_outline_stroke(
+        UINT32_C(0x50607080));
+}
+
+static int check_invalid_untextured_ball_result_is_sticky(void)
+{
+    PaintOperationCounts before_blocked_leaf;
+    int prior_preflight_attempts;
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(image_attempts == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    before_blocked_leaf = paint_operation_counts();
+    prior_preflight_attempts = preflight_attempts;
+    Gui_paint_ball(100, 200, -1);
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+    return fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT
+           ? 0 : 1;
+}
+
+static int check_untextured_ball_numeric_boundaries_are_sticky(void)
+{
+    static const double nonfinite_values[] = {
+        NAN, INFINITY, -INFINITY
+    };
+    const int float_collapse_coordinate = 1 << 30;
+    size_t value_index;
+    double saved_value;
+
+    reset_frame();
+    Gui_paint_ball(INT_MAX, 20, -1);
+    TEST_CHECK(check_invalid_untextured_ball_result_is_sticky() == 0);
+
+    reset_frame();
+    Gui_paint_ball(20, INT_MIN, -1);
+    TEST_CHECK(check_invalid_untextured_ball_result_is_sticky() == 0);
+
+    reset_frame();
+    Gui_paint_ball(float_collapse_coordinate, 20, -1);
+    TEST_CHECK(check_invalid_untextured_ball_result_is_sticky() == 0);
+
+    for (value_index = 0; value_index < NELEM(nonfinite_values);
+         value_index++) {
+        reset_frame();
+        saved_value = tbl_cos[TABLE_SIZE / 16];
+        tbl_cos[TABLE_SIZE / 16] = nonfinite_values[value_index];
+        Gui_paint_ball(100, 200, -1);
+        tbl_cos[TABLE_SIZE / 16] = saved_value;
+        TEST_CHECK(check_invalid_untextured_ball_result_is_sticky() == 0);
+
+        reset_frame();
+        saved_value = tbl_sin[3 * TABLE_SIZE / 16];
+        tbl_sin[3 * TABLE_SIZE / 16] = nonfinite_values[value_index];
+        Gui_paint_ball(100, 200, -1);
+        tbl_sin[3 * TABLE_SIZE / 16] = saved_value;
+        TEST_CHECK(check_invalid_untextured_ball_result_is_sticky() == 0);
+    }
+    return 0;
+}
+
+static int check_untextured_ball_failures_are_sticky(void)
+{
+    PaintOperationCounts before_blocked_leaf;
+    int prior_preflight_attempts;
+
+    reset_frame();
+    blend_failure_attempt = 1;
+    blend_failure_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    Gui_paint_ball(100, 200, -1);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+    before_blocked_leaf = paint_operation_counts();
+    prior_preflight_attempts = preflight_attempts;
+    Gui_paint_ball(100, 200, -1);
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+
+    reset_frame();
+    stroke_failure_attempt = 1;
+    stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    Gui_paint_ball(100, 200, -1);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+    before_blocked_leaf = paint_operation_counts();
+    prior_preflight_attempts = preflight_attempts;
+    Gui_paint_ball(100, 200, -1);
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+
+    reset_frame();
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    Gui_paint_ball(100, 200, -1);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+    before_blocked_leaf = paint_operation_counts();
+    prior_preflight_attempts = preflight_attempts;
+    Gui_paint_ball(100, 200, -1);
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+
+    reset_frame();
+    preset_sticky_frame_failure();
+    before_blocked_leaf = paint_operation_counts();
+    prior_preflight_attempts = preflight_attempts;
+    Gui_paint_ball(100, 200, -1);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+    return check_no_world_legacy_state();
+}
+
 static int check_ball_connector_stroke(
     const float expected_points[][2], uint32_t expected_color)
 {
@@ -5847,6 +6120,14 @@ int main(void)
     if (check_directional_gravity_numeric_boundaries_are_checked() != 0)
         return 1;
     if (check_directional_gravity_failures_are_sticky() != 0)
+        return 1;
+    if (check_textured_ball_branch_and_style_tint() != 0)
+        return 1;
+    if (check_untextured_ball_outline_is_semantic() != 0)
+        return 1;
+    if (check_untextured_ball_numeric_boundaries_are_sticky() != 0)
+        return 1;
+    if (check_untextured_ball_failures_are_sticky() != 0)
         return 1;
     if (check_item_outline_and_ball_connector_are_semantic() != 0)
         return 1;

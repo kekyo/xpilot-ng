@@ -218,6 +218,15 @@ extern SdlPaintTestMatrixPhase Sdlpaint_test_matrix_phase(void);
 
 #ifdef XPILOT_SDLGUI_TEST_HOOKS
 /**
+ * Select the production ball texture branch for SDL GUI primitive tests.
+ *
+ * @param enabled Nonzero to paint the ball image; zero to paint its outline.
+ * @remarks This hook changes only the private option value and is available
+ *          only to the SDL GUI primitive test target.
+ */
+extern void Sdlgui_test_set_textured_balls(int enabled);
+
+/**
  * Draw only the semantic HUD speed and direction pointers for tests.
  *
  * @return The sticky result for the active renderer frame, or
