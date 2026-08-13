@@ -1,5 +1,6 @@
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
-	-I$(top_srcdir)/src/common -I$(top_srcdir)/src/client \
+	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
+	-I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/src/client/sdl \
 	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
 	@SDL2_CFLAGS@ @SDL2_IMAGE_CFLAGS@ @SDL2_TTF_CFLAGS@ \

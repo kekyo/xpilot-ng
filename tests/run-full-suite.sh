@@ -28,9 +28,11 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 # Autoconf rejects an out-of-tree configure when the source checkout already
-# has an in-tree config.status.  Preserve that checkout and clean only a
-# temporary source snapshot in this case.
-if test -f "$source_dir/config.status"; then
+# has an in-tree config.status.  A generated source-tree version.h can also
+# hide a missing build-tree include path.  Preserve the checkout and exercise
+# a temporary source snapshot without either artifact in both cases.
+if test -f "$source_dir/config.status" \
+    || test -f "$source_dir/src/common/version.h"; then
     build_source_dir="$suite_dir/source"
     mkdir -p "$build_source_dir"
     cp -a "$source_dir/." "$build_source_dir/"
@@ -41,6 +43,7 @@ if test -f "$source_dir/config.status"; then
     rm -f -- "$build_source_dir/config.status" \
         "$build_source_dir/config.cache" "$build_source_dir/config.log" \
         "$build_source_dir/config.h" "$build_source_dir/stamp-h1" \
+        "$build_source_dir/src/common/version.h" \
         "$build_source_dir/src/client/sdl/xpilot-ng-sdl" \
         "$build_source_dir/src/client/x11/xpilot-ng-x11" \
         "$build_source_dir/src/server/xpilot-ng-server" \
