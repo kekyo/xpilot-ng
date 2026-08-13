@@ -96,6 +96,7 @@ static int successful_text_draws;
 static int legacy_begin_calls;
 static int legacy_vertex_calls;
 static int legacy_color_calls;
+static int legacy_blend_calls;
 static RendererStatus blend_result;
 static RendererStatus draw_result;
 static RendererStatus fill_result;
@@ -120,6 +121,7 @@ int maxFPS = 60;
 Uint32 redRGBA = 0xff0000ff;
 Uint32 greenRGBA = 0x00ff00ff;
 Uint32 whiteRGBA = 0xffffffff;
+Uint32 blackRGBA = 0x000000ff;
 Uint32 yellowRGBA = 0xffff00ff;
 Uint32 nullRGBA = 0x00000000;
 font_data gamefont;
@@ -175,6 +177,7 @@ static void reset_frame(void)
     legacy_begin_calls = 0;
     legacy_vertex_calls = 0;
     legacy_color_calls = 0;
+    legacy_blend_calls = 0;
     blend_result = RENDERER_STATUS_OK;
     draw_result = RENDERER_STATUS_OK;
     fill_result = RENDERER_STATUS_OK;
@@ -443,6 +446,13 @@ void GLAPIENTRY glVertex2i(GLint x, GLint y)
 
 void GLAPIENTRY glEnd(void)
 {
+}
+
+void GLAPIENTRY glBlendFunc(GLenum source, GLenum destination)
+{
+    (void)source;
+    (void)destination;
+    legacy_blend_calls++;
 }
 
 static void destroy_widget(GLWidget *widget)
@@ -1703,6 +1713,206 @@ static int check_double_chooser_parent_paint(void)
     return 0;
 }
 
+static int check_successful_color_chooser_parent_paint(
+    int has_background, RendererColor expected_background)
+{
+    const RendererColor black = {0x00, 0x00, 0x00, 0xff};
+    const float points[3][2] = {
+        {35.0f, 19.0f}, {35.0f, 22.0f}, {38.0f, 22.0f}
+    };
+    int expected_event_count = has_background ? 4 : 3;
+    int index;
+
+    TEST_CHECK(event_count == expected_event_count);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    if (has_background) {
+        TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+        TEST_CHECK(events[2] == DRAW_EVENT_TRIANGLES);
+        TEST_CHECK(events[3] == DRAW_EVENT_FLUSH);
+    } else {
+        TEST_CHECK(events[1] == DRAW_EVENT_TRIANGLES);
+        TEST_CHECK(events[2] == DRAW_EVENT_FLUSH);
+    }
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == (has_background ? 3 : 0));
+    TEST_CHECK(draw_order == (has_background ? 4 : 3));
+    TEST_CHECK(flush_order == (has_background ? 5 : 4));
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == has_background);
+    TEST_CHECK(successful_fills == has_background);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(successful_draws == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(text_attempts == 0);
+    if (has_background) {
+        TEST_CHECK(fills[0].x == 11.0f);
+        TEST_CHECK(fills[0].y == 17.0f);
+        TEST_CHECK(fills[0].width == 29.0f);
+        TEST_CHECK(fills[0].height == 13.0f);
+        TEST_CHECK(color_equal(fills[0].color, expected_background));
+    }
+    TEST_CHECK(draws[0].texture == NULL);
+    TEST_CHECK(draws[0].vertex_count == 3);
+    for (index = 0; index < 3; index++) {
+        TEST_CHECK(vertex_equal(
+            &draws[0].vertices[index],
+            points[index][0], points[index][1], black));
+    }
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    TEST_CHECK(legacy_blend_calls == 0);
+    return 0;
+}
+
+static int check_color_chooser_partial_failures(GLWidget *widget)
+{
+    TEST_CHECK(widget != NULL);
+
+    reset_frame();
+    fill_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    widget->Draw(widget);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == 3);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 0);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    fill_result = RENDERER_STATUS_OK;
+    widget->Draw(widget);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    TEST_CHECK(legacy_blend_calls == 0);
+
+    reset_frame();
+    draw_result = RENDERER_STATUS_BACKEND_ERROR;
+    flush_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    widget->Draw(widget);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+    TEST_CHECK(events[2] == DRAW_EVENT_TRIANGLES);
+    TEST_CHECK(events[3] == DRAW_EVENT_FLUSH);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == 3);
+    TEST_CHECK(draw_order == 4);
+    TEST_CHECK(flush_order == 5);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(successful_draws == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    draw_result = RENDERER_STATUS_OK;
+    flush_result = RENDERER_STATUS_OK;
+    widget->Draw(widget);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(successful_draws == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    TEST_CHECK(legacy_blend_calls == 0);
+    return 0;
+}
+
+static int check_color_chooser_parent_paint(void)
+{
+    const RendererColor transparent_background = {
+        0x12, 0x34, 0x56, 0x00
+    };
+    Uint32 value = 0xabcdef88;
+    Uint32 foreground = 0x102030ff;
+    Uint32 background = 0x12345600;
+    Uint32 zero_background = 0;
+    SDL_Rect bounds = {11, 17, 29, 13};
+    int allocations_before = live_text_allocations;
+    GLWidget *widget = Init_ColorChooserWidget(
+        "Color", &value, &foreground, &background, NULL, NULL);
+    ColorChooserWidget *info;
+    ButtonWidget *button_info;
+
+    TEST_CHECK(widget != NULL);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+    TEST_CHECK(widget->children == info->name);
+    TEST_CHECK(info->name->next == info->button);
+    TEST_CHECK(info->button->next == NULL);
+    TEST_CHECK(!info->expanded);
+    TEST_CHECK(info->mod == NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    TEST_CHECK(info->button->bounds.x == 35);
+    TEST_CHECK(info->button->bounds.y == 19);
+    TEST_CHECK(info->button->bounds.w == 3);
+    TEST_CHECK(info->button->bounds.h == 3);
+    button_info = info->button->wid_info;
+    TEST_CHECK(button_info != NULL);
+    TEST_CHECK(!button_info->pressed);
+
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_color_chooser_parent_paint(
+        1, transparent_background) == 0);
+    TEST_CHECK(!info->expanded);
+    TEST_CHECK(info->mod == NULL);
+    TEST_CHECK(!button_info->pressed);
+    TEST_CHECK(value == 0xabcdef88);
+
+    info->bgcolor = NULL;
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_color_chooser_parent_paint(
+        0, transparent_background) == 0);
+
+    info->bgcolor = &zero_background;
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_color_chooser_parent_paint(
+        0, transparent_background) == 0);
+
+    info->bgcolor = &background;
+    TEST_CHECK(check_color_chooser_partial_failures(widget) == 0);
+    TEST_CHECK(!info->expanded);
+    TEST_CHECK(info->mod == NULL);
+    TEST_CHECK(!button_info->pressed);
+    TEST_CHECK(value == 0xabcdef88);
+
+    destroy_widget(widget);
+    TEST_CHECK(live_text_allocations == allocations_before);
+    return 0;
+}
+
 static int check_tap_is_consumed_when_flush_fails(void)
 {
     GLWidget *widget = Init_ArrowWidget(
@@ -1764,6 +1974,7 @@ int main(void)
     TEST_CHECK(check_bool_chooser_parent_paint() == 0);
     TEST_CHECK(check_int_chooser_parent_paint() == 0);
     TEST_CHECK(check_double_chooser_parent_paint() == 0);
+    TEST_CHECK(check_color_chooser_parent_paint() == 0);
     TEST_CHECK(check_label_scrap_button() == 0);
     TEST_CHECK(live_text_allocations == 0);
     return 0;

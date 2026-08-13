@@ -98,6 +98,70 @@ static RendererStatus Fill_semantic_widget_bounds(
     return status;
 }
 
+typedef struct SemanticWidgetBatch {
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    int has_accepted_commands;
+} SemanticWidgetBatch;
+
+static RendererStatus Begin_semantic_widget_batch(SemanticWidgetBatch *batch)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    batch->sdl_renderer = NULL;
+    batch->renderer = NULL;
+    batch->status = Begin_semantic_widget(
+	&batch->sdl_renderer, &batch->renderer);
+    batch->has_accepted_commands = 0;
+    return batch->status;
+}
+
+static RendererStatus Track_semantic_widget_batch(
+    SemanticWidgetBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    batch->status = Track_semantic_widget(batch->sdl_renderer, status);
+    return batch->status;
+}
+
+static RendererStatus Accept_semantic_widget_command(
+    SemanticWidgetBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (status == RENDERER_STATUS_OK)
+	batch->has_accepted_commands = 1;
+    return Track_semantic_widget_batch(batch, status);
+}
+
+static RendererStatus Set_semantic_widget_batch_blend(
+    SemanticWidgetBatch *batch, RendererBlendMode blend)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (batch->status != RENDERER_STATUS_OK)
+	return batch->status;
+    return Track_semantic_widget_batch(
+	batch, Renderer_set_blend(batch->renderer, blend));
+}
+
+static RendererStatus Finish_semantic_widget_batch(
+    SemanticWidgetBatch *batch)
+{
+    RendererStatus flush_status;
+
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!batch->has_accepted_commands || batch->sdl_renderer == NULL)
+	return batch->status;
+    flush_status = Sdl_renderer_flush_preserving_legacy(
+	batch->sdl_renderer);
+    batch->has_accepted_commands = 0;
+    return Track_semantic_widget_batch(batch, flush_status);
+}
+
 GLWidget *Init_EmptyBaseGLWidget( void )
 {
     GLWidget *tmp = XMALLOC(GLWidget, 1);
@@ -2284,6 +2348,9 @@ static void SetBounds_ColorChooserWidget( GLWidget *widget, SDL_Rect *b )
 static void Paint_ColorChooserWidget( GLWidget *widget )
 {
     ColorChooserWidget *wid_info;
+    SemanticWidgetBatch batch;
+    RendererColor color;
+    RendererVertex2D vertices[3];
 
     if (!widget) {
     	error("Paint_ColorChooserWidget: argument is NULL!");
@@ -2297,21 +2364,42 @@ static void Paint_ColorChooserWidget( GLWidget *widget )
 	return;
     }
 
-    if ( (wid_info->bgcolor) && *(wid_info->bgcolor) ) {
-    	set_alphacolor(*(wid_info->bgcolor));
-    	glBegin(GL_QUADS);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w    ,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w    ,widget->bounds.y+widget->bounds.h	);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y+widget->bounds.h	);
-    	glEnd();
+    if (Begin_semantic_widget_batch(&batch) != RENDERER_STATUS_OK)
+	return;
+    color = Renderer_color_from_rgba32(blackRGBA);
+    vertices[0] = (RendererVertex2D){
+	(float)wid_info->button->bounds.x,
+	(float)wid_info->button->bounds.y,
+	0.0f, 0.0f, color};
+    vertices[1] = (RendererVertex2D){
+	(float)wid_info->button->bounds.x,
+	(float)(wid_info->button->bounds.y + wid_info->button->bounds.h),
+	0.0f, 0.0f, color};
+    vertices[2] = (RendererVertex2D){
+	(float)(wid_info->button->bounds.x + wid_info->button->bounds.w),
+	(float)(wid_info->button->bounds.y + wid_info->button->bounds.h),
+	0.0f, 0.0f, color};
+    (void)Set_semantic_widget_batch_blend(
+	&batch, RENDERER_BLEND_ALPHA);
+    if (batch.status == RENDERER_STATUS_OK
+	&& wid_info->bgcolor != NULL && *(wid_info->bgcolor) != 0
+	&& widget->bounds.w > 0 && widget->bounds.h > 0) {
+	(void)Accept_semantic_widget_command(
+	    &batch,
+	    Renderer_fill_rect(
+		batch.renderer,
+		(float)widget->bounds.x, (float)widget->bounds.y,
+		(float)widget->bounds.w, (float)widget->bounds.h,
+		Renderer_color_from_rgba32(*(wid_info->bgcolor))));
     }
-    set_alphacolor(blackRGBA);
-    glBegin(GL_TRIANGLES);
-    	glVertex2i(wid_info->button->bounds.x ,wid_info->button->bounds.y);
-    	glVertex2i(wid_info->button->bounds.x ,wid_info->button->bounds.y + wid_info->button->bounds.h);
-    	glVertex2i(wid_info->button->bounds.x +wid_info->button->bounds.w ,wid_info->button->bounds.y + wid_info->button->bounds.h);
-    glEnd();
+    if (batch.status == RENDERER_STATUS_OK) {
+	(void)Accept_semantic_widget_command(
+	    &batch,
+	    Renderer_draw_triangles(batch.renderer, NULL, vertices, 3));
+    }
+    (void)Finish_semantic_widget_batch(&batch);
+    if (batch.status != RENDERER_STATUS_OK)
+	warn("Could not draw color chooser widget");
 }
 
 static void action_ColorChooserWidget(void *data)
