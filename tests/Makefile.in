@@ -1039,7 +1039,7 @@ test_images_SOURCES = test_images.c \
 	$(top_srcdir)/src/common/strdup.c
 
 test_images_CPPFLAGS = $(AM_CPPFLAGS) -DXPILOT_IMAGE_TEST_HOOKS
-test_images_LDADD = @SDL2_LIBS@ @GL_LIBS@
+test_images_LDADD = @SDL2_LIBS@
 test_radar_renderer_SOURCES = test_radar_renderer.c \
 	$(top_srcdir)/src/client/sdl/radar.c
 

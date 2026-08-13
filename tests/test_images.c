@@ -13,8 +13,6 @@
 
 #define MAX_FAKE_TEXTURES 128
 #define MAX_DRAWS 16
-#define MAX_LEGACY_UPLOADS 128
-#define MAX_LEGACY_UPLOAD_BYTES 2048
 #define FLOAT_TOLERANCE 0.0001f
 
 struct Renderer {
@@ -46,24 +44,6 @@ typedef struct FakeDraw {
     size_t vertex_count;
 } FakeDraw;
 
-typedef struct LegacyUpload {
-    GLuint texture;
-    GLenum target;
-    GLint level;
-    GLint internal_format;
-    GLsizei width;
-    GLsizei height;
-    GLint border;
-    GLenum format;
-    GLenum type;
-    uint8_t pixels[MAX_LEGACY_UPLOAD_BYTES];
-    size_t pixel_size;
-    GLint mag_filter;
-    GLint min_filter;
-    GLint wrap_s;
-    GLint wrap_t;
-} LegacyUpload;
-
 typedef struct FixtureState {
     int picture_init_calls;
     int picture_init_successes;
@@ -82,7 +62,6 @@ static SdlRenderer fake_sdl_renderer = {
 };
 static FakeTexture fake_textures[MAX_FAKE_TEXTURES];
 static FakeDraw fake_draws[MAX_DRAWS];
-static LegacyUpload legacy_uploads[MAX_LEGACY_UPLOADS];
 static FixtureState fixture_state;
 static int fake_texture_count;
 static int texture_create_attempts;
@@ -97,13 +76,12 @@ static int pending_draws;
 static int prepare_legacy_calls;
 static int legacy_draw_calls;
 static unsigned int next_legacy_texture = 1001;
-static GLuint bound_legacy_texture;
-static int legacy_upload_count;
-static int legacy_texture_creates;
-static int legacy_texture_deletes;
-static int legacy_upload_attempts;
-static int fail_legacy_upload_attempt;
-static GLenum pending_gl_error;
+static int legacy_texture_generate_calls;
+static int legacy_texture_bind_calls;
+static int legacy_texture_upload_calls;
+static int legacy_texture_parameter_calls;
+static int legacy_texture_delete_calls;
+static int legacy_error_query_calls;
 static RendererStatus draw_result = RENDERER_STATUS_OK;
 static RendererStatus blend_result = RENDERER_STATUS_OK;
 static RendererStatus preserving_flush_result = RENDERER_STATUS_OK;
@@ -267,45 +245,6 @@ static int pixel_equals(const FakeTexture *texture, int x, int y,
         && pixel[2] == blue && pixel[3] == alpha;
 }
 
-static LegacyUpload *find_legacy_upload(GLuint texture)
-{
-    int index;
-
-    for (index = legacy_upload_count - 1; index >= 0; index--) {
-        if (legacy_uploads[index].texture == texture)
-            return &legacy_uploads[index];
-    }
-    return NULL;
-}
-
-static LegacyUpload *capture_legacy_texture(GLuint texture)
-{
-    LegacyUpload *upload = find_legacy_upload(texture);
-
-    if (upload != NULL || legacy_upload_count >= MAX_LEGACY_UPLOADS)
-        return upload;
-    upload = &legacy_uploads[legacy_upload_count++];
-    memset(upload, 0, sizeof(*upload));
-    upload->texture = texture;
-    return upload;
-}
-
-static const uint8_t *legacy_pixel(const LegacyUpload *upload, int x, int y)
-{
-    return upload->pixels
-        + ((size_t)y * (size_t)upload->width + (size_t)x) * 4;
-}
-
-static int legacy_pixel_equals(const LegacyUpload *upload, int x, int y,
-                               uint8_t red, uint8_t green, uint8_t blue,
-                               uint8_t alpha)
-{
-    const uint8_t *pixel = legacy_pixel(upload, x, y);
-
-    return pixel[0] == red && pixel[1] == green
-        && pixel[2] == blue && pixel[3] == alpha;
-}
-
 static FakeTexture *find_texture(int width, int height, uint8_t first_red)
 {
     int index;
@@ -362,6 +301,8 @@ RendererStatus Renderer_texture_create_with_desc(
     if (renderer == NULL || desc == NULL || rgba_pixels == NULL
         || texture == NULL || renderer->frame_active)
         return RENDERER_STATUS_INVALID_STATE;
+    if (pitch < (size_t)desc->width * 4)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
     if (fail_texture_create_attempt == texture_create_attempts)
         return RENDERER_STATUS_BACKEND_ERROR;
     if (fake_texture_count >= MAX_FAKE_TEXTURES)
@@ -371,7 +312,7 @@ RendererStatus Renderer_texture_create_with_desc(
     memset(record, 0, sizeof(*record));
     record->handle.identifier = (unsigned int)fake_texture_count;
     record->desc = *desc;
-    record->pitch = (size_t)desc->width * 4;
+    record->pitch = pitch;
     record->pixels = malloc(record->pitch * (size_t)desc->height);
     if (record->pixels == NULL)
         return RENDERER_STATUS_OUT_OF_MEMORY;
@@ -545,21 +486,23 @@ void GLAPIENTRY glGenTextures(GLsizei count, GLuint *textures)
 {
     GLsizei index;
 
+    legacy_texture_generate_calls++;
     for (index = 0; index < count; index++)
         textures[index] = next_legacy_texture++;
-    legacy_texture_creates += count;
 }
 
 void GLAPIENTRY glDeleteTextures(GLsizei count, const GLuint *textures)
 {
+    (void)count;
     (void)textures;
-    legacy_texture_deletes += count;
+    legacy_texture_delete_calls++;
 }
 
 void GLAPIENTRY glBindTexture(GLenum target, GLuint texture)
 {
-    if (target == GL_TEXTURE_2D)
-        bound_legacy_texture = texture;
+    (void)target;
+    (void)texture;
+    legacy_texture_bind_calls++;
 }
 
 void GLAPIENTRY glTexImage2D(GLenum target, GLint level,
@@ -567,77 +510,38 @@ void GLAPIENTRY glTexImage2D(GLenum target, GLint level,
                             GLsizei height, GLint border, GLenum format,
                             GLenum type, const GLvoid *pixels)
 {
-    LegacyUpload *upload = NULL;
-    size_t pixel_size = 0;
-
-    upload = capture_legacy_texture(bound_legacy_texture);
-    if (upload != NULL) {
-        upload->target = target;
-        upload->level = level;
-        upload->internal_format = internal_format;
-        upload->width = width;
-        upload->height = height;
-        upload->border = border;
-        upload->format = format;
-        upload->type = type;
-        if (width > 0 && height > 0
-            && (size_t)width <= SIZE_MAX / 4
-            && (size_t)height <= SIZE_MAX / ((size_t)width * 4)) {
-            pixel_size = (size_t)width * (size_t)height * 4;
-        }
-        if (pixels != NULL && pixel_size <= sizeof(upload->pixels)) {
-            memcpy(upload->pixels, pixels, pixel_size);
-            upload->pixel_size = pixel_size;
-        }
-    }
-    legacy_upload_attempts++;
-    if (legacy_upload_attempts == fail_legacy_upload_attempt)
-        pending_gl_error = GL_INVALID_OPERATION;
+    (void)target;
+    (void)level;
+    (void)internal_format;
+    (void)width;
+    (void)height;
+    (void)border;
+    (void)format;
+    (void)type;
+    (void)pixels;
+    legacy_texture_upload_calls++;
 }
 
 GLenum GLAPIENTRY glGetError(void)
 {
-    GLenum error_code = pending_gl_error;
-
-    pending_gl_error = GL_NO_ERROR;
-    return error_code;
-}
-
-static void capture_legacy_parameter(GLenum target, GLenum name, GLint value)
-{
-    LegacyUpload *upload;
-
-    if (target != GL_TEXTURE_2D)
-        return;
-    upload = capture_legacy_texture(bound_legacy_texture);
-    if (upload == NULL)
-        return;
-    switch (name) {
-    case GL_TEXTURE_MAG_FILTER:
-        upload->mag_filter = value;
-        break;
-    case GL_TEXTURE_MIN_FILTER:
-        upload->min_filter = value;
-        break;
-    case GL_TEXTURE_WRAP_S:
-        upload->wrap_s = value;
-        break;
-    case GL_TEXTURE_WRAP_T:
-        upload->wrap_t = value;
-        break;
-    default:
-        break;
-    }
+    legacy_error_query_calls++;
+    return GL_NO_ERROR;
 }
 
 void GLAPIENTRY glTexParameterf(GLenum target, GLenum name, GLfloat value)
 {
-    capture_legacy_parameter(target, name, (GLint)value);
+    (void)target;
+    (void)name;
+    (void)value;
+    legacy_texture_parameter_calls++;
 }
 
 void GLAPIENTRY glTexParameteri(GLenum target, GLenum name, GLint value)
 {
-    capture_legacy_parameter(target, name, value);
+    (void)target;
+    (void)name;
+    (void)value;
+    legacy_texture_parameter_calls++;
 }
 
 void GLAPIENTRY glEnable(GLenum capability)
@@ -795,16 +699,6 @@ static int check_registration_prepare_and_pixels(int *ordinary_id,
     first_attempt_destroy_count = texture_destroy_calls;
 
     fail_texture_create_attempt = 0;
-    fail_legacy_upload_attempt = legacy_upload_attempts + 2;
-    TEST_CHECK(Images_prepare(&fake_renderer) == -1);
-    TEST_CHECK(Image_get(*ordinary_id) == NULL);
-    TEST_CHECK(Image_get(*rotatable_id) == NULL);
-    TEST_CHECK(Image_get(*map_id) == NULL);
-    TEST_CHECK(fake_textures[1].destroy_count == 1);
-    TEST_CHECK(fake_textures[2].destroy_count == 1);
-    first_attempt_destroy_count = texture_destroy_calls;
-
-    fail_legacy_upload_attempt = 0;
     TEST_CHECK(Images_prepare(&fake_renderer) == 0);
     TEST_CHECK(Image_get(*ordinary_id) != NULL);
     TEST_CHECK(Image_get(*rotatable_id) != NULL);
@@ -822,8 +716,10 @@ static int check_registration_prepare_and_pixels(int *ordinary_id,
     TEST_CHECK(map != NULL);
     TEST_CHECK(ordinary->desc.filter == RENDERER_TEXTURE_FILTER_NEAREST);
     TEST_CHECK(ordinary->desc.wrap == RENDERER_TEXTURE_WRAP_CLAMP);
+    TEST_CHECK(ordinary->pitch == 6 * 4);
     TEST_CHECK(rotatable->desc.filter == RENDERER_TEXTURE_FILTER_LINEAR);
     TEST_CHECK(rotatable->desc.wrap == RENDERER_TEXTURE_WRAP_CLAMP);
+    TEST_CHECK(rotatable->pitch == 12 * 4);
     TEST_CHECK(map->desc.filter == RENDERER_TEXTURE_FILTER_NEAREST);
     TEST_CHECK(map->desc.wrap == RENDERER_TEXTURE_WRAP_REPEAT);
     TEST_CHECK(check_semantic_map_source(map, 101) == 0);
@@ -848,6 +744,12 @@ static int check_registration_prepare_and_pixels(int *ordinary_id,
     TEST_CHECK(texture_create_attempts == attempts_after_prepare);
     TEST_CHECK(fixture_state.picture_init_calls == loads_after_prepare);
     TEST_CHECK(texture_destroy_calls == first_attempt_destroy_count);
+    TEST_CHECK(legacy_texture_generate_calls == 0);
+    TEST_CHECK(legacy_texture_bind_calls == 0);
+    TEST_CHECK(legacy_texture_upload_calls == 0);
+    TEST_CHECK(legacy_texture_parameter_calls == 0);
+    TEST_CHECK(legacy_texture_delete_calls == 0);
+    TEST_CHECK(legacy_error_query_calls == 0);
     return 0;
 }
 
@@ -874,47 +776,6 @@ static int check_late_registration(void)
     TEST_CHECK(late->desc.filter == RENDERER_TEXTURE_FILTER_NEAREST);
     TEST_CHECK(late->desc.wrap == RENDERER_TEXTURE_WRAP_REPEAT);
     TEST_CHECK(check_semantic_map_source(late, 141) == 0);
-    return 0;
-}
-
-static int check_legacy_map_upload(int map_id)
-{
-    image_t *map = Image_get(map_id);
-    LegacyUpload *upload;
-    int x;
-    int y;
-
-    TEST_CHECK(map != NULL);
-    upload = find_legacy_upload(map->legacy_name);
-    TEST_CHECK(upload != NULL);
-    TEST_CHECK(upload->texture == map->legacy_name);
-    TEST_CHECK(upload->target == GL_TEXTURE_2D);
-    TEST_CHECK(upload->level == 0);
-    TEST_CHECK(upload->internal_format == GL_RGBA);
-    TEST_CHECK(upload->width == 4);
-    TEST_CHECK(upload->height == 4);
-    TEST_CHECK(upload->border == 0);
-    TEST_CHECK(upload->format == GL_RGBA);
-    TEST_CHECK(upload->type == GL_UNSIGNED_BYTE);
-    TEST_CHECK(upload->pixel_size == 4 * 4 * 4);
-    TEST_CHECK(upload->mag_filter == GL_NEAREST);
-    TEST_CHECK(upload->min_filter == GL_NEAREST);
-    TEST_CHECK(upload->wrap_s == GL_REPEAT);
-    TEST_CHECK(upload->wrap_t == GL_REPEAT);
-
-    for (y = 0; y < 3; y++) {
-        for (x = 0; x < 3; x++) {
-            TEST_CHECK(pixel_matches_color(
-                legacy_pixel(upload, x, y),
-                fixture_color(101, 0, x, 2 - y)));
-        }
-    }
-    for (y = 0; y < 4; y++) {
-        TEST_CHECK(legacy_pixel_equals(upload, 3, y, 0, 0, 0, 0));
-    }
-    for (x = 0; x < 4; x++) {
-        TEST_CHECK(legacy_pixel_equals(upload, x, 3, 0, 0, 0, 0));
-    }
     return 0;
 }
 
@@ -1114,20 +975,23 @@ static int check_cleanup_is_exact(void)
 {
     int index;
     int destroys_after_first_cleanup;
-    int legacy_deletes_after_first_cleanup;
 
     Images_cleanup();
     for (index = 0; index < fake_texture_count; index++)
         TEST_CHECK(fake_textures[index].destroy_count == 1);
     TEST_CHECK(fixture_state.picture_cleanup_calls
                == fixture_state.picture_init_successes);
-    TEST_CHECK(legacy_texture_deletes == legacy_texture_creates);
+    TEST_CHECK(legacy_texture_generate_calls == 0);
+    TEST_CHECK(legacy_texture_bind_calls == 0);
+    TEST_CHECK(legacy_texture_upload_calls == 0);
+    TEST_CHECK(legacy_texture_parameter_calls == 0);
+    TEST_CHECK(legacy_texture_delete_calls == 0);
+    TEST_CHECK(legacy_error_query_calls == 0);
     destroys_after_first_cleanup = texture_destroy_calls;
-    legacy_deletes_after_first_cleanup = legacy_texture_deletes;
 
     Images_cleanup();
     TEST_CHECK(texture_destroy_calls == destroys_after_first_cleanup);
-    TEST_CHECK(legacy_texture_deletes == legacy_deletes_after_first_cleanup);
+    TEST_CHECK(legacy_texture_delete_calls == 0);
     TEST_CHECK(Bitmap_add("registry-reset", 1, false) == 0);
     Images_cleanup();
     Images_test_reset_hooks();
@@ -1144,8 +1008,6 @@ int main(void)
             &ordinary_id, &rotatable_id, &map_id) != 0)
         return 1;
     if (check_late_registration() != 0)
-        return 1;
-    if (check_legacy_map_upload(map_id) != 0)
         return 1;
     reset_active_frame_capture();
     if (check_semantic_world_and_hud_draws(ordinary_id) != 0)
