@@ -473,9 +473,11 @@ void Paint_frame(void)
 	Paint_messages();
 	renderer_status = Console_paint();
 	if (renderer_status == RENDERER_STATUS_OK) {
-	    Paint_select();
-	    renderer_status = DrawGLWidgets_checked(
-		MainWidget, sdl_renderer, &gameUiDrawState);
+	    renderer_status = Paint_select();
+	    if (renderer_status == RENDERER_STATUS_OK) {
+		renderer_status = DrawGLWidgets_checked(
+		    MainWidget, sdl_renderer, &gameUiDrawState);
+	    }
 	}
 	glPopMatrix();
 	if (renderer_status != RENDERER_STATUS_OK) {

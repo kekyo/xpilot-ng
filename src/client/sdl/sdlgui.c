@@ -1515,16 +1515,82 @@ void Paint_score_objects(void)
     }
 }
 
-void Paint_select(void)
+static int Semantic_select_float(int64_t value, float *result)
 {
-    if(!select_bounds) return;
-    set_alphacolor(selectionColorRGBA);
-    glBegin(GL_LINE_LOOP);
-    	glVertex2i(select_bounds->x 	    	    	,select_bounds->y   	    	    );
-    	glVertex2i(select_bounds->x + select_bounds->w	,select_bounds->y   	    	    );
-    	glVertex2i(select_bounds->x + select_bounds->w	,select_bounds->y + select_bounds->h);
-    	glVertex2i(select_bounds->x 	    	    	,select_bounds->y + select_bounds->h);
-    glEnd();
+    if (result == NULL || (double)value < -(double)FLT_MAX
+	|| (double)value > (double)FLT_MAX) {
+	return 0;
+    }
+    *result = (float)value;
+    return isfinite(*result);
+}
+
+static RendererStatus Build_semantic_select_geometry(
+    const irec_t *bounds, RendererPoint2D points[4])
+{
+    int64_t left;
+    int64_t top;
+    int64_t right;
+    int64_t bottom;
+
+    if (bounds == NULL || points == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+
+    left = (int64_t)bounds->x;
+    top = (int64_t)bounds->y;
+    right = left + (int64_t)bounds->w;
+    bottom = top + (int64_t)bounds->h;
+    if (!Semantic_select_float(left, &points[0].x)
+	|| !Semantic_select_float(top, &points[0].y)
+	|| !Semantic_select_float(right, &points[1].x)
+	|| !Semantic_select_float(top, &points[1].y)
+	|| !Semantic_select_float(right, &points[2].x)
+	|| !Semantic_select_float(bottom, &points[2].y)
+	|| !Semantic_select_float(left, &points[3].x)
+	|| !Semantic_select_float(bottom, &points[3].y)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    return RENDERER_STATUS_OK;
+}
+
+RendererStatus Paint_select(void)
+{
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererPoint2D points[4];
+    RendererStatus status;
+
+    if (select_bounds == NULL)
+	return RENDERER_STATUS_OK;
+
+    sdl_renderer = Get_sdl_renderer();
+    if (sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    renderer = Sdl_renderer_frontend(sdl_renderer);
+    if (renderer == NULL) {
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    }
+
+    status = Build_semantic_select_geometry(select_bounds, points);
+    if (status != RENDERER_STATUS_OK)
+	return Sdl_renderer_track_frame_result(sdl_renderer, status);
+    status = Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA);
+    status = Sdl_renderer_track_frame_result(sdl_renderer, status);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    status = Renderer_stroke_path(
+	renderer, points, 4, 1.0f,
+	Renderer_color_from_rgba32(selectionColorRGBA), 1);
+    status = Sdl_renderer_track_frame_result(sdl_renderer, status);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
+    return Sdl_renderer_track_frame_result(sdl_renderer, status);
 }
 
 void Paint_HUD_values(void)

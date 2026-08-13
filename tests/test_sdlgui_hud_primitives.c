@@ -52,6 +52,8 @@ typedef struct FakeStroke {
     float width;
     RendererColor color;
     int closed;
+    int transform_token;
+    int scissor_token;
 } FakeStroke;
 
 typedef struct FakeText {
@@ -135,6 +137,7 @@ extern Uint32 packetLossMeterColorRGBA;
 extern Uint32 packetDropMeterColorRGBA;
 extern Uint32 packetLagMeterColorRGBA;
 extern Uint32 temporaryMeterColorRGBA;
+extern Uint32 selectionColorRGBA;
 
 static int color_equal(RendererColor actual, RendererColor expected)
 {
@@ -157,6 +160,8 @@ static int check_stroke(
     TEST_CHECK(color_equal(
         stroke->color, Renderer_color_from_rgba32(rgba)));
     TEST_CHECK(stroke->closed == closed);
+    TEST_CHECK(stroke->transform_token == 71);
+    TEST_CHECK(stroke->scissor_token == 83);
     for (point_index = 0; point_index < expected_point_count;
          point_index++) {
         TEST_CHECK(stroke->points[point_index].x
@@ -377,6 +382,8 @@ RendererStatus Renderer_stroke_path(
     stroke->width = width;
     stroke->color = color;
     stroke->closed = closed;
+    stroke->transform_token = renderer->transform_token;
+    stroke->scissor_token = renderer->scissor_token;
     return RENDERER_STATUS_OK;
 }
 
@@ -470,6 +477,171 @@ static int check_no_legacy_primitives(void)
     TEST_CHECK(legacy_end_calls == 0);
     TEST_CHECK(legacy_color_calls == 0);
     return 0;
+}
+
+static int check_null_selection_is_successful_noop(void)
+{
+    RendererStatus result;
+
+    reset_frame();
+    select_bounds = NULL;
+    selectionColorRGBA = UINT32_C(0x89abcdef);
+
+    result = Paint_select();
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 0);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    return check_no_legacy_primitives();
+}
+
+static int check_selection_outline_is_semantic(void)
+{
+    static const float expected_points[][2] = {
+        {12.0f, 23.0f},
+        {46.0f, 23.0f},
+        {46.0f, 68.0f},
+        {12.0f, 68.0f}
+    };
+    irec_t bounds = {12, 23, 34, 45};
+    RendererStatus result;
+
+    reset_frame();
+    select_bounds = &bounds;
+    selectionColorRGBA = UINT32_C(0x89abcdef);
+
+    result = Paint_select();
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    TEST_CHECK(check_stroke(
+        0, expected_points, 4, UINT32_C(0x89abcdef), 1) == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    return check_no_legacy_primitives();
+}
+
+static int check_selection_requires_active_frame(void)
+{
+    irec_t bounds = {12, 23, 34, 45};
+    RendererStatus result;
+
+    reset_frame();
+    select_bounds = &bounds;
+    selectionColorRGBA = UINT32_C(0x89abcdef);
+    fake_renderer.frame_active = 0;
+
+    result = Paint_select();
+
+    TEST_CHECK(result == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    return check_no_legacy_primitives();
+}
+
+static int check_selection_stroke_failure_is_sticky(void)
+{
+    irec_t bounds = {12, 23, 34, 45};
+    RendererStatus result;
+
+    reset_frame();
+    select_bounds = &bounds;
+    selectionColorRGBA = UINT32_C(0x89abcdef);
+    stroke_failure_attempt = 1;
+    stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+
+    result = Paint_select();
+
+    TEST_CHECK(result == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+    result = Paint_select();
+
+    TEST_CHECK(result == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    return check_no_legacy_primitives();
+}
+
+static int check_selection_flush_failure_is_sticky(void)
+{
+    irec_t bounds = {12, 23, 34, 45};
+    RendererStatus result;
+
+    reset_frame();
+    select_bounds = &bounds;
+    selectionColorRGBA = UINT32_C(0x89abcdef);
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+
+    result = Paint_select();
+
+    TEST_CHECK(result == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    flush_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    result = Paint_select();
+
+    TEST_CHECK(result == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    return check_no_legacy_primitives();
 }
 
 static int check_fuel_meter_fill_uses_inherited_hud_state(void)
@@ -780,6 +952,16 @@ static int check_label_failure_blocks_later_same_frame_meters(void)
 
 int main(void)
 {
+    if (check_null_selection_is_successful_noop() != 0)
+        return 1;
+    if (check_selection_outline_is_semantic() != 0)
+        return 1;
+    if (check_selection_requires_active_frame() != 0)
+        return 1;
+    if (check_selection_stroke_failure_is_sticky() != 0)
+        return 1;
+    if (check_selection_flush_failure_is_sticky() != 0)
+        return 1;
     if (check_fuel_meter_fill_uses_inherited_hud_state() != 0)
         return 1;
     if (check_negative_and_empty_meter_fills() != 0)

@@ -23,6 +23,8 @@
 
 #include "xpclient_sdl.h"
 
+#include "renderer.h"
+
 #define MAX_VERTICES 10000
 
 typedef unsigned int color_t;
@@ -60,6 +62,16 @@ extern void Segment_add(Uint32 color, int x_1, int y_1, int x_2, int y_2);
 extern void Circle(Uint32 color, int x, int y, int radius, int filled);
 
 extern irec_t *select_bounds;
-extern void Paint_select(void);
+
+/**
+ * Draw the current selection bounds as a semantic HUD outline.
+ *
+ * @return The sticky result for the active renderer frame, or
+ *         RENDERER_STATUS_OK when select_bounds is NULL.
+ * @remarks The operation preserves the renderer's current transform and
+ *          scissor state. It requires an active renderer frame whenever
+ *          select_bounds is non-NULL.
+ */
+extern RendererStatus Paint_select(void);
 
 #endif
