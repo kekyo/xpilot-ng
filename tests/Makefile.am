@@ -244,6 +244,8 @@ test_sdlgui_hud_primitives_LDADD = @SDL2_LIBS@
 test_sdlgui_asteroids_SOURCES = test_sdlgui_asteroids.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/asteroid_batch_test_support.h \
+	$(top_srcdir)/src/client/sdl/polygon_geometry.c \
+	$(top_srcdir)/src/client/sdl/polygon_geometry.h \
 	$(top_srcdir)/src/client/paintobjects.c
 test_sdlgui_asteroids_CPPFLAGS = $(AM_CPPFLAGS) \
 	-DXPILOT_ASTEROID_BATCH_TEST_HOOKS
@@ -268,7 +270,8 @@ test_sdlgui_asteroids_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_lasers_begin \
 	-Wl,--wrap=Gui_paint_lasers_end \
 	-Wl,--wrap=Gui_paint_laser
-test_sdlgui_asteroids_LDADD = @SDL2_LIBS@
+test_sdlgui_asteroids_LDADD = \
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL2_LIBS@
 
 test_sdlgui_polygons_SOURCES = test_sdlgui_polygons.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \

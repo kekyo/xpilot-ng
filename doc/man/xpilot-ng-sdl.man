@@ -1436,11 +1436,6 @@ The default value is: 10.
 Set the line width of ships.
 The default value is: 1.000.
 .HP
-\fB\-smoothLines\fR <value>
-.IP
-Use antialized smooth lines.
-The default value is: yes.
-.HP
 \fB\-texturedBalls\fR <value>
 .IP
 Draw balls with textures.

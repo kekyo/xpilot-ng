@@ -447,27 +447,6 @@ image_t *Image_get_texture(int ind)
     return Image_get(first_texture + ind);
 }
 
-void Image_use_texture(int ind)
-{
-    image_t *image = Image_get_texture(ind);
-
-    if (image == NULL) {
-        warn("Texture %d is undefined.\n", ind);
-        return;
-    }
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBindTexture(GL_TEXTURE_2D, image->legacy_name);
-    glColor4ub(255, 255, 255, 255);
-}
-
-void Image_no_texture(void)
-{
-    /*glDisable(GL_BLEND);*/
-    glDisable(GL_TEXTURE_2D);
-}
-
 static void Image_draw(image_t *image, int frame, RendererRect area,
                        RendererPoint2D position, float radians,
                        ImageGeometrySpace space, int packed_color)

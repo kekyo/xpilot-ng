@@ -212,16 +212,6 @@ image_t *Image_get(int ind);
 image_t *Image_get_texture(int ind);
 
 /**
- * Bind a prepared map texture for transitional fixed-function drawing.
- *
- * @param ind Zero-based index relative to the first map texture.
- */
-void Image_use_texture(int ind);
-
-/** Disable transitional fixed-function texturing. */
-void Image_no_texture(void);
-
-/**
  * Add an image registration without loading it.
  *
  * @param filename Picture filename.

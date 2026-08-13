@@ -329,9 +329,11 @@ test_sdlgui_polygons_LINK = $(CCLD) $(test_sdlgui_polygons_CFLAGS) \
 am_test_sdlgui_asteroids_OBJECTS =  \
 	test_sdlgui_asteroids-test_sdlgui_asteroids.$(OBJEXT) \
 	test_sdlgui_asteroids-sdlgui.$(OBJEXT) \
+	test_sdlgui_asteroids-polygon_geometry.$(OBJEXT) \
 	test_sdlgui_asteroids-paintobjects.$(OBJEXT)
 test_sdlgui_asteroids_OBJECTS = $(am_test_sdlgui_asteroids_OBJECTS)
-test_sdlgui_asteroids_DEPENDENCIES =
+test_sdlgui_asteroids_DEPENDENCIES = \
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a
 test_sdlgui_asteroids_LINK = $(CCLD) \
 	$(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) \
 	$(test_sdlgui_asteroids_LDFLAGS) $(LDFLAGS) -o $@
@@ -474,6 +476,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_sdlgui_polygons-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po \
 	./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po \
+	./$(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po \
 	./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po \
 	./$(DEPDIR)/test_sdlgui_ships-paintobjects.Po \
@@ -1152,6 +1155,8 @@ test_sdlgui_hud_primitives_LDADD = @SDL2_LIBS@
 test_sdlgui_asteroids_SOURCES = test_sdlgui_asteroids.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/asteroid_batch_test_support.h \
+	$(top_srcdir)/src/client/sdl/polygon_geometry.c \
+	$(top_srcdir)/src/client/sdl/polygon_geometry.h \
 	$(top_srcdir)/src/client/paintobjects.c
 
 test_sdlgui_asteroids_CPPFLAGS = $(AM_CPPFLAGS) \
@@ -1180,7 +1185,8 @@ test_sdlgui_asteroids_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_lasers_end \
 	-Wl,--wrap=Gui_paint_laser
 
-test_sdlgui_asteroids_LDADD = @SDL2_LIBS@
+test_sdlgui_asteroids_LDADD = \
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL2_LIBS@
 test_sdlgui_polygons_SOURCES = test_sdlgui_polygons.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/polygon_cache_test_support.h \
@@ -1565,6 +1571,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_polygons-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_ships-paintobjects.Po@am__quote@ # am--include-marker
@@ -2406,6 +2413,20 @@ test_sdlgui_asteroids-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_asteroids-sdlgui.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -c -o test_sdlgui_asteroids-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+
+test_sdlgui_asteroids-polygon_geometry.o: $(top_srcdir)/src/client/sdl/polygon_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -MT test_sdlgui_asteroids-polygon_geometry.o -MD -MP -MF $(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Tpo -c -o test_sdlgui_asteroids-polygon_geometry.o `test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/polygon_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Tpo $(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/polygon_geometry.c' object='test_sdlgui_asteroids-polygon_geometry.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -c -o test_sdlgui_asteroids-polygon_geometry.o `test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/polygon_geometry.c
+
+test_sdlgui_asteroids-polygon_geometry.obj: $(top_srcdir)/src/client/sdl/polygon_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -MT test_sdlgui_asteroids-polygon_geometry.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Tpo -c -o test_sdlgui_asteroids-polygon_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/polygon_geometry.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Tpo $(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/polygon_geometry.c' object='test_sdlgui_asteroids-polygon_geometry.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -c -o test_sdlgui_asteroids-polygon_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/polygon_geometry.c'; fi`
 
 test_sdlgui_asteroids-paintobjects.o: $(top_srcdir)/src/client/paintobjects.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -MT test_sdlgui_asteroids-paintobjects.o -MD -MP -MF $(DEPDIR)/test_sdlgui_asteroids-paintobjects.Tpo -c -o test_sdlgui_asteroids-paintobjects.o `test -f '$(top_srcdir)/src/client/paintobjects.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/paintobjects.c
@@ -3326,6 +3347,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-paintobjects.Po
@@ -3469,6 +3491,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_polygons-test_sdlgui_polygons.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-paintobjects.Po

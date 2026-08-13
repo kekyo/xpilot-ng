@@ -66,7 +66,7 @@ RendererStatus setupPaint_moving(void);
  */
 RendererStatus setupPaint_HUD(void);
 
-/* Shared paint colors and direct-OpenGL color helper from sdlgui.c. */
+/* Shared paint colors from sdlgui.c. */
 extern Uint32 nullRGBA;
 extern Uint32 blackRGBA;
 extern Uint32 whiteRGBA;
@@ -81,8 +81,6 @@ extern Uint32 scoreSelfColorRGBA;
 extern Uint32 scoreColorRGBA;
 extern Uint32 scoreOwnTeamColorRGBA;
 extern Uint32 scoreEnemyTeamColorRGBA;
-
-extern void set_alphacolor(Uint32 color);
 
 extern irec_t *select_bounds;
 

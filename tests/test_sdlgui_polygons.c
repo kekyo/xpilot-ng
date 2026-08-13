@@ -1109,17 +1109,6 @@ image_t *Image_get_texture(int index)
     return texture_available ? &fake_map_texture : NULL;
 }
 
-void Image_use_texture(int index)
-{
-    (void)index;
-    legacy_calls++;
-}
-
-void Image_no_texture(void)
-{
-    legacy_calls++;
-}
-
 void warn(const char *format, ...)
 {
     (void)format;

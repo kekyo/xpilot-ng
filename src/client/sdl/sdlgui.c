@@ -36,6 +36,7 @@
 #include "glwidgets.h"
 #include "text.h"
 #include "asteroid_data.h"
+#include "polygon_geometry.h"
 
 #ifdef XPILOT_APPEARING_BATCH_TEST_HOOKS
 #include "appearing_batch_test_support.h"
@@ -137,12 +138,35 @@ int   hudRadarObjectShape;
 float hudRadarDotScale;
 
 static double shipLineWidth;
-static bool smoothLines;
 static bool texturedBalls;
 static bool texturedShips;
-static GLuint polyListBase = 0;
-static GLuint polyEdgeListBase = 0;
-static GLsizei polyListCount = 0;
+
+typedef struct SemanticPolygonLocalPoint {
+    int64_t x;
+    int64_t y;
+} SemanticPolygonLocalPoint;
+
+typedef struct SemanticPolygonCacheEntry {
+    /* Geometry and edge visibility are immutable scene snapshots.  Style and
+     * texture table entries are intentionally resolved for every paint. */
+    PolygonGeometry fill_geometry;
+    SemanticPolygonLocalPoint *local_points;
+    RendererPoint2D *world_points;
+    RendererVertex2D *draw_vertices;
+    unsigned char *visible_edges;
+    size_t point_count;
+    int has_special_edges;
+    int64_t anchor_x;
+    int64_t anchor_y;
+    int64_t min_x;
+    int64_t min_y;
+    int bounds_height;
+} SemanticPolygonCacheEntry;
+
+static SemanticPolygonCacheEntry *semanticPolygonCache;
+static size_t semanticPolygonCacheCount;
+static const xp_polygon_t *semanticPolygonCacheSource;
+static int semanticPolygonCacheReady;
 
 irec_t *select_bounds;
 
@@ -153,6 +177,8 @@ string_tex_t HUD_texs[MAX_HUD_TEXS+MAX_SCORE_OBJECTS];
 int Gui_init(void);
 void Gui_cleanup(void);
 static void Discard_semantic_asteroid_batch(void);
+static RendererStatus Prepare_semantic_polygon_cache(void);
+static void Discard_semantic_polygon_cache(void);
 
 static bool Ensure_cached_text(font_data *font, const char *text,
 			       string_tex_t *cache)
@@ -164,25 +190,6 @@ static bool Ensure_cached_text(font_data *font, const char *text,
 	return true;
     }
     return render_text(font, text, cache);
-}
-
-static RendererStatus Preflight_sdl_paint_leaf(void)
-{
-    SdlRenderer *sdl_renderer = Get_sdl_renderer();
-
-    if (sdl_renderer == NULL)
-	return RENDERER_STATUS_INVALID_STATE;
-    return Sdl_renderer_track_frame_result(
-	sdl_renderer, RENDERER_STATUS_OK);
-}
-
-/* better to use alpha everywhere, less confusion */
-void set_alphacolor(Uint32 color)
-{
-    glColor4ub((color >> 24) & 255,
-    	       (color >> 16) & 255,
-	       (color >> 8) & 255,
-	       color & 255);
 }
 
 static GLubyte get_alpha(Uint32 color)
@@ -208,179 +215,31 @@ static int wrap(int *xp, int *yp)
     return returnval;
 }
 
-#ifndef CALLBACK
-#define CALLBACK
-#endif
-
-static void CALLBACK vertex_callback(ipos_t *p, irec_t *trec)
-{
-    if (trec != NULL) {
-	glTexCoord2f((p->x + trec->x) / (GLfloat)trec->w,
-		     (p->y + trec->y) / (GLfloat)trec->h);
-    }
-    glVertex2i(p->x, p->y);
-}
-
-static void tessellate_polygon(GLUtriangulatorObj *tess, int ind)
-{
-    int i, x, y, minx, miny;
-    xp_polygon_t polygon;
-    polygon_style_t p_style;
-    image_t *texture = NULL;
-    irec_t trec;
-    GLdouble v[3] = { 0, 0, 0 };
-    ipos_t p[MAX_VERTICES];
-
-    polygon = polygons[ind];
-    p_style = polygon_styles[polygon.style];
-    
-    p[0].x = p[0].y = 0;
-    if (BIT(p_style.flags, STYLE_TEXTURED)) {
-	texture = Image_get_texture(p_style.texture);
-	if (texture != NULL) {
-	    x = y = minx = miny = 0;
-	    for (i = 1; i < polygon.num_points; i++) {
-		x += polygon.points[i].x;
-		y += polygon.points[i].y;
-		if (x < minx) minx = x;
-		if (y < miny) miny = y;
-	    }
-	    trec.x = -minx;
-	    trec.y = -miny - (polygon.bounds.h % texture->height);
-	    trec.w = texture->frame_width;
-	    trec.h = texture->height;
-	}
-    }
-    glNewList(polyListBase + ind,  GL_COMPILE);
-    gluTessBeginPolygon(tess, texture ? &trec : NULL);
-    gluTessVertex(tess, v, &p[0]);
-    for (i = 1; i < polygon.num_points; i++) {
-	v[0] = p[i].x = p[i - 1].x + polygon.points[i].x;
-	v[1] = p[i].y = p[i - 1].y + polygon.points[i].y;
-	gluTessVertex(tess, v, &p[i]);
-    }
-    gluTessEndPolygon(tess);
-    glEndList();
-
-    glNewList(polyEdgeListBase + ind,  GL_COMPILE);
-    if (polygon.edge_styles == NULL) { /* No special edges */
-	glBegin(GL_LINE_LOOP);
-	x = y = 0;
-	glVertex2i(x, y);
-	for (i = 1; i < polygon.num_points; i++) {
-	    x += polygon.points[i].x;
-	    y += polygon.points[i].y;
-	    glVertex2i(x, y);
-	}
-	glEnd();
-    }
-    else { 	/* This polygon has special edges */
-	ipos_t pos1, pos2;
-	int sindex;
-
-	glBegin(GL_LINES);
-	pos1.x = 0;
-	pos1.y = 0;
-	for (i = 1; i < polygon.num_points; i++) {
-	    pos2.x = pos1.x + polygon.points[i].x;
-	    pos2.y = pos1.y + polygon.points[i].y;
-	    sindex = polygon.edge_styles[i - 1];
-	    /* Style 0 means internal edges which are never shown */
-	    if (sindex != 0) {
-		glVertex2i(pos1.x, pos1.y);
-		glVertex2i(pos2.x, pos2.y);
-	    }
-	    pos1 = pos2;
-	}
-	glEnd();
-    }
-    glEndList();
-}
-
 int Gui_init(void)
 {
-    int i;
-    GLUtriangulatorObj *tess = NULL;
-    
-    if (num_polygons == 0) return 0;
+    RendererStatus status = Prepare_semantic_polygon_cache();
 
-    polyListCount = num_polygons;
-    polyListBase = glGenLists(polyListCount);
-    if (!polyListBase) {
-	error("failed to generate display lists");
-	goto fail;
-    }
-    polyEdgeListBase = glGenLists(polyListCount);
-    if (!polyEdgeListBase) {
-	error("failed to generate edge display lists");
-	goto fail;
-    }
-
-    tess = gluNewTess();
-    if (tess == NULL) {
-	error("failed to create tessellation object");
-	goto fail;
-    }
-
-    /* TODO: figure out proper casting here do not use _GLUfuncptr */
-    /* it doesn't work on windows  or MAC OS X */
-#ifdef _MSC_VER 
-    gluTessCallback(tess, GLU_TESS_BEGIN, glBegin);
-    gluTessCallback(tess, GLU_TESS_VERTEX_DATA, vertex_callback);
-#else
-    gluTessCallback(tess, GLU_TESS_BEGIN, (GLvoid (*)(void))glBegin);
-    gluTessCallback(tess, GLU_TESS_VERTEX_DATA, (GLvoid (*)(void))vertex_callback);
-#endif
-    gluTessCallback(tess, GLU_TESS_END, glEnd);
-
-    for (i = 0; i < num_polygons; i++) {
-	tessellate_polygon(tess, i);
-    }
-
-    gluDeleteTess(tess);
-
-    return 0;
-
-fail:
-    if (tess != NULL)
-	gluDeleteTess(tess);
-    Gui_cleanup();
+    if (status == RENDERER_STATUS_OK)
+	return 0;
+    error("failed to prepare polygon geometry cache");
     return -1;
 }
 
 void Gui_cleanup(void)
 {
     Discard_semantic_asteroid_batch();
-    if (polyListBase) {
-	glDeleteLists(polyListBase, polyListCount);
-        polyListBase = 0;
-    }
-    if (polyEdgeListBase) {
-	glDeleteLists(polyEdgeListBase, polyListCount);
-        polyEdgeListBase = 0;
-    }
-    polyListCount = 0;
+    Discard_semantic_polygon_cache();
 }
-
-#ifdef XPILOT_GL_TEST_HOOKS
-void Gui_test_get_display_lists(GLuint *polygon_fill_list_base,
-				GLuint *polygon_edge_list_base)
-{
-    if (polygon_fill_list_base != NULL)
-	*polygon_fill_list_base = polyListBase;
-    if (polygon_edge_list_base != NULL)
-	*polygon_edge_list_base = polyEdgeListBase;
-}
-#endif
 
 #ifdef XPILOT_POLYGON_CACHE_TEST_HOOKS
 RendererStatus Sdlgui_test_prepare_polygon_cache(void)
 {
-    return RENDERER_STATUS_INVALID_STATE;
+    return Prepare_semantic_polygon_cache();
 }
 
 void Sdlgui_test_discard_polygon_cache(void)
 {
+    Discard_semantic_polygon_cache();
 }
 #endif
 
@@ -638,6 +497,248 @@ static int Semantic_world_line_extent_preserved(
 {
     /* Equal integer coordinates are valid; only conversion collapse is bad. */
     return first == second || first_float != second_float;
+}
+
+static int Semantic_polygon_size_fits(size_t count, size_t item_size)
+{
+    return item_size == 0
+	|| (count <= SIZE_MAX / item_size
+	    && count <= (size_t)PTRDIFF_MAX / item_size);
+}
+
+static int Semantic_polygon_add_int64(
+    int64_t first, int64_t second, int64_t *result)
+{
+    if (result == NULL
+	|| (second > 0 && first > INT64_MAX - second)
+	|| (second < 0 && first < INT64_MIN - second)) {
+	return 0;
+    }
+    *result = first + second;
+    return 1;
+}
+
+static void Cleanup_semantic_polygon_cache_entries(
+    SemanticPolygonCacheEntry *entries, size_t entry_count)
+{
+    size_t index;
+
+    if (entries == NULL)
+	return;
+    for (index = 0; index < entry_count; index++) {
+	Polygon_geometry_cleanup(&entries[index].fill_geometry);
+	free(entries[index].local_points);
+	free(entries[index].world_points);
+	free(entries[index].draw_vertices);
+	free(entries[index].visible_edges);
+    }
+    free(entries);
+}
+
+static void Discard_semantic_polygon_cache(void)
+{
+    Cleanup_semantic_polygon_cache_entries(
+	semanticPolygonCache, semanticPolygonCacheCount);
+    semanticPolygonCache = NULL;
+    semanticPolygonCacheCount = 0;
+    semanticPolygonCacheSource = NULL;
+    semanticPolygonCacheReady = 0;
+}
+
+static RendererStatus Set_semantic_polygon_contour_point(
+    RendererPoint2D *point, int64_t origin_x, int64_t origin_y,
+    SemanticPolygonLocalPoint local)
+{
+    int64_t x;
+    int64_t y;
+
+    if (!Semantic_polygon_add_int64(origin_x, local.x, &x)
+	|| !Semantic_polygon_add_int64(origin_y, local.y, &y)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    return Set_semantic_world_line_point(point, x, y);
+}
+
+static RendererStatus Validate_semantic_polygon_contour(
+    SemanticPolygonCacheEntry *entry, int64_t origin_x, int64_t origin_y)
+{
+    size_t index;
+
+    if (entry == NULL || entry->local_points == NULL
+	|| entry->world_points == NULL || entry->point_count < 3) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    for (index = 0; index < entry->point_count; index++) {
+	RendererStatus status = Set_semantic_polygon_contour_point(
+	    &entry->world_points[index], origin_x, origin_y,
+	    entry->local_points[index]);
+
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+    }
+    for (index = 0; index < entry->point_count; index++) {
+	size_t next = (index + 1) % entry->point_count;
+	SemanticPolygonLocalPoint first = entry->local_points[index];
+	SemanticPolygonLocalPoint second = entry->local_points[next];
+	RendererPoint2D first_world = entry->world_points[index];
+	RendererPoint2D second_world = entry->world_points[next];
+
+	if (!Semantic_world_line_extent_preserved(
+		first.x, second.x, first_world.x, second_world.x)
+	    || !Semantic_world_line_extent_preserved(
+		first.y, second.y, first_world.y, second_world.y)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Build_semantic_polygon_cache_entry(
+    const xp_polygon_t *polygon, SemanticPolygonCacheEntry *entry)
+{
+    size_t source_point_count;
+    size_t index;
+    int64_t current_x = 0;
+    int64_t current_y = 0;
+    RendererStatus status;
+
+    if (polygon == NULL || entry == NULL || polygon->points == NULL
+	|| polygon->num_points < 3 || polygon->bounds.h < 0) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    source_point_count = (size_t)polygon->num_points;
+    if (!Semantic_polygon_size_fits(
+	    source_point_count, sizeof(*entry->local_points))
+	|| !Semantic_polygon_size_fits(
+	    source_point_count, sizeof(*entry->world_points))) {
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    }
+
+    entry->local_points = malloc(
+	source_point_count * sizeof(*entry->local_points));
+    if (entry->local_points == NULL)
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    entry->local_points[0].x = 0;
+    entry->local_points[0].y = 0;
+    for (index = 1; index < source_point_count; index++) {
+	if (!Semantic_polygon_add_int64(
+		current_x, (int64_t)polygon->points[index].x, &current_x)
+	    || !Semantic_polygon_add_int64(
+		current_y, (int64_t)polygon->points[index].y, &current_y)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+	entry->local_points[index].x = current_x;
+	entry->local_points[index].y = current_y;
+    }
+
+    entry->point_count = source_point_count;
+    /* Accept an optional repeated first vertex at the end.  Keep a single
+     * canonical vertex and let both tessellation and path stroking close it;
+     * the last retained selector remains the outgoing close edge. */
+    if (current_x == 0 && current_y == 0)
+	entry->point_count--;
+    if (entry->point_count < 3)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+
+    entry->world_points = malloc(
+	entry->point_count * sizeof(*entry->world_points));
+    if (entry->world_points == NULL)
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    entry->has_special_edges = polygon->edge_styles != NULL;
+    if (entry->has_special_edges) {
+	entry->visible_edges = malloc(
+	    entry->point_count * sizeof(*entry->visible_edges));
+	if (entry->visible_edges == NULL)
+	    return RENDERER_STATUS_OUT_OF_MEMORY;
+	for (index = 0; index < entry->point_count; index++) {
+	    int selector = polygon->edge_styles[index];
+
+	    if (selector < 0 || selector > 255)
+		return RENDERER_STATUS_INVALID_ARGUMENT;
+	    /* SDL historically used special selectors only as a visibility mask;
+	     * the current polygon default still supplies color and width. */
+	    entry->visible_edges[index] = selector != 0;
+	}
+    }
+
+    entry->anchor_x = polygon->points[0].x;
+    entry->anchor_y = polygon->points[0].y;
+    entry->min_x = entry->local_points[0].x;
+    entry->min_y = entry->local_points[0].y;
+    entry->bounds_height = polygon->bounds.h;
+    for (index = 0; index < entry->point_count; index++) {
+	SemanticPolygonLocalPoint local = entry->local_points[index];
+
+	entry->world_points[index].x = (float)local.x;
+	entry->world_points[index].y = (float)local.y;
+	if (!isfinite(entry->world_points[index].x)
+	    || !isfinite(entry->world_points[index].y)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+	if (local.x < entry->min_x)
+	    entry->min_x = local.x;
+	if (local.y < entry->min_y)
+	    entry->min_y = local.y;
+    }
+    status = Polygon_geometry_tessellate_odd(
+	entry->world_points, entry->point_count, &entry->fill_geometry);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+
+    if (entry->fill_geometry.triangle_point_count != 0) {
+	if (!Semantic_polygon_size_fits(
+		entry->fill_geometry.triangle_point_count,
+		sizeof(*entry->draw_vertices))) {
+	    return RENDERER_STATUS_OUT_OF_MEMORY;
+	}
+	entry->draw_vertices = malloc(
+	    entry->fill_geometry.triangle_point_count
+		* sizeof(*entry->draw_vertices));
+	if (entry->draw_vertices == NULL)
+	    return RENDERER_STATUS_OUT_OF_MEMORY;
+    }
+    return Validate_semantic_polygon_contour(
+	entry, entry->anchor_x, entry->anchor_y);
+}
+
+static RendererStatus Prepare_semantic_polygon_cache(void)
+{
+    SemanticPolygonCacheEntry *candidate;
+    size_t candidate_count;
+    size_t index;
+    RendererStatus status;
+
+    if (semanticPolygonCacheReady || semanticPolygonCache != NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    if (num_polygons < 0 || (num_polygons > 0 && polygons == NULL))
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    candidate_count = (size_t)num_polygons;
+    if (candidate_count == 0) {
+	semanticPolygonCacheSource = polygons;
+	semanticPolygonCacheReady = 1;
+	return RENDERER_STATUS_OK;
+    }
+    if (!Semantic_polygon_size_fits(candidate_count, sizeof(*candidate)))
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+
+    candidate = calloc(candidate_count, sizeof(*candidate));
+    if (candidate == NULL)
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    for (index = 0; index < candidate_count; index++) {
+	status = Build_semantic_polygon_cache_entry(
+	    &polygons[index], &candidate[index]);
+	if (status != RENDERER_STATUS_OK) {
+	    Cleanup_semantic_polygon_cache_entries(
+		candidate, candidate_count);
+	    return status;
+	}
+    }
+
+    semanticPolygonCache = candidate;
+    semanticPolygonCacheCount = candidate_count;
+    semanticPolygonCacheSource = polygons;
+    semanticPolygonCacheReady = 1;
+    return RENDERER_STATUS_OK;
 }
 
 static RendererStatus Append_semantic_world_line_path(
@@ -1813,70 +1914,381 @@ void Gui_paint_filled_slice(int bl, int tl, int tr, int br, int y)
     (void)Paint_semantic_map_quad(points, wallColorRGBA);
 }
 
+static RendererStatus Get_semantic_polygon_color(
+    int rgb, RendererColor *color)
+{
+    uint32_t rgba;
+
+    if (color == NULL || rgb < 0 || rgb > 0x00ffffff)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    rgba = ((uint32_t)rgb << 8) | UINT32_C(0xff);
+    *color = Renderer_color_from_rgba32(rgba);
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Set_semantic_polygon_triangle_position(
+    RendererVertex2D *vertex, int64_t origin_x, int64_t origin_y,
+    RendererPoint2D local)
+{
+    double x;
+    double y;
+
+    if (vertex == NULL || !isfinite(local.x) || !isfinite(local.y))
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    x = (double)origin_x + (double)local.x;
+    y = (double)origin_y + (double)local.y;
+    if (!isfinite(x) || !isfinite(y)
+	|| x < INT_MIN || x > INT_MAX
+	|| y < INT_MIN || y > INT_MAX) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    vertex->x = (float)x;
+    vertex->y = (float)y;
+    if (!isfinite(vertex->x) || !isfinite(vertex->y))
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    return RENDERER_STATUS_OK;
+}
+
+static int Semantic_polygon_triangle_extent_preserved(
+    RendererPoint2D first_local, RendererPoint2D second_local,
+    const RendererVertex2D *first_world,
+    const RendererVertex2D *second_world)
+{
+    return (first_local.x == second_local.x
+	    || first_world->x != second_world->x)
+	&& (first_local.y == second_local.y
+	    || first_world->y != second_world->y);
+}
+
+static double Semantic_polygon_triangle_twice_area(
+    const RendererVertex2D *first, const RendererVertex2D *second,
+    const RendererVertex2D *third)
+{
+    return ((double)second->x - first->x)
+	    * ((double)third->y - first->y)
+	- ((double)second->y - first->y)
+	    * ((double)third->x - first->x);
+}
+
+static RendererStatus Prepare_semantic_polygon_triangle_vertices(
+    SemanticPolygonCacheEntry *entry, int64_t origin_x, int64_t origin_y,
+    RendererColor color)
+{
+    size_t index;
+
+    if (entry == NULL
+	|| (entry->fill_geometry.triangle_point_count != 0
+	    && entry->draw_vertices == NULL)) {
+	return RENDERER_STATUS_INVALID_STATE;
+    }
+    for (index = 0;
+	 index < entry->fill_geometry.triangle_point_count;
+	 index++) {
+	RendererStatus status = Set_semantic_polygon_triangle_position(
+	    &entry->draw_vertices[index], origin_x, origin_y,
+	    entry->fill_geometry.triangle_points[index]);
+
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+	entry->draw_vertices[index].u = 0.0f;
+	entry->draw_vertices[index].v = 0.0f;
+	entry->draw_vertices[index].color = color;
+    }
+    for (index = 0;
+	 index < entry->fill_geometry.triangle_point_count;
+	 index += 3) {
+	RendererPoint2D *local = &entry->fill_geometry.triangle_points[index];
+	RendererVertex2D *world_vertex = &entry->draw_vertices[index];
+	double twice_area;
+
+	if (!Semantic_polygon_triangle_extent_preserved(
+		local[0], local[1], &world_vertex[0], &world_vertex[1])
+	    || !Semantic_polygon_triangle_extent_preserved(
+		local[1], local[2], &world_vertex[1], &world_vertex[2])
+	    || !Semantic_polygon_triangle_extent_preserved(
+		local[2], local[0], &world_vertex[2], &world_vertex[0])) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+	twice_area = Semantic_polygon_triangle_twice_area(
+	    &world_vertex[0], &world_vertex[1], &world_vertex[2]);
+	if (!isfinite(twice_area) || twice_area == 0.0)
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Prepare_semantic_polygon_texture_vertices(
+    SemanticPolygonCacheEntry *entry, const image_t *image)
+{
+    RendererColor white = {255, 255, 255, 255};
+    float frame_width;
+    float height;
+    float min_x;
+    float min_y;
+    float vertical_offset;
+    size_t index;
+
+    if (entry == NULL || image == NULL
+	|| image->width <= 0 || image->height <= 0
+	|| image->frame_width <= 0 || image->frame_width > image->width) {
+	return RENDERER_STATUS_INVALID_STATE;
+    }
+    frame_width = (float)image->frame_width;
+    height = (float)image->height;
+    min_x = (float)entry->min_x;
+    min_y = (float)entry->min_y;
+    vertical_offset = (float)(entry->bounds_height % image->height);
+    for (index = 0;
+	 index < entry->fill_geometry.triangle_point_count;
+	 index++) {
+	RendererPoint2D local = entry->fill_geometry.triangle_points[index];
+	RendererVertex2D *vertex = &entry->draw_vertices[index];
+
+	vertex->u = (local.x - min_x) / frame_width;
+	/* Convert the legacy bottom-origin texture coordinate to the semantic
+	 * top-origin convention without removing intentional repeat intervals. */
+	vertex->v = 1.0f
+	    - (local.y - min_y - vertical_offset) / height;
+	vertex->color = white;
+	if (!isfinite(vertex->u) || !isfinite(vertex->v))
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static int Semantic_polygon_has_visible_edge(
+    const SemanticPolygonCacheEntry *entry)
+{
+    size_t index;
+
+    if (entry == NULL)
+	return 0;
+    for (index = 0; index < entry->point_count; index++) {
+	size_t next = (index + 1) % entry->point_count;
+	RendererPoint2D first = entry->world_points[index];
+	RendererPoint2D second = entry->world_points[next];
+
+	if ((!entry->has_special_edges || entry->visible_edges[index])
+	    && (first.x != second.x || first.y != second.y)) {
+	    return 1;
+	}
+    }
+    return 0;
+}
+
+static RendererStatus Paint_semantic_polygon_outline(
+    SemanticWorldLineBatch *batch, SemanticPolygonCacheEntry *entry,
+    float width, RendererColor color)
+{
+    size_t index;
+
+    if (batch == NULL || entry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!entry->has_special_edges) {
+	return Accept_semantic_world_line_command(
+	    batch, Renderer_stroke_path(
+		batch->renderer, entry->world_points, entry->point_count,
+		width, color, 1));
+    }
+    for (index = 0; index < entry->point_count; index++) {
+	RendererPoint2D segment[2];
+	RendererStatus status;
+
+	if (!entry->visible_edges[index])
+	    continue;
+	segment[0] = entry->world_points[index];
+	segment[1] = entry->world_points[
+	    (index + 1) % entry->point_count];
+	if (segment[0].x == segment[1].x
+	    && segment[0].y == segment[1].y) {
+	    continue;
+	}
+	status = Accept_semantic_world_line_command(
+	    batch, Renderer_stroke_path(
+		batch->renderer, segment, 2, width, color, 0));
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+    }
+    return RENDERER_STATUS_OK;
+}
+
 void Gui_paint_polygon(int i, int xoff, int yoff)
 {
-    xp_polygon_t polygon;
+    SemanticWorldLineBatch batch;
+    SemanticPolygonCacheEntry *entry;
     polygon_style_t p_style;
     edge_style_t e_style;
-    int width;
-    bool did_fill = false;
+    RendererColor fill_color;
+    RendererColor outline_color;
+    RendererTexture *texture = NULL;
+    image_t *image = NULL;
+    RendererStatus status;
+    int64_t origin_x;
+    int64_t origin_y;
+    int64_t offset_x;
+    int64_t offset_y;
+    int did_fill;
+    int draw_fill;
+    int draw_outline;
+    float outline_width = 0.0f;
 
-    polygon = polygons[i];
-    p_style = polygon_styles[polygon.style];
-    e_style = edge_styles[p_style.def_edge_style];
-
+    if (Begin_semantic_world_line_batch(&batch) != RENDERER_STATUS_OK)
+	return;
+    if (!semanticPolygonCacheReady || semanticPolygonCache == NULL
+	|| semanticPolygonCacheSource != polygons
+	|| num_polygons < 0
+	|| (size_t)num_polygons != semanticPolygonCacheCount) {
+	(void)Track_semantic_world_line_batch(
+	    &batch, RENDERER_STATUS_INVALID_STATE);
+	return;
+    }
+    if (i < 0 || (size_t)i >= semanticPolygonCacheCount
+	|| polygon_styles == NULL || num_polygon_styles <= 0
+	|| polygons[i].style < 0
+	|| polygons[i].style >= num_polygon_styles) {
+	(void)Track_semantic_world_line_batch(
+	    &batch, RENDERER_STATUS_INVALID_ARGUMENT);
+	return;
+    }
+    entry = &semanticPolygonCache[i];
+    p_style = polygon_styles[polygons[i].style];
     if (BIT(p_style.flags, STYLE_INVISIBLE))
 	return;
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+    if (edge_styles == NULL || num_edge_styles <= 0
+	|| p_style.def_edge_style < 0
+	|| p_style.def_edge_style >= num_edge_styles) {
+	(void)Track_semantic_world_line_batch(
+	    &batch, RENDERER_STATUS_INVALID_ARGUMENT);
+	return;
+    }
+    e_style = edge_styles[p_style.def_edge_style];
+    status = Get_semantic_polygon_color(p_style.rgb, &fill_color);
+    if (status == RENDERER_STATUS_OK)
+	status = Get_semantic_polygon_color(e_style.rgb, &outline_color);
+    if (status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_world_line_batch(&batch, status);
+	return;
+    }
+    if (Setup == NULL || Setup->width <= 0 || Setup->height <= 0) {
+	(void)Track_semantic_world_line_batch(
+	    &batch, RENDERER_STATUS_INVALID_ARGUMENT);
+	return;
+    }
+    offset_x = (int64_t)xoff * (int64_t)Setup->width;
+    offset_y = (int64_t)yoff * (int64_t)Setup->height;
+    if (!Semantic_polygon_add_int64(
+	    entry->anchor_x, offset_x, &origin_x)
+	|| !Semantic_polygon_add_int64(
+	    entry->anchor_y, offset_y, &origin_y)) {
+	(void)Track_semantic_world_line_batch(
+	    &batch, RENDERER_STATUS_INVALID_ARGUMENT);
+	return;
+    }
+    status = Validate_semantic_polygon_contour(entry, origin_x, origin_y);
+    if (status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_world_line_batch(&batch, status);
+	return;
+    }
+
+    did_fill = (instruments.texturedWalls || instruments.filledWorld)
+	&& BIT(p_style.flags, STYLE_TEXTURED | STYLE_FILLED);
+    draw_fill = did_fill
+	&& entry->fill_geometry.triangle_point_count != 0;
+    if (draw_fill) {
+	status = Prepare_semantic_polygon_triangle_vertices(
+	    entry, origin_x, origin_y, fill_color);
+	if (status != RENDERER_STATUS_OK) {
+	    (void)Track_semantic_world_line_batch(&batch, status);
+	    return;
+	}
+    }
+
+    if (draw_fill && BIT(p_style.flags, STYLE_TEXTURED)
+	&& instruments.texturedWalls) {
+	if (p_style.texture < 0 || p_style.texture > 255) {
+	    (void)Track_semantic_world_line_batch(
+		&batch, RENDERER_STATUS_INVALID_ARGUMENT);
+	    return;
+	}
+	image = Image_get_texture(p_style.texture);
+	if (image != NULL) {
+	    if (image->state != IMG_STATE_READY || image->texture == NULL) {
+		(void)Track_semantic_world_line_batch(
+		    &batch, RENDERER_STATUS_INVALID_STATE);
+		return;
+	    }
+	    if (image->renderer != batch.renderer) {
+		(void)Track_semantic_world_line_batch(
+		    &batch, RENDERER_STATUS_RESOURCE_MISMATCH);
+		return;
+	    }
+	    status = Prepare_semantic_polygon_texture_vertices(entry, image);
+	    if (status != RENDERER_STATUS_OK) {
+		(void)Track_semantic_world_line_batch(&batch, status);
+		return;
+	    }
+	    texture = image->texture;
+	}
+    }
+
+    if (e_style.width < -1) {
+	(void)Track_semantic_world_line_batch(
+	    &batch, RENDERER_STATUS_INVALID_ARGUMENT);
+	return;
+    }
+    draw_outline = e_style.width != -1 || !did_fill;
+    if (draw_outline) {
+	double physical_width;
+
+	if (!isfinite(clData.scale) || clData.scale <= 0.0) {
+	    (void)Track_semantic_world_line_batch(
+		&batch, RENDERER_STATUS_INVALID_ARGUMENT);
+	    return;
+	}
+	if (e_style.width == 0)
+	    physical_width = 1.0;
+	else if (e_style.width == -1)
+	    physical_width = clData.scale;
+	else
+	    physical_width = (double)e_style.width * clData.scale;
+	outline_width = (float)physical_width;
+	if (!isfinite(physical_width) || physical_width <= 0.0
+	    || !isfinite(outline_width) || outline_width <= 0.0f) {
+	    (void)Track_semantic_world_line_batch(
+		&batch, RENDERER_STATUS_INVALID_ARGUMENT);
+	    return;
+	}
+    }
+    draw_outline = draw_outline
+	&& Semantic_polygon_has_visible_edge(entry);
+    if (!draw_fill && !draw_outline)
 	return;
 
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
-
-    glTranslatef(polygon.points[0].x * clData.scale +
-		 rint((xoff * Setup->width - world.x) * clData.scale),
-		 polygon.points[0].y * clData.scale +
-		 rint((yoff * Setup->height - world.y) * clData.scale), 0);
-    glScalef(clData.scale, clData.scale, 0);
-
-    /* possibly paint the polygon as filled or textured */
-    if ((instruments.texturedWalls || instruments.filledWorld) &&
-	    BIT(p_style.flags, STYLE_TEXTURED | STYLE_FILLED)) {
-	if (BIT(p_style.flags, STYLE_TEXTURED)
-	        && instruments.texturedWalls) {
-	    Image_use_texture(p_style.texture);
-	    glCallList(polyListBase + i);
-	    Image_no_texture();
+    /* Everything derived from mutable scene tables and external texture
+     * resources is validated before the first renderer state command. */
+    status = Track_semantic_world_line_batch(
+	&batch, Renderer_set_blend(batch.renderer, RENDERER_BLEND_ALPHA));
+    if (status != RENDERER_STATUS_OK)
+	return;
+    if (draw_fill) {
+	status = Accept_semantic_world_line_command(
+	    &batch, Renderer_draw_triangles(
+		batch.renderer, texture, entry->draw_vertices,
+		entry->fill_geometry.triangle_point_count));
+	if (status != RENDERER_STATUS_OK) {
+	    (void)Finish_semantic_world_line_batch(&batch);
+	    return;
 	}
-	else {
-	    set_alphacolor((p_style.rgb << 8) | 0xff);
-	    glCallList(polyListBase + i);
-	}
-	did_fill = true;
     }
-
-    width = e_style.width;
-    if (!did_fill && width == -1)
-	width = 1;
-
-    /* possibly paint the edges around the polygon */
-    if (width != -1) {
-	set_alphacolor((e_style.rgb << 8) | 0xff);
-	glLineWidth(width * clData.scale);
-	if (smoothLines) {
-	    glEnable(GL_BLEND);
-	    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	    glEnable(GL_LINE_SMOOTH);
+    if (draw_outline) {
+	status = Paint_semantic_polygon_outline(
+	    &batch, entry, outline_width, outline_color);
+	if (status != RENDERER_STATUS_OK) {
+	    (void)Finish_semantic_world_line_batch(&batch);
+	    return;
 	}
-	glCallList(polyEdgeListBase + i);
-	if (smoothLines) {
-	    glDisable(GL_LINE_SMOOTH);
-	    glDisable(GL_BLEND);
-	}
-	glLineWidth(1);
     }
-    glPopMatrix();
+    (void)Finish_semantic_world_line_batch(&batch);
 }
 
 
@@ -5599,14 +6011,6 @@ static xp_option_t sdlgui_options[] = {
 	NULL,
 	XP_OPTFLAG_CONFIG_DEFAULT,
 	"Set the line width of ships.\n"),
-
-    XP_BOOL_OPTION(
-        "smoothLines",
-        true,
-	&smoothLines,
-	NULL,
-	XP_OPTFLAG_CONFIG_DEFAULT,
-	"Use antialized smooth lines.\n"),
 
     XP_BOOL_OPTION(
         "texturedBalls",
