@@ -1,6 +1,7 @@
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_srcdir)/src/common -I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/src/client/sdl \
+	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
 	@SDL2_CFLAGS@ @SDL2_IMAGE_CFLAGS@ @SDL2_TTF_CFLAGS@ \
 	@GL_CFLAGS@ @GLU_CFLAGS@
 
@@ -123,7 +124,10 @@ test_image_geometry_SOURCES = test_image_geometry.c \
 	$(top_srcdir)/src/client/sdl/image_geometry.c
 
 test_polygon_geometry_SOURCES = test_polygon_geometry.c \
+	$(top_srcdir)/src/client/sdl/polygon_geometry.c \
 	$(top_srcdir)/src/client/sdl/polygon_geometry.h
+test_polygon_geometry_LDADD = \
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a
 
 test_gfx2d_picture_SOURCES = test_gfx2d_picture.c \
 	$(top_srcdir)/src/client/gfx2d.c

@@ -186,9 +186,11 @@ am_test_image_geometry_OBJECTS = test_image_geometry.$(OBJEXT) \
 	image_geometry.$(OBJEXT)
 test_image_geometry_OBJECTS = $(am_test_image_geometry_OBJECTS)
 test_image_geometry_LDADD = $(LDADD)
-am_test_polygon_geometry_OBJECTS = test_polygon_geometry.$(OBJEXT)
+am_test_polygon_geometry_OBJECTS = test_polygon_geometry.$(OBJEXT) \
+	polygon_geometry.$(OBJEXT)
 test_polygon_geometry_OBJECTS = $(am_test_polygon_geometry_OBJECTS)
-test_polygon_geometry_LDADD = $(LDADD)
+test_polygon_geometry_DEPENDENCIES = \
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a
 am_test_images_OBJECTS = test_images-test_images.$(OBJEXT) \
 	test_images-images.$(OBJEXT) \
 	test_images-image_geometry.$(OBJEXT) \
@@ -421,6 +423,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po \
 	./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po \
 	./$(DEPDIR)/test_image_geometry.Po \
+	./$(DEPDIR)/polygon_geometry.Po \
 	./$(DEPDIR)/test_polygon_geometry.Po \
 	./$(DEPDIR)/test_images-image_geometry.Po \
 	./$(DEPDIR)/test_images-images.Po \
@@ -914,6 +917,7 @@ top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_srcdir)/src/common -I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/src/client/sdl \
+	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
 	@SDL2_CFLAGS@ @SDL2_IMAGE_CFLAGS@ @SDL2_TTF_CFLAGS@ \
 	@GL_CFLAGS@ @GLU_CFLAGS@
 
@@ -1006,7 +1010,10 @@ test_image_geometry_SOURCES = test_image_geometry.c \
 	$(top_srcdir)/src/client/sdl/image_geometry.c
 
 test_polygon_geometry_SOURCES = test_polygon_geometry.c \
+	$(top_srcdir)/src/client/sdl/polygon_geometry.c \
 	$(top_srcdir)/src/client/sdl/polygon_geometry.h
+test_polygon_geometry_LDADD = \
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a
 
 test_gfx2d_picture_SOURCES = test_gfx2d_picture.c \
 	$(top_srcdir)/src/client/gfx2d.c
@@ -1486,6 +1493,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_image_geometry.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/polygon_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_polygon_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-image_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-images.Po@am__quote@ # am--include-marker
@@ -1780,6 +1788,20 @@ image_geometry.obj: $(top_srcdir)/src/client/sdl/image_geometry.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/image_geometry.c' object='image_geometry.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o image_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/image_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/image_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/image_geometry.c'; fi`
+
+polygon_geometry.o: $(top_srcdir)/src/client/sdl/polygon_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT polygon_geometry.o -MD -MP -MF $(DEPDIR)/polygon_geometry.Tpo -c -o polygon_geometry.o `test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/polygon_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/polygon_geometry.Tpo $(DEPDIR)/polygon_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/polygon_geometry.c' object='polygon_geometry.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o polygon_geometry.o `test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/polygon_geometry.c
+
+polygon_geometry.obj: $(top_srcdir)/src/client/sdl/polygon_geometry.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT polygon_geometry.obj -MD -MP -MF $(DEPDIR)/polygon_geometry.Tpo -c -o polygon_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/polygon_geometry.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/polygon_geometry.Tpo $(DEPDIR)/polygon_geometry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/polygon_geometry.c' object='polygon_geometry.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o polygon_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/polygon_geometry.c'; fi`
 
 test_images-test_images.o: test_images.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_images_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_images-test_images.o -MD -MP -MF $(DEPDIR)/test_images-test_images.Tpo -c -o test_images-test_images.o `test -f 'test_images.c' || echo '$(srcdir)/'`test_images.c
@@ -3195,6 +3217,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po
 	-rm -f ./$(DEPDIR)/test_image_geometry.Po
+	-rm -f ./$(DEPDIR)/polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_images-image_geometry.Po
 	-rm -f ./$(DEPDIR)/test_images-images.Po
@@ -3335,6 +3358,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po
 	-rm -f ./$(DEPDIR)/test_image_geometry.Po
+	-rm -f ./$(DEPDIR)/polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_images-image_geometry.Po
 	-rm -f ./$(DEPDIR)/test_images-images.Po
