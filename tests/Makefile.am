@@ -14,7 +14,8 @@ check_PROGRAMS = test-meta-environment \
 	test-sdl-meta-frame test-sdl-game-frame test-sdl-renderer-scissor \
 	test-sdlpaint-stage test-paintmap-vdecor \
 	test-glwidgets-scissor test-glwidgets-primitives \
-	test-sdlmeta-primitives test-sdlgui-hud-primitives \
+	test-sdlmeta-primitives test-sdlgui-appearing \
+	test-sdlgui-hud-primitives \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
 TESTS = test-meta-environment \
@@ -28,7 +29,7 @@ TESTS = test-meta-environment \
 	test-sdlpaint-stage test-paintmap-vdecor \
 	test-sdl-renderer-scissor test-glwidgets-scissor \
 	test-glwidgets-primitives test-sdlmeta-primitives \
-	test-sdlgui-hud-primitives \
+	test-sdlgui-appearing test-sdlgui-hud-primitives \
 	test-text-geometry \
 	test-text-atlas test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
@@ -201,6 +202,25 @@ test_sdlmeta_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_sdlmeta_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdlmeta_primitives_LDADD = @SDL2_LIBS@
+
+test_sdlgui_appearing_SOURCES = test_sdlgui_appearing.c \
+	$(top_srcdir)/src/client/sdl/sdlgui.c \
+	$(top_srcdir)/src/client/sdl/appearing_batch_test_support.h \
+	$(top_srcdir)/src/client/paintobjects.c
+test_sdlgui_appearing_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_APPEARING_BATCH_TEST_HOOKS
+test_sdlgui_appearing_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_sdlgui_appearing_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=realloc \
+	-Wl,--wrap=Gui_paint_paused \
+	-Wl,--wrap=Gui_paint_ecm \
+	-Wl,--wrap=Gui_paint_ship \
+	-Wl,--wrap=Gui_paint_all_connectors_begin \
+	-Wl,--wrap=Gui_paint_refuel \
+	-Wl,--wrap=Gui_paint_connector \
+	-Wl,--wrap=Gui_paint_transporter
+test_sdlgui_appearing_LDADD = @SDL2_LIBS@
 
 test_sdlgui_hud_primitives_SOURCES = test_sdlgui_hud_primitives.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c

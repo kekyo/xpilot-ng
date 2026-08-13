@@ -76,7 +76,23 @@ void Gui_paint_lasers_end(void);
 void Gui_paint_laser(int color, int x_1, int y_1, int len, int dir);
 
 void Gui_paint_paused(int x, int y, int count);
+/** Begin a contiguous group of appearing indicators. */
+void Gui_paint_appearing_begin(void);
+/**
+ * Paint one appearing indicator.
+ *
+ * @param x Horizontal center in world coordinates.
+ * @param y Vertical center in world coordinates.
+ * @param id Player identifier used to select the indicator color.
+ * @param count Appearance progress value; nonnegative values are not clamped.
+ *
+ * @remarks A standalone call is valid. Calls bracketed by
+ *          Gui_paint_appearing_begin() and Gui_paint_appearing_end() may be
+ *          combined by the backend while retaining their traversal order.
+ */
 void Gui_paint_appearing(int x, int y, int id, int count);
+/** End and submit a group begun by Gui_paint_appearing_begin(). */
+void Gui_paint_appearing_end(void);
 
 void Gui_paint_ecm(int x, int y, int size);
 
@@ -97,4 +113,3 @@ void Gui_paint_ship(int x, int y, int dir, int id, int cloak, int phased,
 void Store_guiobject_options(void);
 
 #endif
-

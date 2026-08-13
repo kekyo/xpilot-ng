@@ -37,9 +37,15 @@
 #include "text.h"
 #include "asteroid_data.h"
 
+#ifdef XPILOT_APPEARING_BATCH_TEST_HOOKS
+#include "appearing_batch_test_support.h"
+#endif
+
 #include <float.h>
 #include <limits.h>
 #include <math.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 Uint32 nullRGBA     = 0x00000000;
 Uint32 blackRGBA    = 0x000000ff;
@@ -1913,40 +1919,253 @@ void Gui_paint_paused(int x, int y, int count)
 		(count <= 0 || loopsSlow % 10 >= 5) ? 1 : 0, whiteRGBA);
 }
 
+typedef struct SemanticAppearingBatch {
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    RendererVertex2D *vertices;
+    size_t vertex_count;
+    size_t vertex_capacity;
+    int active;
+} SemanticAppearingBatch;
+
+static SemanticAppearingBatch semantic_appearing_batch;
+
+static RendererStatus Track_semantic_appearing_batch(
+    SemanticAppearingBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (batch->sdl_renderer == NULL) {
+	if (batch->status == RENDERER_STATUS_OK)
+	    batch->status = status;
+	return batch->status;
+    }
+    batch->status = Sdl_renderer_track_frame_result(
+	batch->sdl_renderer, status);
+    return batch->status;
+}
+
+static RendererStatus Build_semantic_appearing_vertices(
+    int x, int y, int count, Uint32 packed_color,
+    RendererVertex2D vertices[6])
+{
+    const int64_t hsize = INT64_C(3) * BLOCK_SZ / INT64_C(7);
+    const int64_t left = (int64_t)x - hsize;
+    const int64_t top = (int64_t)y - hsize;
+    const int64_t right = left + INT64_C(2) * hsize + INT64_C(1);
+    double height_value;
+    int64_t height;
+    int64_t bottom;
+    RendererPoint2D points[4];
+    RendererColor color;
+
+    if (vertices == NULL || count < 0)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    height_value = ((double)count / 180.0) * (double)hsize + 1.0;
+    if (!isfinite(height_value)
+	|| (long double)height_value > (long double)INT64_MAX) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    height = (int64_t)height_value;
+    if (height <= 0 || top > INT64_MAX - height)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    bottom = top + height;
+    if (left < INT_MIN || left > INT_MAX
+	|| top < INT_MIN || top > INT_MAX
+	|| right < INT_MIN || right > INT_MAX
+	|| bottom < INT_MIN || bottom > INT_MAX) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    points[0].x = (float)left;
+    points[0].y = (float)top;
+    points[1].x = (float)right;
+    points[1].y = (float)top;
+    points[2].x = (float)right;
+    points[2].y = (float)bottom;
+    points[3].x = (float)left;
+    points[3].y = (float)bottom;
+    if (!isfinite(points[0].x) || !isfinite(points[0].y)
+	|| !isfinite(points[2].x) || !isfinite(points[2].y)
+	|| points[0].x == points[1].x
+	|| points[0].y == points[3].y) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    color = Renderer_color_from_rgba32(packed_color);
+    Set_semantic_map_vertex(&vertices[0], points[0], color);
+    Set_semantic_map_vertex(&vertices[1], points[1], color);
+    Set_semantic_map_vertex(&vertices[2], points[2], color);
+    Set_semantic_map_vertex(&vertices[3], points[0], color);
+    Set_semantic_map_vertex(&vertices[4], points[2], color);
+    Set_semantic_map_vertex(&vertices[5], points[3], color);
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Reserve_semantic_appearing_vertices(
+    SemanticAppearingBatch *batch, size_t additional_vertices)
+{
+    const size_t maximum_vertices = (size_t)INT_MAX
+	- (size_t)INT_MAX % 3;
+    RendererVertex2D *replacement;
+    size_t needed;
+    size_t capacity;
+
+    if (batch == NULL
+	|| additional_vertices > maximum_vertices - batch->vertex_count) {
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    }
+    needed = batch->vertex_count + additional_vertices;
+    if (needed <= batch->vertex_capacity)
+	return RENDERER_STATUS_OK;
+    capacity = batch->vertex_capacity == 0 ? 6 : batch->vertex_capacity;
+    while (capacity < needed) {
+	if (capacity > maximum_vertices / 2) {
+	    capacity = maximum_vertices;
+	    break;
+	}
+	capacity *= 2;
+    }
+    if (capacity < needed
+	|| capacity > SIZE_MAX / sizeof(*batch->vertices)) {
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    }
+    replacement = realloc(
+	batch->vertices, capacity * sizeof(*batch->vertices));
+    if (replacement == NULL)
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    batch->vertices = replacement;
+    batch->vertex_capacity = capacity;
+    return RENDERER_STATUS_OK;
+}
+
+void Gui_paint_appearing_begin(void)
+{
+    SemanticAppearingBatch *batch = &semantic_appearing_batch;
+
+    if (batch->active)
+	Gui_paint_appearing_end();
+    free(batch->vertices);
+    memset(batch, 0, sizeof(*batch));
+    batch->active = 1;
+    batch->status = RENDERER_STATUS_INVALID_STATE;
+    batch->sdl_renderer = Get_sdl_renderer();
+    if (batch->sdl_renderer == NULL)
+	return;
+    batch->status = Sdl_renderer_track_frame_result(
+	batch->sdl_renderer, RENDERER_STATUS_OK);
+    if (batch->status != RENDERER_STATUS_OK)
+	return;
+    batch->renderer = Sdl_renderer_frontend(batch->sdl_renderer);
+    if (batch->renderer == NULL) {
+	(void)Track_semantic_appearing_batch(
+	    batch, RENDERER_STATUS_INVALID_STATE);
+    }
+}
+
 void Gui_paint_appearing(int x, int y, int id, int count)
 {
-    const unsigned hsize = 3 * BLOCK_SZ / 7;
-    int minx,miny,maxx,maxy;
+    SemanticAppearingBatch *batch = &semantic_appearing_batch;
+    RendererVertex2D vertices[6];
+    RendererStatus status = RENDERER_STATUS_OK;
     Uint32 color;
-    other_t *other = Other_by_id(id);
+    other_t *other;
+    int standalone = !batch->active;
 
-    /* Make a note we are doing the base warning */
+    if (standalone)
+	Gui_paint_appearing_begin();
+    other = Other_by_id(id);
+
+    /* Make a note we are doing the base warning. */
     if (version >= 0x4F12) {
 	homebase_t *base = Homebase_by_id(id);
-	if (base != NULL)
-	    base->appeartime = (long)(loops + (count * clientFPS) / 120);
+	if (base != NULL) {
+	    double candidate = (double)loops
+		+ ((double)count * clientFPS) / 120.0;
+
+	    if (!isfinite(candidate)
+		|| (long double)candidate < (long double)LONG_MIN
+		|| (long double)candidate > (long double)LONG_MAX) {
+		status = RENDERER_STATUS_INVALID_ARGUMENT;
+	    } else {
+		base->appeartime = (long)candidate;
+	    }
+	}
     }
 
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
-	return;
-
-    minx = x - (int)hsize;
-    miny = y - (int)hsize;
-    maxx = minx + 2 * hsize + 1;
-    maxy = miny + (unsigned)(count / 180. * hsize + 1);
-
-    color = Life_color(other);
-    set_alphacolor((color)?color:redRGBA);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-    glBegin(GL_QUADS);
-    	glVertex2i(minx , miny);
-    	glVertex2i(maxx , miny);
-    	glVertex2i(maxx , maxy);
-    	glVertex2i(minx , maxy);
-    glEnd();
+    if (status == RENDERER_STATUS_OK && batch->status == RENDERER_STATUS_OK) {
+	color = Life_color(other);
+	status = Build_semantic_appearing_vertices(
+	    x, y, count, color ? color : redRGBA, vertices);
+    }
+    if (status == RENDERER_STATUS_OK && batch->status == RENDERER_STATUS_OK)
+	status = Reserve_semantic_appearing_vertices(batch, NELEM(vertices));
+    if (status == RENDERER_STATUS_OK && batch->status == RENDERER_STATUS_OK) {
+	memcpy(&batch->vertices[batch->vertex_count], vertices,
+	       sizeof(vertices));
+	batch->vertex_count += NELEM(vertices);
+    } else if (status != RENDERER_STATUS_OK) {
+	(void)Track_semantic_appearing_batch(batch, status);
+    }
+    if (standalone)
+	Gui_paint_appearing_end();
 }
+
+void Gui_paint_appearing_end(void)
+{
+    SemanticAppearingBatch *batch = &semantic_appearing_batch;
+    RendererStatus status;
+
+    if (!batch->active)
+	return;
+    if (batch->status == RENDERER_STATUS_OK && batch->vertex_count != 0) {
+	status = Renderer_set_blend(
+	    batch->renderer, RENDERER_BLEND_ADDITIVE);
+	if (Track_semantic_appearing_batch(batch, status)
+	    == RENDERER_STATUS_OK) {
+	    status = Renderer_draw_triangles(
+		batch->renderer, NULL, batch->vertices,
+		batch->vertex_count);
+	    if (Track_semantic_appearing_batch(batch, status)
+		== RENDERER_STATUS_OK) {
+		status = Sdl_renderer_flush_preserving_legacy(
+		    batch->sdl_renderer);
+		(void)Track_semantic_appearing_batch(batch, status);
+	    }
+	}
+    }
+    free(batch->vertices);
+    batch->vertices = NULL;
+    batch->vertex_count = 0;
+    batch->vertex_capacity = 0;
+    batch->active = 0;
+    batch->renderer = NULL;
+    batch->sdl_renderer = NULL;
+}
+
+#ifdef XPILOT_APPEARING_BATCH_TEST_HOOKS
+RendererStatus Sdlgui_test_paint_appearing_batch(
+    const SdlguiTestAppearing *entries, size_t entry_count)
+{
+    SdlRenderer *renderer;
+    size_t entry_index;
+
+    renderer = Get_sdl_renderer();
+    if (renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    if (entries == NULL && entry_count != 0) {
+	return Sdl_renderer_track_frame_result(
+	    renderer, RENDERER_STATUS_INVALID_ARGUMENT);
+    }
+    Gui_paint_appearing_begin();
+    for (entry_index = 0; entry_index < entry_count; entry_index++) {
+	Gui_paint_appearing(
+	    entries[entry_index].x, entries[entry_index].y,
+	    entries[entry_index].id, entries[entry_index].count);
+    }
+    Gui_paint_appearing_end();
+    return Sdl_renderer_frame_result(renderer);
+}
+#endif
 
 void Gui_paint_ecm(int x, int y, int size)
 {

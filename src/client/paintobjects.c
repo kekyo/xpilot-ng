@@ -406,6 +406,7 @@ static void Paint_appearing(void)
     int i, x, y;
 
     if (num_appearing > 0) {
+	Gui_paint_appearing_begin();
 	for (i = 0; i < num_appearing; i++) {
 	    x = appearing_ptr[i].x;
 	    y = appearing_ptr[i].y;
@@ -413,6 +414,7 @@ static void Paint_appearing(void)
 		Gui_paint_appearing(x, y, appearing_ptr[i].id,
 				    appearing_ptr[i].count);
 	}
+	Gui_paint_appearing_end();
 	RELEASE(appearing_ptr, num_appearing, max_appearing);
     }
 }
