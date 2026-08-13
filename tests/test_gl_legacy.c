@@ -1,9 +1,7 @@
 #include "test_helpers.h"
 
 #include "xpclient_sdl.h"
-#include "guiobjects.h"
 #include "gl_diagnostics.h"
-#include "images.h"
 #include "renderer.h"
 #include "renderer_gl_legacy.h"
 #include "sdlrenderer.h"
@@ -211,18 +209,6 @@ int xpprintf(const char *format, ...)
     result = vfprintf(stdout, format, args);
     va_end(args);
     return result;
-}
-
-image_t *Image_get_texture(int index)
-{
-    (void)index;
-    return NULL;
-}
-
-image_t *Image_get(int index)
-{
-    (void)index;
-    return NULL;
 }
 
 static void APIENTRY capture_gl_gen_textures(GLsizei count, GLuint *textures)

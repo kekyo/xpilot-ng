@@ -28,7 +28,7 @@
 typedef enum image_state_e {
     /** The registration has no GPU resources yet. */
     IMG_STATE_UNINITIALIZED,
-    /** Both semantic and transitional texture resources are ready. */
+    /** The semantic texture resource is ready. */
     IMG_STATE_READY
 } image_state_e;
 
@@ -39,12 +39,9 @@ typedef enum image_state_e {
  * different states. If rotate flag is true, the image will be rotated
  * when it is created to generate num_frames-1 of new frames.
  * Width is the natural semantic atlas width across all frames. Frame_width is
- * the width of any single frame. Data_width and data_height include
- * power-of-two atlas padding retained only for the compatibility renderer.
+ * the width of any single frame.
  */
 typedef struct image_t {
-    /** Transitional fixed-function OpenGL texture name. */
-    GLuint legacy_name;
     /** Backend-neutral texture used by semantic sprite commands. */
     RendererTexture *texture;
     /** Renderer that owns @ref texture. */
@@ -65,10 +62,6 @@ typedef struct image_t {
     int width;
     /** Natural semantic texture height. */
     int height;
-    /** Width of the power-of-two compatibility texture data. */
-    int data_width;
-    /** Height of the power-of-two compatibility texture data. */
-    int data_height;
     /** Width of one frame. */
     int frame_width;
 } image_t;

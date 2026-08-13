@@ -653,7 +653,6 @@ static void reset_frame(void)
     fake_renderer.transform_token = 71;
     fake_renderer.scissor_token = 83;
     fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
-    fake_asteroid_image.legacy_name = 97;
     draw_width = 200;
     draw_height = 120;
     ext_view_width = 200;

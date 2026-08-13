@@ -207,8 +207,6 @@ static void reset_scene(void)
     fake_map_texture.state = IMG_STATE_READY;
     fake_map_texture.width = 3;
     fake_map_texture.height = 3;
-    fake_map_texture.data_width = 4;
-    fake_map_texture.data_height = 4;
     fake_map_texture.frame_width = 3;
     fake_map_texture.num_frames = 1;
     fake_map_texture.filter = RENDERER_TEXTURE_FILTER_NEAREST;

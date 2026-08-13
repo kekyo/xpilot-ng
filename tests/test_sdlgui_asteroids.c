@@ -212,7 +212,6 @@ static void reset_state(void)
     other_texture.owner = &other_renderer;
     fake_sdl_renderer.frontend = &fake_renderer;
     fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
-    fake_asteroid_image.legacy_name = 91;
     fake_asteroid_image.texture = &fake_texture;
     fake_asteroid_image.renderer = &fake_renderer;
     fake_asteroid_image.state = IMG_STATE_READY;

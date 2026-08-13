@@ -24,7 +24,6 @@
 #include "images.h"
 #include "images_test_support.h"
 #include "sdlinit.h"
-#include "sdlpaint.h"
 #include "sdlrenderer.h"
 
 #include <limits.h>
@@ -35,11 +34,8 @@
 typedef struct ImageCandidate {
     image_t *image;
     RendererTexture *texture;
-    GLuint legacy_name;
     int width;
     int height;
-    int data_width;
-    int data_height;
     int frame_width;
 } ImageCandidate;
 
@@ -110,35 +106,6 @@ static void Image_picture_cleanup(xp_picture_t *picture)
 }
 #endif
 
-static int Image_gl_failed(void)
-{
-    GLenum error_code;
-    int failed = 0;
-
-    while ((error_code = glGetError()) != GL_NO_ERROR) {
-        failed = 1;
-#ifdef GL_CONTEXT_LOST
-        if (error_code == GL_CONTEXT_LOST)
-            break;
-#endif
-    }
-    return failed;
-}
-
-static int Image_pow2_ceil(int value)
-{
-    int result = 1;
-
-    if (value <= 0)
-        return 0;
-    while (result < value) {
-        if (result > INT_MAX / 2)
-            return 0;
-        result <<= 1;
-    }
-    return result;
-}
-
 static int Image_picture_valid(const xp_picture_t *picture,
                                const image_t *image)
 {
@@ -182,34 +149,9 @@ static void Image_store_rgba(uint8_t *destination, RGB_COLOR color)
     destination[3] = 255;
 }
 
-static void Image_flip_legacy_rows(uint8_t *pixels, int data_width,
-                                   int content_height)
-{
-    size_t row_size = (size_t)data_width * 4;
-    int top;
-
-    /* Semantic textures retain top-left source rows. Fixed-function OpenGL
-     * still expects the old bottom-up content inside the unflipped padding. */
-    for (top = 0; top < content_height / 2; top++) {
-        uint8_t *top_row = pixels + (size_t)top * row_size;
-        uint8_t *bottom_row = pixels
-            + (size_t)(content_height - top - 1) * row_size;
-        size_t byte;
-
-        for (byte = 0; byte < row_size; byte++) {
-            uint8_t temporary = top_row[byte];
-
-            top_row[byte] = bottom_row[byte];
-            bottom_row[byte] = temporary;
-        }
-    }
-}
-
 static void Image_candidate_release(Renderer *renderer,
                                     ImageCandidate *candidate)
 {
-    int released_legacy = candidate->legacy_name != 0;
-
     if (candidate->texture != NULL) {
         if (Renderer_texture_destroy(renderer, candidate->texture)
             != RENDERER_STATUS_OK) {
@@ -217,12 +159,6 @@ static void Image_candidate_release(Renderer *renderer,
         }
         candidate->texture = NULL;
     }
-    if (candidate->legacy_name != 0) {
-        glDeleteTextures(1, &candidate->legacy_name);
-        candidate->legacy_name = 0;
-    }
-    if (released_legacy && Image_gl_failed())
-        warn("OpenGL failed while releasing a staged image texture");
 }
 
 static void Image_candidates_release(Renderer *renderer,
@@ -262,12 +198,9 @@ static int Image_stage(Renderer *renderer, image_t *image,
     candidate->frame_width = (int)picture.width;
     candidate->width = candidate->frame_width * image->num_frames;
     candidate->height = (int)picture.height;
-    candidate->data_width = Image_pow2_ceil(candidate->width);
-    candidate->data_height = Image_pow2_ceil(candidate->height);
-    if (candidate->data_width == 0 || candidate->data_height == 0
-        || Image_pixel_buffer_size(candidate->data_width,
-                                   candidate->data_height,
-                                   &pixel_size) != 0) {
+    if (Image_pixel_buffer_size(candidate->width,
+                                candidate->height,
+                                &pixel_size) != 0) {
         error("Image is too large: %s", image->filename);
         goto cleanup;
     }
@@ -281,7 +214,7 @@ static int Image_stage(Renderer *renderer, image_t *image,
         for (y = 0; y < candidate->height; y++) {
             for (x = 0; x < candidate->frame_width; x++) {
                 size_t destination =
-                    ((size_t)y * (size_t)candidate->data_width
+                    ((size_t)y * (size_t)candidate->width
                      + (size_t)frame * (size_t)candidate->frame_width
                      + (size_t)x) * 4;
 
@@ -299,48 +232,15 @@ static int Image_stage(Renderer *renderer, image_t *image,
         ? RENDERER_TEXTURE_WRAP_REPEAT : RENDERER_TEXTURE_WRAP_CLAMP;
     if (Renderer_texture_create_with_desc(
             renderer, &texture_desc, pixels,
-            (size_t)candidate->data_width * 4,
+            (size_t)candidate->width * 4,
             &candidate->texture) != RENDERER_STATUS_OK) {
         error("Failed to create renderer texture: %s", image->filename);
         goto cleanup;
     }
 
-    Image_flip_legacy_rows(pixels, candidate->data_width, candidate->height);
-    if (Image_gl_failed()) {
-        error("OpenGL reported an error before compatibility upload: %s",
-              image->filename);
-        goto cleanup;
-    }
-    glGenTextures(1, &candidate->legacy_name);
-    if (candidate->legacy_name == 0) {
-        error("Failed to create compatibility texture: %s", image->filename);
-        goto cleanup;
-    }
-    glBindTexture(GL_TEXTURE_2D, candidate->legacy_name);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                 candidate->data_width, candidate->data_height,
-                 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                    image->filter == RENDERER_TEXTURE_FILTER_LINEAR
-                        ? GL_LINEAR : GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                    image->filter == RENDERER_TEXTURE_FILTER_LINEAR
-                        ? GL_LINEAR : GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                    texture_desc.wrap == RENDERER_TEXTURE_WRAP_REPEAT
-                        ? GL_REPEAT : GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-                    texture_desc.wrap == RENDERER_TEXTURE_WRAP_REPEAT
-                        ? GL_REPEAT : GL_CLAMP_TO_EDGE);
-    if (Image_gl_failed()) {
-        error("Failed to upload compatibility texture: %s", image->filename);
-        goto cleanup;
-    }
-
-    warn("Loaded image %s: w=%d, h=%d, fw=%d, dw=%d, dh=%d",
+    warn("Loaded image %s: w=%d, h=%d, fw=%d",
          image->filename, candidate->width, candidate->height,
-         candidate->frame_width, candidate->data_width,
-         candidate->data_height);
+         candidate->frame_width);
     result = 0;
 
 cleanup:
@@ -356,16 +256,12 @@ static void Image_publish_candidate(Renderer *renderer,
 {
     image_t *image = candidate->image;
 
-    image->legacy_name = candidate->legacy_name;
     image->texture = candidate->texture;
     image->renderer = renderer;
     image->width = candidate->width;
     image->height = candidate->height;
-    image->data_width = candidate->data_width;
-    image->data_height = candidate->data_height;
     image->frame_width = candidate->frame_width;
     image->state = IMG_STATE_READY;
-    candidate->legacy_name = 0;
     candidate->texture = NULL;
 }
 
@@ -410,23 +306,12 @@ int Images_prepare(Renderer *renderer)
 
 static void Image_free(image_t *image)
 {
-    int released_gpu_resource = 0;
-
     if (image->texture != NULL && image->renderer != NULL) {
-        released_gpu_resource = 1;
         if (Renderer_texture_destroy(image->renderer, image->texture)
             != RENDERER_STATUS_OK) {
             warn("Could not release renderer texture for %s",
                  image->filename != NULL ? image->filename : "(unknown)");
         }
-    }
-    if (image->legacy_name != 0) {
-        released_gpu_resource = 1;
-        glDeleteTextures(1, &image->legacy_name);
-    }
-    if (released_gpu_resource && Image_gl_failed()) {
-        warn("OpenGL failed while releasing image texture for %s",
-             image->filename != NULL ? image->filename : "(unknown)");
     }
     free(image->filename);
     memset(image, 0, sizeof(*image));
