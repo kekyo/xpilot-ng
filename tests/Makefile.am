@@ -12,7 +12,7 @@ check_PROGRAMS = test-meta-environment \
 	test-renderer-gl-backends test-paint-transform test-image-geometry \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
 	test-sdl-meta-frame test-sdl-game-frame test-sdl-renderer-scissor \
-	test-sdlpaint-stage \
+	test-sdlpaint-stage test-paintmap-vdecor \
 	test-glwidgets-scissor test-glwidgets-primitives \
 	test-sdlmeta-primitives test-sdlgui-hud-primitives \
 	test-text-geometry test-text-atlas \
@@ -25,7 +25,7 @@ TESTS = test-meta-environment \
 	test-image-geometry test-gfx2d-picture \
 	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
 	test-sdl-game-frame \
-	test-sdlpaint-stage \
+	test-sdlpaint-stage test-paintmap-vdecor \
 	test-sdl-renderer-scissor test-glwidgets-scissor \
 	test-glwidgets-primitives test-sdlmeta-primitives \
 	test-sdlgui-hud-primitives \
@@ -161,6 +161,13 @@ test_sdlpaint_stage_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_sdlpaint_stage_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdlpaint_stage_LDADD = @SDL2_LIBS@
+
+test_paintmap_vdecor_SOURCES = test_paintmap_vdecor.c \
+	$(top_srcdir)/src/client/paintmap.c
+test_paintmap_vdecor_CPPFLAGS = $(AM_CPPFLAGS) -DPAINT_FREE=0
+test_paintmap_vdecor_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_paintmap_vdecor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 
 test_sdl_renderer_scissor_SOURCES = test_sdl_renderer_scissor.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \

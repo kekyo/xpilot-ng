@@ -100,6 +100,7 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) test-sdlpaint-stage$(EXEEXT) \
+	test-paintmap-vdecor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) \
 	test-glwidgets-primitives$(EXEEXT) \
 	test-sdlmeta-primitives$(EXEEXT) \
@@ -116,7 +117,7 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-gfx2d-picture$(EXEEXT) test-images$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
-	test-sdlpaint-stage$(EXEEXT) \
+	test-sdlpaint-stage$(EXEEXT) test-paintmap-vdecor$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) \
 	test-glwidgets-primitives$(EXEEXT) \
@@ -193,6 +194,13 @@ am_test_paint_transform_OBJECTS = test_paint_transform.$(OBJEXT) \
 	paint_transform.$(OBJEXT)
 test_paint_transform_OBJECTS = $(am_test_paint_transform_OBJECTS)
 test_paint_transform_LDADD = $(LDADD)
+am_test_paintmap_vdecor_OBJECTS =  \
+	test_paintmap_vdecor-test_paintmap_vdecor.$(OBJEXT) \
+	test_paintmap_vdecor-paintmap.$(OBJEXT)
+test_paintmap_vdecor_OBJECTS = $(am_test_paintmap_vdecor_OBJECTS)
+test_paintmap_vdecor_LDADD = $(LDADD)
+test_paintmap_vdecor_LINK = $(CCLD) $(test_paintmap_vdecor_CFLAGS) \
+	$(CFLAGS) $(test_paintmap_vdecor_LDFLAGS) $(LDFLAGS) -o $@
 am_test_radar_renderer_OBJECTS =  \
 	test_radar_renderer-test_radar_renderer.$(OBJEXT) \
 	test_radar_renderer-radar.$(OBJEXT)
@@ -375,6 +383,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_meta_environment-strlcpy.Po \
 	./$(DEPDIR)/test_meta_environment-test_meta_environment.Po \
 	./$(DEPDIR)/test_paint_transform.Po \
+	./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po \
+	./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po \
 	./$(DEPDIR)/test_radar_renderer-radar.Po \
 	./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po \
 	./$(DEPDIR)/test_renderer_commands.Po \
@@ -436,7 +446,8 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
 	$(test_meta_environment_SOURCES) \
-	$(test_paint_transform_SOURCES) $(test_radar_renderer_SOURCES) \
+	$(test_paint_transform_SOURCES) $(test_paintmap_vdecor_SOURCES) \
+	$(test_radar_renderer_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
@@ -457,7 +468,8 @@ DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
 	$(test_meta_environment_SOURCES) \
-	$(test_paint_transform_SOURCES) $(test_radar_renderer_SOURCES) \
+	$(test_paint_transform_SOURCES) $(test_paintmap_vdecor_SOURCES) \
+	$(test_radar_renderer_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
@@ -974,6 +986,13 @@ test_sdlpaint_stage_CFLAGS = $(AM_CFLAGS) \
 
 test_sdlpaint_stage_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdlpaint_stage_LDADD = @SDL2_LIBS@
+test_paintmap_vdecor_SOURCES = test_paintmap_vdecor.c \
+	$(top_srcdir)/src/client/paintmap.c
+test_paintmap_vdecor_CPPFLAGS = $(AM_CPPFLAGS) -DPAINT_FREE=0
+test_paintmap_vdecor_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+
+test_paintmap_vdecor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdl_renderer_scissor_SOURCES = test_sdl_renderer_scissor.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
 	$(top_srcdir)/src/client/sdl/sdlrenderer.c
@@ -1143,6 +1162,10 @@ test-paint-transform$(EXEEXT): $(test_paint_transform_OBJECTS) $(test_paint_tran
 	@rm -f test-paint-transform$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_paint_transform_OBJECTS) $(test_paint_transform_LDADD) $(LIBS)
 
+test-paintmap-vdecor$(EXEEXT): $(test_paintmap_vdecor_OBJECTS) $(test_paintmap_vdecor_DEPENDENCIES) $(EXTRA_test_paintmap_vdecor_DEPENDENCIES)
+	@rm -f test-paintmap-vdecor$(EXEEXT)
+	$(AM_V_CCLD)$(test_paintmap_vdecor_LINK) $(test_paintmap_vdecor_OBJECTS) $(test_paintmap_vdecor_LDADD) $(LIBS)
+
 test-radar-renderer$(EXEEXT): $(test_radar_renderer_OBJECTS) $(test_radar_renderer_DEPENDENCIES) $(EXTRA_test_radar_renderer_DEPENDENCIES)
 	@rm -f test-radar-renderer$(EXEEXT)
 	$(AM_V_CCLD)$(test_radar_renderer_LINK) $(test_radar_renderer_OBJECTS) $(test_radar_renderer_LDADD) $(LIBS)
@@ -1280,6 +1303,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-strlcpy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-test_meta_environment.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paint_transform.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_radar_renderer-radar.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_commands.Po@am__quote@ # am--include-marker
@@ -1663,6 +1688,34 @@ paint_transform.obj: $(top_srcdir)/src/client/sdl/paint_transform.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/paint_transform.c' object='paint_transform.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o paint_transform.obj `if test -f '$(top_srcdir)/src/client/sdl/paint_transform.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/paint_transform.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/paint_transform.c'; fi`
+
+test_paintmap_vdecor-test_paintmap_vdecor.o: test_paintmap_vdecor.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_paintmap_vdecor_CPPFLAGS) $(CPPFLAGS) $(test_paintmap_vdecor_CFLAGS) $(CFLAGS) -MT test_paintmap_vdecor-test_paintmap_vdecor.o -MD -MP -MF $(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Tpo -c -o test_paintmap_vdecor-test_paintmap_vdecor.o `test -f 'test_paintmap_vdecor.c' || echo '$(srcdir)/'`test_paintmap_vdecor.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Tpo $(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_paintmap_vdecor.c' object='test_paintmap_vdecor-test_paintmap_vdecor.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_paintmap_vdecor_CPPFLAGS) $(CPPFLAGS) $(test_paintmap_vdecor_CFLAGS) $(CFLAGS) -c -o test_paintmap_vdecor-test_paintmap_vdecor.o `test -f 'test_paintmap_vdecor.c' || echo '$(srcdir)/'`test_paintmap_vdecor.c
+
+test_paintmap_vdecor-test_paintmap_vdecor.obj: test_paintmap_vdecor.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_paintmap_vdecor_CPPFLAGS) $(CPPFLAGS) $(test_paintmap_vdecor_CFLAGS) $(CFLAGS) -MT test_paintmap_vdecor-test_paintmap_vdecor.obj -MD -MP -MF $(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Tpo -c -o test_paintmap_vdecor-test_paintmap_vdecor.obj `if test -f 'test_paintmap_vdecor.c'; then $(CYGPATH_W) 'test_paintmap_vdecor.c'; else $(CYGPATH_W) '$(srcdir)/test_paintmap_vdecor.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Tpo $(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_paintmap_vdecor.c' object='test_paintmap_vdecor-test_paintmap_vdecor.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_paintmap_vdecor_CPPFLAGS) $(CPPFLAGS) $(test_paintmap_vdecor_CFLAGS) $(CFLAGS) -c -o test_paintmap_vdecor-test_paintmap_vdecor.obj `if test -f 'test_paintmap_vdecor.c'; then $(CYGPATH_W) 'test_paintmap_vdecor.c'; else $(CYGPATH_W) '$(srcdir)/test_paintmap_vdecor.c'; fi`
+
+test_paintmap_vdecor-paintmap.o: $(top_srcdir)/src/client/paintmap.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_paintmap_vdecor_CPPFLAGS) $(CPPFLAGS) $(test_paintmap_vdecor_CFLAGS) $(CFLAGS) -MT test_paintmap_vdecor-paintmap.o -MD -MP -MF $(DEPDIR)/test_paintmap_vdecor-paintmap.Tpo -c -o test_paintmap_vdecor-paintmap.o `test -f '$(top_srcdir)/src/client/paintmap.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/paintmap.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_paintmap_vdecor-paintmap.Tpo $(DEPDIR)/test_paintmap_vdecor-paintmap.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/paintmap.c' object='test_paintmap_vdecor-paintmap.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_paintmap_vdecor_CPPFLAGS) $(CPPFLAGS) $(test_paintmap_vdecor_CFLAGS) $(CFLAGS) -c -o test_paintmap_vdecor-paintmap.o `test -f '$(top_srcdir)/src/client/paintmap.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/paintmap.c
+
+test_paintmap_vdecor-paintmap.obj: $(top_srcdir)/src/client/paintmap.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_paintmap_vdecor_CPPFLAGS) $(CPPFLAGS) $(test_paintmap_vdecor_CFLAGS) $(CFLAGS) -MT test_paintmap_vdecor-paintmap.obj -MD -MP -MF $(DEPDIR)/test_paintmap_vdecor-paintmap.Tpo -c -o test_paintmap_vdecor-paintmap.obj `if test -f '$(top_srcdir)/src/client/paintmap.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/paintmap.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/paintmap.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_paintmap_vdecor-paintmap.Tpo $(DEPDIR)/test_paintmap_vdecor-paintmap.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/paintmap.c' object='test_paintmap_vdecor-paintmap.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_paintmap_vdecor_CPPFLAGS) $(CPPFLAGS) $(test_paintmap_vdecor_CFLAGS) $(CFLAGS) -c -o test_paintmap_vdecor-paintmap.obj `if test -f '$(top_srcdir)/src/client/paintmap.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/paintmap.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/paintmap.c'; fi`
 
 test_radar_renderer-test_radar_renderer.o: test_radar_renderer.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_radar_renderer_CPPFLAGS) $(CPPFLAGS) $(test_radar_renderer_CFLAGS) $(CFLAGS) -MT test_radar_renderer-test_radar_renderer.o -MD -MP -MF $(DEPDIR)/test_radar_renderer-test_radar_renderer.Tpo -c -o test_radar_renderer-test_radar_renderer.o `test -f 'test_radar_renderer.c' || echo '$(srcdir)/'`test_radar_renderer.c
@@ -2571,6 +2624,13 @@ test-sdlpaint-stage.log: test-sdlpaint-stage$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-paintmap-vdecor.log: test-paintmap-vdecor$(EXEEXT)
+	@p='test-paintmap-vdecor$(EXEEXT)'; \
+	b='test-paintmap-vdecor'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-text-geometry.log: test-text-geometry$(EXEEXT)
 	@p='test-text-geometry$(EXEEXT)'; \
 	b='test-text-geometry'; \
@@ -2736,6 +2796,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_meta_environment-strlcpy.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-test_meta_environment.Po
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
+	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
+	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-radar.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
@@ -2861,6 +2923,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_meta_environment-strlcpy.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-test_meta_environment.Po
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
+	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
+	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-radar.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
