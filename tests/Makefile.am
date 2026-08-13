@@ -14,6 +14,7 @@ check_PROGRAMS = test-meta-environment \
 	test-polygon-geometry \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
 	test-sdl-meta-frame test-sdl-game-frame test-sdl-renderer-scissor \
+	test-sdl-init-core-profile test-sdl-renderer-core-context \
 	test-sdlpaint-stage test-paintmap-vdecor \
 	test-glwidgets-scissor test-glwidgets-primitives \
 	test-sdlmeta-primitives test-sdlgui-appearing \
@@ -29,7 +30,8 @@ TESTS = test-meta-environment \
 	test-image-geometry test-polygon-geometry test-gfx2d-picture \
 	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
 	test-sdl-game-frame \
-	test-sdlpaint-stage run-sdlpaint-matrix-boundary.sh \
+	test-sdl-init-core-profile test-sdlpaint-stage \
+	run-sdl-core-boundary.sh \
 	test-paintmap-vdecor \
 	test-sdl-renderer-scissor test-glwidgets-scissor \
 	test-glwidgets-primitives test-sdlmeta-primitives \
@@ -39,7 +41,8 @@ TESTS = test-meta-environment \
 	test-text-geometry \
 	test-text-atlas test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
-	run-renderer-gl-backends.sh run-e2e.sh
+	run-renderer-gl-backends.sh run-sdl-renderer-core-context.sh \
+	run-e2e.sh
 
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
@@ -189,6 +192,26 @@ test_sdl_renderer_scissor_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_sdl_renderer_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdl_renderer_scissor_LDADD = @SDL2_LIBS@ @GL_LIBS@
+
+test_sdl_init_core_profile_SOURCES = test_sdl_init_core_profile.c \
+	$(top_srcdir)/src/client/sdl/sdlinit.c
+test_sdl_init_core_profile_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_sdl_init_core_profile_LDFLAGS = $(AM_LDFLAGS) \
+	-Wl,--gc-sections -Wl,--wrap=SDL_Init -Wl,--wrap=SDL_Quit \
+	-Wl,--wrap=IMG_Init -Wl,--wrap=IMG_Quit \
+	-Wl,--wrap=TTF_Init -Wl,--wrap=TTF_Quit \
+	-Wl,--wrap=SDL_GL_SetAttribute -Wl,--wrap=SDL_CreateWindow
+test_sdl_init_core_profile_LDADD = @SDL2_IMAGE_LIBS@ @SDL2_TTF_LIBS@ \
+	@SDL2_LIBS@
+
+test_sdl_renderer_core_context_SOURCES = \
+	test_sdl_renderer_core_context.c \
+	$(top_srcdir)/src/client/sdl/renderer.c \
+	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
+	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
+	$(top_srcdir)/src/client/sdl/sdlrenderer.c
+test_sdl_renderer_core_context_LDADD = @SDL2_LIBS@ @GL_LIBS@
 
 test_glwidgets_scissor_SOURCES = test_glwidgets_scissor.c \
 	$(top_srcdir)/src/client/sdl/glwidgets.c
@@ -377,11 +400,21 @@ AM_TESTS_ENVIRONMENT = \
 	XPILOT_GL_TEST_BINARY='$(abs_builddir)/test-gl-legacy'; \
 	export XPILOT_GL_TEST_BINARY; \
 	XPILOT_RENDERER_GL_TEST_BINARY='$(abs_builddir)/test-renderer-gl-backends'; \
-	export XPILOT_RENDERER_GL_TEST_BINARY;
+	export XPILOT_RENDERER_GL_TEST_BINARY; \
+	XPILOT_SDL_CORE_CONTEXT_TEST_BINARY='$(abs_builddir)/test-sdl-renderer-core-context'; \
+	export XPILOT_SDL_CORE_CONTEXT_TEST_BINARY; \
+	XPILOT_SDL_OBJECT_DIR='$(abs_top_builddir)/src/client/sdl'; \
+	export XPILOT_SDL_OBJECT_DIR; \
+	XPILOT_SDL_BINARY='$(abs_top_builddir)/src/client/sdl/xpilot-ng-sdl'; \
+	export XPILOT_SDL_BINARY;
 
 EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-legacy.sh \
-	run-renderer-gl-backends.sh run-sdlpaint-matrix-boundary.sh \
+	run-renderer-gl-backends.sh run-sdl-core-boundary.sh \
+	run-sdl-renderer-core-context.sh \
 	test_helpers.h
+
+run-sdl-core-boundary.log: \
+	$(top_builddir)/src/client/sdl/xpilot-ng-sdl
 
 .PHONY: e2e-install
 run-e2e.log: e2e-install

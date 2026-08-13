@@ -1,7 +1,7 @@
 #include "test_helpers.h"
 
 #include "renderer_backend.h"
-#include "renderer_gl_legacy.h"
+#include "renderer_gl_core.h"
 #include "sdlrenderer.h"
 
 #include <SDL.h>
@@ -10,6 +10,10 @@
 #include <string.h>
 
 #define MAX_DRAWS 4
+
+/* Step 5 replaces the compatibility-state bridge with this semantic
+ * ordering barrier. Keep the test independent of the retired API. */
+RendererStatus Sdl_renderer_flush(SdlRenderer *renderer);
 
 typedef struct CapturedDraw {
     int scissor_enabled;
@@ -25,6 +29,7 @@ typedef struct FakeBackend {
     int frame_width;
     int frame_height;
     int draw_count;
+    int flush_count;
     CapturedDraw draws[MAX_DRAWS];
 } FakeBackend;
 
@@ -76,7 +81,9 @@ static RendererStatus fake_draw(void *context,
 
 static RendererStatus fake_flush(void *context)
 {
-    (void)context;
+    FakeBackend *fake = context;
+
+    fake->flush_count++;
     return RENDERER_STATUS_OK;
 }
 
@@ -167,9 +174,9 @@ static const RendererBackendInterface fake_backend_interface = {
     .destroy = fake_destroy
 };
 
-RendererStatus Renderer_gl_legacy_create(RendererGLProcLoader loader,
-                                         void *userdata,
-                                         Renderer **renderer)
+RendererStatus Renderer_gl_core_create(RendererGLProcLoader loader,
+                                       void *userdata,
+                                       Renderer **renderer)
 {
     (void)loader;
     (void)userdata;
@@ -178,6 +185,15 @@ RendererStatus Renderer_gl_legacy_create(RendererGLProcLoader loader,
     *renderer = Renderer_backend_create(&fake_backend_interface, &backend);
     return *renderer != NULL
         ? RENDERER_STATUS_OK : RENDERER_STATUS_OUT_OF_MEMORY;
+}
+
+/* Preserve linkability until production selects the core factory. The
+ * neutral flush assertions remain the behavioral RED gate. */
+RendererStatus Renderer_gl_legacy_create(RendererGLProcLoader loader,
+                                         void *userdata,
+                                         Renderer **renderer)
+{
+    return Renderer_gl_core_create(loader, userdata, renderer);
 }
 
 SDL_Window *SDLCALL SDL_GL_GetCurrentWindow(void)
@@ -402,6 +418,43 @@ static int check_transform_failure_is_sticky_until_next_frame(void)
     return 0;
 }
 
+static int check_flush_delivers_each_command_once(void)
+{
+    const RendererColor clear = {0, 0, 0, 255};
+    const RendererColor white = {255, 255, 255, 255};
+    SDL_Window *window = (SDL_Window *)&fake_window_storage;
+    SdlRenderer *sdl_renderer = NULL;
+    Renderer *renderer;
+
+    memset(&backend, 0, sizeof(backend));
+    backend.begin_result = RENDERER_STATUS_OK;
+    TEST_CHECK(Sdl_renderer_create(window, &sdl_renderer)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(sdl_renderer != NULL);
+    TEST_CHECK(Sdl_renderer_flush(NULL) == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Sdl_renderer_flush(sdl_renderer)
+               == RENDERER_STATUS_INVALID_STATE);
+
+    TEST_CHECK(Sdl_renderer_begin_frame(sdl_renderer, 100, 80, clear)
+               == RENDERER_STATUS_OK);
+    renderer = Sdl_renderer_frontend(sdl_renderer);
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_fill_rect(renderer, 2.0f, 3.0f, 5.0f, 7.0f,
+                                  white) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 0);
+    TEST_CHECK(Sdl_renderer_flush(sdl_renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(backend.flush_count == 1);
+    TEST_CHECK(Sdl_renderer_end_frame(sdl_renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(backend.flush_count == 1);
+    TEST_CHECK(backend.end_count == 1);
+
+    Sdl_renderer_destroy(sdl_renderer);
+    TEST_CHECK(backend.destroy_count == 1);
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(Sdl_renderer_frame_result(NULL)
@@ -414,5 +467,6 @@ int main(void)
     TEST_CHECK(check_logical_scissor_uses_drawable_pixels() == 0);
     TEST_CHECK(check_frame_result_is_sticky_until_successful_begin() == 0);
     TEST_CHECK(check_transform_failure_is_sticky_until_next_frame() == 0);
+    TEST_CHECK(check_flush_delivers_each_command_once() == 0);
     return 0;
 }

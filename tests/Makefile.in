@@ -100,7 +100,9 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-images$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
-	test-sdl-renderer-scissor$(EXEEXT) test-sdlpaint-stage$(EXEEXT) \
+	test-sdl-renderer-scissor$(EXEEXT) \
+	test-sdl-init-core-profile$(EXEEXT) \
+	test-sdl-renderer-core-context$(EXEEXT) test-sdlpaint-stage$(EXEEXT) \
 	test-paintmap-vdecor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) \
 	test-glwidgets-primitives$(EXEEXT) \
@@ -123,7 +125,8 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-images$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
-	test-sdlpaint-stage$(EXEEXT) run-sdlpaint-matrix-boundary.sh \
+	test-sdl-init-core-profile$(EXEEXT) test-sdlpaint-stage$(EXEEXT) \
+	run-sdl-core-boundary.sh \
 	test-paintmap-vdecor$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) \
 	test-glwidgets-scissor$(EXEEXT) \
@@ -136,7 +139,8 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
 	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT) \
-	run-renderer-gl-backends.sh run-e2e.sh
+	run-renderer-gl-backends.sh run-sdl-renderer-core-context.sh \
+	run-e2e.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -256,6 +260,14 @@ am_test_sdl_game_frame_OBJECTS = test_sdl_game_frame.$(OBJEXT) \
 	sdlgameframe.$(OBJEXT)
 test_sdl_game_frame_OBJECTS = $(am_test_sdl_game_frame_OBJECTS)
 test_sdl_game_frame_LDADD = $(LDADD)
+am_test_sdl_init_core_profile_OBJECTS = test_sdl_init_core_profile-test_sdl_init_core_profile.$(OBJEXT) \
+	test_sdl_init_core_profile-sdlinit.$(OBJEXT)
+test_sdl_init_core_profile_OBJECTS = \
+	$(am_test_sdl_init_core_profile_OBJECTS)
+test_sdl_init_core_profile_DEPENDENCIES =
+test_sdl_init_core_profile_LINK = $(CCLD) \
+	$(test_sdl_init_core_profile_CFLAGS) $(CFLAGS) \
+	$(test_sdl_init_core_profile_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdl_keys_OBJECTS = test_sdl_keys.$(OBJEXT) sdlkeys.$(OBJEXT)
 test_sdl_keys_OBJECTS = $(am_test_sdl_keys_OBJECTS)
 test_sdl_keys_DEPENDENCIES =
@@ -263,6 +275,13 @@ am_test_sdl_meta_frame_OBJECTS = test_sdl_meta_frame.$(OBJEXT) \
 	sdlmetaframe.$(OBJEXT)
 test_sdl_meta_frame_OBJECTS = $(am_test_sdl_meta_frame_OBJECTS)
 test_sdl_meta_frame_LDADD = $(LDADD)
+am_test_sdl_renderer_core_context_OBJECTS = \
+	test_sdl_renderer_core_context.$(OBJEXT) renderer.$(OBJEXT) \
+	renderer_gl_legacy.$(OBJEXT) renderer_gl_core.$(OBJEXT) \
+	sdlrenderer.$(OBJEXT)
+test_sdl_renderer_core_context_OBJECTS = \
+	$(am_test_sdl_renderer_core_context_OBJECTS)
+test_sdl_renderer_core_context_DEPENDENCIES =
 am_test_sdl_renderer_scissor_OBJECTS =  \
 	test_sdl_renderer_scissor-test_sdl_renderer_scissor.$(OBJEXT) \
 	test_sdl_renderer_scissor-renderer.$(OBJEXT) \
@@ -453,8 +472,11 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_sdl_clipboard.Po \
 	./$(DEPDIR)/test_sdl_console.Po ./$(DEPDIR)/test_sdl_event.Po \
 	./$(DEPDIR)/test_sdl_game_frame.Po \
+	./$(DEPDIR)/test_sdl_init_core_profile-sdlinit.Po \
+	./$(DEPDIR)/test_sdl_init_core_profile-test_sdl_init_core_profile.Po \
 	./$(DEPDIR)/test_sdl_keys.Po \
 	./$(DEPDIR)/test_sdl_meta_frame.Po \
+	./$(DEPDIR)/test_sdl_renderer_core_context.Po \
 	./$(DEPDIR)/test_sdl_renderer_scissor-renderer.Po \
 	./$(DEPDIR)/test_sdl_renderer_scissor-sdlrenderer.Po \
 	./$(DEPDIR)/test_sdl_renderer_scissor-test_sdl_renderer_scissor.Po \
@@ -530,7 +552,9 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
 	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
 	$(test_sdl_event_SOURCES) $(test_sdl_game_frame_SOURCES) \
-	$(test_sdl_keys_SOURCES) $(test_sdl_meta_frame_SOURCES) \
+	$(test_sdl_init_core_profile_SOURCES) $(test_sdl_keys_SOURCES) \
+	$(test_sdl_meta_frame_SOURCES) \
+	$(test_sdl_renderer_core_context_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_sdlmeta_primitives_SOURCES) \
@@ -557,7 +581,9 @@ DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_renderer_gl_backends_SOURCES) \
 	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
 	$(test_sdl_event_SOURCES) $(test_sdl_game_frame_SOURCES) \
-	$(test_sdl_keys_SOURCES) $(test_sdl_meta_frame_SOURCES) \
+	$(test_sdl_init_core_profile_SOURCES) $(test_sdl_keys_SOURCES) \
+	$(test_sdl_meta_frame_SOURCES) \
+	$(test_sdl_renderer_core_context_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
 	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_sdlmeta_primitives_SOURCES) \
@@ -1095,6 +1121,28 @@ test_sdl_renderer_scissor_CFLAGS = $(AM_CFLAGS) \
 
 test_sdl_renderer_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdl_renderer_scissor_LDADD = @SDL2_LIBS@ @GL_LIBS@
+test_sdl_init_core_profile_SOURCES = test_sdl_init_core_profile.c \
+	$(top_srcdir)/src/client/sdl/sdlinit.c
+
+test_sdl_init_core_profile_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+
+test_sdl_init_core_profile_LDFLAGS = $(AM_LDFLAGS) \
+	-Wl,--gc-sections -Wl,--wrap=SDL_Init -Wl,--wrap=SDL_Quit \
+	-Wl,--wrap=IMG_Init -Wl,--wrap=IMG_Quit \
+	-Wl,--wrap=TTF_Init -Wl,--wrap=TTF_Quit \
+	-Wl,--wrap=SDL_GL_SetAttribute -Wl,--wrap=SDL_CreateWindow
+
+test_sdl_init_core_profile_LDADD = @SDL2_IMAGE_LIBS@ @SDL2_TTF_LIBS@ \
+	@SDL2_LIBS@
+test_sdl_renderer_core_context_SOURCES = \
+	test_sdl_renderer_core_context.c \
+	$(top_srcdir)/src/client/sdl/renderer.c \
+	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
+	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
+	$(top_srcdir)/src/client/sdl/sdlrenderer.c
+
+test_sdl_renderer_core_context_LDADD = @SDL2_LIBS@ @GL_LIBS@
 test_glwidgets_scissor_SOURCES = test_glwidgets_scissor.c \
 	$(top_srcdir)/src/client/sdl/glwidgets.c
 
@@ -1297,10 +1345,17 @@ AM_TESTS_ENVIRONMENT = \
 	XPILOT_GL_TEST_BINARY='$(abs_builddir)/test-gl-legacy'; \
 	export XPILOT_GL_TEST_BINARY; \
 	XPILOT_RENDERER_GL_TEST_BINARY='$(abs_builddir)/test-renderer-gl-backends'; \
-	export XPILOT_RENDERER_GL_TEST_BINARY;
+	export XPILOT_RENDERER_GL_TEST_BINARY; \
+	XPILOT_SDL_CORE_CONTEXT_TEST_BINARY='$(abs_builddir)/test-sdl-renderer-core-context'; \
+	export XPILOT_SDL_CORE_CONTEXT_TEST_BINARY; \
+	XPILOT_SDL_OBJECT_DIR='$(abs_top_builddir)/src/client/sdl'; \
+	export XPILOT_SDL_OBJECT_DIR; \
+	XPILOT_SDL_BINARY='$(abs_top_builddir)/src/client/sdl/xpilot-ng-sdl'; \
+	export XPILOT_SDL_BINARY;
 
 EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-legacy.sh \
-	run-renderer-gl-backends.sh run-sdlpaint-matrix-boundary.sh \
+	run-renderer-gl-backends.sh run-sdl-core-boundary.sh \
+	run-sdl-renderer-core-context.sh \
 	test_helpers.h
 
 all: all-am
@@ -1412,6 +1467,10 @@ test-sdl-game-frame$(EXEEXT): $(test_sdl_game_frame_OBJECTS) $(test_sdl_game_fra
 	@rm -f test-sdl-game-frame$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_game_frame_OBJECTS) $(test_sdl_game_frame_LDADD) $(LIBS)
 
+test-sdl-init-core-profile$(EXEEXT): $(test_sdl_init_core_profile_OBJECTS) $(test_sdl_init_core_profile_DEPENDENCIES) $(EXTRA_test_sdl_init_core_profile_DEPENDENCIES)
+	@rm -f test-sdl-init-core-profile$(EXEEXT)
+	$(AM_V_CCLD)$(test_sdl_init_core_profile_LINK) $(test_sdl_init_core_profile_OBJECTS) $(test_sdl_init_core_profile_LDADD) $(LIBS)
+
 test-sdl-keys$(EXEEXT): $(test_sdl_keys_OBJECTS) $(test_sdl_keys_DEPENDENCIES) $(EXTRA_test_sdl_keys_DEPENDENCIES)
 	@rm -f test-sdl-keys$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_keys_OBJECTS) $(test_sdl_keys_LDADD) $(LIBS)
@@ -1419,6 +1478,10 @@ test-sdl-keys$(EXEEXT): $(test_sdl_keys_OBJECTS) $(test_sdl_keys_DEPENDENCIES) $
 test-sdl-meta-frame$(EXEEXT): $(test_sdl_meta_frame_OBJECTS) $(test_sdl_meta_frame_DEPENDENCIES) $(EXTRA_test_sdl_meta_frame_DEPENDENCIES)
 	@rm -f test-sdl-meta-frame$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_meta_frame_OBJECTS) $(test_sdl_meta_frame_LDADD) $(LIBS)
+
+test-sdl-renderer-core-context$(EXEEXT): $(test_sdl_renderer_core_context_OBJECTS) $(test_sdl_renderer_core_context_DEPENDENCIES) $(EXTRA_test_sdl_renderer_core_context_DEPENDENCIES)
+	@rm -f test-sdl-renderer-core-context$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_sdl_renderer_core_context_OBJECTS) $(test_sdl_renderer_core_context_LDADD) $(LIBS)
 
 test-sdl-renderer-scissor$(EXEEXT): $(test_sdl_renderer_scissor_OBJECTS) $(test_sdl_renderer_scissor_DEPENDENCIES) $(EXTRA_test_sdl_renderer_scissor_DEPENDENCIES)
 	@rm -f test-sdl-renderer-scissor$(EXEEXT)
@@ -1549,8 +1612,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_console.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_event.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_game_frame.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_init_core_profile-sdlinit.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_init_core_profile-test_sdl_init_core_profile.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_keys.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_meta_frame.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_renderer_core_context.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_renderer_scissor-renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_renderer_scissor-sdlrenderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_renderer_scissor-test_sdl_renderer_scissor.Po@am__quote@ # am--include-marker
@@ -2107,6 +2173,34 @@ sdlgameframe.obj: $(top_srcdir)/src/client/sdl/sdlgameframe.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgameframe.c' object='sdlgameframe.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdlgameframe.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgameframe.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgameframe.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgameframe.c'; fi`
+
+test_sdl_init_core_profile-test_sdl_init_core_profile.o: test_sdl_init_core_profile.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdl_init_core_profile_CFLAGS) $(CFLAGS) -MT test_sdl_init_core_profile-test_sdl_init_core_profile.o -MD -MP -MF $(DEPDIR)/test_sdl_init_core_profile-test_sdl_init_core_profile.Tpo -c -o test_sdl_init_core_profile-test_sdl_init_core_profile.o `test -f 'test_sdl_init_core_profile.c' || echo '$(srcdir)/'`test_sdl_init_core_profile.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdl_init_core_profile-test_sdl_init_core_profile.Tpo $(DEPDIR)/test_sdl_init_core_profile-test_sdl_init_core_profile.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdl_init_core_profile.c' object='test_sdl_init_core_profile-test_sdl_init_core_profile.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdl_init_core_profile_CFLAGS) $(CFLAGS) -c -o test_sdl_init_core_profile-test_sdl_init_core_profile.o `test -f 'test_sdl_init_core_profile.c' || echo '$(srcdir)/'`test_sdl_init_core_profile.c
+
+test_sdl_init_core_profile-test_sdl_init_core_profile.obj: test_sdl_init_core_profile.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdl_init_core_profile_CFLAGS) $(CFLAGS) -MT test_sdl_init_core_profile-test_sdl_init_core_profile.obj -MD -MP -MF $(DEPDIR)/test_sdl_init_core_profile-test_sdl_init_core_profile.Tpo -c -o test_sdl_init_core_profile-test_sdl_init_core_profile.obj `if test -f 'test_sdl_init_core_profile.c'; then $(CYGPATH_W) 'test_sdl_init_core_profile.c'; else $(CYGPATH_W) '$(srcdir)/test_sdl_init_core_profile.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdl_init_core_profile-test_sdl_init_core_profile.Tpo $(DEPDIR)/test_sdl_init_core_profile-test_sdl_init_core_profile.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdl_init_core_profile.c' object='test_sdl_init_core_profile-test_sdl_init_core_profile.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdl_init_core_profile_CFLAGS) $(CFLAGS) -c -o test_sdl_init_core_profile-test_sdl_init_core_profile.obj `if test -f 'test_sdl_init_core_profile.c'; then $(CYGPATH_W) 'test_sdl_init_core_profile.c'; else $(CYGPATH_W) '$(srcdir)/test_sdl_init_core_profile.c'; fi`
+
+test_sdl_init_core_profile-sdlinit.o: $(top_srcdir)/src/client/sdl/sdlinit.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdl_init_core_profile_CFLAGS) $(CFLAGS) -MT test_sdl_init_core_profile-sdlinit.o -MD -MP -MF $(DEPDIR)/test_sdl_init_core_profile-sdlinit.Tpo -c -o test_sdl_init_core_profile-sdlinit.o `test -f '$(top_srcdir)/src/client/sdl/sdlinit.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlinit.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdl_init_core_profile-sdlinit.Tpo $(DEPDIR)/test_sdl_init_core_profile-sdlinit.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlinit.c' object='test_sdl_init_core_profile-sdlinit.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdl_init_core_profile_CFLAGS) $(CFLAGS) -c -o test_sdl_init_core_profile-sdlinit.o `test -f '$(top_srcdir)/src/client/sdl/sdlinit.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlinit.c
+
+test_sdl_init_core_profile-sdlinit.obj: $(top_srcdir)/src/client/sdl/sdlinit.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdl_init_core_profile_CFLAGS) $(CFLAGS) -MT test_sdl_init_core_profile-sdlinit.obj -MD -MP -MF $(DEPDIR)/test_sdl_init_core_profile-sdlinit.Tpo -c -o test_sdl_init_core_profile-sdlinit.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlinit.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlinit.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlinit.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdl_init_core_profile-sdlinit.Tpo $(DEPDIR)/test_sdl_init_core_profile-sdlinit.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlinit.c' object='test_sdl_init_core_profile-sdlinit.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdl_init_core_profile_CFLAGS) $(CFLAGS) -c -o test_sdl_init_core_profile-sdlinit.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlinit.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlinit.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlinit.c'; fi`
 
 sdlkeys.o: $(top_srcdir)/src/client/sdl/sdlkeys.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlkeys.o -MD -MP -MF $(DEPDIR)/sdlkeys.Tpo -c -o sdlkeys.o `test -f '$(top_srcdir)/src/client/sdl/sdlkeys.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlkeys.c
@@ -3064,6 +3158,13 @@ test-sdl-game-frame.log: test-sdl-game-frame$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-sdl-init-core-profile.log: test-sdl-init-core-profile$(EXEEXT)
+	@p='test-sdl-init-core-profile$(EXEEXT)'; \
+	b='test-sdl-init-core-profile'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdl-renderer-scissor.log: test-sdl-renderer-scissor$(EXEEXT)
 	@p='test-sdl-renderer-scissor$(EXEEXT)'; \
 	b='test-sdl-renderer-scissor'; \
@@ -3325,8 +3426,11 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdl_console.Po
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po
 	-rm -f ./$(DEPDIR)/test_sdl_game_frame.Po
+	-rm -f ./$(DEPDIR)/test_sdl_init_core_profile-sdlinit.Po
+	-rm -f ./$(DEPDIR)/test_sdl_init_core_profile-test_sdl_init_core_profile.Po
 	-rm -f ./$(DEPDIR)/test_sdl_keys.Po
 	-rm -f ./$(DEPDIR)/test_sdl_meta_frame.Po
+	-rm -f ./$(DEPDIR)/test_sdl_renderer_core_context.Po
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-renderer.Po
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-test_sdl_renderer_scissor.Po
@@ -3469,8 +3573,11 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdl_console.Po
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po
 	-rm -f ./$(DEPDIR)/test_sdl_game_frame.Po
+	-rm -f ./$(DEPDIR)/test_sdl_init_core_profile-sdlinit.Po
+	-rm -f ./$(DEPDIR)/test_sdl_init_core_profile-test_sdl_init_core_profile.Po
 	-rm -f ./$(DEPDIR)/test_sdl_keys.Po
 	-rm -f ./$(DEPDIR)/test_sdl_meta_frame.Po
+	-rm -f ./$(DEPDIR)/test_sdl_renderer_core_context.Po
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-renderer.Po
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-test_sdl_renderer_scissor.Po
@@ -3551,6 +3658,8 @@ uninstall-am:
 
 .PRECIOUS: Makefile
 
+run-sdl-core-boundary.log: \
+	$(top_builddir)/src/client/sdl/xpilot-ng-sdl
 
 .PHONY: e2e-install
 run-e2e.log: e2e-install

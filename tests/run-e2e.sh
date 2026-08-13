@@ -130,10 +130,16 @@ process_stopped()
     ! kill -0 "$1" 2>/dev/null
 }
 
+core_context_logged()
+{
+    grep -Eq '^OpenGL context: .*, profile=core, attributes=[0-9]+\.[0-9]+$' \
+        "$1" 2>/dev/null
+}
+
 meta_initialized()
 {
     grep -q "SDL_ttf initialized" "$runtime_dir/meta.log" 2>/dev/null \
-        && grep -q '^OpenGL context:' "$runtime_dir/meta.log" 2>/dev/null
+        && core_context_logged "$runtime_dir/meta.log"
 }
 
 meta_ui_ready()
@@ -331,8 +337,8 @@ client_pid=$!
 window_owner_pid=$client_pid
 wait_until "SDL game window" 20 find_game_window
 wait_until "local client acceptance" 20 client_accepted
-wait_until "game OpenGL context diagnostics" 10 \
-    grep -q '^OpenGL context:' "$runtime_dir/client.log"
+wait_until "game core OpenGL context diagnostics" 10 \
+    core_context_logged "$runtime_dir/client.log"
 wait_until "game text renderers" 10 \
     grep -q '^Font text renderers ready: game=renderer map=renderer$' \
         "$runtime_dir/client.log"
