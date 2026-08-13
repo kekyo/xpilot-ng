@@ -3119,34 +3119,50 @@ static void Paint_ListWidget( GLWidget *widget )
 {
     ListWidget *wid_info;
     GLWidget *curr;
-    int count = 0;
-    Uint32  *col;
+    SemanticWidgetBatch batch;
+    int use_first_background = 1;
+    int blend_set = 0;
 
-    if (!widget) return;
-    
+    if (!widget) {
+	error("Paint_ListWidget: argument is NULL!");
+	return;
+    }
     wid_info = (ListWidget *)(widget->wid_info);
-
-    glBegin(GL_QUADS);
+    if (!wid_info) {
+	error("Paint_ListWidget: wid_info missing!");
+	return;
+    }
+    if (Begin_semantic_widget_batch(&batch) != RENDERER_STATUS_OK)
+	return;
 
     curr = widget->children;
-    while (curr) {
-    	if (count % 2) col = wid_info->bg2;
-    	else col = wid_info->bg1;
-	
-	++count;
-    
-    	if (*col) {
-    	    set_alphacolor(*col);
+    while (curr && batch.status == RENDERER_STATUS_OK) {
+	Uint32 *color = use_first_background
+	    ? wid_info->bg1 : wid_info->bg2;
 
-    	    glVertex2i(curr->bounds.x	    	    	,curr->bounds.y	    	    	);
-    	    glVertex2i(curr->bounds.x+widget->bounds.w	,curr->bounds.y	    	    	);
-    	    glVertex2i(curr->bounds.x+widget->bounds.w	,curr->bounds.y+curr->bounds.h	);
-    	    glVertex2i(curr->bounds.x 	    	    	,curr->bounds.y+curr->bounds.h	);
-    	}
-    	curr = curr->next;
+	use_first_background = !use_first_background;
+	if (*color != 0 && widget->bounds.w > 0 && curr->bounds.h > 0) {
+	    if (!blend_set) {
+		(void)Set_semantic_widget_batch_blend(
+		    &batch, RENDERER_BLEND_ALPHA);
+		if (batch.status == RENDERER_STATUS_OK)
+		    blend_set = 1;
+	    }
+	    if (batch.status == RENDERER_STATUS_OK) {
+		(void)Accept_semantic_widget_command(
+		    &batch,
+		    Renderer_fill_rect(
+			batch.renderer,
+			(float)curr->bounds.x, (float)curr->bounds.y,
+			(float)widget->bounds.w, (float)curr->bounds.h,
+			Renderer_color_from_rgba32(*color)));
+	    }
+	}
+	curr = curr->next;
     }
-
-    glEnd();
+    (void)Finish_semantic_widget_batch(&batch);
+    if (batch.status != RENDERER_STATUS_OK)
+	warn("Could not draw list widget background");
 }
 
 /* This setbounds method has very special behaviour; basically
