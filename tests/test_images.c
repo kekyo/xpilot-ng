@@ -13,6 +13,8 @@
 
 #define MAX_FAKE_TEXTURES 128
 #define MAX_DRAWS 16
+#define MAX_LEGACY_UPLOADS 128
+#define MAX_LEGACY_UPLOAD_BYTES 2048
 #define FLOAT_TOLERANCE 0.0001f
 
 struct Renderer {
@@ -44,6 +46,24 @@ typedef struct FakeDraw {
     size_t vertex_count;
 } FakeDraw;
 
+typedef struct LegacyUpload {
+    GLuint texture;
+    GLenum target;
+    GLint level;
+    GLint internal_format;
+    GLsizei width;
+    GLsizei height;
+    GLint border;
+    GLenum format;
+    GLenum type;
+    uint8_t pixels[MAX_LEGACY_UPLOAD_BYTES];
+    size_t pixel_size;
+    GLint mag_filter;
+    GLint min_filter;
+    GLint wrap_s;
+    GLint wrap_t;
+} LegacyUpload;
+
 typedef struct FixtureState {
     int picture_init_calls;
     int picture_init_successes;
@@ -62,6 +82,7 @@ static SdlRenderer fake_sdl_renderer = {
 };
 static FakeTexture fake_textures[MAX_FAKE_TEXTURES];
 static FakeDraw fake_draws[MAX_DRAWS];
+static LegacyUpload legacy_uploads[MAX_LEGACY_UPLOADS];
 static FixtureState fixture_state;
 static int fake_texture_count;
 static int texture_create_attempts;
@@ -76,6 +97,8 @@ static int pending_draws;
 static int prepare_legacy_calls;
 static int legacy_draw_calls;
 static unsigned int next_legacy_texture = 1001;
+static GLuint bound_legacy_texture;
+static int legacy_upload_count;
 static int legacy_texture_creates;
 static int legacy_texture_deletes;
 static int legacy_upload_attempts;
@@ -117,6 +140,18 @@ static RGB_COLOR fixture_color(uint8_t base, int frame, int x, int y)
     return RGB24((uint8_t)(base + offset),
                  (uint8_t)(base + offset + 1),
                  (uint8_t)(base + offset + 2));
+}
+
+static int pixel_matches_color(const uint8_t *pixel, RGB_COLOR color)
+{
+    if (color == 0) {
+        return pixel[0] == 0 && pixel[1] == 0
+            && pixel[2] == 0 && pixel[3] == 0;
+    }
+    return pixel[0] == (uint8_t)RED_VALUE(color)
+        && pixel[1] == (uint8_t)GREEN_VALUE(color)
+        && pixel[2] == (uint8_t)BLUE_VALUE(color)
+        && pixel[3] == 255;
 }
 
 static uint8_t fixture_base(const char *filename)
@@ -232,6 +267,45 @@ static int pixel_equals(const FakeTexture *texture, int x, int y,
         && pixel[2] == blue && pixel[3] == alpha;
 }
 
+static LegacyUpload *find_legacy_upload(GLuint texture)
+{
+    int index;
+
+    for (index = legacy_upload_count - 1; index >= 0; index--) {
+        if (legacy_uploads[index].texture == texture)
+            return &legacy_uploads[index];
+    }
+    return NULL;
+}
+
+static LegacyUpload *capture_legacy_texture(GLuint texture)
+{
+    LegacyUpload *upload = find_legacy_upload(texture);
+
+    if (upload != NULL || legacy_upload_count >= MAX_LEGACY_UPLOADS)
+        return upload;
+    upload = &legacy_uploads[legacy_upload_count++];
+    memset(upload, 0, sizeof(*upload));
+    upload->texture = texture;
+    return upload;
+}
+
+static const uint8_t *legacy_pixel(const LegacyUpload *upload, int x, int y)
+{
+    return upload->pixels
+        + ((size_t)y * (size_t)upload->width + (size_t)x) * 4;
+}
+
+static int legacy_pixel_equals(const LegacyUpload *upload, int x, int y,
+                               uint8_t red, uint8_t green, uint8_t blue,
+                               uint8_t alpha)
+{
+    const uint8_t *pixel = legacy_pixel(upload, x, y);
+
+    return pixel[0] == red && pixel[1] == green
+        && pixel[2] == blue && pixel[3] == alpha;
+}
+
 static FakeTexture *find_texture(int width, int height, uint8_t first_red)
 {
     int index;
@@ -247,6 +321,24 @@ static FakeTexture *find_texture(int width, int height, uint8_t first_red)
         }
     }
     return NULL;
+}
+
+static int check_semantic_map_source(const FakeTexture *texture, uint8_t base)
+{
+    int x;
+    int y;
+
+    TEST_CHECK(texture != NULL);
+    TEST_CHECK(texture->desc.width == 3);
+    TEST_CHECK(texture->desc.height == 3);
+    TEST_CHECK(texture->pitch == 3 * 4);
+    for (y = 0; y < 3; y++) {
+        for (x = 0; x < 3; x++) {
+            TEST_CHECK(pixel_matches_color(
+                fake_pixel(texture, x, y), fixture_color(base, 0, x, y)));
+        }
+    }
+    return 0;
 }
 
 RendererColor Renderer_color_from_rgba32(uint32_t rgba)
@@ -466,8 +558,8 @@ void GLAPIENTRY glDeleteTextures(GLsizei count, const GLuint *textures)
 
 void GLAPIENTRY glBindTexture(GLenum target, GLuint texture)
 {
-    (void)target;
-    (void)texture;
+    if (target == GL_TEXTURE_2D)
+        bound_legacy_texture = texture;
 }
 
 void GLAPIENTRY glTexImage2D(GLenum target, GLint level,
@@ -475,15 +567,29 @@ void GLAPIENTRY glTexImage2D(GLenum target, GLint level,
                             GLsizei height, GLint border, GLenum format,
                             GLenum type, const GLvoid *pixels)
 {
-    (void)target;
-    (void)level;
-    (void)internal_format;
-    (void)width;
-    (void)height;
-    (void)border;
-    (void)format;
-    (void)type;
-    (void)pixels;
+    LegacyUpload *upload = NULL;
+    size_t pixel_size = 0;
+
+    upload = capture_legacy_texture(bound_legacy_texture);
+    if (upload != NULL) {
+        upload->target = target;
+        upload->level = level;
+        upload->internal_format = internal_format;
+        upload->width = width;
+        upload->height = height;
+        upload->border = border;
+        upload->format = format;
+        upload->type = type;
+        if (width > 0 && height > 0
+            && (size_t)width <= SIZE_MAX / 4
+            && (size_t)height <= SIZE_MAX / ((size_t)width * 4)) {
+            pixel_size = (size_t)width * (size_t)height * 4;
+        }
+        if (pixels != NULL && pixel_size <= sizeof(upload->pixels)) {
+            memcpy(upload->pixels, pixels, pixel_size);
+            upload->pixel_size = pixel_size;
+        }
+    }
     legacy_upload_attempts++;
     if (legacy_upload_attempts == fail_legacy_upload_attempt)
         pending_gl_error = GL_INVALID_OPERATION;
@@ -497,18 +603,41 @@ GLenum GLAPIENTRY glGetError(void)
     return error_code;
 }
 
+static void capture_legacy_parameter(GLenum target, GLenum name, GLint value)
+{
+    LegacyUpload *upload;
+
+    if (target != GL_TEXTURE_2D)
+        return;
+    upload = capture_legacy_texture(bound_legacy_texture);
+    if (upload == NULL)
+        return;
+    switch (name) {
+    case GL_TEXTURE_MAG_FILTER:
+        upload->mag_filter = value;
+        break;
+    case GL_TEXTURE_MIN_FILTER:
+        upload->min_filter = value;
+        break;
+    case GL_TEXTURE_WRAP_S:
+        upload->wrap_s = value;
+        break;
+    case GL_TEXTURE_WRAP_T:
+        upload->wrap_t = value;
+        break;
+    default:
+        break;
+    }
+}
+
 void GLAPIENTRY glTexParameterf(GLenum target, GLenum name, GLfloat value)
 {
-    (void)target;
-    (void)name;
-    (void)value;
+    capture_legacy_parameter(target, name, (GLint)value);
 }
 
 void GLAPIENTRY glTexParameteri(GLenum target, GLenum name, GLint value)
 {
-    (void)target;
-    (void)name;
-    (void)value;
+    capture_legacy_parameter(target, name, value);
 }
 
 void GLAPIENTRY glEnable(GLenum capability)
@@ -685,9 +814,9 @@ static int check_registration_prepare_and_pixels(int *ordinary_id,
     TEST_CHECK(fixture_state.map_signed_count == -1);
     TEST_CHECK(fake_renderer.frame_active == 0);
 
-    ordinary = find_texture(8, 4, 11);
-    rotatable = find_texture(16, 2, 61);
-    map = find_texture(4, 4, 101);
+    ordinary = find_texture(6, 3, 11);
+    rotatable = find_texture(12, 2, 61);
+    map = find_texture(3, 3, 101);
     TEST_CHECK(ordinary != NULL);
     TEST_CHECK(rotatable != NULL);
     TEST_CHECK(map != NULL);
@@ -697,6 +826,7 @@ static int check_registration_prepare_and_pixels(int *ordinary_id,
     TEST_CHECK(rotatable->desc.wrap == RENDERER_TEXTURE_WRAP_CLAMP);
     TEST_CHECK(map->desc.filter == RENDERER_TEXTURE_FILTER_NEAREST);
     TEST_CHECK(map->desc.wrap == RENDERER_TEXTURE_WRAP_REPEAT);
+    TEST_CHECK(check_semantic_map_source(map, 101) == 0);
 
     wormhole = Image_get(*rotatable_id + 1 + IMG_WORMHOLE);
     TEST_CHECK(wormhole != NULL);
@@ -711,8 +841,6 @@ static int check_registration_prepare_and_pixels(int *ordinary_id,
     TEST_CHECK(pixel_equals(ordinary, 1, 1, 0, 0, 0, 0));
     TEST_CHECK(pixel_equals(ordinary, 3, 0, 38, 39, 40, 255));
     TEST_CHECK(pixel_equals(ordinary, 5, 2, 62, 63, 64, 255));
-    TEST_CHECK(pixel_equals(ordinary, 6, 0, 0, 0, 0, 0));
-    TEST_CHECK(pixel_equals(ordinary, 7, 3, 0, 0, 0, 0));
 
     attempts_after_prepare = texture_create_attempts;
     loads_after_prepare = fixture_state.picture_init_calls;
@@ -725,6 +853,7 @@ static int check_registration_prepare_and_pixels(int *ordinary_id,
 
 static int check_late_registration(void)
 {
+    FakeTexture *late;
     int late_id;
     int create_attempts_before;
     int load_calls_before;
@@ -740,7 +869,52 @@ static int check_late_registration(void)
     TEST_CHECK(Image_get(late_id) != NULL);
     TEST_CHECK(texture_create_attempts == create_attempts_before + 1);
     TEST_CHECK(fixture_state.picture_init_calls == load_calls_before + 1);
-    TEST_CHECK(find_texture(4, 4, 141) != NULL);
+    late = find_texture(3, 3, 141);
+    TEST_CHECK(late != NULL);
+    TEST_CHECK(late->desc.filter == RENDERER_TEXTURE_FILTER_NEAREST);
+    TEST_CHECK(late->desc.wrap == RENDERER_TEXTURE_WRAP_REPEAT);
+    TEST_CHECK(check_semantic_map_source(late, 141) == 0);
+    return 0;
+}
+
+static int check_legacy_map_upload(int map_id)
+{
+    image_t *map = Image_get(map_id);
+    LegacyUpload *upload;
+    int x;
+    int y;
+
+    TEST_CHECK(map != NULL);
+    upload = find_legacy_upload(map->legacy_name);
+    TEST_CHECK(upload != NULL);
+    TEST_CHECK(upload->texture == map->legacy_name);
+    TEST_CHECK(upload->target == GL_TEXTURE_2D);
+    TEST_CHECK(upload->level == 0);
+    TEST_CHECK(upload->internal_format == GL_RGBA);
+    TEST_CHECK(upload->width == 4);
+    TEST_CHECK(upload->height == 4);
+    TEST_CHECK(upload->border == 0);
+    TEST_CHECK(upload->format == GL_RGBA);
+    TEST_CHECK(upload->type == GL_UNSIGNED_BYTE);
+    TEST_CHECK(upload->pixel_size == 4 * 4 * 4);
+    TEST_CHECK(upload->mag_filter == GL_NEAREST);
+    TEST_CHECK(upload->min_filter == GL_NEAREST);
+    TEST_CHECK(upload->wrap_s == GL_REPEAT);
+    TEST_CHECK(upload->wrap_t == GL_REPEAT);
+
+    for (y = 0; y < 3; y++) {
+        for (x = 0; x < 3; x++) {
+            TEST_CHECK(pixel_matches_color(
+                legacy_pixel(upload, x, y),
+                fixture_color(101, 0, x, 2 - y)));
+        }
+    }
+    for (y = 0; y < 4; y++) {
+        TEST_CHECK(legacy_pixel_equals(upload, 3, y, 0, 0, 0, 0));
+    }
+    for (x = 0; x < 4; x++) {
+        TEST_CHECK(legacy_pixel_equals(upload, x, 3, 0, 0, 0, 0));
+    }
     return 0;
 }
 
@@ -758,13 +932,13 @@ static int check_semantic_world_and_hud_draws(int ordinary_id)
     world = &fake_draws[0];
     TEST_CHECK(world->vertex_count == 6);
     TEST_CHECK(vertex_equal(&world->vertices[0], 10.0f, 23.0f,
-                            3.0f / 8.0f, 0.0f, tint));
+                            3.0f / 6.0f, 0.0f, tint));
     TEST_CHECK(vertex_equal(&world->vertices[1], 13.0f, 23.0f,
-                            6.0f / 8.0f, 0.0f, tint));
+                            6.0f / 6.0f, 0.0f, tint));
     TEST_CHECK(vertex_equal(&world->vertices[2], 13.0f, 20.0f,
-                            6.0f / 8.0f, 3.0f / 4.0f, tint));
+                            6.0f / 6.0f, 3.0f / 3.0f, tint));
     TEST_CHECK(vertex_equal(&world->vertices[5], 10.0f, 20.0f,
-                            3.0f / 8.0f, 3.0f / 4.0f, tint));
+                            3.0f / 6.0f, 3.0f / 3.0f, tint));
 
     Image_paint_hud(ordinary_id, 30, 40, 0, 0x11223344);
     TEST_CHECK(draw_count == 2);
@@ -773,11 +947,11 @@ static int check_semantic_world_and_hud_draws(int ordinary_id)
     TEST_CHECK(vertex_equal(&hud->vertices[0], 30.0f, 40.0f,
                             0.0f, 0.0f, tint));
     TEST_CHECK(vertex_equal(&hud->vertices[1], 33.0f, 40.0f,
-                            3.0f / 8.0f, 0.0f, tint));
+                            3.0f / 6.0f, 0.0f, tint));
     TEST_CHECK(vertex_equal(&hud->vertices[2], 33.0f, 43.0f,
-                            3.0f / 8.0f, 3.0f / 4.0f, tint));
+                            3.0f / 6.0f, 3.0f / 3.0f, tint));
     TEST_CHECK(vertex_equal(&hud->vertices[5], 30.0f, 43.0f,
-                            0.0f, 3.0f / 4.0f, tint));
+                            0.0f, 3.0f / 3.0f, tint));
     TEST_CHECK(legacy_draw_calls == legacy_before);
     TEST_CHECK(prepare_legacy_calls == 0);
     TEST_CHECK(fake_sdl_renderer.preserved_state == 0x51a7e123u);
@@ -797,9 +971,9 @@ static int check_area_and_rotated_draws(int ordinary_id, int rotatable_id)
     TEST_CHECK(draw_count == 3);
     area_draw = &fake_draws[2];
     TEST_CHECK(vertex_equal(&area_draw->vertices[0], 4.0f, 6.0f,
-                            1.0f / 8.0f, 1.0f / 4.0f, area_tint));
+                            1.0f / 6.0f, 1.0f / 3.0f, area_tint));
     TEST_CHECK(vertex_equal(&area_draw->vertices[2], 6.0f, 5.0f,
-                            3.0f / 8.0f, 2.0f / 4.0f, area_tint));
+                            3.0f / 6.0f, 2.0f / 3.0f, area_tint));
 
     Image_paint_rotated(rotatable_id, 10, 20, TABLE_SIZE / 4, 0x05060708);
     TEST_CHECK(draw_count == 4);
@@ -807,9 +981,9 @@ static int check_area_and_rotated_draws(int ordinary_id, int rotatable_id)
     TEST_CHECK(vertex_equal(&rotated->vertices[0], 9.0f, 18.5f,
                             0.0f, 0.0f, rotate_tint));
     TEST_CHECK(vertex_equal(&rotated->vertices[1], 9.0f, 21.5f,
-                            3.0f / 16.0f, 0.0f, rotate_tint));
+                            3.0f / 12.0f, 0.0f, rotate_tint));
     TEST_CHECK(vertex_equal(&rotated->vertices[2], 11.0f, 21.5f,
-                            3.0f / 16.0f, 1.0f, rotate_tint));
+                            3.0f / 12.0f, 1.0f, rotate_tint));
     TEST_CHECK(vertex_equal(&rotated->vertices[5], 11.0f, 18.5f,
                             0.0f, 1.0f, rotate_tint));
     TEST_CHECK(preserving_flush_calls == flushes_before + 2);
@@ -970,6 +1144,8 @@ int main(void)
             &ordinary_id, &rotatable_id, &map_id) != 0)
         return 1;
     if (check_late_registration() != 0)
+        return 1;
+    if (check_legacy_map_upload(map_id) != 0)
         return 1;
     reset_active_frame_capture();
     if (check_semantic_world_and_hud_draws(ordinary_id) != 0)
