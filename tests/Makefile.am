@@ -184,6 +184,8 @@ test_sdlmeta_primitives_LDADD = @SDL2_LIBS@
 
 test_sdlgui_hud_primitives_SOURCES = test_sdlgui_hud_primitives.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c
+test_sdlgui_hud_primitives_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_SDLGUI_TEST_HOOKS
 test_sdlgui_hud_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_sdlgui_hud_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections

@@ -58,7 +58,6 @@ extern Uint32 scoreEnemyTeamColorRGBA;
 extern int GL_X(int x);
 extern int GL_Y(int y);
 extern void set_alphacolor(Uint32 color);
-extern void Segment_add(Uint32 color, int x_1, int y_1, int x_2, int y_2);
 extern void Circle(Uint32 color, int x, int y, int radius, int filled);
 
 extern irec_t *select_bounds;
@@ -73,5 +72,17 @@ extern irec_t *select_bounds;
  *          select_bounds is non-NULL.
  */
 extern RendererStatus Paint_select(void);
+
+#ifdef XPILOT_SDLGUI_TEST_HOOKS
+/**
+ * Draw only the semantic HUD speed and direction pointers for tests.
+ *
+ * @return The sticky result for the active renderer frame, or
+ *         RENDERER_STATUS_OK when neither pointer is visible.
+ * @remarks This hook preserves the renderer's current transform and scissor
+ *          state and is available only to the SDL GUI primitive test target.
+ */
+extern RendererStatus Sdlgui_test_paint_hud_pointers(void);
+#endif
 
 #endif

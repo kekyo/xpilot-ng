@@ -38,6 +38,7 @@
 #include "asteroid_data.h"
 
 #include <float.h>
+#include <limits.h>
 #include <math.h>
 
 Uint32 nullRGBA     = 0x00000000;
@@ -174,18 +175,6 @@ int GL_Y(int y)
     return (int)((y - world.y) * clData.scale);
 }
 
-
-/* remove this later maybe? to tedious for me to edit them all away now */
-void Segment_add(Uint32 color, int x_1, int y_1, int x_2, int y_2)
-{
-    if (smoothLines) glEnable(GL_LINE_SMOOTH);
-    set_alphacolor(color);
-    glBegin( GL_LINE_LOOP );
-    	glVertex2i(x_1,y_1);
-	glVertex2i(x_2,y_2);
-    glEnd();
-    if (smoothLines) glDisable(GL_LINE_SMOOTH);
-}
 
 void Circle(Uint32 color,
 	    int x, int y,
@@ -1609,12 +1598,19 @@ void Paint_HUD_values(void)
     HUDprint(&gamefont,hudColorRGBA,RIGHT,DOWN,x,y-20,"CL.LAG : %.1f ms", clData.clientLag);
 }
 
-typedef struct SemanticMeterBatch {
+typedef struct SemanticHudBatch {
     SdlRenderer *sdl_renderer;
     Renderer *renderer;
     RendererStatus status;
     int has_accepted_commands;
-} SemanticMeterBatch;
+} SemanticHudBatch;
+
+typedef struct SemanticHudPointerGeometry {
+    RendererPoint2D speed[2];
+    RendererPoint2D direction[2];
+    int draw_speed;
+    int draw_direction;
+} SemanticHudPointerGeometry;
 
 typedef struct SemanticMeterGeometry {
     float fill_x;
@@ -1628,7 +1624,7 @@ typedef struct SemanticMeterGeometry {
     int text_y;
 } SemanticMeterGeometry;
 
-static RendererStatus Begin_semantic_meter_batch(SemanticMeterBatch *batch)
+static RendererStatus Begin_semantic_hud_batch(SemanticHudBatch *batch)
 {
     if (batch == NULL)
 	return RENDERER_STATUS_INVALID_ARGUMENT;
@@ -1650,8 +1646,8 @@ static RendererStatus Begin_semantic_meter_batch(SemanticMeterBatch *batch)
     return batch->status;
 }
 
-static RendererStatus Track_semantic_meter_batch(
-    SemanticMeterBatch *batch, RendererStatus status)
+static RendererStatus Track_semantic_hud_batch(
+    SemanticHudBatch *batch, RendererStatus status)
 {
     if (batch == NULL)
 	return RENDERER_STATUS_INVALID_ARGUMENT;
@@ -1664,18 +1660,18 @@ static RendererStatus Track_semantic_meter_batch(
     return batch->status;
 }
 
-static RendererStatus Accept_semantic_meter_command(
-    SemanticMeterBatch *batch, RendererStatus status)
+static RendererStatus Accept_semantic_hud_command(
+    SemanticHudBatch *batch, RendererStatus status)
 {
     if (batch == NULL)
 	return RENDERER_STATUS_INVALID_ARGUMENT;
     if (status == RENDERER_STATUS_OK)
 	batch->has_accepted_commands = 1;
-    return Track_semantic_meter_batch(batch, status);
+    return Track_semantic_hud_batch(batch, status);
 }
 
-static RendererStatus Finish_semantic_meter_batch(
-    SemanticMeterBatch *batch)
+static RendererStatus Finish_semantic_hud_batch(
+    SemanticHudBatch *batch)
 {
     RendererStatus flush_status;
 
@@ -1686,8 +1682,124 @@ static RendererStatus Finish_semantic_meter_batch(
     flush_status = Sdl_renderer_flush_preserving_legacy(
 	batch->sdl_renderer);
     batch->has_accepted_commands = 0;
-    return Track_semantic_meter_batch(batch, flush_status);
+    return Track_semantic_hud_batch(batch, flush_status);
 }
+
+static int Semantic_hud_pointer_point(
+    double x, double y, RendererPoint2D *point)
+{
+    int integer_x;
+    int integer_y;
+
+    if (point == NULL || !isfinite(x) || !isfinite(y)
+	|| x < (double)INT_MIN || x > (double)INT_MAX
+	|| y < (double)INT_MIN || y > (double)INT_MAX) {
+	return 0;
+    }
+    integer_x = (int)x;
+    integer_y = (int)y;
+    point->x = (float)integer_x;
+    point->y = (float)integer_y;
+    return isfinite(point->x) && isfinite(point->y);
+}
+
+static RendererStatus Build_semantic_hud_pointer_geometry(
+    int draw_speed, int draw_direction,
+    SemanticHudPointerGeometry *geometry)
+{
+    double center_x;
+    double center_y;
+
+    if (geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+
+    geometry->draw_speed = draw_speed;
+    geometry->draw_direction = draw_direction;
+    center_x = (double)(draw_width / 2);
+    center_y = (double)(draw_height / 2);
+
+    if (draw_speed
+	&& (!Semantic_hud_pointer_point(
+		center_x, center_y, &geometry->speed[0])
+	    || !Semantic_hud_pointer_point(
+		center_x - ptr_move_fact * (double)selfVel.x,
+		center_y + ptr_move_fact * (double)selfVel.y,
+		&geometry->speed[1]))) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+
+    if (draw_direction) {
+	double cosine;
+	double sine;
+
+	if (heading < 0 || heading >= TABLE_SIZE)
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	cosine = tcos(heading);
+	sine = tsin(heading);
+	if (!isfinite(cosine) || !isfinite(sine)
+	    || !Semantic_hud_pointer_point(
+		center_x + 85.0 * cosine,
+		center_y - 85.0 * sine,
+		&geometry->direction[0])
+	    || !Semantic_hud_pointer_point(
+		center_x + 100.0 * cosine,
+		center_y - 100.0 * sine,
+		&geometry->direction[1])) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Paint_semantic_hud_pointers(void)
+{
+    SemanticHudBatch batch;
+    SemanticHudPointerGeometry geometry;
+    RendererStatus operation_status;
+    int draw_speed;
+    int draw_direction;
+
+    draw_speed = ptr_move_fact != 0.0
+	&& selfVisible
+	&& (selfVel.x != 0 || selfVel.y != 0);
+    draw_direction = selfVisible && dirPtrColorRGBA;
+    if (!draw_speed && !draw_direction)
+	return RENDERER_STATUS_OK;
+
+    if (Begin_semantic_hud_batch(&batch) != RENDERER_STATUS_OK)
+	return batch.status;
+    operation_status = Build_semantic_hud_pointer_geometry(
+	draw_speed, draw_direction, &geometry);
+    if (operation_status != RENDERER_STATUS_OK)
+	return Track_semantic_hud_batch(&batch, operation_status);
+    operation_status = Renderer_set_blend(
+	batch.renderer, RENDERER_BLEND_ADDITIVE);
+    if (Track_semantic_hud_batch(&batch, operation_status)
+	!= RENDERER_STATUS_OK) {
+	return batch.status;
+    }
+
+    if (geometry.draw_speed) {
+	operation_status = Renderer_stroke_path(
+	    batch.renderer, geometry.speed, 2, 1.0f,
+	    Renderer_color_from_rgba32(hudColorRGBA), 1);
+	Accept_semantic_hud_command(&batch, operation_status);
+    }
+    if (batch.status == RENDERER_STATUS_OK && geometry.draw_direction) {
+	operation_status = Renderer_stroke_path(
+	    batch.renderer, geometry.direction, 2, 1.0f,
+	    Renderer_color_from_rgba32(dirPtrColorRGBA), 1);
+	Accept_semantic_hud_command(&batch, operation_status);
+    }
+    return Finish_semantic_hud_batch(&batch);
+}
+
+#ifdef XPILOT_SDLGUI_TEST_HOOKS
+RendererStatus Sdlgui_test_paint_hud_pointers(void)
+{
+    return Paint_semantic_hud_pointers();
+}
+#endif
 
 static int Semantic_meter_float(int64_t value, float *result)
 {
@@ -1805,7 +1917,7 @@ static RendererStatus Build_semantic_meter_geometry(
 static void Paint_meter(int xoff, int y, string_tex_t *tex, int val, int max,
 			int meter_color)
 {
-    SemanticMeterBatch batch;
+    SemanticHudBatch batch;
     SemanticMeterGeometry geometry;
     RendererColor border_color;
     RendererStatus operation_status;
@@ -1813,15 +1925,15 @@ static void Paint_meter(int xoff, int y, string_tex_t *tex, int val, int max,
     int color;
     int tick_index;
 
-    if (Begin_semantic_meter_batch(&batch) != RENDERER_STATUS_OK)
+    if (Begin_semantic_hud_batch(&batch) != RENDERER_STATUS_OK)
 	return;
     operation_status = Build_semantic_meter_geometry(
 	xoff, y, val, max, &geometry, &x_alignment);
     if (operation_status != RENDERER_STATUS_OK) {
-	Track_semantic_meter_batch(&batch, operation_status);
+	Track_semantic_hud_batch(&batch, operation_status);
 	return;
     }
-    if (Track_semantic_meter_batch(
+    if (Track_semantic_hud_batch(
 	    &batch,
 	    Renderer_set_blend(
 		batch.renderer, RENDERER_BLEND_ALPHA))
@@ -1835,7 +1947,7 @@ static void Paint_meter(int xoff, int y, string_tex_t *tex, int val, int max,
 	    geometry.fill_x, geometry.fill_y,
 	    geometry.fill_width, geometry.fill_height,
 	    Renderer_color_from_rgba32((Uint32)meter_color));
-	Accept_semantic_meter_command(&batch, operation_status);
+	Accept_semantic_hud_command(&batch, operation_status);
     }
 
     /* meterBorderColorRGBA = 0 obviously means no meter borders are drawn */
@@ -1844,7 +1956,7 @@ static void Paint_meter(int xoff, int y, string_tex_t *tex, int val, int max,
 	operation_status = Renderer_stroke_path(
 	    batch.renderer, geometry.border, 4, 1.0f,
 	    border_color, 1);
-	Accept_semantic_meter_command(&batch, operation_status);
+	Accept_semantic_hud_command(&batch, operation_status);
     }
     for (tick_index = 0;
 	 batch.status == RENDERER_STATUS_OK
@@ -1853,9 +1965,9 @@ static void Paint_meter(int xoff, int y, string_tex_t *tex, int val, int max,
 	operation_status = Renderer_stroke_path(
 	    batch.renderer, geometry.ticks[tick_index], 2, 1.0f,
 	    border_color, 0);
-	Accept_semantic_meter_command(&batch, operation_status);
+	Accept_semantic_hud_command(&batch, operation_status);
     }
-    if (Finish_semantic_meter_batch(&batch) != RENDERER_STATUS_OK)
+    if (Finish_semantic_hud_batch(&batch) != RENDERER_STATUS_OK)
 	return;
 
     color = meterBorderColorRGBA ? meterBorderColorRGBA : meter_color;
@@ -1865,7 +1977,7 @@ static void Paint_meter(int xoff, int y, string_tex_t *tex, int val, int max,
 	    tex, color, x_alignment, CENTER,
 	    geometry.text_x, geometry.text_y, true);
 	if (operation_status != RENDERER_STATUS_OK)
-	    Track_semantic_meter_batch(&batch, operation_status);
+	    Track_semantic_hud_batch(&batch, operation_status);
     }
 }
 
@@ -2187,30 +2299,11 @@ void Paint_HUD(void)
     static char		autopilot[] = "Autopilot";
     int tempx,tempy,tempw,temph;
     fontbounds dummy;
+
+    if (Paint_semantic_hud_pointers() != RENDERER_STATUS_OK)
+	return;
     tex_index = 0;
     glEnable(GL_BLEND);
-    /*
-     * Show speed pointer
-     */
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-    if (ptr_move_fact != 0.0
-	&& selfVisible
-	&& (selfVel.x != 0 || selfVel.y != 0))
-    	Segment_add(hudColorRGBA,
-		    draw_width / 2,
-		    draw_height / 2,
-		    (int)(draw_width / 2 - ptr_move_fact * selfVel.x),
-		    (int)(draw_height / 2 + ptr_move_fact * selfVel.y));
-
-    if (selfVisible && dirPtrColorRGBA) {
-	Segment_add(dirPtrColorRGBA,
-		    (int) (draw_width / 2 +
-			   (100 - 15) * tcos(heading)),
-		    (int) (draw_height / 2 -
-			   (100 - 15) * tsin(heading)),
-		    (int) (draw_width / 2 + 100 * tcos(heading)),
-		    (int) (draw_height / 2 - 100 * tsin(heading)));
-    }
 
     /* TODO */
     /* This should be done in a nicer way now (using radar.c maybe) */

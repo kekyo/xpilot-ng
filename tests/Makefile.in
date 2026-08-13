@@ -990,6 +990,9 @@ test_sdlmeta_primitives_LDADD = @SDL2_LIBS@
 test_sdlgui_hud_primitives_SOURCES = test_sdlgui_hud_primitives.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c
 
+test_sdlgui_hud_primitives_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_SDLGUI_TEST_HOOKS
+
 test_sdlgui_hud_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
@@ -1980,32 +1983,32 @@ test_sdlmeta_primitives-sdlmeta.obj: $(top_srcdir)/src/client/sdl/sdlmeta.c
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlmeta_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlmeta_primitives-sdlmeta.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlmeta.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlmeta.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlmeta.c'; fi`
 
 test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o: test_sdlgui_hud_primitives.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o `test -f 'test_sdlgui_hud_primitives.c' || echo '$(srcdir)/'`test_sdlgui_hud_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o `test -f 'test_sdlgui_hud_primitives.c' || echo '$(srcdir)/'`test_sdlgui_hud_primitives.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlgui_hud_primitives.c' object='test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o `test -f 'test_sdlgui_hud_primitives.c' || echo '$(srcdir)/'`test_sdlgui_hud_primitives.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.o `test -f 'test_sdlgui_hud_primitives.c' || echo '$(srcdir)/'`test_sdlgui_hud_primitives.c
 
 test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj: test_sdlgui_hud_primitives.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj `if test -f 'test_sdlgui_hud_primitives.c'; then $(CYGPATH_W) 'test_sdlgui_hud_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_hud_primitives.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj `if test -f 'test_sdlgui_hud_primitives.c'; then $(CYGPATH_W) 'test_sdlgui_hud_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_hud_primitives.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Tpo $(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlgui_hud_primitives.c' object='test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj `if test -f 'test_sdlgui_hud_primitives.c'; then $(CYGPATH_W) 'test_sdlgui_hud_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_hud_primitives.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.obj `if test -f 'test_sdlgui_hud_primitives.c'; then $(CYGPATH_W) 'test_sdlgui_hud_primitives.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_hud_primitives.c'; fi`
 
 test_sdlgui_hud_primitives-sdlgui.o: $(top_srcdir)/src/client/sdl/sdlgui.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-sdlgui.o -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo -c -o test_sdlgui_hud_primitives-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-sdlgui.o -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo -c -o test_sdlgui_hud_primitives-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_hud_primitives-sdlgui.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
 
 test_sdlgui_hud_primitives-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-sdlgui.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo -c -o test_sdlgui_hud_primitives-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -MT test_sdlgui_hud_primitives-sdlgui.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo -c -o test_sdlgui_hud_primitives-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Tpo $(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_hud_primitives-sdlgui.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
 
 surface_rgba8.o: $(top_srcdir)/src/client/sdl/surface_rgba8.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT surface_rgba8.o -MD -MP -MF $(DEPDIR)/surface_rgba8.Tpo -c -o surface_rgba8.o `test -f '$(top_srcdir)/src/client/sdl/surface_rgba8.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/surface_rgba8.c

@@ -10,6 +10,7 @@
 #include <GL/gl.h>
 
 #include <limits.h>
+#include <math.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -92,6 +93,7 @@ static int legacy_vertex_calls;
 static int legacy_end_calls;
 static int legacy_color_calls;
 static RendererStatus blend_result;
+static RendererBlendMode blend_modes[MAX_EVENTS];
 static RendererStatus fill_result;
 static int stroke_failure_attempt;
 static RendererStatus stroke_failure_result;
@@ -127,6 +129,12 @@ short phasingtimemax;
 short destruct;
 short shutdown_count;
 short shutdown_delay;
+ipos_t selfVel;
+short heading;
+short selfVisible;
+double ptr_move_fact;
+double tbl_sin[TABLE_SIZE];
+double tbl_cos[TABLE_SIZE];
 
 extern Uint32 meterBorderColorRGBA;
 extern Uint32 fuelMeterColorRGBA;
@@ -138,6 +146,8 @@ extern Uint32 packetDropMeterColorRGBA;
 extern Uint32 packetLagMeterColorRGBA;
 extern Uint32 temporaryMeterColorRGBA;
 extern Uint32 selectionColorRGBA;
+extern Uint32 hudColorRGBA;
+extern Uint32 dirPtrColorRGBA;
 
 static int color_equal(RendererColor actual, RendererColor expected)
 {
@@ -198,6 +208,9 @@ static void reset_frame(void)
     memset(strokes, 0, sizeof(strokes));
     memset(&last_text, 0, sizeof(last_text));
     memset(&gamefont, 0, sizeof(gamefont));
+    memset(blend_modes, 0, sizeof(blend_modes));
+    memset(tbl_sin, 0, sizeof(tbl_sin));
+    memset(tbl_cos, 0, sizeof(tbl_cos));
     memset(&meter_texs[0], 0,
            MAX_METERS * sizeof(meter_texs[0]));
     event_count = 0;
@@ -250,6 +263,14 @@ static void reset_frame(void)
     destruct = 0;
     shutdown_count = -1;
     shutdown_delay = 0;
+    selfVel.x = 0;
+    selfVel.y = 0;
+    heading = 0;
+    selfVisible = 0;
+    ptr_move_fact = 0.0;
+    hudColorRGBA = 0;
+    dirPtrColorRGBA = 0;
+    tbl_cos[0] = 1.0;
     reset_meter_options();
     fuelMeterColorRGBA = 0x12345678;
 }
@@ -305,10 +326,14 @@ RendererStatus Renderer_set_blend(Renderer *renderer,
                                   RendererBlendMode blend)
 {
     blend_attempts++;
+    if (blend_attempts <= MAX_EVENTS)
+        blend_modes[blend_attempts - 1] = blend;
     operation_result_pending = 1;
     record_event(PAINT_EVENT_BLEND);
     if (renderer != &fake_renderer || !renderer->frame_active
-        || blend != RENDERER_BLEND_ALPHA) {
+        || (blend != RENDERER_BLEND_OPAQUE
+            && blend != RENDERER_BLEND_ALPHA
+            && blend != RENDERER_BLEND_ADDITIVE)) {
         return RENDERER_STATUS_INVALID_STATE;
     }
     return blend_result;
@@ -477,6 +502,304 @@ static int check_no_legacy_primitives(void)
     TEST_CHECK(legacy_end_calls == 0);
     TEST_CHECK(legacy_color_calls == 0);
     return 0;
+}
+
+static int check_hud_pointers_are_semantic(void)
+{
+    /* Odd centers and negative fractional endpoints pin truncation to zero. */
+    static const float speed_points[][2] = {
+        {25.0f, 15.0f},
+        {-4.0f, 0.0f}
+    };
+    static const float direction_points[][2] = {
+        {-6.0f, -4.0f},
+        {-12.0f, -8.0f}
+    };
+    RendererStatus result;
+
+    reset_frame();
+    draw_width = 51;
+    draw_height = 31;
+    selfVisible = 1;
+    selfVel.x = 13;
+    selfVel.y = -7;
+    ptr_move_fact = 2.25;
+    hudColorRGBA = UINT32_C(0x10203040);
+    dirPtrColorRGBA = UINT32_C(0x50607080);
+    heading = 7;
+    tbl_cos[heading] = -0.371;
+    tbl_sin[heading] = 0.233;
+
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stroke_attempts == 2);
+    TEST_CHECK(successful_strokes == 2);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    TEST_CHECK(check_stroke(
+        0, speed_points, 2, UINT32_C(0x10203040), 1) == 0);
+    TEST_CHECK(check_stroke(
+        1, direction_points, 2, UINT32_C(0x50607080), 1) == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    return check_no_legacy_primitives();
+}
+
+static int check_hud_pointer_visibility_conditions(void)
+{
+    static const float speed_points[][2] = {
+        {100.0f, 60.0f},
+        {98.0f, 60.0f}
+    };
+    RendererStatus result;
+
+    reset_frame();
+    selfVisible = 1;
+    selfVel.x = 2;
+    ptr_move_fact = 0.0;
+
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 0);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_frame();
+    selfVisible = 0;
+    selfVel.x = 2;
+    ptr_move_fact = 1.0;
+    dirPtrColorRGBA = UINT32_C(0x50607080);
+
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 0);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_frame();
+    selfVisible = 1;
+    ptr_move_fact = 1.0;
+
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 0);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_frame();
+    selfVisible = 1;
+    selfVel.x = 2;
+    ptr_move_fact = 1.0;
+    hudColorRGBA = 0;
+
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(check_stroke(
+        0, speed_points, 2, UINT32_C(0x00000000), 1) == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    return check_no_legacy_primitives();
+}
+
+static int check_pointer_failure_flushes_only_accepted_prefix(void)
+{
+    static const float speed_points[][2] = {
+        {100.0f, 60.0f},
+        {90.0f, 45.0f}
+    };
+    RendererStatus result;
+
+    reset_frame();
+    selfVisible = 1;
+    selfVel.x = 4;
+    selfVel.y = -6;
+    ptr_move_fact = 2.5;
+    hudColorRGBA = UINT32_C(0x10203040);
+    dirPtrColorRGBA = UINT32_C(0x50607080);
+    heading = 0;
+    stroke_failure_attempt = 2;
+    stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stroke_attempts == 2);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(check_stroke(
+        0, speed_points, 2, UINT32_C(0x10203040), 1) == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    stroke_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(stroke_attempts == 2);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    return check_no_legacy_primitives();
+}
+
+static int check_invalid_hud_pointer_geometry_is_rejected(void)
+{
+    RendererStatus result;
+
+    reset_frame();
+    selfVisible = 1;
+    selfVel.x = 1;
+    ptr_move_fact = HUGE_VAL;
+
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_frame();
+    selfVisible = 1;
+    selfVel.x = 2;
+    ptr_move_fact = (double)INT_MAX;
+
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_frame();
+    selfVisible = 1;
+    dirPtrColorRGBA = UINT32_C(0x50607080);
+    heading = -1;
+
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_frame();
+    selfVisible = 1;
+    dirPtrColorRGBA = UINT32_C(0x50607080);
+    heading = TABLE_SIZE;
+
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_frame();
+    selfVisible = 1;
+    dirPtrColorRGBA = UINT32_C(0x50607080);
+    tbl_cos[0] = NAN;
+
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_frame();
+    selfVisible = 1;
+    dirPtrColorRGBA = UINT32_C(0x50607080);
+    tbl_sin[0] = HUGE_VAL;
+
+    result = Sdlgui_test_paint_hud_pointers();
+
+    TEST_CHECK(result == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    return check_no_legacy_primitives();
 }
 
 static int check_null_selection_is_successful_noop(void)
@@ -952,6 +1275,14 @@ static int check_label_failure_blocks_later_same_frame_meters(void)
 
 int main(void)
 {
+    if (check_hud_pointers_are_semantic() != 0)
+        return 1;
+    if (check_hud_pointer_visibility_conditions() != 0)
+        return 1;
+    if (check_pointer_failure_flushes_only_accepted_prefix() != 0)
+        return 1;
+    if (check_invalid_hud_pointer_geometry_is_rejected() != 0)
+        return 1;
     if (check_null_selection_is_successful_noop() != 0)
         return 1;
     if (check_selection_outline_is_semantic() != 0)
