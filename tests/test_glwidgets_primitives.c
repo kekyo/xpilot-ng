@@ -14,6 +14,7 @@
 
 #define MAX_EVENTS 8
 #define MAX_DRAWS 8
+#define MAX_FILLS 8
 
 struct Renderer {
     int frame_active;
@@ -27,6 +28,7 @@ struct SdlRenderer {
 typedef enum DrawEvent {
     DRAW_EVENT_BLEND,
     DRAW_EVENT_TRIANGLES,
+    DRAW_EVENT_FILL_RECT,
     DRAW_EVENT_FLUSH
 } DrawEvent;
 
@@ -36,6 +38,14 @@ typedef struct FakeDraw {
     size_t vertex_count;
 } FakeDraw;
 
+typedef struct FakeFill {
+    float x;
+    float y;
+    float width;
+    float height;
+    RendererColor color;
+} FakeFill;
+
 static Renderer fake_renderer;
 static SdlRenderer fake_sdl_renderer = {
     &fake_renderer,
@@ -43,17 +53,33 @@ static SdlRenderer fake_sdl_renderer = {
 };
 static DrawEvent events[MAX_EVENTS];
 static FakeDraw draws[MAX_DRAWS];
+static FakeFill fills[MAX_FILLS];
 static int event_count;
+static int call_order;
+static int preflight_attempts;
+static int preflight_order;
+static int blend_order;
+static int draw_order;
+static int fill_order;
+static int flush_order;
+static int operation_result_pending;
 static int blend_attempts;
 static int draw_attempts;
 static int successful_draws;
+static int fill_attempts;
+static int successful_fills;
 static int flush_attempts;
 static int legacy_begin_calls;
 static int legacy_vertex_calls;
 static int legacy_color_calls;
 static RendererStatus blend_result;
 static RendererStatus draw_result;
+static RendererStatus fill_result;
 static RendererStatus flush_result;
+
+long loopsSlow;
+Uint32 redRGBA = 0xff0000ff;
+Uint32 greenRGBA = 0x00ff00ff;
 
 static int color_equal(RendererColor actual, RendererColor expected)
 {
@@ -79,16 +105,28 @@ static void reset_frame(void)
 {
     memset(events, 0, sizeof(events));
     memset(draws, 0, sizeof(draws));
+    memset(fills, 0, sizeof(fills));
     event_count = 0;
+    call_order = 0;
+    preflight_attempts = 0;
+    preflight_order = 0;
+    blend_order = 0;
+    draw_order = 0;
+    fill_order = 0;
+    flush_order = 0;
+    operation_result_pending = 0;
     blend_attempts = 0;
     draw_attempts = 0;
     successful_draws = 0;
+    fill_attempts = 0;
+    successful_fills = 0;
     flush_attempts = 0;
     legacy_begin_calls = 0;
     legacy_vertex_calls = 0;
     legacy_color_calls = 0;
     blend_result = RENDERER_STATUS_OK;
     draw_result = RENDERER_STATUS_OK;
+    fill_result = RENDERER_STATUS_OK;
     flush_result = RENDERER_STATUS_OK;
     fake_renderer.frame_active = 1;
     fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
@@ -119,6 +157,13 @@ Renderer *Sdl_renderer_frontend(SdlRenderer *renderer)
 RendererStatus Sdl_renderer_track_frame_result(
     SdlRenderer *renderer, RendererStatus status)
 {
+    if (operation_result_pending) {
+        operation_result_pending = 0;
+    } else {
+        preflight_attempts++;
+        if (preflight_order == 0)
+            preflight_order = ++call_order;
+    }
     if (renderer == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
     if (renderer->frontend == NULL || !renderer->frontend->frame_active)
@@ -140,6 +185,9 @@ RendererStatus Renderer_set_blend(Renderer *renderer,
                                   RendererBlendMode blend)
 {
     blend_attempts++;
+    if (blend_order == 0)
+        blend_order = ++call_order;
+    operation_result_pending = 1;
     record_event(DRAW_EVENT_BLEND);
     if (renderer != &fake_renderer || !renderer->frame_active
         || blend != RENDERER_BLEND_ALPHA) {
@@ -156,6 +204,9 @@ RendererStatus Renderer_draw_triangles(Renderer *renderer,
     FakeDraw *draw;
 
     draw_attempts++;
+    if (draw_order == 0)
+        draw_order = ++call_order;
+    operation_result_pending = 1;
     record_event(DRAW_EVENT_TRIANGLES);
     if (renderer != &fake_renderer || !renderer->frame_active
         || texture != NULL || vertices == NULL || vertex_count != 3) {
@@ -172,9 +223,39 @@ RendererStatus Renderer_draw_triangles(Renderer *renderer,
     return RENDERER_STATUS_OK;
 }
 
+RendererStatus Renderer_fill_rect(Renderer *renderer,
+                                  float x, float y,
+                                  float width, float height,
+                                  RendererColor color)
+{
+    FakeFill *fill;
+
+    fill_attempts++;
+    if (fill_order == 0)
+        fill_order = ++call_order;
+    operation_result_pending = 1;
+    record_event(DRAW_EVENT_FILL_RECT);
+    if (renderer != &fake_renderer || !renderer->frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (fill_result != RENDERER_STATUS_OK)
+        return fill_result;
+    if (successful_fills >= MAX_FILLS)
+        return RENDERER_STATUS_OUT_OF_MEMORY;
+    fill = &fills[successful_fills++];
+    fill->x = x;
+    fill->y = y;
+    fill->width = width;
+    fill->height = height;
+    fill->color = color;
+    return RENDERER_STATUS_OK;
+}
+
 RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
 {
     flush_attempts++;
+    if (flush_order == 0)
+        flush_order = ++call_order;
+    operation_result_pending = 1;
     record_event(DRAW_EVENT_FLUSH);
     if (renderer != &fake_sdl_renderer
         || renderer->frontend == NULL
@@ -229,8 +310,18 @@ void GLAPIENTRY glEnd(void)
 
 static void destroy_widget(GLWidget *widget)
 {
+    GLWidget *child;
+    GLWidget *next;
+
     if (widget == NULL)
         return;
+    child = widget->children;
+    while (child != NULL) {
+        next = child->next;
+        child->next = NULL;
+        destroy_widget(child);
+        child = next;
+    }
     free(widget->wid_info);
     free(widget);
 }
@@ -244,6 +335,11 @@ static int check_successful_draw(RendererColor expected_color,
     TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
     TEST_CHECK(events[1] == DRAW_EVENT_TRIANGLES);
     TEST_CHECK(events[2] == DRAW_EVENT_FLUSH);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(draw_order == 3);
+    TEST_CHECK(flush_order == 4);
     TEST_CHECK(blend_attempts == 1);
     TEST_CHECK(draw_attempts == 1);
     TEST_CHECK(successful_draws == 1);
@@ -257,6 +353,37 @@ static int check_successful_draw(RendererColor expected_color,
             expected_points[index][0], expected_points[index][1],
             expected_color));
     }
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    return 0;
+}
+
+static int check_successful_fill(float expected_x, float expected_y,
+                                 float expected_width,
+                                 float expected_height,
+                                 RendererColor expected_color)
+{
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+    TEST_CHECK(events[2] == DRAW_EVENT_FLUSH);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == 3);
+    TEST_CHECK(flush_order == 4);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(fills[0].x == expected_x);
+    TEST_CHECK(fills[0].y == expected_y);
+    TEST_CHECK(fills[0].width == expected_width);
+    TEST_CHECK(fills[0].height == expected_height);
+    TEST_CHECK(color_equal(fills[0].color, expected_color));
     TEST_CHECK(legacy_begin_calls == 0);
     TEST_CHECK(legacy_vertex_calls == 0);
     TEST_CHECK(legacy_color_calls == 0);
@@ -297,6 +424,106 @@ static void count_action(void *data)
     int *count = data;
 
     (*count)++;
+}
+
+static int check_button_geometry_colors_and_state(void)
+{
+    Uint32 normal_rgba = 0x12345678;
+    Uint32 pressed_rgba = 0x90abcdef;
+    const RendererColor normal_color = {0x12, 0x34, 0x56, 0x78};
+    const RendererColor pressed_color = {0x90, 0xab, 0xcd, 0xef};
+    const RendererColor default_normal_color = {0x00, 0xff, 0x00, 0xff};
+    const RendererColor default_pressed_color = {0xff, 0x00, 0x00, 0xff};
+    SDL_Rect bounds = {11, 17, 9, 7};
+    GLWidget *widget;
+    ButtonWidget *info;
+    int action_count = 0;
+
+    widget = Init_ButtonWidget(&normal_rgba, &pressed_rgba, 3,
+                               count_action, &action_count);
+    TEST_CHECK(widget != NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+
+    loopsSlow = 100;
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_fill(
+        11.0f, 17.0f, 9.0f, 7.0f, normal_color) == 0);
+    TEST_CHECK(!info->pressed);
+    TEST_CHECK(action_count == 0);
+
+    loopsSlow = 200;
+    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    TEST_CHECK(info->pressed);
+    TEST_CHECK(info->press_time == 200);
+    TEST_CHECK(action_count == 1);
+    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    TEST_CHECK(action_count == 1);
+
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_fill(
+        11.0f, 17.0f, 9.0f, 7.0f, pressed_color) == 0);
+    TEST_CHECK(info->pressed);
+    TEST_CHECK(action_count == 1);
+
+    loopsSlow = 203;
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_fill(
+        11.0f, 17.0f, 9.0f, 7.0f, pressed_color) == 0);
+    TEST_CHECK(!info->pressed);
+    TEST_CHECK(action_count == 1);
+
+    loopsSlow = 204;
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_fill(
+        11.0f, 17.0f, 9.0f, 7.0f, normal_color) == 0);
+    TEST_CHECK(action_count == 1);
+    destroy_widget(widget);
+
+    widget = Init_ButtonWidget(NULL, NULL, 2,
+                               count_action, &action_count);
+    TEST_CHECK(widget != NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+
+    loopsSlow = 300;
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_fill(
+        11.0f, 17.0f, 9.0f, 7.0f, default_normal_color) == 0);
+    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    TEST_CHECK(action_count == 2);
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_fill(
+        11.0f, 17.0f, 9.0f, 7.0f, default_pressed_color) == 0);
+
+    destroy_widget(widget);
+    return 0;
+}
+
+static int check_scrollbar_geometry_and_color(void)
+{
+    const RendererColor background_color = {0x00, 0x00, 0x00, 0x44};
+    SDL_Rect bounds = {13, 19, 21, 27};
+    GLWidget *widget = Init_ScrollbarWidget(
+        false, 0.25f, 0.5f, SB_VERTICAL, NULL, NULL);
+
+    TEST_CHECK(widget != NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_fill(
+        13.0f, 19.0f, 21.0f, 27.0f, background_color) == 0);
+
+    destroy_widget(widget);
+    return 0;
 }
 
 static int check_state_colors(void)
@@ -434,6 +661,116 @@ static int check_failure_short_circuit(void)
     return 0;
 }
 
+static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
+{
+    TEST_CHECK(widget != NULL);
+
+    reset_frame();
+    blend_result = RENDERER_STATUS_INVALID_ARGUMENT;
+    widget->Draw(widget);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    widget->Draw(widget);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+
+    reset_frame();
+    fill_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    widget->Draw(widget);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == 3);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    widget->Draw(widget);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+
+    reset_frame();
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    widget->Draw(widget);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
+    TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
+    TEST_CHECK(events[2] == DRAW_EVENT_FLUSH);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(blend_order == 2);
+    TEST_CHECK(fill_order == 3);
+    TEST_CHECK(flush_order == 4);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    widget->Draw(widget);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+
+    return 0;
+}
+
+static int check_fill_failure_short_circuit(void)
+{
+    Uint32 normal_rgba = 0x12345678;
+    Uint32 pressed_rgba = 0x90abcdef;
+    SDL_Rect bounds = {7, 9, 11, 13};
+    GLWidget *button = Init_ButtonWidget(
+        &normal_rgba, &pressed_rgba, 3, NULL, NULL);
+    GLWidget *scrollbar = Init_ScrollbarWidget(
+        false, 0.25f, 0.5f, SB_HORISONTAL, NULL, NULL);
+
+    TEST_CHECK(button != NULL);
+    TEST_CHECK(scrollbar != NULL);
+    SetBounds_GLWidget(button, &bounds);
+    SetBounds_GLWidget(scrollbar, &bounds);
+    TEST_CHECK(check_fill_failure_short_circuit_for_widget(button) == 0);
+    TEST_CHECK(check_fill_failure_short_circuit_for_widget(scrollbar) == 0);
+
+    destroy_widget(button);
+    destroy_widget(scrollbar);
+    return 0;
+}
+
 static int check_tap_is_consumed_when_flush_fails(void)
 {
     GLWidget *widget = Init_ArrowWidget(
@@ -463,5 +800,8 @@ int main(void)
     TEST_CHECK(check_state_colors() == 0);
     TEST_CHECK(check_failure_short_circuit() == 0);
     TEST_CHECK(check_tap_is_consumed_when_flush_fails() == 0);
+    TEST_CHECK(check_button_geometry_colors_and_state() == 0);
+    TEST_CHECK(check_scrollbar_geometry_and_color() == 0);
+    TEST_CHECK(check_fill_failure_short_circuit() == 0);
     return 0;
 }

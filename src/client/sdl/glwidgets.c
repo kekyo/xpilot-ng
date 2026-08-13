@@ -68,6 +68,36 @@ static RendererStatus Track_semantic_widget(
     return Sdl_renderer_track_frame_result(sdl_renderer, status);
 }
 
+static RendererStatus Fill_semantic_widget_bounds(
+    SdlRenderer *sdl_renderer, Renderer *renderer,
+    const SDL_Rect *bounds, Uint32 rgba)
+{
+    RendererStatus status;
+
+    if (sdl_renderer == NULL || renderer == NULL || bounds == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (bounds->w <= 0 || bounds->h <= 0)
+	return RENDERER_STATUS_OK;
+    status = Track_semantic_widget(
+	sdl_renderer,
+	Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA));
+    if (status == RENDERER_STATUS_OK) {
+	status = Track_semantic_widget(
+	    sdl_renderer,
+	    Renderer_fill_rect(
+		renderer,
+		(float)bounds->x, (float)bounds->y,
+		(float)bounds->w, (float)bounds->h,
+		Renderer_color_from_rgba32(rgba)));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Track_semantic_widget(
+	    sdl_renderer,
+	    Sdl_renderer_flush_preserving_legacy(sdl_renderer));
+    }
+    return status;
+}
+
 GLWidget *Init_EmptyBaseGLWidget( void )
 {
     GLWidget *tmp = XMALLOC(GLWidget, 1);
@@ -745,10 +775,16 @@ static void button_ButtonWidget( Uint8 button, Uint8 state, Uint16 x, Uint16 y, 
 static void Paint_ButtonWidget( GLWidget *widget )
 {
     ButtonWidget *wid_info;
-    int color;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    Uint32 color;
     
     if (!widget) return;	
     if (!(wid_info = (ButtonWidget *)(widget->wid_info))) return;
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
     
     if (wid_info->pressed) {
     	if (wid_info->pressed_color)
@@ -761,14 +797,11 @@ static void Paint_ButtonWidget( GLWidget *widget )
 	    color = *(wid_info->normal_color);
 	else color = greenRGBA;
     }
-    
-    set_alphacolor(color);
-    glBegin(GL_QUADS);
-    	glVertex2i( widget->bounds.x 	    	    	, widget->bounds.y	    	    	);
-    	glVertex2i( widget->bounds.x	    	    	, widget->bounds.y+widget->bounds.h	);
-    	glVertex2i( widget->bounds.x+widget->bounds.w	, widget->bounds.y+widget->bounds.h	);
-    	glVertex2i( widget->bounds.x+widget->bounds.w	, widget->bounds.y	    	    	);
-    glEnd();
+
+    status = Fill_semantic_widget_bounds(
+	sdl_renderer, renderer, &widget->bounds, color);
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw button widget");
 }
 
 GLWidget *Init_ButtonWidget( Uint32 *normal_color, Uint32 *pressed_color, Uint8 depress_time, void (*action)(void *data), void *actiondata)
@@ -971,16 +1004,19 @@ static void SetBounds_ScrollbarWidget( GLWidget *widget, SDL_Rect *b )
 static void Paint_ScrollbarWidget( GLWidget *widget )
 {
     static Uint32 bgcolor  = 0x00000044;
-    SDL_Rect *b = &(widget->bounds);
-    
-    set_alphacolor( bgcolor );
-    
-    glBegin(GL_QUADS);
-    	glVertex2i(b->x     	, b->y);
-    	glVertex2i(b->x + b->w	, b->y);
-    	glVertex2i(b->x + b->w	, b->y + b->h);
-    	glVertex2i(b->x     	, b->y + b->h);
-    glEnd();
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+
+    if (widget == NULL)
+	return;
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
+    status = Fill_semantic_widget_bounds(
+	sdl_renderer, renderer, &widget->bounds, bgcolor);
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw scrollbar widget");
 }
 
 static void motion_ScrollbarWidget( Sint16 xrel, Sint16 yrel, Uint16 x, Uint16 y, void *data )
