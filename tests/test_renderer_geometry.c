@@ -3,6 +3,7 @@
 #include "renderer.h"
 #include "renderer_backend.h"
 
+#include <math.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -546,6 +547,158 @@ static int check_screen_space_stroke_and_point_sizes(void)
     return 0;
 }
 
+static int check_colored_stroke_geometry(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor red = {255, 0, 0, 255};
+    const RendererColor green = {0, 255, 0, 255};
+    const RendererColor blue = {0, 0, 255, 255};
+    const RendererColor white = {255, 255, 255, 255};
+    const RendererTransform2D scaled = {
+        {2.0f, 0.0f, 0.0f,
+         0.0f, 3.0f, 0.0f,
+         4.0f, 5.0f, 1.0f}
+    };
+    const RendererPoint2D points[] = {
+        {1.0f, 2.0f},
+        {4.0f, 2.0f},
+        {4.0f, 4.0f},
+        {1.0f, 4.0f}
+    };
+    const RendererColor colors[] = {red, green, blue, white};
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+    const captured_draw_t *draw;
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 40, 40, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_transform_2d(renderer, scaled)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_colored_path(
+                   renderer, points, colors, 4, 2.0f, 1)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 0);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 1);
+    draw = &backend.draws[0];
+    TEST_CHECK(draw->vertex_count == 24);
+
+    /* The transform is applied to the path first; the normal is then a
+     * physical two-pixel expansion even though the scale is nonuniform. */
+    TEST_CHECK(vertex_equal(draw->vertices[0], 6.0f, 10.0f,
+                            0.0f, 0.0f, red));
+    TEST_CHECK(vertex_equal(draw->vertices[1], 12.0f, 10.0f,
+                            0.0f, 0.0f, green));
+    TEST_CHECK(vertex_equal(draw->vertices[2], 12.0f, 12.0f,
+                            0.0f, 0.0f, green));
+    TEST_CHECK(vertex_equal(draw->vertices[3], 6.0f, 10.0f,
+                            0.0f, 0.0f, red));
+    TEST_CHECK(vertex_equal(draw->vertices[4], 12.0f, 12.0f,
+                            0.0f, 0.0f, green));
+    TEST_CHECK(vertex_equal(draw->vertices[5], 6.0f, 12.0f,
+                            0.0f, 0.0f, red));
+
+    /* The third segment retains the colors of its endpoints. */
+    TEST_CHECK(vertex_equal(draw->vertices[12], 12.0f, 18.0f,
+                            0.0f, 0.0f, blue));
+    TEST_CHECK(vertex_equal(draw->vertices[13], 6.0f, 18.0f,
+                            0.0f, 0.0f, white));
+    TEST_CHECK(vertex_equal(draw->vertices[14], 6.0f, 16.0f,
+                            0.0f, 0.0f, white));
+    TEST_CHECK(vertex_equal(draw->vertices[15], 12.0f, 18.0f,
+                            0.0f, 0.0f, blue));
+    TEST_CHECK(vertex_equal(draw->vertices[16], 6.0f, 16.0f,
+                            0.0f, 0.0f, white));
+    TEST_CHECK(vertex_equal(draw->vertices[17], 12.0f, 16.0f,
+                            0.0f, 0.0f, blue));
+
+    /* The final segment closes the path from the last point back to the
+     * first, with the corresponding endpoint colours. */
+    TEST_CHECK(vertex_equal(draw->vertices[18], 5.0f, 17.0f,
+                            0.0f, 0.0f, white));
+    TEST_CHECK(vertex_equal(draw->vertices[19], 5.0f, 11.0f,
+                            0.0f, 0.0f, red));
+    TEST_CHECK(vertex_equal(draw->vertices[20], 7.0f, 11.0f,
+                            0.0f, 0.0f, red));
+    TEST_CHECK(vertex_equal(draw->vertices[21], 5.0f, 17.0f,
+                            0.0f, 0.0f, white));
+    TEST_CHECK(vertex_equal(draw->vertices[22], 7.0f, 11.0f,
+                            0.0f, 0.0f, red));
+    TEST_CHECK(vertex_equal(draw->vertices[23], 7.0f, 17.0f,
+                            0.0f, 0.0f, white));
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
+static int check_colored_stroke_validation(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor color = {80, 90, 100, 110};
+    const RendererPoint2D points[] = {{1.0f, 1.0f}, {1.0f, 1.0f}};
+    const RendererColor colors[] = {color, color};
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 20, 20, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_colored_path(
+                   renderer, NULL, colors, 2, 2.0f, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_colored_path(
+                   renderer, points, NULL, 2, 2.0f, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_colored_path(
+                   renderer, points, colors, 1, 2.0f, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_colored_path(
+                   renderer, points, colors, 2, 0.0f, 0)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_stroke_colored_path(
+                   renderer, points, colors, 2, 2.0f, 0)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 0);
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
+static int check_extremely_short_colored_stroke(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor red = {255, 0, 0, 255};
+    const RendererColor blue = {0, 0, 255, 255};
+    const float smallest_positive = nextafterf(0.0f, 1.0f);
+    const RendererPoint2D points[] = {
+        {0.0f, 0.0f}, {smallest_positive, 0.0f}
+    };
+    const RendererColor colors[] = {red, blue};
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 20, 20, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_stroke_colored_path(
+                   renderer, points, colors, 2, 2.0f, 0)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(backend.draws[0].vertex_count == 6);
+    TEST_CHECK(vertex_equal(backend.draws[0].vertices[0],
+                            0.0f, -1.0f, 0.0f, 0.0f, red));
+    TEST_CHECK(vertex_equal(backend.draws[0].vertices[2],
+                            smallest_positive, 1.0f,
+                            0.0f, 0.0f, blue));
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(check_quad_triangulation() == 0);
@@ -555,5 +708,8 @@ int main(void)
     TEST_CHECK(check_closed_and_zero_length_strokes() == 0);
     TEST_CHECK(check_point_geometry() == 0);
     TEST_CHECK(check_screen_space_stroke_and_point_sizes() == 0);
+    TEST_CHECK(check_colored_stroke_geometry() == 0);
+    TEST_CHECK(check_colored_stroke_validation() == 0);
+    TEST_CHECK(check_extremely_short_colored_stroke() == 0);
     return 0;
 }

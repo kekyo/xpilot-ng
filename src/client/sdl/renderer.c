@@ -520,10 +520,10 @@ RendererStatus Renderer_draw_triangles(Renderer *renderer,
                          renderer->transform);
 }
 
-RendererStatus Renderer_stroke_path(Renderer *renderer,
-                                    const RendererPoint2D *points,
-                                    size_t point_count, float width,
-                                    RendererColor color, int closed)
+static RendererStatus Queue_stroke_path(
+    Renderer *renderer, const RendererPoint2D *points,
+    const RendererColor *point_colors, size_t point_count, float width,
+    const RendererColor *constant_color, int closed)
 {
     RendererStatus status = Check_draw_state(renderer);
     RendererVertex2D *vertices;
@@ -534,16 +534,19 @@ RendererStatus Renderer_stroke_path(Renderer *renderer,
 
     if (status != RENDERER_STATUS_OK)
         return status;
-    if (points == NULL || point_count < 2 || !isfinite(width) || width <= 0.0f)
+    if (points == NULL || point_count < 2 || !isfinite(width)
+        || width <= 0.0f
+        || ((point_colors == NULL) == (constant_color == NULL))) {
         return RENDERER_STATUS_INVALID_ARGUMENT;
-    for (segment = 0; segment < point_count; segment++) {
-        if (!isfinite(points[segment].x) || !isfinite(points[segment].y))
-            return RENDERER_STATUS_INVALID_ARGUMENT;
     }
     maximum_segments = point_count - 1 + (closed != 0);
     if (maximum_segments > SIZE_MAX / 6
         || maximum_segments * 6 > SIZE_MAX / sizeof(*vertices)) {
         return RENDERER_STATUS_OUT_OF_MEMORY;
+    }
+    for (segment = 0; segment < point_count; segment++) {
+        if (!isfinite(points[segment].x) || !isfinite(points[segment].y))
+            return RENDERER_STATUS_INVALID_ARGUMENT;
     }
     vertices = malloc(maximum_segments * 6 * sizeof(*vertices));
     if (vertices == NULL)
@@ -560,6 +563,16 @@ RendererStatus Renderer_stroke_path(Renderer *renderer,
         float length;
         float normal_x;
         float normal_y;
+        float first_minus_x;
+        float first_minus_y;
+        float first_plus_x;
+        float first_plus_y;
+        float second_minus_x;
+        float second_minus_y;
+        float second_plus_x;
+        float second_plus_y;
+        RendererColor first_color;
+        RendererColor second_color;
 
         if (second == point_count)
             second = 0;
@@ -579,26 +592,39 @@ RendererStatus Renderer_stroke_path(Renderer *renderer,
             free(vertices);
             return RENDERER_STATUS_INVALID_ARGUMENT;
         }
-        normal_x = -dy * half_width / length;
-        normal_y = dx * half_width / length;
+        normal_x = -(dy / length) * half_width;
+        normal_y = (dx / length) * half_width;
+        first_minus_x = first_point.x - normal_x;
+        first_minus_y = first_point.y - normal_y;
+        first_plus_x = first_point.x + normal_x;
+        first_plus_y = first_point.y + normal_y;
+        second_minus_x = second_point.x - normal_x;
+        second_minus_y = second_point.y - normal_y;
+        second_plus_x = second_point.x + normal_x;
+        second_plus_y = second_point.y + normal_y;
+        if (!isfinite(first_minus_x) || !isfinite(first_minus_y)
+            || !isfinite(first_plus_x) || !isfinite(first_plus_y)
+            || !isfinite(second_minus_x) || !isfinite(second_minus_y)
+            || !isfinite(second_plus_x) || !isfinite(second_plus_y)) {
+            free(vertices);
+            return RENDERER_STATUS_INVALID_ARGUMENT;
+        }
+        first_color = point_colors != NULL
+            ? point_colors[first] : *constant_color;
+        second_color = point_colors != NULL
+            ? point_colors[second] : *constant_color;
         Set_vertex(&vertices[vertex_count++],
-                   first_point.x - normal_x,
-                   first_point.y - normal_y, 0.0f, 0.0f, color);
+                   first_minus_x, first_minus_y, 0.0f, 0.0f, first_color);
         Set_vertex(&vertices[vertex_count++],
-                   second_point.x - normal_x,
-                   second_point.y - normal_y, 0.0f, 0.0f, color);
+                   second_minus_x, second_minus_y, 0.0f, 0.0f, second_color);
         Set_vertex(&vertices[vertex_count++],
-                   second_point.x + normal_x,
-                   second_point.y + normal_y, 0.0f, 0.0f, color);
+                   second_plus_x, second_plus_y, 0.0f, 0.0f, second_color);
         Set_vertex(&vertices[vertex_count++],
-                   first_point.x - normal_x,
-                   first_point.y - normal_y, 0.0f, 0.0f, color);
+                   first_minus_x, first_minus_y, 0.0f, 0.0f, first_color);
         Set_vertex(&vertices[vertex_count++],
-                   second_point.x + normal_x,
-                   second_point.y + normal_y, 0.0f, 0.0f, color);
+                   second_plus_x, second_plus_y, 0.0f, 0.0f, second_color);
         Set_vertex(&vertices[vertex_count++],
-                   first_point.x + normal_x,
-                   first_point.y + normal_y, 0.0f, 0.0f, color);
+                   first_plus_x, first_plus_y, 0.0f, 0.0f, first_color);
     }
     if (vertex_count == 0) {
         free(vertices);
@@ -606,6 +632,23 @@ RendererStatus Renderer_stroke_path(Renderer *renderer,
     }
     return Queue_command(renderer, vertices, vertex_count, NULL, NULL,
                          identity_transform);
+}
+
+RendererStatus Renderer_stroke_path(Renderer *renderer,
+                                    const RendererPoint2D *points,
+                                    size_t point_count, float width,
+                                    RendererColor color, int closed)
+{
+    return Queue_stroke_path(renderer, points, NULL, point_count, width,
+                             &color, closed);
+}
+
+RendererStatus Renderer_stroke_colored_path(
+    Renderer *renderer, const RendererPoint2D *points,
+    const RendererColor *colors, size_t point_count, float width, int closed)
+{
+    return Queue_stroke_path(renderer, points, colors, point_count, width,
+                             NULL, closed);
 }
 
 RendererStatus Renderer_draw_point(Renderer *renderer, float x, float y,

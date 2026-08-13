@@ -14,6 +14,10 @@
 
 #define MAX_TEXTURES 8
 #define MAX_SPRITES 8
+#define MAX_TRIANGLES 4
+#define MAX_PATH_POINTS 8
+#define MAX_RECTS 8
+#define MAX_SCISSOR_CALLS 4
 #define MAX_EVENTS 32
 #define FLOAT_TOLERANCE 0.0001f
 
@@ -27,6 +31,7 @@ struct RendererTexture {
 
 struct SdlRenderer {
     Renderer *frontend;
+    RendererStatus frame_result;
 };
 
 typedef struct FakeTexture {
@@ -50,16 +55,64 @@ typedef struct FakeSprite {
     RendererColor tint;
 } FakeSprite;
 
+typedef struct FakeTriangles {
+    RendererVertex2D vertices[6];
+    size_t vertex_count;
+} FakeTriangles;
+
+typedef struct FakePath {
+    RendererPoint2D points[MAX_PATH_POINTS];
+    RendererColor colors[MAX_PATH_POINTS];
+    size_t point_count;
+    float width;
+    int closed;
+    RendererColor color;
+    int colored;
+} FakePath;
+
+typedef struct FakeRect {
+    float x;
+    float y;
+    float width;
+    float height;
+    RendererColor color;
+} FakeRect;
+
+typedef struct FakeScissorCall {
+    RendererRect scissor;
+    int enabled;
+    int paint_events_before;
+} FakeScissorCall;
+
 typedef enum PaintEvent {
     PAINT_EVENT_SPRITE,
+    PAINT_EVENT_TRIANGLES,
+    PAINT_EVENT_STROKE,
+    PAINT_EVENT_RECT,
+    PAINT_EVENT_COLORED_STROKE,
     PAINT_EVENT_FLUSH,
     PAINT_EVENT_LEGACY
 } PaintEvent;
+
+typedef enum FakeOperation {
+    FAKE_OPERATION_NONE,
+    FAKE_OPERATION_BLEND,
+    FAKE_OPERATION_SPRITE,
+    FAKE_OPERATION_TRIANGLES,
+    FAKE_OPERATION_STROKE,
+    FAKE_OPERATION_RECT,
+    FAKE_OPERATION_COLORED_STROKE,
+    FAKE_OPERATION_FLUSH
+} FakeOperation;
 
 static Renderer fake_renderer;
 static SdlRenderer fake_sdl_renderer = {&fake_renderer};
 static FakeTexture fake_textures[MAX_TEXTURES];
 static FakeSprite fake_sprites[MAX_SPRITES];
+static FakeTriangles fake_triangles[MAX_TRIANGLES];
+static FakePath fake_strokes[MAX_PATH_POINTS];
+static FakeRect fake_rects[MAX_RECTS];
+static FakeScissorCall fake_scissor_calls[MAX_SCISSOR_CALLS];
 static PaintEvent paint_events[MAX_EVENTS];
 static int texture_create_attempts;
 static int texture_create_successes;
@@ -68,10 +121,20 @@ static int texture_update_calls;
 static int texture_destroy_calls;
 static int resource_calls_during_frame;
 static int sprite_calls;
+static int triangle_calls;
+static int stroke_calls;
+static int rect_calls;
+static int colored_stroke_calls;
 static int blend_calls;
+static RendererBlendMode blend_modes[4];
 static int preserving_flush_calls;
+static int scissor_calls;
 static int paint_event_count;
 static int forbidden_legacy_texture_calls;
+static int legacy_begin_calls;
+static int legacy_vertex_calls;
+static int legacy_color_calls;
+static FakeOperation fail_operation;
 static xp_option_t *radar_geometry_option;
 
 setup_t *Setup;
@@ -120,16 +183,38 @@ static int color_equal(RendererColor actual, RendererColor expected)
         && actual.blue == expected.blue && actual.alpha == expected.alpha;
 }
 
+static int vertex_equal(const RendererVertex2D *vertex,
+                        float x, float y, float u, float v,
+                        RendererColor color)
+{
+    return float_equal(vertex->x, x) && float_equal(vertex->y, y)
+        && float_equal(vertex->u, u) && float_equal(vertex->v, v)
+        && color_equal(vertex->color, color);
+}
+
 static int rect_equal(SDL_Rect actual, SDL_Rect expected)
 {
     return actual.x == expected.x && actual.y == expected.y
         && actual.w == expected.w && actual.h == expected.h;
 }
 
+static int renderer_rect_equal(RendererRect actual, RendererRect expected)
+{
+    return actual.x == expected.x && actual.y == expected.y
+        && actual.width == expected.width
+        && actual.height == expected.height;
+}
+
 static void record_paint_event(PaintEvent event)
 {
     if (paint_event_count < MAX_EVENTS)
         paint_events[paint_event_count++] = event;
+}
+
+static RendererStatus fake_operation_status(FakeOperation operation)
+{
+    return fail_operation == operation
+        ? RENDERER_STATUS_BACKEND_ERROR : RENDERER_STATUS_OK;
 }
 
 static FakeTexture *fake_texture_from_handle(RendererTexture *texture)
@@ -166,6 +251,26 @@ RendererColor Renderer_color_from_rgba32(uint32_t rgba)
     };
 
     return color;
+}
+
+RendererStatus Sdl_renderer_track_frame_result(
+    SdlRenderer *renderer, RendererStatus status)
+{
+    if (renderer == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (renderer->frontend == NULL || !renderer->frontend->frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (renderer->frame_result == RENDERER_STATUS_OK
+        && status != RENDERER_STATUS_OK) {
+        renderer->frame_result = status;
+    }
+    return renderer->frame_result;
+}
+
+RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
+{
+    return renderer == NULL ? RENDERER_STATUS_INVALID_ARGUMENT
+                             : renderer->frame_result;
 }
 
 RendererStatus Renderer_texture_create_with_desc(
@@ -243,11 +348,13 @@ RendererStatus Renderer_set_blend(Renderer *renderer,
                                   RendererBlendMode blend)
 {
     if (renderer != &fake_renderer || !renderer->frame_active
-        || blend != RENDERER_BLEND_ALPHA) {
+        || blend != RENDERER_BLEND_ALPHA && blend != RENDERER_BLEND_OPAQUE
+        || blend_calls >= (int)(sizeof(blend_modes) / sizeof(blend_modes[0]))) {
         return RENDERER_STATUS_INVALID_STATE;
     }
+    blend_modes[blend_calls] = blend;
     blend_calls++;
-    return RENDERER_STATUS_OK;
+    return fake_operation_status(FAKE_OPERATION_BLEND);
 }
 
 RendererStatus Renderer_draw_sprite(Renderer *renderer,
@@ -265,6 +372,9 @@ RendererStatus Renderer_draw_sprite(Renderer *renderer,
         || sprite_calls >= MAX_SPRITES) {
         return RENDERER_STATUS_INVALID_STATE;
     }
+    if (fake_operation_status(FAKE_OPERATION_SPRITE)
+            != RENDERER_STATUS_OK)
+        return RENDERER_STATUS_BACKEND_ERROR;
     sprite = &fake_sprites[sprite_calls++];
     sprite->texture = texture;
     sprite->left = left;
@@ -280,6 +390,110 @@ RendererStatus Renderer_draw_sprite(Renderer *renderer,
     return RENDERER_STATUS_OK;
 }
 
+RendererStatus Renderer_draw_triangles(Renderer *renderer,
+                                       RendererTexture *texture,
+                                       const RendererVertex2D *vertices,
+                                       size_t vertex_count)
+{
+    FakeTriangles *triangles;
+
+    (void)texture;
+    triangle_calls++;
+    if (renderer != &fake_renderer || !renderer->frame_active
+        || vertices == NULL || vertex_count != 6
+        || triangle_calls > MAX_TRIANGLES) {
+        return RENDERER_STATUS_INVALID_STATE;
+    }
+    if (fake_operation_status(FAKE_OPERATION_TRIANGLES)
+            != RENDERER_STATUS_OK)
+        return RENDERER_STATUS_BACKEND_ERROR;
+    triangles = &fake_triangles[triangle_calls - 1];
+    memcpy(triangles->vertices, vertices,
+           vertex_count * sizeof(*vertices));
+    triangles->vertex_count = vertex_count;
+    record_paint_event(PAINT_EVENT_TRIANGLES);
+    return RENDERER_STATUS_OK;
+}
+
+RendererStatus Renderer_stroke_path(Renderer *renderer,
+                                    const RendererPoint2D *points,
+                                    size_t point_count, float width,
+                                    RendererColor color, int closed)
+{
+    FakePath *path;
+
+    stroke_calls++;
+    if (renderer != &fake_renderer || !renderer->frame_active
+        || points == NULL || point_count == 0
+        || point_count > MAX_PATH_POINTS || stroke_calls > MAX_PATH_POINTS) {
+        return RENDERER_STATUS_INVALID_STATE;
+    }
+    if (fake_operation_status(FAKE_OPERATION_STROKE)
+            != RENDERER_STATUS_OK)
+        return RENDERER_STATUS_BACKEND_ERROR;
+    path = &fake_strokes[stroke_calls - 1];
+    memcpy(path->points, points, point_count * sizeof(*points));
+    path->point_count = point_count;
+    path->width = width;
+    path->closed = closed;
+    path->color = color;
+    path->colored = 0;
+    record_paint_event(PAINT_EVENT_STROKE);
+    return RENDERER_STATUS_OK;
+}
+
+RendererStatus Renderer_stroke_colored_path(
+    Renderer *renderer, const RendererPoint2D *points,
+    const RendererColor *colors, size_t point_count,
+    float width, int closed)
+{
+    FakePath *path;
+
+    colored_stroke_calls++;
+    if (renderer != &fake_renderer || !renderer->frame_active
+        || points == NULL || colors == NULL || point_count == 0
+        || point_count > MAX_PATH_POINTS
+        || colored_stroke_calls > MAX_PATH_POINTS) {
+        return RENDERER_STATUS_INVALID_STATE;
+    }
+    if (fake_operation_status(FAKE_OPERATION_COLORED_STROKE)
+            != RENDERER_STATUS_OK)
+        return RENDERER_STATUS_BACKEND_ERROR;
+    path = &fake_strokes[stroke_calls + colored_stroke_calls - 1];
+    memcpy(path->points, points, point_count * sizeof(*points));
+    memcpy(path->colors, colors, point_count * sizeof(*colors));
+    path->point_count = point_count;
+    path->width = width;
+    path->closed = closed;
+    path->colored = 1;
+    record_paint_event(PAINT_EVENT_COLORED_STROKE);
+    return RENDERER_STATUS_OK;
+}
+
+RendererStatus Renderer_fill_rect(Renderer *renderer, float x, float y,
+                                  float width, float height,
+                                  RendererColor color)
+{
+    FakeRect *rect;
+
+    rect_calls++;
+    if (renderer != &fake_renderer || !renderer->frame_active
+        || rect_calls > MAX_RECTS) {
+        return RENDERER_STATUS_INVALID_STATE;
+    }
+    if (fake_operation_status(FAKE_OPERATION_RECT)
+            != RENDERER_STATUS_OK)
+        return RENDERER_STATUS_BACKEND_ERROR;
+    rect = &fake_rects[rect_calls - 1];
+    rect->x = x;
+    rect->y = y;
+    rect->width = width;
+    rect->height = height;
+    rect->color = color;
+    record_paint_event(PAINT_EVENT_RECT);
+    return RENDERER_STATUS_OK;
+}
+
 SdlRenderer *Get_sdl_renderer(void)
 {
     return &fake_sdl_renderer;
@@ -290,13 +504,30 @@ Renderer *Sdl_renderer_frontend(SdlRenderer *renderer)
     return renderer == &fake_sdl_renderer ? renderer->frontend : NULL;
 }
 
+RendererStatus Sdl_renderer_set_logical_scissor(
+    SdlRenderer *renderer, const RendererRect *scissor)
+{
+    FakeScissorCall *call;
+
+    if (renderer != &fake_sdl_renderer || !fake_renderer.frame_active
+        || scissor_calls >= MAX_SCISSOR_CALLS) {
+        return RENDERER_STATUS_INVALID_STATE;
+    }
+    call = &fake_scissor_calls[scissor_calls++];
+    call->enabled = scissor != NULL;
+    if (scissor != NULL)
+        call->scissor = *scissor;
+    call->paint_events_before = paint_event_count;
+    return RENDERER_STATUS_OK;
+}
+
 RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
 {
     if (renderer != &fake_sdl_renderer || !fake_renderer.frame_active)
         return RENDERER_STATUS_INVALID_STATE;
     preserving_flush_calls++;
     record_paint_event(PAINT_EVENT_FLUSH);
-    return RENDERER_STATUS_OK;
+    return fake_operation_status(FAKE_OPERATION_FLUSH);
 }
 
 GLWidget *Init_EmptyBaseGLWidget(void)
@@ -465,6 +696,7 @@ void GLAPIENTRY glColor3ub(GLubyte red, GLubyte green, GLubyte blue)
     (void)red;
     (void)green;
     (void)blue;
+    legacy_color_calls++;
 }
 
 void GLAPIENTRY glColor4ub(GLubyte red, GLubyte green,
@@ -474,12 +706,13 @@ void GLAPIENTRY glColor4ub(GLubyte red, GLubyte green,
     (void)green;
     (void)blue;
     (void)alpha;
+    legacy_color_calls++;
 }
 
 void GLAPIENTRY glBegin(GLenum mode)
 {
     (void)mode;
-    record_paint_event(PAINT_EVENT_LEGACY);
+    legacy_begin_calls++;
 }
 
 void GLAPIENTRY glTexCoord2f(GLfloat u, GLfloat v)
@@ -493,6 +726,7 @@ void GLAPIENTRY glVertex2i(GLint x, GLint y)
 {
     (void)x;
     (void)y;
+    legacy_vertex_calls++;
 }
 
 void GLAPIENTRY glEnd(void)
@@ -502,11 +736,26 @@ void GLAPIENTRY glEnd(void)
 static void reset_paint_records(void)
 {
     memset(fake_sprites, 0, sizeof(fake_sprites));
+    memset(fake_triangles, 0, sizeof(fake_triangles));
+    memset(fake_strokes, 0, sizeof(fake_strokes));
+    memset(fake_rects, 0, sizeof(fake_rects));
+    memset(fake_scissor_calls, 0, sizeof(fake_scissor_calls));
     memset(paint_events, 0, sizeof(paint_events));
     sprite_calls = 0;
+    triangle_calls = 0;
+    stroke_calls = 0;
+    rect_calls = 0;
+    colored_stroke_calls = 0;
     blend_calls = 0;
+    memset(blend_modes, 0, sizeof(blend_modes));
     preserving_flush_calls = 0;
+    scissor_calls = 0;
     paint_event_count = 0;
+    legacy_begin_calls = 0;
+    legacy_vertex_calls = 0;
+    legacy_color_calls = 0;
+    fail_operation = FAKE_OPERATION_NONE;
+    fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
 }
 
 static int set_radar_geometry(const char *geometry)
@@ -639,9 +888,30 @@ static int check_non_sliding_paint(GLWidget *widget,
 {
     SDL_Surface *surface = Radar_test_surface();
     SDL_Rect bounds = Radar_test_bounds();
+    const RendererColor checkpoint_color = {0x50, 0x50, 0xff, 0xff};
+    const RendererColor white = {0xff, 0xff, 0xff, 0xff};
+    const RendererColor green = {0, 0xff, 0, 0xff};
+    const RendererColor black = {0, 0, 0, 0xff};
+    const RendererColor blue = {0, 0, 0x90, 0xff};
+    radar_t *objects;
     int resource_calls_before = resource_calls_during_frame;
 
+    objects = malloc(2 * sizeof(*objects));
+    TEST_CHECK(objects != NULL);
+    objects[0] = (radar_t){10, 20, 2, RadarFriend};
+    objects[1] = (radar_t){90, 60, 3, RadarEnemy};
+    radar_ptr = objects;
+    num_radar = 2;
+    max_radar = 2;
+    instruments.showDecor = false;
     instruments.slidingRadar = false;
+    selfPos.x = 30;
+    selfPos.y = 20;
+    Setup->mode = TIMING;
+    selfVisible = 1;
+    heading = 0;
+    tbl_cos[0] = 1.0;
+    tbl_sin[0] = 0.0;
     reset_paint_records();
     fake_renderer.frame_active = 1;
     widget->Draw(widget);
@@ -655,15 +925,82 @@ static int check_non_sliding_paint(GLWidget *widget,
         0.0f, 0.0f,
         (float)bounds.w / surface->w,
         (float)bounds.h / surface->h) == 0);
-    TEST_CHECK(blend_calls == 1);
+    TEST_CHECK(blend_calls == 2);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(blend_modes[1] == RENDERER_BLEND_OPAQUE);
     TEST_CHECK(preserving_flush_calls == 1);
-    TEST_CHECK(paint_event_count >= 3);
+    TEST_CHECK(paint_event_count == 7);
     TEST_CHECK(paint_events[0] == PAINT_EVENT_SPRITE);
-    TEST_CHECK(paint_events[1] == PAINT_EVENT_FLUSH);
-    TEST_CHECK(paint_events[2] == PAINT_EVENT_LEGACY);
+    TEST_CHECK(paint_events[1] == PAINT_EVENT_TRIANGLES);
+    TEST_CHECK(paint_events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(paint_events[3] == PAINT_EVENT_RECT);
+    TEST_CHECK(paint_events[4] == PAINT_EVENT_RECT);
+    TEST_CHECK(paint_events[5] == PAINT_EVENT_COLORED_STROKE);
+    TEST_CHECK(paint_events[6] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(triangle_calls == 1);
+    TEST_CHECK(fake_triangles[0].vertex_count == 6);
+    TEST_CHECK(vertex_equal(&fake_triangles[0].vertices[0],
+                            28.0f, 44.0f, 0.0f, 0.0f,
+                            checkpoint_color));
+    TEST_CHECK(vertex_equal(&fake_triangles[0].vertices[1],
+                            31.0f, 41.0f, 0.0f, 0.0f,
+                            checkpoint_color));
+    TEST_CHECK(vertex_equal(&fake_triangles[0].vertices[2],
+                            34.0f, 44.0f, 0.0f, 0.0f,
+                            checkpoint_color));
+    TEST_CHECK(vertex_equal(&fake_triangles[0].vertices[3],
+                            28.0f, 44.0f, 0.0f, 0.0f,
+                            checkpoint_color));
+    TEST_CHECK(vertex_equal(&fake_triangles[0].vertices[4],
+                            34.0f, 44.0f, 0.0f, 0.0f,
+                            checkpoint_color));
+    TEST_CHECK(vertex_equal(&fake_triangles[0].vertices[5],
+                            31.0f, 47.0f, 0.0f, 0.0f,
+                            checkpoint_color));
+    TEST_CHECK(stroke_calls == 1);
+    TEST_CHECK(fake_strokes[0].point_count == 2);
+    TEST_CHECK(float_equal(fake_strokes[0].points[0].x, 33.0f));
+    TEST_CHECK(float_equal(fake_strokes[0].points[0].y, 45.0f));
+    TEST_CHECK(float_equal(fake_strokes[0].points[1].x, 41.0f));
+    TEST_CHECK(float_equal(fake_strokes[0].points[1].y, 45.0f));
+    TEST_CHECK(float_equal(fake_strokes[0].width, 1.0f));
+    TEST_CHECK(fake_strokes[0].closed == 0);
+    TEST_CHECK(color_equal(fake_strokes[0].color, white));
+    TEST_CHECK(rect_calls == 2);
+    TEST_CHECK(float_equal(fake_rects[0].x, 30.0f));
+    TEST_CHECK(float_equal(fake_rects[0].y, 43.0f));
+    TEST_CHECK(float_equal(fake_rects[0].width, 2.0f));
+    TEST_CHECK(float_equal(fake_rects[0].height, 2.0f));
+    TEST_CHECK(color_equal(fake_rects[0].color, green));
+    TEST_CHECK(float_equal(fake_rects[1].x, 38.0f));
+    TEST_CHECK(float_equal(fake_rects[1].y, 40.0f));
+    TEST_CHECK(float_equal(fake_rects[1].width, 3.0f));
+    TEST_CHECK(float_equal(fake_rects[1].height, 3.0f));
+    TEST_CHECK(color_equal(fake_rects[1].color, white));
+    TEST_CHECK(colored_stroke_calls == 1);
+    TEST_CHECK(fake_strokes[1].point_count == 4);
+    TEST_CHECK(float_equal(fake_strokes[1].points[0].x, 30.0f));
+    TEST_CHECK(float_equal(fake_strokes[1].points[0].y, 46.0f));
+    TEST_CHECK(float_equal(fake_strokes[1].points[1].x, 30.0f));
+    TEST_CHECK(float_equal(fake_strokes[1].points[1].y, 40.0f));
+    TEST_CHECK(float_equal(fake_strokes[1].points[2].x, 42.0f));
+    TEST_CHECK(float_equal(fake_strokes[1].points[2].y, 40.0f));
+    TEST_CHECK(float_equal(fake_strokes[1].points[3].x, 42.0f));
+    TEST_CHECK(float_equal(fake_strokes[1].points[3].y, 46.0f));
+    TEST_CHECK(float_equal(fake_strokes[1].width, 1.0f));
+    TEST_CHECK(fake_strokes[1].closed != 0);
+    TEST_CHECK(color_equal(fake_strokes[1].colors[0], black));
+    TEST_CHECK(color_equal(fake_strokes[1].colors[1], blue));
+    TEST_CHECK(color_equal(fake_strokes[1].colors[2], black));
+    TEST_CHECK(color_equal(fake_strokes[1].colors[3], blue));
+    TEST_CHECK(radar_ptr == NULL);
     TEST_CHECK(resource_calls_during_frame == resource_calls_before);
     TEST_CHECK(texture_update_calls == 0);
     TEST_CHECK(forbidden_legacy_texture_calls == 0);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+
     return 0;
 }
 
@@ -700,16 +1037,26 @@ static int check_sliding_paint_order_and_uv(GLWidget *widget,
     TEST_CHECK(check_sprite(&fake_sprites[3], texture,
                             30.0f, 40.0f, 33.0f, 44.0f,
                             u_split, v_split, u_end, v_end) == 0);
-    TEST_CHECK(blend_calls == 1);
+    TEST_CHECK(blend_calls == 2);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(blend_modes[1] == RENDERER_BLEND_OPAQUE);
     TEST_CHECK(preserving_flush_calls == 1);
-    TEST_CHECK(paint_event_count >= 6);
+    TEST_CHECK(paint_event_count == 8);
     for (index = 0; index < 4; index++)
         TEST_CHECK(paint_events[index] == PAINT_EVENT_SPRITE);
-    TEST_CHECK(paint_events[4] == PAINT_EVENT_FLUSH);
-    TEST_CHECK(paint_events[5] == PAINT_EVENT_LEGACY);
+    TEST_CHECK(paint_events[4] == PAINT_EVENT_TRIANGLES);
+    TEST_CHECK(paint_events[5] == PAINT_EVENT_STROKE);
+    TEST_CHECK(paint_events[6] == PAINT_EVENT_COLORED_STROKE);
+    TEST_CHECK(paint_events[7] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(triangle_calls == 1);
+    TEST_CHECK(stroke_calls == 1);
+    TEST_CHECK(colored_stroke_calls == 1);
     TEST_CHECK(resource_calls_during_frame == resource_calls_before);
     TEST_CHECK(texture_update_calls == 0);
     TEST_CHECK(forbidden_legacy_texture_calls == 0);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
 
     selfPos.x = 60;
     selfPos.y = 40;
@@ -723,8 +1070,159 @@ static int check_sliding_paint_order_and_uv(GLWidget *widget,
                             (float)(bounds.x + bounds.w),
                             (float)(bounds.y + bounds.h),
                             0.0f, 0.0f, u_end, v_end) == 0);
+    TEST_CHECK(blend_calls == 2);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(blend_modes[1] == RENDERER_BLEND_OPAQUE);
     TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(paint_event_count == 5);
+    TEST_CHECK(paint_events[0] == PAINT_EVENT_SPRITE);
+    TEST_CHECK(paint_events[1] == PAINT_EVENT_TRIANGLES);
+    TEST_CHECK(paint_events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(paint_events[3] == PAINT_EVENT_COLORED_STROKE);
+    TEST_CHECK(paint_events[4] == PAINT_EVENT_FLUSH);
     TEST_CHECK(resource_calls_during_frame == resource_calls_before);
+    return 0;
+}
+
+static int check_sticky_failure_short_circuit(GLWidget *widget)
+{
+    radar_t *objects;
+
+    objects = malloc(2 * sizeof(*objects));
+    TEST_CHECK(objects != NULL);
+    objects[0] = (radar_t){10, 20, 2, RadarFriend};
+    objects[1] = (radar_t){90, 60, 3, RadarEnemy};
+    radar_ptr = objects;
+    num_radar = 2;
+    max_radar = 2;
+    instruments.slidingRadar = false;
+    Setup->mode = TIMING;
+    selfVisible = 1;
+    reset_paint_records();
+    fail_operation = FAKE_OPERATION_TRIANGLES;
+    fake_renderer.frame_active = 1;
+    widget->Draw(widget);
+
+    /* The checkpoint is the first failed semantic command. No later
+     * primitive is attempted, but the already queued sprite is flushed. */
+    TEST_CHECK(sprite_calls == 1);
+    TEST_CHECK(triangle_calls == 1);
+    TEST_CHECK(stroke_calls == 0);
+    TEST_CHECK(rect_calls == 0);
+    TEST_CHECK(colored_stroke_calls == 0);
+    TEST_CHECK(paint_event_count == 2);
+    TEST_CHECK(paint_events[0] == PAINT_EVENT_SPRITE);
+    TEST_CHECK(paint_events[1] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(radar_ptr == NULL);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+
+    /* A retained frame failure must preflight the next widget draw too. */
+    {
+        int old_sprite_calls = sprite_calls;
+        int old_triangle_calls = triangle_calls;
+        int old_stroke_calls = stroke_calls;
+        int old_rect_calls = rect_calls;
+        int old_colored_stroke_calls = colored_stroke_calls;
+        int old_blend_calls = blend_calls;
+        int old_flush_calls = preserving_flush_calls;
+        int old_event_count = paint_event_count;
+
+        fake_renderer.frame_active = 1;
+        widget->Draw(widget);
+        fake_renderer.frame_active = 0;
+        TEST_CHECK(sprite_calls == old_sprite_calls);
+        TEST_CHECK(triangle_calls == old_triangle_calls);
+        TEST_CHECK(stroke_calls == old_stroke_calls);
+        TEST_CHECK(rect_calls == old_rect_calls);
+        TEST_CHECK(colored_stroke_calls == old_colored_stroke_calls);
+        TEST_CHECK(blend_calls == old_blend_calls);
+        TEST_CHECK(preserving_flush_calls == old_flush_calls);
+        TEST_CHECK(paint_event_count == old_event_count);
+        TEST_CHECK(radar_ptr == NULL);
+    }
+    return 0;
+}
+
+static int check_semantic_clip_lifetime(GLWidget *widget)
+{
+    RendererRect expected_clip = {
+        widget->bounds.x,
+        widget->bounds.y,
+        widget->bounds.w + 1,
+        widget->bounds.h + 1
+    };
+
+    instruments.slidingRadar = false;
+    Setup->mode = 0;
+    selfVisible = 0;
+    reset_paint_records();
+    fake_renderer.frame_active = 1;
+    widget->Draw(widget);
+    fake_renderer.frame_active = 0;
+
+    /* Semantic drawing uses the same logical extent as the widget's
+     * root-clipped legacy scissor, then disables it after the flush. */
+    TEST_CHECK(scissor_calls == 2);
+    TEST_CHECK(fake_scissor_calls[0].enabled != 0);
+    TEST_CHECK(renderer_rect_equal(
+        fake_scissor_calls[0].scissor, expected_clip));
+    TEST_CHECK(fake_scissor_calls[0].paint_events_before == 0);
+    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(paint_event_count > 0);
+    TEST_CHECK(paint_events[paint_event_count - 1] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(fake_scissor_calls[1].enabled == 0);
+    TEST_CHECK(fake_scissor_calls[1].paint_events_before
+               == paint_event_count);
+
+    reset_paint_records();
+    fail_operation = FAKE_OPERATION_FLUSH;
+    fake_renderer.frame_active = 1;
+    widget->Draw(widget);
+    fake_renderer.frame_active = 0;
+
+    /* A failed flush retains commands for retry and locks draw-state
+     * mutation, so Radar_paint must leave the active clip unchanged. */
+    TEST_CHECK(preserving_flush_calls == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(scissor_calls == 1);
+    TEST_CHECK(fake_scissor_calls[0].enabled != 0);
+    TEST_CHECK(renderer_rect_equal(
+        fake_scissor_calls[0].scissor, expected_clip));
+    TEST_CHECK(fake_scissor_calls[0].paint_events_before == 0);
+    return 0;
+}
+
+static int check_empty_object_buffer_is_retained(GLWidget *widget)
+{
+    radar_t *objects;
+
+    objects = malloc(2 * sizeof(*objects));
+    TEST_CHECK(objects != NULL);
+    radar_ptr = objects;
+    num_radar = 0;
+    max_radar = 2;
+    instruments.slidingRadar = false;
+    Setup->mode = 0;
+    selfVisible = 0;
+    reset_paint_records();
+    fake_renderer.frame_active = 1;
+    widget->Draw(widget);
+    fake_renderer.frame_active = 0;
+
+    /* An empty retained STORE buffer remains usable by a later frame. */
+    TEST_CHECK(radar_ptr == objects);
+    TEST_CHECK(num_radar == 0);
+    TEST_CHECK(max_radar == 2);
+
+    free(objects);
+    radar_ptr = NULL;
+    max_radar = 0;
     return 0;
 }
 
@@ -790,6 +1288,12 @@ int main(void)
     if (check_non_sliding_paint(widget, resized_texture) != 0)
         goto cleanup;
     if (check_sliding_paint_order_and_uv(widget, resized_texture) != 0)
+        goto cleanup;
+    if (check_sticky_failure_short_circuit(widget) != 0)
+        goto cleanup;
+    if (check_semantic_clip_lifetime(widget) != 0)
+        goto cleanup;
+    if (check_empty_object_buffer_is_retained(widget) != 0)
         goto cleanup;
     if (check_cleanup_is_exact_and_idempotent(
             widget, resized_texture) != 0) {

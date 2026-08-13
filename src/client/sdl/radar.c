@@ -135,19 +135,36 @@ static void to_screen(GLWidget *radar, int *x, int *y, int from_w, int from_h)
     *y = (int)(rb.y + rb.h - (fy + 0.5));
 }
 
-static void Radar_paint_border(GLWidget *radar)
+static RendererStatus Radar_paint_border(Renderer *renderer,
+					 GLWidget *radar, int *submitted)
 {
-    glBegin(GL_LINE_LOOP);
-    glColor4ub(0, 0, 0, 0xff);
-    glVertex2i(radar->bounds.x, radar->bounds.y + radar->bounds.h);
-    glColor4ub(0, 0x00, 0x90, 0xff);
-    glVertex2i(radar->bounds.x, radar->bounds.y);
-    glColor4ub(0, 0, 0, 0xff);
-    glVertex2i(radar->bounds.x + radar->bounds.w - 1, radar->bounds.y);
-    glColor4ub(0, 0x00, 0x90, 0xff);
-    glVertex2i(radar->bounds.x + radar->bounds.w - 1,
-	       radar->bounds.y + radar->bounds.h);
-    glEnd();
+    const RendererColor black = {0, 0, 0, 0xff};
+    const RendererColor blue = {0, 0, 0x90, 0xff};
+    RendererPoint2D points[4];
+    RendererColor colors[4] = {black, blue, black, blue};
+    RendererStatus status;
+
+    points[0] = (RendererPoint2D){
+	(float)radar->bounds.x,
+	(float)(radar->bounds.y + radar->bounds.h)
+    };
+    points[1] = (RendererPoint2D){
+	(float)radar->bounds.x,
+	(float)radar->bounds.y
+    };
+    points[2] = (RendererPoint2D){
+	(float)(radar->bounds.x + radar->bounds.w - 1),
+	(float)radar->bounds.y
+    };
+    points[3] = (RendererPoint2D){
+	(float)(radar->bounds.x + radar->bounds.w - 1),
+	(float)(radar->bounds.y + radar->bounds.h)
+    };
+    status = Renderer_stroke_colored_path(
+	renderer, points, colors, 4, 1.0f, 1);
+    if (status == RENDERER_STATUS_OK)
+	(*submitted)++;
+    return status;
 }
 
 /*
@@ -286,40 +303,46 @@ static void Radar_paint_world_polygons(GLWidget *radar, SDL_Surface *s)
 /*
  * Paints objects (ships, etc.) visible in the radar.
  */
-static void Radar_paint_objects( GLWidget *radar )
+static RendererStatus Radar_paint_objects(Renderer *renderer,
+					  GLWidget *radar, int *submitted)
 {
     int	i, x, y, s;
+    RendererStatus status;
 
     for (i = 0; i < num_radar; i++) {
 	x = radar_ptr[i].x;
 	y = radar_ptr[i].y;
 	s = radar_ptr[i].size;
+	if (s <= 0)
+	    continue;
 	to_screen(radar, &x, &y, RadarWidth, RadarHeight);
 	x -= s/2;
 	y -= s/2;
-	if (radar_ptr[i].type == RadarFriend) glColor3ub(0, 0xff, 0);
-	else glColor3ub(0xff, 0xff, 0xff);
-	glBegin(GL_QUADS);
-	glVertex2i(x, y);
-	glVertex2i(x + s, y);
-	glVertex2i(x + s, y + s);
-	glVertex2i(x, y + s);
-	glEnd();
+	status = Renderer_fill_rect(
+	    renderer, (float)x, (float)y, (float)s, (float)s,
+	    radar_ptr[i].type == RadarFriend
+		? (RendererColor){0, 0xff, 0, 0xff}
+		: (RendererColor){0xff, 0xff, 0xff, 0xff});
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+	(*submitted)++;
     }
-
-    if (num_radar)
-	RELEASE(radar_ptr, num_radar, max_radar);
+    return RENDERER_STATUS_OK;
 }
 
 /*
  * Paints player's ship and direction.
  */
-static void Radar_paint_self(GLWidget *radar)
+static RendererStatus Radar_paint_self(Renderer *renderer,
+				       GLWidget *radar, int *submitted)
 {
     int x, y, x2, y2;
     SDL_Rect rb = radar->bounds;
+    RendererPoint2D points[2];
+    RendererStatus status;
 
-    if (!selfVisible) return;
+    if (!selfVisible)
+	return RENDERER_STATUS_OK;
 
     if (instruments.slidingRadar) {
 	x = rb.x + rb.w/2;
@@ -332,20 +355,27 @@ static void Radar_paint_self(GLWidget *radar)
     x2 = (int)(x + 8 * tcos(heading));
     y2 = (int)(y - 8 * tsin(heading));
 
-    glColor4ub(0xff, 0xff, 0xff, 0xff);
-    glBegin(GL_LINES);
-    glVertex2i(x, y);
-    glVertex2i(x2, y2);
-    glEnd();
-
+    points[0] = (RendererPoint2D){(float)x, (float)y};
+    points[1] = (RendererPoint2D){(float)x2, (float)y2};
+    status = Renderer_stroke_path(
+	renderer, points, 2, 1.0f,
+	(RendererColor){0xff, 0xff, 0xff, 0xff}, 0);
+    if (status == RENDERER_STATUS_OK)
+	(*submitted)++;
+    return status;
 }
 
 /*
  * Paints the next checkpoint.
  */
-static void Radar_paint_checkpoint(GLWidget *radar)
+static RendererStatus Radar_paint_checkpoint(Renderer *renderer,
+					     GLWidget *radar, int *submitted)
 {
     int x, y;
+    RendererColor color = {0x50, 0x50, 0xff, 0xff};
+    RendererVertex2D vertices[6];
+    RendererStatus status;
+
     if (BIT(Setup->mode, TIMING)) {
 	if (oldServer) {
 	    Check_pos_by_index(nextCheckPoint, &x, &y);
@@ -357,16 +387,23 @@ static void Radar_paint_checkpoint(GLWidget *radar)
 	    y = b.y + b.h/2;
 	}
 	to_screen(radar, &x, &y, Setup->width, Setup->height);
-	
-	glColor4ub(0x50, 0x50, 0xff, 0xff);
-	glBegin(GL_QUADS);
-	glVertex2i(x - 3, y);
-	glVertex2i(x, y - 3);
-	glVertex2i(x + 3, y);
-	glVertex2i(x, y + 3);
-	glEnd();
-	
-    }    
+
+	vertices[0] = (RendererVertex2D){
+	    (float)(x - 3), (float)y, 0.0f, 0.0f, color};
+	vertices[1] = (RendererVertex2D){
+	    (float)x, (float)(y - 3), 0.0f, 0.0f, color};
+	vertices[2] = (RendererVertex2D){
+	    (float)(x + 3), (float)y, 0.0f, 0.0f, color};
+	vertices[3] = vertices[0];
+	vertices[4] = vertices[2];
+	vertices[5] = (RendererVertex2D){
+	    (float)x, (float)(y + 3), 0.0f, 0.0f, color};
+	status = Renderer_draw_triangles(renderer, NULL, vertices, 6);
+	if (status == RENDERER_STATUS_OK)
+	    (*submitted)++;
+	return status;
+    }
+    return RENDERER_STATUS_OK;
 }
 
 static void move(Sint16 xrel,Sint16 yrel,Uint16 x,Uint16 y, void *data)
@@ -545,9 +582,9 @@ int Radar_prepare(Renderer *renderer)
 
 /*
  * The radar is drawn so that first the walls are painted to an offscreen
- * SDL surface. This surface is then converted into an OpenGL texture.
- * For each frame OpenGL is used to paint rectangles with this walls
- * texture and on top of that the radar objects.
+ * SDL surface. This surface is then uploaded as a renderer texture.
+ * For each frame semantic renderer commands paint the walls texture and
+ * the radar overlays on top of it.
  */
 GLWidget *Init_RadarWidget(void)
 {
@@ -635,6 +672,7 @@ static RendererStatus Radar_blit_world(Renderer *renderer,
 				       int *submitted)
 {
     float tx1, ty1, tx2, ty2;
+    RendererStatus status;
 
     if (sr->w <= 0 || sr->h <= 0 || dr->w <= 0 || dr->h <= 0)
 	return RENDERER_STATUS_OK;
@@ -643,13 +681,15 @@ static RendererStatus Radar_blit_world(Renderer *renderer,
     tx2 = ((float)sr->x + sr->w) / radar_surface->w;
     ty2 = ((float)sr->y + sr->h) / radar_surface->h;
 
-    (*submitted)++;
-    return Renderer_draw_sprite(
+    status = Renderer_draw_sprite(
 	renderer, radar_texture,
 	(float)dr->x, (float)dr->y,
 	(float)(dr->x + dr->w), (float)(dr->y + dr->h),
 	tx1, ty1, tx2, ty2,
 	(RendererColor){255, 255, 255, 255});
+    if (status == RENDERER_STATUS_OK)
+	(*submitted)++;
+    return status;
 }
 
 /*
@@ -661,11 +701,40 @@ static void Radar_paint( GLWidget *widget )
     Renderer *renderer = sdl_renderer != NULL
 	? Sdl_renderer_frontend(sdl_renderer) : NULL;
     RendererStatus status = RENDERER_STATUS_INVALID_STATE;
+    RendererRect semantic_clip;
     int submitted = 0;
+    int scissor_set = 0;
 
-    if (renderer != NULL && renderer == radar_renderer
-	&& radar_texture != NULL) {
-	status = Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA);
+    if (sdl_renderer == NULL)
+	goto release_objects;
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
+	goto release_objects;
+    if (renderer == NULL || radar_texture == NULL || radar_surface == NULL) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+	goto finish;
+    }
+    if (renderer != radar_renderer) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_RESOURCE_MISMATCH);
+	goto finish;
+    }
+    semantic_clip = (RendererRect){
+	widget->bounds.x, widget->bounds.y,
+	widget->bounds.w + 1, widget->bounds.h + 1
+    };
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer,
+	Sdl_renderer_set_logical_scissor(sdl_renderer, &semantic_clip));
+    if (status == RENDERER_STATUS_OK)
+	scissor_set = 1;
+
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer,
+	    Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA));
     }
 
     if (status == RENDERER_STATUS_OK && instruments.slidingRadar) {
@@ -694,47 +763,87 @@ static void Radar_paint( GLWidget *widget )
         sr.x = 0; sr.y = 0; sr.w = x; sr.h = y;
         dr.x = w + radar_bounds.x; dr.y = h + radar_bounds.y;
         dr.w = x; dr.h = y;
-        status = Radar_blit_world(renderer, &sr, &dr, &submitted);
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer,
+	    Radar_blit_world(renderer, &sr, &dr, &submitted));
 
         sr.x = x; sr.y = 0; sr.w = w; sr.h = y;
         dr.x = 0 + radar_bounds.x; dr.y = h + radar_bounds.y;
         dr.w = w; dr.h = y;
-        if (status == RENDERER_STATUS_OK)
-	    status = Radar_blit_world(renderer, &sr, &dr, &submitted);
+	if (status == RENDERER_STATUS_OK)
+	    status = Sdl_renderer_track_frame_result(
+		sdl_renderer,
+		Radar_blit_world(renderer, &sr, &dr, &submitted));
 
         sr.x = 0; sr.y = y; sr.w = x; sr.h = h;
         dr.x = w + radar_bounds.x; dr.y = 0 + radar_bounds.y;
         dr.w = x; dr.h = h;
-        if (status == RENDERER_STATUS_OK)
-	    status = Radar_blit_world(renderer, &sr, &dr, &submitted);
+	if (status == RENDERER_STATUS_OK)
+	    status = Sdl_renderer_track_frame_result(
+		sdl_renderer,
+		Radar_blit_world(renderer, &sr, &dr, &submitted));
 
         sr.x = x; sr.y = y; sr.w = w; sr.h = h;
         dr.x = 0 + radar_bounds.x; dr.y = 0 + radar_bounds.y;
         dr.w = w; dr.h = h;
-        if (status == RENDERER_STATUS_OK)
-	    status = Radar_blit_world(renderer, &sr, &dr, &submitted);
+	if (status == RENDERER_STATUS_OK)
+	    status = Sdl_renderer_track_frame_result(
+		sdl_renderer,
+		Radar_blit_world(renderer, &sr, &dr, &submitted));
     } else if (status == RENDERER_STATUS_OK) {
 	SDL_Rect sr;
 	sr.x = sr.y = 0;
 	sr.w = radar_bounds.w; sr.h = radar_bounds.h;
-	status = Radar_blit_world(
-	    renderer, &sr, &radar_bounds, &submitted);
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer,
+	    Radar_blit_world(renderer, &sr, &radar_bounds, &submitted));
     }
 
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer,
+	    Renderer_set_blend(renderer, RENDERER_BLEND_OPAQUE));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer,
+	    Radar_paint_checkpoint(renderer, widget, &submitted));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, Radar_paint_self(renderer, widget, &submitted));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, Radar_paint_objects(renderer, widget, &submitted));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, Radar_paint_border(renderer, widget, &submitted));
+    }
+
+finish:
     if (submitted > 0) {
 	RendererStatus flush_status =
 	    Sdl_renderer_flush_preserving_legacy(sdl_renderer);
 
-	if (status == RENDERER_STATUS_OK)
-	    status = flush_status;
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, flush_status);
+    }
+    if (status == RENDERER_STATUS_OK && scissor_set) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer,
+	    Sdl_renderer_set_logical_scissor(sdl_renderer, NULL));
     }
     if (status != RENDERER_STATUS_OK)
-	warn("Could not draw radar texture");
+	warn("Could not draw radar");
 
-    Radar_paint_checkpoint( widget );
-    Radar_paint_self( widget );
-    Radar_paint_objects( widget );
-    Radar_paint_border( widget );
+release_objects:
+    if (num_radar) {
+	RELEASE(radar_ptr, num_radar, max_radar);
+	if (max_radar == 0)
+	    radar_ptr = NULL;
+    }
 }
 
 /* these 2 are here to allow linking to libxpclient */

@@ -269,6 +269,27 @@ RendererStatus Renderer_stroke_path(Renderer *renderer,
                                     RendererColor color, int closed);
 
 /**
+ * Queue a screen-width path with a color at each path position.
+ *
+ * The path is transformed before its segments are expanded, so @p width is
+ * measured in physical screen pixels. Each segment's vertex colors run from
+ * the color of its first endpoint to the color of its second endpoint.
+ * Zero-length segments are ignored.
+ *
+ * @param renderer Renderer with an active frame.
+ * @param points Path positions.
+ * @param colors Colors corresponding one-to-one with @p points.
+ * @param point_count Number of positions and colors; must be at least two.
+ * @param width Positive stroke width in pixels.
+ * @param closed Nonzero to append the final-to-first segment, including its
+ *        endpoint color transition.
+ * @return Operation status.
+ */
+RendererStatus Renderer_stroke_colored_path(
+    Renderer *renderer, const RendererPoint2D *points,
+    const RendererColor *colors, size_t point_count, float width, int closed);
+
+/**
  * Queue a square point centered at the supplied position.
  *
  * @param renderer Renderer with an active frame.
