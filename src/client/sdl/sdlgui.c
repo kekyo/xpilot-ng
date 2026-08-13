@@ -176,22 +176,6 @@ int GL_Y(int y)
 }
 
 
-void Circle(Uint32 color,
-	    int x, int y,
-	    int radius, int filled)
-{
-    float i,resolution = 16;
-    set_alphacolor(color);
-    if (filled)
-    	glBegin( GL_POLYGON );
-    else
-    	glBegin( GL_LINE_LOOP );
-    	/* Silly resolution */
-    	for (i = 0.0f; i < TABLE_SIZE; i=i+((float)TABLE_SIZE)/resolution)
-    	    glVertex2f((x + tcos((int)i)*radius),(y + tsin((int)i)*radius));
-    glEnd();
-}
-
 static int wrap(int *xp, int *yp)
 {
     int			x = *xp, y = *yp;
@@ -1043,19 +1027,6 @@ void Gui_paint_asteroids_end(void)
     glDisable(GL_LIGHT0);
     glDisable(GL_LIGHTING);
     glDisable(GL_TEXTURE_2D);
-
-/* this displays the asteroid hit area */
-#if 0
-    int i, x, y, size;
-    for (i = 0; i < num_asteroids; i++) {
-	x = asteroid_ptr[i].x;
-	y = asteroid_ptr[i].y;
-	if (wrap(&x, &y)) {
-	    size = asteroid_ptr[i].size;
-	    Circle(whiteRGBA, x, y, (int)(0.8 * SHIP_SZ * size), 0);
-	}
-    }
-#endif
 }
 
 void Gui_paint_asteroid(int x, int y, int type, int rot, int size)
@@ -1612,6 +1583,38 @@ typedef struct SemanticHudPointerGeometry {
     int draw_direction;
 } SemanticHudPointerGeometry;
 
+#define SEMANTIC_HUD_RADAR_RING_POINTS 16
+#define SEMANTIC_HUD_RADAR_FILL_VERTICES \
+    ((SEMANTIC_HUD_RADAR_RING_POINTS - 2) * 3)
+
+typedef struct SemanticHudRadarDotGeometry {
+    RendererVertex2D fill[SEMANTIC_HUD_RADAR_FILL_VERTICES];
+    RendererPoint2D outline[SEMANTIC_HUD_RADAR_RING_POINTS];
+    size_t fill_count;
+    size_t outline_count;
+    RendererColor color;
+} SemanticHudRadarDotGeometry;
+
+typedef struct SemanticHudRadarPass {
+    double scale;
+    double xlimit;
+    double ylimit;
+    double xfactor;
+    double yfactor;
+    int width;
+    int height;
+    int size;
+} SemanticHudRadarPass;
+
+typedef struct SemanticHudRadarScene {
+    SemanticHudRadarPass passes[2];
+    RendererPoint2D ball_scan[SEMANTIC_HUD_RADAR_RING_POINTS];
+    RendererPoint2D cover_scan[SEMANTIC_HUD_RADAR_RING_POINTS];
+    int radar_enabled;
+    int draw_ball_scan;
+    int draw_cover_scan;
+} SemanticHudRadarScene;
+
 typedef struct SemanticMeterGeometry {
     float fill_x;
     float fill_y;
@@ -2105,86 +2108,549 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 
 }
 
-static void Paint_hudradar_dot(int x, int y, Uint32 col, int shape, int sz)
+static int Semantic_hud_radar_dot_visible(
+    Uint32 color, int shape, int size)
 {
-    if (col == 0 || shape < 2 || sz == 0) return;
-    set_alphacolor(col);
-
-    switch(shape) {
-    case 2:
-    case 3:
-	Circle(col, x, y, sz, shape == 2 ? 1 : 0);
-	break;
-    case 4:
-    case 5:
-	glBegin(shape == 4 ? GL_QUADS : GL_LINE_LOOP);
-	glVertex2i(x - sz, y - sz);
-	glVertex2i(x - sz, y + sz);
-	glVertex2i(x + sz, y + sz);
-	glVertex2i(x + sz, y - sz);
-	glEnd();
-	break;
-    case 6:
-    case 7:
-	glBegin(shape == 6 ? GL_TRIANGLES : GL_LINE_LOOP);
-	glVertex2i(x - sz, y + sz);
-	glVertex2i(x, y - sz);
-	glVertex2i(x + sz, y + sz);
-	glEnd();
-	break;
-    }
+    return color != 0 && shape >= 2 && shape <= 7 && size != 0;
 }
 
-static void Paint_hudradar(double hrscale, double xlimit, double ylimit, int sz)
+static int Semantic_hud_radar_float(double value, float *result)
 {
-    Uint32 c;
-    int i, x, y, shape, size;
-    int hrw = (int)(hrscale * 256);
-    int hrh = (int)(hrscale * RadarHeight);
-    double xf = (double) hrw / (double) Setup->width;
-    double yf = (double) hrh / (double) Setup->height;
+    if (result == NULL || !isfinite(value)
+	|| value < -(double)FLT_MAX || value > (double)FLT_MAX) {
+	return 0;
+    }
+    *result = (float)value;
+    return isfinite(*result);
+}
 
-    for (i = 0; i < num_radar; i++) {
-	x = (int)(radar_ptr[i].x * hrscale
-		  - (world.x + ext_view_width / 2) * xf);
-	y = (int)(radar_ptr[i].y * hrscale
-		  - (world.y + ext_view_height / 2) * yf);
+static int Semantic_hud_radar_point(
+    double x, double y, RendererPoint2D *point)
+{
+    return point != NULL
+	&& Semantic_hud_radar_float(x, &point->x)
+	&& Semantic_hud_radar_float(y, &point->y);
+}
 
-	if (x < -hrw / 2)
-	    x += hrw;
-	else if (x > hrw / 2)
-	    x -= hrw;
+static void Set_semantic_hud_radar_vertex(
+    RendererVertex2D *vertex, RendererPoint2D point, RendererColor color)
+{
+    vertex->x = point.x;
+    vertex->y = point.y;
+    vertex->u = 0.0f;
+    vertex->v = 0.0f;
+    vertex->color = color;
+}
 
-	if (y < -hrh / 2)
-	    y += hrh;
-	else if (y > hrh / 2)
-	    y -= hrh;
+static RendererStatus Build_semantic_hud_radar_ring(
+    int64_t x, int64_t y, int radius,
+    RendererPoint2D points[SEMANTIC_HUD_RADAR_RING_POINTS])
+{
+    int point_index;
 
-	if (!((x <= xlimit) && (x >= -xlimit)
-	      && (y <= ylimit) && (y >= -ylimit))) {
+    if (points == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    for (point_index = 0;
+	 point_index < SEMANTIC_HUD_RADAR_RING_POINTS;
+	 point_index++) {
+	int table_index = point_index * TABLE_SIZE
+	    / SEMANTIC_HUD_RADAR_RING_POINTS;
+	double cosine = tcos(table_index);
+	double sine = tsin(table_index);
 
- 	    x = x + draw_width / 2;
- 	    y = -y + draw_height / 2;
-
-	    if (radar_ptr[i].type == RadarEnemy) {
-		c = hudRadarEnemyColorRGBA;
-		shape = hudRadarEnemyShape;
-	    } else {
-		c = hudRadarOtherColorRGBA;
-		shape = hudRadarOtherShape;
-	    }
-	    size = sz;
-	    if (radar_ptr[i].size == 0) {
-		size >>= 1;
-		if (hudRadarObjectColorRGBA)
-		    c = hudRadarObjectColorRGBA;
-		if (hudRadarObjectShape)
-		    shape = hudRadarObjectShape;
-	    }
-	    Paint_hudradar_dot(x, y, c, shape, size);
+	if (!isfinite(cosine) || !isfinite(sine)
+	    || !Semantic_hud_radar_point(
+		(double)x + cosine * (double)radius,
+		(double)y + sine * (double)radius,
+		&points[point_index])) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
 	}
     }
+    return RENDERER_STATUS_OK;
 }
+
+static RendererStatus Build_semantic_hud_radar_dot_geometry(
+    int64_t x, int64_t y, Uint32 packed_color, int shape, int size,
+    SemanticHudRadarDotGeometry *geometry)
+{
+    RendererPoint2D points[4];
+    RendererStatus status;
+    size_t triangle_index;
+
+    if (geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    memset(geometry, 0, sizeof(*geometry));
+    if (!Semantic_hud_radar_dot_visible(packed_color, shape, size))
+	return RENDERER_STATUS_OK;
+    geometry->color = Renderer_color_from_rgba32(packed_color);
+
+    if (shape == 2 || shape == 3) {
+	status = Build_semantic_hud_radar_ring(
+	    x, y, size, geometry->outline);
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+	if (shape == 3) {
+	    geometry->outline_count = SEMANTIC_HUD_RADAR_RING_POINTS;
+	    return RENDERER_STATUS_OK;
+	}
+	/* GL_POLYGON's convex ring is reproduced by a fan rooted at point zero. */
+	for (triangle_index = 1;
+	     triangle_index + 1 < SEMANTIC_HUD_RADAR_RING_POINTS;
+	     triangle_index++) {
+	    size_t vertex_index = geometry->fill_count;
+
+	    Set_semantic_hud_radar_vertex(
+		&geometry->fill[vertex_index], geometry->outline[0],
+		geometry->color);
+	    Set_semantic_hud_radar_vertex(
+		&geometry->fill[vertex_index + 1],
+		geometry->outline[triangle_index], geometry->color);
+	    Set_semantic_hud_radar_vertex(
+		&geometry->fill[vertex_index + 2],
+		geometry->outline[triangle_index + 1], geometry->color);
+	    geometry->fill_count += 3;
+	}
+	return RENDERER_STATUS_OK;
+    }
+
+    if (shape == 4 || shape == 5) {
+	if (!Semantic_hud_radar_point(
+		(double)(x - (int64_t)size),
+		(double)(y - (int64_t)size), &points[0])
+	    || !Semantic_hud_radar_point(
+		(double)(x - (int64_t)size),
+		(double)(y + (int64_t)size), &points[1])
+	    || !Semantic_hud_radar_point(
+		(double)(x + (int64_t)size),
+		(double)(y + (int64_t)size), &points[2])
+	    || !Semantic_hud_radar_point(
+		(double)(x + (int64_t)size),
+		(double)(y - (int64_t)size), &points[3])) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+	if (shape == 5) {
+	    memcpy(geometry->outline, points, sizeof(points));
+	    geometry->outline_count = 4;
+	    return RENDERER_STATUS_OK;
+	}
+	Set_semantic_hud_radar_vertex(
+	    &geometry->fill[0], points[0], geometry->color);
+	Set_semantic_hud_radar_vertex(
+	    &geometry->fill[1], points[1], geometry->color);
+	Set_semantic_hud_radar_vertex(
+	    &geometry->fill[2], points[2], geometry->color);
+	Set_semantic_hud_radar_vertex(
+	    &geometry->fill[3], points[0], geometry->color);
+	Set_semantic_hud_radar_vertex(
+	    &geometry->fill[4], points[2], geometry->color);
+	Set_semantic_hud_radar_vertex(
+	    &geometry->fill[5], points[3], geometry->color);
+	geometry->fill_count = 6;
+	return RENDERER_STATUS_OK;
+    }
+
+    if (!Semantic_hud_radar_point(
+	    (double)(x - (int64_t)size),
+	    (double)(y + (int64_t)size), &points[0])
+	|| !Semantic_hud_radar_point(
+	    (double)x, (double)(y - (int64_t)size), &points[1])
+	|| !Semantic_hud_radar_point(
+	    (double)(x + (int64_t)size),
+	    (double)(y + (int64_t)size), &points[2])) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    if (shape == 7) {
+	memcpy(geometry->outline, points, 3 * sizeof(points[0]));
+	geometry->outline_count = 3;
+	return RENDERER_STATUS_OK;
+    }
+    Set_semantic_hud_radar_vertex(
+	&geometry->fill[0], points[0], geometry->color);
+    Set_semantic_hud_radar_vertex(
+	&geometry->fill[1], points[1], geometry->color);
+    Set_semantic_hud_radar_vertex(
+	&geometry->fill[2], points[2], geometry->color);
+    geometry->fill_count = 3;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Submit_semantic_hud_radar_dot(
+    SemanticHudBatch *batch, const SemanticHudRadarDotGeometry *geometry)
+{
+    RendererStatus status;
+
+    if (batch == NULL || geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (geometry->fill_count != 0) {
+	status = Renderer_draw_triangles(
+	    batch->renderer, NULL, geometry->fill, geometry->fill_count);
+	return Accept_semantic_hud_command(batch, status);
+    }
+    if (geometry->outline_count != 0) {
+	status = Renderer_stroke_path(
+	    batch->renderer, geometry->outline, geometry->outline_count,
+	    1.0f, geometry->color, 1);
+	return Accept_semantic_hud_command(batch, status);
+    }
+    return batch->status;
+}
+
+static int Semantic_hud_radar_truncated_int(double value, int *result)
+{
+    if (result == NULL || !isfinite(value)
+	|| value < (double)INT_MIN || value > (double)INT_MAX) {
+	return 0;
+    }
+    *result = (int)value;
+    return 1;
+}
+
+static RendererStatus Build_semantic_hud_radar_pass(
+    double scale, double xlimit, double ylimit, int size,
+    SemanticHudRadarPass *pass)
+{
+    double scaled_width;
+    double scaled_height;
+
+    if (pass == NULL || Setup == NULL
+	|| Setup->width <= 0 || Setup->height <= 0 || RadarHeight == 0
+	|| !isfinite(scale) || scale <= 0.0
+	|| !isfinite(xlimit) || xlimit < 0.0
+	|| !isfinite(ylimit) || ylimit < 0.0) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    scaled_width = scale * 256.0;
+    scaled_height = scale * (double)RadarHeight;
+    if (!Semantic_hud_radar_truncated_int(scaled_width, &pass->width)
+	|| !Semantic_hud_radar_truncated_int(
+	    scaled_height, &pass->height)
+	|| pass->width <= 0 || pass->height <= 0) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    pass->scale = scale;
+    pass->xlimit = xlimit;
+    pass->ylimit = ylimit;
+    pass->xfactor = (double)pass->width / (double)Setup->width;
+    pass->yfactor = (double)pass->height / (double)Setup->height;
+    pass->size = size;
+    if (!isfinite(pass->xfactor) || !isfinite(pass->yfactor))
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    return RENDERER_STATUS_OK;
+}
+
+static int Semantic_hud_radar_half_size(int size)
+{
+    int half = size / 2;
+
+    /* Match GCC's arithmetic right shift used by the legacy object marker. */
+    if (size < 0 && size % 2 != 0)
+	half--;
+    return half;
+}
+
+static RendererStatus Build_semantic_hud_radar_entry(
+    const SemanticHudRadarPass *pass, const radar_t *radar,
+    SemanticHudRadarDotGeometry *geometry)
+{
+    double relative_x;
+    double relative_y;
+    int integer_x;
+    int integer_y;
+    int64_t x;
+    int64_t y;
+    int64_t center_x;
+    int64_t center_y;
+    Uint32 color;
+    int shape;
+    int size;
+
+    if (pass == NULL || radar == NULL || geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    memset(geometry, 0, sizeof(*geometry));
+    relative_x = (double)radar->x * pass->scale
+	- (double)((int64_t)world.x + ext_view_width / 2)
+	    * pass->xfactor;
+    relative_y = (double)radar->y * pass->scale
+	- (double)((int64_t)world.y + ext_view_height / 2)
+	    * pass->yfactor;
+    if (!Semantic_hud_radar_truncated_int(relative_x, &integer_x)
+	|| !Semantic_hud_radar_truncated_int(relative_y, &integer_y)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+
+    x = integer_x;
+    y = integer_y;
+    /* Preserve the legacy one-period wrap and its strict half-map bounds. */
+    if (x < -(int64_t)pass->width / 2)
+	x += pass->width;
+    else if (x > (int64_t)pass->width / 2)
+	x -= pass->width;
+    if (y < -(int64_t)pass->height / 2)
+	y += pass->height;
+    else if (y > (int64_t)pass->height / 2)
+	y -= pass->height;
+
+    if ((double)x <= pass->xlimit && (double)x >= -pass->xlimit
+	&& (double)y <= pass->ylimit && (double)y >= -pass->ylimit) {
+	return RENDERER_STATUS_OK;
+    }
+
+    if (radar->type == RadarEnemy) {
+	color = hudRadarEnemyColorRGBA;
+	shape = hudRadarEnemyShape;
+    } else {
+	color = hudRadarOtherColorRGBA;
+	shape = hudRadarOtherShape;
+    }
+    size = pass->size;
+    if (radar->size == 0) {
+	size = Semantic_hud_radar_half_size(size);
+	if (hudRadarObjectColorRGBA)
+	    color = hudRadarObjectColorRGBA;
+	if (hudRadarObjectShape)
+	    shape = hudRadarObjectShape;
+    }
+
+    center_x = (int64_t)(draw_width / 2);
+    center_y = (int64_t)(draw_height / 2);
+    return Build_semantic_hud_radar_dot_geometry(
+	x + center_x, -y + center_y, color, shape, size, geometry);
+}
+
+static RendererStatus Validate_semantic_hud_radar_pass(
+    const SemanticHudRadarPass *pass)
+{
+    SemanticHudRadarDotGeometry geometry;
+    int radar_index;
+
+    if (pass == NULL || num_radar < 0
+	|| (num_radar > 0 && radar_ptr == NULL)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    /* Validate every derived dot before the batch accepts its first command. */
+    for (radar_index = 0; radar_index < num_radar; radar_index++) {
+	RendererStatus status = Build_semantic_hud_radar_entry(
+	    pass, &radar_ptr[radar_index], &geometry);
+
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Submit_semantic_hud_radar_pass(
+    SemanticHudBatch *batch, const SemanticHudRadarPass *pass)
+{
+    SemanticHudRadarDotGeometry geometry;
+    int radar_index;
+
+    if (batch == NULL || pass == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    for (radar_index = 0;
+	 radar_index < num_radar && batch->status == RENDERER_STATUS_OK;
+	 radar_index++) {
+	RendererStatus status = Build_semantic_hud_radar_entry(
+	    pass, &radar_ptr[radar_index], &geometry);
+
+	if (status != RENDERER_STATUS_OK) {
+	    Track_semantic_hud_batch(batch, status);
+	    break;
+	}
+	Submit_semantic_hud_radar_dot(batch, &geometry);
+    }
+    return batch->status;
+}
+
+static RendererStatus Build_semantic_hud_radar_scene(
+    int radar_enabled, int draw_ball_scan, int draw_cover_scan,
+    SemanticHudRadarScene *scene)
+{
+    double map_scale;
+    double first_xlimit_value;
+    double first_ylimit_value;
+    double second_scale;
+    double second_xlimit;
+    double second_ylimit;
+    int first_xlimit;
+    int first_ylimit;
+    int ball_radius = 0;
+    int cover_radius = 0;
+    RendererStatus status;
+
+    if (scene == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    memset(scene, 0, sizeof(*scene));
+    scene->radar_enabled = radar_enabled;
+    scene->draw_ball_scan = draw_ball_scan;
+    scene->draw_cover_scan = draw_cover_scan;
+
+    if (radar_enabled) {
+	if (Setup == NULL || Setup->width <= 0 || Setup->height <= 0
+	    || ext_view_width < 0 || ext_view_height < 0
+	    || active_view_width < 0 || active_view_height < 0
+	    || !isfinite(hudRadarScale) || hudRadarScale <= 0.0
+	    || !isfinite(hudRadarLimit) || hudRadarLimit < 0.0
+	    || !isfinite(clData.scale) || clData.scale <= 0.0
+	    || num_radar < 0 || (num_radar > 0 && radar_ptr == NULL)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+	map_scale = (double)Setup->width / 256.0;
+	if (!isfinite(map_scale) || map_scale <= 0.0
+	    || map_scale > (double)FLT_MAX) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+	hudRadarMapScale = (float)map_scale;
+	if (!isfinite(hudRadarMapScale) || hudRadarMapScale <= 0.0f)
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+
+	first_xlimit_value = hudRadarLimit * (ext_view_width / 2)
+	    * hudRadarScale / (double)hudRadarMapScale;
+	first_ylimit_value = hudRadarLimit * (ext_view_height / 2)
+	    * hudRadarScale / (double)hudRadarMapScale;
+	if (!Semantic_hud_radar_truncated_int(
+		first_xlimit_value, &first_xlimit)
+	    || !Semantic_hud_radar_truncated_int(
+		first_ylimit_value, &first_ylimit)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+	second_scale = (double)hudRadarMapScale * clData.scale;
+	second_xlimit = (active_view_width / 2) * clData.scale;
+	second_ylimit = (active_view_height / 2) * clData.scale;
+	status = Build_semantic_hud_radar_pass(
+	    hudRadarScale, first_xlimit, first_ylimit,
+	    hudRadarDotSize, &scene->passes[0]);
+	if (status == RENDERER_STATUS_OK) {
+	    status = Build_semantic_hud_radar_pass(
+		second_scale, second_xlimit, second_ylimit,
+		SHIP_SZ, &scene->passes[1]);
+	}
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+	status = Validate_semantic_hud_radar_pass(&scene->passes[0]);
+	if (status == RENDERER_STATUS_OK)
+	    status = Validate_semantic_hud_radar_pass(&scene->passes[1]);
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+    }
+
+    if (draw_ball_scan || draw_cover_scan) {
+	if (!isfinite(clData.scale) || clData.scale <= 0.0)
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    if (draw_ball_scan
+	&& !Semantic_hud_radar_truncated_int(
+	    8.0 * clData.scale, &ball_radius)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    if (draw_cover_scan
+	&& !Semantic_hud_radar_truncated_int(
+	    6.0 * clData.scale, &cover_radius)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    if (draw_ball_scan && ball_radius != 0) {
+	status = Build_semantic_hud_radar_ring(
+	    (int64_t)(draw_width / 2), (int64_t)(draw_height / 2),
+	    ball_radius, scene->ball_scan);
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+    } else {
+	scene->draw_ball_scan = 0;
+    }
+    if (draw_cover_scan && cover_radius != 0) {
+	status = Build_semantic_hud_radar_ring(
+	    (int64_t)(draw_width / 2), (int64_t)(draw_height / 2),
+	    cover_radius, scene->cover_scan);
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+    } else {
+	scene->draw_cover_scan = 0;
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Paint_semantic_hud_radar_and_scans(void)
+{
+    SemanticHudBatch batch;
+    SemanticHudRadarScene scene;
+    RendererStatus operation_status;
+    int radar_enabled;
+    int draw_ball_scan;
+    int draw_cover_scan;
+
+    radar_enabled = hudRadarEnemyColorRGBA
+	|| hudRadarOtherColorRGBA || hudRadarObjectColorRGBA;
+    draw_ball_scan = Bms_test_state(BmsBall) && msgScanBallColorRGBA;
+    draw_cover_scan = Bms_test_state(BmsCover) && msgScanCoverColorRGBA;
+    if (!radar_enabled && !draw_ball_scan && !draw_cover_scan)
+	return RENDERER_STATUS_OK;
+
+    if (Begin_semantic_hud_batch(&batch) != RENDERER_STATUS_OK)
+	return batch.status;
+    operation_status = Build_semantic_hud_radar_scene(
+	radar_enabled, draw_ball_scan, draw_cover_scan, &scene);
+    if (operation_status != RENDERER_STATUS_OK)
+	return Track_semantic_hud_batch(&batch, operation_status);
+
+    operation_status = Renderer_set_blend(
+	batch.renderer, RENDERER_BLEND_ALPHA);
+    Track_semantic_hud_batch(&batch, operation_status);
+    if (batch.status == RENDERER_STATUS_OK && scene.radar_enabled) {
+	Submit_semantic_hud_radar_pass(&batch, &scene.passes[0]);
+	if (batch.status == RENDERER_STATUS_OK)
+	    Submit_semantic_hud_radar_pass(&batch, &scene.passes[1]);
+    }
+    if (batch.status == RENDERER_STATUS_OK) {
+	operation_status = Renderer_set_blend(
+	    batch.renderer, RENDERER_BLEND_OPAQUE);
+	Track_semantic_hud_batch(&batch, operation_status);
+    }
+    if (batch.status == RENDERER_STATUS_OK && scene.draw_ball_scan) {
+	operation_status = Renderer_stroke_path(
+	    batch.renderer, scene.ball_scan,
+	    SEMANTIC_HUD_RADAR_RING_POINTS, 1.0f,
+	    Renderer_color_from_rgba32(msgScanBallColorRGBA), 1);
+	Accept_semantic_hud_command(&batch, operation_status);
+    }
+    if (batch.status == RENDERER_STATUS_OK && scene.draw_cover_scan) {
+	operation_status = Renderer_stroke_path(
+	    batch.renderer, scene.cover_scan,
+	    SEMANTIC_HUD_RADAR_RING_POINTS, 1.0f,
+	    Renderer_color_from_rgba32(msgScanCoverColorRGBA), 1);
+	Accept_semantic_hud_command(&batch, operation_status);
+    }
+    return Finish_semantic_hud_batch(&batch);
+}
+
+#ifdef XPILOT_SDLGUI_TEST_HOOKS
+RendererStatus Sdlgui_test_paint_hud_radar_dot(
+    int x, int y, Uint32 color, int shape, int size)
+{
+    SemanticHudBatch batch;
+    SemanticHudRadarDotGeometry geometry;
+    RendererStatus operation_status;
+
+    if (!Semantic_hud_radar_dot_visible(color, shape, size))
+	return RENDERER_STATUS_OK;
+    if (Begin_semantic_hud_batch(&batch) != RENDERER_STATUS_OK)
+	return batch.status;
+    operation_status = Build_semantic_hud_radar_dot_geometry(
+	x, y, color, shape, size, &geometry);
+    if (operation_status != RENDERER_STATUS_OK)
+	return Track_semantic_hud_batch(&batch, operation_status);
+    operation_status = Renderer_set_blend(
+	batch.renderer, RENDERER_BLEND_ALPHA);
+    if (Track_semantic_hud_batch(&batch, operation_status)
+	== RENDERER_STATUS_OK) {
+	Submit_semantic_hud_radar_dot(&batch, &geometry);
+    }
+    return Finish_semantic_hud_batch(&batch);
+}
+
+RendererStatus Sdlgui_test_paint_hud_radar_and_scans(void)
+{
+    return Paint_semantic_hud_radar_and_scans();
+}
+#endif
 
 static void Paint_HUD_items(int hud_pos_x, int hud_pos_y)
 {
@@ -2302,41 +2768,10 @@ void Paint_HUD(void)
 
     if (Paint_semantic_hud_pointers() != RENDERER_STATUS_OK)
 	return;
+    if (Paint_semantic_hud_radar_and_scans() != RENDERER_STATUS_OK)
+	return;
     tex_index = 0;
-    glEnable(GL_BLEND);
-
-    /* TODO */
-    /* This should be done in a nicer way now (using radar.c maybe) */
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    if (hudRadarEnemyColorRGBA 
-	|| hudRadarOtherColorRGBA 
-	|| hudRadarObjectColorRGBA) {
-	hudRadarMapScale = (double) Setup->width / (double) 256;
-	Paint_hudradar(
-	    hudRadarScale,
-	    (int)(hudRadarLimit * (ext_view_width / 2)
-		  * hudRadarScale / hudRadarMapScale),
-	    (int)(hudRadarLimit * (ext_view_height / 2)
-		  * hudRadarScale / hudRadarMapScale),
-	    hudRadarDotSize);
-
-	Paint_hudradar(hudRadarMapScale*clData.scale,
-		       (active_view_width / 2)*clData.scale,
-		       (active_view_height / 2)*clData.scale,
-		       SHIP_SZ);
-    }
-
-
-    glDisable(GL_BLEND);
-    /* message scan hack by mara and jpv */
-    if (Bms_test_state(BmsBall) && msgScanBallColorRGBA)
-	Circle(msgScanBallColorRGBA, draw_width / 2,
-	       draw_height / 2, (int)(8*clData.scale),0);
-    if (Bms_test_state(BmsCover) && msgScanCoverColorRGBA)
-	Circle(msgScanCoverColorRGBA, draw_width / 2,
-	       draw_height / 2, (int)(6*clData.scale),0);
-
+    /* The remaining compatibility HUD is additive and still needs blending. */
     glEnable(GL_BLEND);
 
     /*

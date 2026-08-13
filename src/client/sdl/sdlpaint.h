@@ -58,7 +58,6 @@ extern Uint32 scoreEnemyTeamColorRGBA;
 extern int GL_X(int x);
 extern int GL_Y(int y);
 extern void set_alphacolor(Uint32 color);
-extern void Circle(Uint32 color, int x, int y, int radius, int filled);
 
 extern irec_t *select_bounds;
 
@@ -83,6 +82,32 @@ extern RendererStatus Paint_select(void);
  *          state and is available only to the SDL GUI primitive test target.
  */
 extern RendererStatus Sdlgui_test_paint_hud_pointers(void);
+
+/**
+ * Draw one semantic HUD radar dot for tests.
+ *
+ * @param x Horizontal center in inherited HUD coordinates.
+ * @param y Vertical center in inherited HUD coordinates.
+ * @param color Packed 0xRRGGBBAA color.
+ * @param shape HUD radar shape number in the inclusive range 2 through 7.
+ * @param size Signed shape radius; zero suppresses drawing.
+ * @return The sticky result for the active renderer frame, or
+ *         RENDERER_STATUS_OK when the dot is suppressed.
+ * @remarks This hook preserves the renderer's current transform and scissor
+ *          state and is available only to the SDL GUI primitive test target.
+ */
+extern RendererStatus Sdlgui_test_paint_hud_radar_dot(
+    int x, int y, Uint32 color, int shape, int size);
+
+/**
+ * Draw the semantic two-pass HUD radar and message scan rings for tests.
+ *
+ * @return The sticky result for the active renderer frame, or
+ *         RENDERER_STATUS_OK when no radar dot or scan ring is visible.
+ * @remarks This hook preserves the renderer's current transform and scissor
+ *          state and is available only to the SDL GUI primitive test target.
+ */
+extern RendererStatus Sdlgui_test_paint_hud_radar_and_scans(void);
 #endif
 
 #endif
