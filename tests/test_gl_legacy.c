@@ -7,6 +7,7 @@
 #include "images.h"
 #include "renderer.h"
 #include "renderer_gl_legacy.h"
+#include "sdlrenderer.h"
 #include "text.h"
 #include "text_atlas.h"
 
@@ -40,6 +41,8 @@ typedef struct framebuffer_api {
 
 struct SdlRenderer {
     unsigned int identity;
+    int frame_active;
+    RendererStatus frame_result;
 };
 
 struct TextRenderer {
@@ -62,6 +65,30 @@ static size_t ttf_close_count;
 static RendererStatus text_renderer_create_result = RENDERER_STATUS_OK;
 static int text_renderer_create_calls;
 static int text_renderer_destroy_calls;
+static SdlRenderer paint_sdl_renderer = {
+    0,
+    1,
+    RENDERER_STATUS_OK
+};
+
+SdlRenderer *Get_sdl_renderer(void)
+{
+    return &paint_sdl_renderer;
+}
+
+RendererStatus Sdl_renderer_track_frame_result(
+    SdlRenderer *renderer, RendererStatus status)
+{
+    if (renderer == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!renderer->frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (renderer->frame_result == RENDERER_STATUS_OK
+        && status != RENDERER_STATUS_OK) {
+        renderer->frame_result = status;
+    }
+    return renderer->frame_result;
+}
 
 RendererStatus Text_renderer_create(SdlRenderer *sdl_renderer,
                                     TextAtlas *atlas,
@@ -200,6 +227,12 @@ int xpprintf(const char *format, ...)
 }
 
 image_t *Image_get_texture(int index)
+{
+    (void)index;
+    return NULL;
+}
+
+image_t *Image_get(int index)
 {
     (void)index;
     return NULL;
@@ -516,8 +549,19 @@ static void check_gui_display_list_lifecycle(void)
     CHECK_CONTINUE(glIsList(polygon_fill_list_base) == GL_TRUE);
     CHECK_CONTINUE(glIsList(polygon_edge_list_base) == GL_TRUE);
 
+    Gui_paint_asteroids_begin();
+    CHECK_CONTINUE(drain_gl_errors() == 0);
+    CHECK_CONTINUE(glIsEnabled(GL_LIGHTING) == GL_TRUE);
+    CHECK_CONTINUE(glIsEnabled(GL_LIGHT0) == GL_TRUE);
+    CHECK_CONTINUE(glIsEnabled(GL_CULL_FACE) == GL_TRUE);
     Gui_paint_asteroid(6, 6, 0, 0, 1);
     CHECK_CONTINUE(drain_gl_errors() == 0);
+    Gui_paint_asteroids_end();
+    CHECK_CONTINUE(drain_gl_errors() == 0);
+    CHECK_CONTINUE(glIsEnabled(GL_LIGHTING) == GL_FALSE);
+    CHECK_CONTINUE(glIsEnabled(GL_LIGHT0) == GL_FALSE);
+    CHECK_CONTINUE(glIsEnabled(GL_CULL_FACE) == GL_FALSE);
+    CHECK_CONTINUE(glIsEnabled(GL_TEXTURE_2D) == GL_FALSE);
     Gui_cleanup();
     CHECK_CONTINUE(glIsList(asteroid_list) == GL_FALSE);
     CHECK_CONTINUE(glIsList(polygon_fill_list_base) == GL_FALSE);

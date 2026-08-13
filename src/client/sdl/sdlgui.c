@@ -129,6 +129,7 @@ static GLuint polyListBase = 0;
 static GLuint polyEdgeListBase = 0;
 static GLsizei polyListCount = 0;
 static GLuint asteroid = 0;
+static bool asteroid_batch_active = false;
 
 irec_t *select_bounds;
 
@@ -149,6 +150,16 @@ static bool Ensure_cached_text(font_data *font, const char *text,
 	return true;
     }
     return render_text(font, text, cache);
+}
+
+static RendererStatus Preflight_sdl_paint_leaf(void)
+{
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+
+    if (sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    return Sdl_renderer_track_frame_result(
+	sdl_renderer, RENDERER_STATUS_OK);
 }
 
 /* better to use alpha everywhere, less confusion */
@@ -552,6 +563,9 @@ void Gui_paint_decor(int x, int y, int xi, int yi, int type,
 
     mask = decor[type];
 
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+
     set_alphacolor(decorColorRGBA);
     glBegin(GL_LINES);
 
@@ -583,6 +597,9 @@ void Gui_paint_decor(int x, int y, int xi, int yi, int type,
 
 void Gui_paint_border(int x, int y, int xi, int yi)
 {
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+
     set_alphacolor(wallColorRGBA);
     glBegin(GL_LINES);
     	glVertex2i(x, y);
@@ -592,7 +609,11 @@ void Gui_paint_border(int x, int y, int xi, int yi)
 
 void Gui_paint_visible_border(int x, int y, int xi, int yi)
 {
-    setupPaint_moving();
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+    if (setupPaint_moving() != RENDERER_STATUS_OK)
+	return;
+
     set_alphacolor(hudColorRGBA);
     glBegin(GL_LINE_LOOP);
     	glVertex2i(x, y);
@@ -600,11 +621,15 @@ void Gui_paint_visible_border(int x, int y, int xi, int yi)
     	glVertex2i(xi, yi);
     	glVertex2i(xi, y);
     glEnd();
-    setupPaint_stationary();
+    if (setupPaint_stationary() != RENDERER_STATUS_OK)
+	return;
 }
 
 void Gui_paint_hudradar_limit(int x, int y, int xi, int yi)
 {
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+
     set_alphacolor(blueRGBA);
     glBegin(GL_LINE_LOOP);
     	glVertex2i(x, y);
@@ -647,6 +672,9 @@ static void paint_dir_grav(int x, int y, int dir)
 {
     const int sz = BLOCK_SZ;
     int cb, c0, c1, c2, p1, p2, swp;
+
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
 
     cb = redRGBA - 255;
     p1 = loops % sz;
@@ -1024,6 +1052,9 @@ void Gui_paint_setup_treasure(int x, int y, int team, bool own)
 
 void Gui_paint_walls(int x, int y, int type)
 {
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+
     set_alphacolor(wallColorRGBA);
     glBegin(GL_LINES);
 
@@ -1082,6 +1113,8 @@ void Gui_paint_polygon(int i, int xoff, int yoff)
 
     if (BIT(p_style.flags, STYLE_INVISIBLE))
 	return;
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
 
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
@@ -1139,7 +1172,14 @@ void Gui_paint_polygon(int i, int xoff, int yoff)
 void Gui_paint_item_object(int type, int x, int y)
 {
     int sz = 16;
+
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
     Image_paint(IMG_ALL_ITEMS, x - 8, y - 4, type, whiteRGBA);
+    /* Do not enter legacy drawing if the semantic image draw failed. */
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+
     set_alphacolor(blueRGBA);
     if (smoothLines) glEnable(GL_LINE_SMOOTH);
     glBegin(GL_LINE_LOOP);
@@ -1161,6 +1201,9 @@ void Gui_paint_ball(int x, int y, int style)
 	Image_paint(IMG_BALL, x - BALL_RADIUS, y - BALL_RADIUS, 0, rgba);
     else {
 	int i, numvert = 16, ang = RES / numvert;
+
+	if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	    return;
 	/* kps hack, feel free to improve */
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -1177,6 +1220,9 @@ void Gui_paint_ball(int x, int y, int style)
 
 void Gui_paint_ball_connector(int x_1, int y_1, int x_2, int y_2)
 {
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     set_alphacolor(connColorRGBA);
@@ -1209,6 +1255,9 @@ void Gui_paint_spark(int color, int x, int y)
 		world.y + ext_view_height - y,
 		color);
     */
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+
     glColor3ub(255 * (color + 1) / 8,
 	       255 * color * color / 64,
 	       0);
@@ -1221,6 +1270,9 @@ void Gui_paint_spark(int color, int x, int y)
 void Gui_paint_wreck(int x, int y, bool deadly, int wtype, int rot, int size)
 {
     int cnt, tx, ty;
+
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
 
     set_alphacolor(deadly ? whiteRGBA : redRGBA);
     glBegin(GL_LINE_LOOP);
@@ -1237,6 +1289,11 @@ void Gui_paint_asteroids_begin(void)
     image_t *img;
     GLfloat ambient[] = { 0.7F, 0.7F, 0.7F, 1.0F };
 
+    asteroid_batch_active = false;
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+    asteroid_batch_active = true;
+
     img = Image_get(IMG_ASTEROID);
     if (img != NULL) {
 	glEnable(GL_TEXTURE_2D);
@@ -1251,15 +1308,26 @@ void Gui_paint_asteroids_begin(void)
 
 void Gui_paint_asteroids_end(void)
 {
+    /* An active legacy batch must restore its GL state despite sticky failure. */
+    (void)Preflight_sdl_paint_leaf();
+    if (!asteroid_batch_active)
+	return;
+
     glDisable(GL_CULL_FACE);
     glDisable(GL_LIGHT0);
     glDisable(GL_LIGHTING);
     glDisable(GL_TEXTURE_2D);
+    asteroid_batch_active = false;
 }
 
 void Gui_paint_asteroid(int x, int y, int type, int rot, int size)
 {
     GLfloat real_size;
+
+    if (!asteroid_batch_active
+	|| Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK) {
+	return;
+    }
 
     real_size = 0.9 * SHIP_SZ * size;
     glPushMatrix();
@@ -1477,6 +1545,9 @@ void Gui_paint_appearing(int x, int y, int id, int count)
 	    base->appeartime = (long)(loops + (count * clientFPS) / 120);
     }
 
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+
     minx = x - (int)hsize;
     miny = y - (int)hsize;
     maxx = minx + 2 * hsize + 1;
@@ -1503,6 +1574,9 @@ void Gui_paint_refuel(int x_0, int y_0, int x_1, int y_1)
 {
     int stipple = 4;
 
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+
     set_alphacolor(fuelColorRGBA);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -1519,6 +1593,9 @@ void Gui_paint_refuel(int x_0, int y_0, int x_1, int y_1)
 
 void Gui_paint_connector(int x_0, int y_0, int x_1, int y_1, int tractor)
 {
+    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     set_alphacolor(connColorRGBA);
@@ -1727,8 +1804,16 @@ void Gui_paint_ship(int x, int y, int dir, int id, int cloak, int phased,
 		else
 			ship = Ship_by_id(id);
 
+    if (!texturedShips
+	&& Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	return;
+
     if (shield) {
     	Image_paint(IMG_SHIELD, x - 27, y - 27, 0, (color & 0xffffff00) + ((color & 0x000000ff)/2));
+	/* Do not enter legacy drawing if the semantic shield draw failed. */
+	if (!texturedShips
+	    && Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
+	    return;
     }
 	if (texturedShips) {
     	    if (BIT(Setup->mode, TEAM_PLAY)

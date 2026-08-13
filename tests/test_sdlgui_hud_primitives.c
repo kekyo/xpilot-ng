@@ -2,10 +2,12 @@
 
 #include "xpclient_sdl.h"
 
+#include "guimap.h"
 #include "guiobjects.h"
 #include "renderer.h"
 #include "images.h"
 #include "sdlinit.h"
+#include "sdlpaint.h"
 #include "sdlrenderer.h"
 #include "text.h"
 
@@ -147,6 +149,7 @@ static FakeText last_text;
 static FakeImage last_image;
 static FakeMapText last_map_text;
 static FakeHudText last_hud_text;
+static image_t fake_asteroid_image;
 static char last_measured_text[50];
 static int event_count;
 static int operation_result_pending;
@@ -165,16 +168,23 @@ static int transform_attempts;
 static int scissor_attempts;
 static int text_attempts;
 static int image_attempts;
+static int image_lookup_attempts;
 static int map_text_attempts;
 static int measure_attempts;
 static int hud_text_attempts;
+static int setup_moving_attempts;
+static int setup_stationary_attempts;
 static int legacy_begin_calls;
 static int legacy_vertex_calls;
 static int legacy_end_calls;
 static int legacy_color_calls;
 static int legacy_blend_calls;
+static int legacy_enable_calls;
+static int legacy_disable_calls;
 static int legacy_line_stipple_calls;
 static int legacy_line_width_calls;
+static int legacy_texture_bind_calls;
+static int legacy_light_calls;
 static RendererBlendMode current_blend;
 static RendererBlendMode blend_modes[MAX_EVENTS];
 static int blend_failure_attempt;
@@ -426,6 +436,7 @@ static void reset_frame(void)
     memset(&last_image, 0, sizeof(last_image));
     memset(&last_map_text, 0, sizeof(last_map_text));
     memset(&last_hud_text, 0, sizeof(last_hud_text));
+    memset(&fake_asteroid_image, 0, sizeof(fake_asteroid_image));
     memset(last_measured_text, 0, sizeof(last_measured_text));
     memset(&gamefont, 0, sizeof(gamefont));
     memset(&mapfont, 0, sizeof(mapfont));
@@ -451,16 +462,23 @@ static void reset_frame(void)
     scissor_attempts = 0;
     text_attempts = 0;
     image_attempts = 0;
+    image_lookup_attempts = 0;
     map_text_attempts = 0;
     measure_attempts = 0;
     hud_text_attempts = 0;
+    setup_moving_attempts = 0;
+    setup_stationary_attempts = 0;
     legacy_begin_calls = 0;
     legacy_vertex_calls = 0;
     legacy_end_calls = 0;
     legacy_color_calls = 0;
     legacy_blend_calls = 0;
+    legacy_enable_calls = 0;
+    legacy_disable_calls = 0;
     legacy_line_stipple_calls = 0;
     legacy_line_width_calls = 0;
+    legacy_texture_bind_calls = 0;
+    legacy_light_calls = 0;
     current_blend = RENDERER_BLEND_OPAQUE;
     blend_failure_attempt = 0;
     blend_failure_result = RENDERER_STATUS_OK;
@@ -483,6 +501,7 @@ static void reset_frame(void)
     fake_renderer.transform_token = 71;
     fake_renderer.scissor_token = 83;
     fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
+    fake_asteroid_image.legacy_name = 97;
     draw_width = 200;
     draw_height = 120;
     ext_view_width = 200;
@@ -613,6 +632,18 @@ RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
 {
     return renderer == NULL ? RENDERER_STATUS_INVALID_ARGUMENT
                             : renderer->frame_result;
+}
+
+RendererStatus setupPaint_moving(void)
+{
+    setup_moving_attempts++;
+    return Sdl_renderer_frame_result(&fake_sdl_renderer);
+}
+
+RendererStatus setupPaint_stationary(void)
+{
+    setup_stationary_attempts++;
+    return Sdl_renderer_frame_result(&fake_sdl_renderer);
 }
 
 RendererStatus Renderer_set_blend(Renderer *renderer,
@@ -845,6 +876,12 @@ void Image_paint(int index, int x, int y, int frame, int color)
         &fake_sdl_renderer, image_result);
 }
 
+image_t *Image_get(int index)
+{
+    image_lookup_attempts++;
+    return index == IMG_ASTEROID ? &fake_asteroid_image : NULL;
+}
+
 void Image_paint_hud(int index, int x, int y, int frame, int color)
 {
     image_attempts++;
@@ -940,12 +977,14 @@ void GLAPIENTRY glEnable(GLenum capability)
 {
     (void)capability;
     legacy_blend_calls++;
+    legacy_enable_calls++;
 }
 
 void GLAPIENTRY glDisable(GLenum capability)
 {
     (void)capability;
     legacy_blend_calls++;
+    legacy_disable_calls++;
 }
 
 void GLAPIENTRY glBlendFunc(GLenum source, GLenum destination)
@@ -996,6 +1035,22 @@ void GLAPIENTRY glEnd(void)
     legacy_end_calls++;
 }
 
+void GLAPIENTRY glBindTexture(GLenum target, GLuint texture)
+{
+    (void)target;
+    (void)texture;
+    legacy_texture_bind_calls++;
+}
+
+void GLAPIENTRY glLightfv(GLenum light, GLenum parameter,
+                          const GLfloat *values)
+{
+    (void)light;
+    (void)parameter;
+    (void)values;
+    legacy_light_calls++;
+}
+
 static int check_no_legacy_primitives(void)
 {
     TEST_CHECK(legacy_begin_calls == 0);
@@ -1005,6 +1060,272 @@ static int check_no_legacy_primitives(void)
     TEST_CHECK(legacy_blend_calls == 0);
     TEST_CHECK(legacy_line_stipple_calls == 0);
     TEST_CHECK(legacy_line_width_calls == 0);
+    return 0;
+}
+
+typedef struct PaintOperationCounts {
+    int event_count;
+    int blend_attempts;
+    int draw_attempts;
+    int fill_attempts;
+    int stroke_attempts;
+    int stippled_stroke_attempts;
+    int flush_attempts;
+    int transform_attempts;
+    int scissor_attempts;
+    int text_attempts;
+    int image_attempts;
+    int image_lookup_attempts;
+    int map_text_attempts;
+    int measure_attempts;
+    int hud_text_attempts;
+    int setup_moving_attempts;
+    int setup_stationary_attempts;
+    int legacy_begin_calls;
+    int legacy_vertex_calls;
+    int legacy_end_calls;
+    int legacy_color_calls;
+    int legacy_blend_calls;
+    int legacy_enable_calls;
+    int legacy_disable_calls;
+    int legacy_line_stipple_calls;
+    int legacy_line_width_calls;
+    int legacy_texture_bind_calls;
+    int legacy_light_calls;
+} PaintOperationCounts;
+
+static PaintOperationCounts paint_operation_counts(void)
+{
+    PaintOperationCounts counts = {
+        event_count,
+        blend_attempts,
+        draw_attempts,
+        fill_attempts,
+        stroke_attempts,
+        stippled_stroke_attempts,
+        flush_attempts,
+        transform_attempts,
+        scissor_attempts,
+        text_attempts,
+        image_attempts,
+        image_lookup_attempts,
+        map_text_attempts,
+        measure_attempts,
+        hud_text_attempts,
+        setup_moving_attempts,
+        setup_stationary_attempts,
+        legacy_begin_calls,
+        legacy_vertex_calls,
+        legacy_end_calls,
+        legacy_color_calls,
+        legacy_blend_calls,
+        legacy_enable_calls,
+        legacy_disable_calls,
+        legacy_line_stipple_calls,
+        legacy_line_width_calls,
+        legacy_texture_bind_calls,
+        legacy_light_calls
+    };
+
+    return counts;
+}
+
+static int check_paint_operation_counts_unchanged(
+    PaintOperationCounts before)
+{
+    PaintOperationCounts after = paint_operation_counts();
+
+#define CHECK_OPERATION_COUNT(field) \
+    TEST_CHECK(after.field == before.field)
+    CHECK_OPERATION_COUNT(event_count);
+    CHECK_OPERATION_COUNT(blend_attempts);
+    CHECK_OPERATION_COUNT(draw_attempts);
+    CHECK_OPERATION_COUNT(fill_attempts);
+    CHECK_OPERATION_COUNT(stroke_attempts);
+    CHECK_OPERATION_COUNT(stippled_stroke_attempts);
+    CHECK_OPERATION_COUNT(flush_attempts);
+    CHECK_OPERATION_COUNT(transform_attempts);
+    CHECK_OPERATION_COUNT(scissor_attempts);
+    CHECK_OPERATION_COUNT(text_attempts);
+    CHECK_OPERATION_COUNT(image_attempts);
+    CHECK_OPERATION_COUNT(image_lookup_attempts);
+    CHECK_OPERATION_COUNT(map_text_attempts);
+    CHECK_OPERATION_COUNT(measure_attempts);
+    CHECK_OPERATION_COUNT(hud_text_attempts);
+    CHECK_OPERATION_COUNT(setup_moving_attempts);
+    CHECK_OPERATION_COUNT(setup_stationary_attempts);
+    CHECK_OPERATION_COUNT(legacy_begin_calls);
+    CHECK_OPERATION_COUNT(legacy_vertex_calls);
+    CHECK_OPERATION_COUNT(legacy_end_calls);
+    CHECK_OPERATION_COUNT(legacy_color_calls);
+    CHECK_OPERATION_COUNT(legacy_blend_calls);
+    CHECK_OPERATION_COUNT(legacy_enable_calls);
+    CHECK_OPERATION_COUNT(legacy_disable_calls);
+    CHECK_OPERATION_COUNT(legacy_line_stipple_calls);
+    CHECK_OPERATION_COUNT(legacy_line_width_calls);
+    CHECK_OPERATION_COUNT(legacy_texture_bind_calls);
+    CHECK_OPERATION_COUNT(legacy_light_calls);
+#undef CHECK_OPERATION_COUNT
+    return 0;
+}
+
+static void preset_sticky_frame_failure(void)
+{
+    (void)Sdl_renderer_track_frame_result(
+        &fake_sdl_renderer, RENDERER_STATUS_BACKEND_ERROR);
+}
+
+static int check_sticky_failure_gates_direct_world_leaf(void)
+{
+    PaintOperationCounts before;
+    int prior_preflight_attempts;
+
+    reset_frame();
+    preset_sticky_frame_failure();
+    before = paint_operation_counts();
+    prior_preflight_attempts = preflight_attempts;
+
+    Gui_paint_border(10, 20, 30, 40);
+
+    TEST_CHECK(check_paint_operation_counts_unchanged(before) == 0);
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    return 0;
+}
+
+static int check_sticky_failure_gates_mixed_image_world_leaf(void)
+{
+    PaintOperationCounts before;
+    int prior_preflight_attempts;
+
+    reset_frame();
+    preset_sticky_frame_failure();
+    before = paint_operation_counts();
+    prior_preflight_attempts = preflight_attempts;
+
+    Gui_paint_item_object(3, 20, 30);
+
+    TEST_CHECK(check_paint_operation_counts_unchanged(before) == 0);
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    return 0;
+}
+
+static int check_sticky_failure_gates_setup_switching_world_leaf(void)
+{
+    PaintOperationCounts before;
+    int prior_preflight_attempts;
+
+    reset_frame();
+    preset_sticky_frame_failure();
+    before = paint_operation_counts();
+    prior_preflight_attempts = preflight_attempts;
+
+    Gui_paint_visible_border(10, 20, 30, 40);
+
+    TEST_CHECK(check_paint_operation_counts_unchanged(before) == 0);
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    return 0;
+}
+
+static int check_sticky_failure_gates_semantic_and_text_world_leaf(void)
+{
+    PaintOperationCounts before;
+    int prior_preflight_attempts;
+
+    reset_frame();
+    fake_setup.mode = TEAM_PLAY;
+    preset_sticky_frame_failure();
+    before = paint_operation_counts();
+    prior_preflight_attempts = preflight_attempts;
+
+    Gui_paint_setup_target(10, 20, 7, 125.0, true);
+
+    TEST_CHECK(check_paint_operation_counts_unchanged(before) == 0);
+    TEST_CHECK(preflight_attempts > prior_preflight_attempts);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    return 0;
+}
+
+static int check_sticky_failure_gates_inactive_asteroid_batch(void)
+{
+    PaintOperationCounts before;
+    int prior_preflight_attempts;
+
+    reset_frame();
+    preset_sticky_frame_failure();
+    before = paint_operation_counts();
+    prior_preflight_attempts = preflight_attempts;
+
+    Gui_paint_asteroids_begin();
+    Gui_paint_asteroids_end();
+
+    TEST_CHECK(check_paint_operation_counts_unchanged(before) == 0);
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 2);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    return 0;
+}
+
+static int check_asteroid_batch_cleanup_survives_sticky_failure(void)
+{
+    PaintOperationCounts before_end;
+    int prior_preflight_attempts;
+
+    reset_frame();
+    prior_preflight_attempts = preflight_attempts;
+
+    Gui_paint_asteroids_begin();
+
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(legacy_enable_calls > 0);
+    TEST_CHECK(legacy_disable_calls == 0);
+    before_end = paint_operation_counts();
+    preset_sticky_frame_failure();
+    prior_preflight_attempts = preflight_attempts;
+
+    Gui_paint_asteroids_end();
+
+    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
+    TEST_CHECK(legacy_disable_calls == legacy_enable_calls);
+    TEST_CHECK(event_count == before_end.event_count);
+    TEST_CHECK(blend_attempts == before_end.blend_attempts);
+    TEST_CHECK(draw_attempts == before_end.draw_attempts);
+    TEST_CHECK(fill_attempts == before_end.fill_attempts);
+    TEST_CHECK(stroke_attempts == before_end.stroke_attempts);
+    TEST_CHECK(stippled_stroke_attempts
+               == before_end.stippled_stroke_attempts);
+    TEST_CHECK(flush_attempts == before_end.flush_attempts);
+    TEST_CHECK(transform_attempts == before_end.transform_attempts);
+    TEST_CHECK(scissor_attempts == before_end.scissor_attempts);
+    TEST_CHECK(text_attempts == before_end.text_attempts);
+    TEST_CHECK(image_attempts == before_end.image_attempts);
+    TEST_CHECK(image_lookup_attempts == before_end.image_lookup_attempts);
+    TEST_CHECK(map_text_attempts == before_end.map_text_attempts);
+    TEST_CHECK(measure_attempts == before_end.measure_attempts);
+    TEST_CHECK(hud_text_attempts == before_end.hud_text_attempts);
+    TEST_CHECK(setup_moving_attempts == before_end.setup_moving_attempts);
+    TEST_CHECK(setup_stationary_attempts
+               == before_end.setup_stationary_attempts);
+    TEST_CHECK(legacy_begin_calls == before_end.legacy_begin_calls);
+    TEST_CHECK(legacy_vertex_calls == before_end.legacy_vertex_calls);
+    TEST_CHECK(legacy_end_calls == before_end.legacy_end_calls);
+    TEST_CHECK(legacy_color_calls == before_end.legacy_color_calls);
+    TEST_CHECK(legacy_line_stipple_calls
+               == before_end.legacy_line_stipple_calls);
+    TEST_CHECK(legacy_line_width_calls
+               == before_end.legacy_line_width_calls);
+    TEST_CHECK(legacy_texture_bind_calls
+               == before_end.legacy_texture_bind_calls);
+    TEST_CHECK(legacy_light_calls == before_end.legacy_light_calls);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
     return 0;
 }
 
@@ -4181,6 +4502,18 @@ static int check_target_failures_stop_later_work(void)
 
 int main(void)
 {
+    if (check_sticky_failure_gates_direct_world_leaf() != 0)
+        return 1;
+    if (check_sticky_failure_gates_mixed_image_world_leaf() != 0)
+        return 1;
+    if (check_sticky_failure_gates_setup_switching_world_leaf() != 0)
+        return 1;
+    if (check_sticky_failure_gates_semantic_and_text_world_leaf() != 0)
+        return 1;
+    if (check_sticky_failure_gates_inactive_asteroid_batch() != 0)
+        return 1;
+    if (check_asteroid_batch_cleanup_survives_sticky_failure() != 0)
+        return 1;
     if (check_target_full_order_and_geometry() != 0)
         return 1;
     if (check_target_optional_paths_and_own_color() != 0)
