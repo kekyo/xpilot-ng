@@ -1444,83 +1444,6 @@ static int check_sticky_failure_gates_semantic_and_text_world_leaf(void)
     return 0;
 }
 
-static int check_sticky_failure_gates_inactive_asteroid_batch(void)
-{
-    PaintOperationCounts before;
-    int prior_preflight_attempts;
-
-    reset_frame();
-    preset_sticky_frame_failure();
-    before = paint_operation_counts();
-    prior_preflight_attempts = preflight_attempts;
-
-    Gui_paint_asteroids_begin();
-    Gui_paint_asteroids_end();
-
-    TEST_CHECK(check_paint_operation_counts_unchanged(before) == 0);
-    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 2);
-    TEST_CHECK(fake_sdl_renderer.frame_result
-               == RENDERER_STATUS_BACKEND_ERROR);
-    return 0;
-}
-
-static int check_asteroid_batch_cleanup_survives_sticky_failure(void)
-{
-    PaintOperationCounts before_end;
-    int prior_preflight_attempts;
-
-    reset_frame();
-    prior_preflight_attempts = preflight_attempts;
-
-    Gui_paint_asteroids_begin();
-
-    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
-    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    TEST_CHECK(legacy_enable_calls > 0);
-    TEST_CHECK(legacy_disable_calls == 0);
-    before_end = paint_operation_counts();
-    preset_sticky_frame_failure();
-    prior_preflight_attempts = preflight_attempts;
-
-    Gui_paint_asteroids_end();
-
-    TEST_CHECK(preflight_attempts == prior_preflight_attempts + 1);
-    TEST_CHECK(legacy_disable_calls == legacy_enable_calls);
-    TEST_CHECK(event_count == before_end.event_count);
-    TEST_CHECK(blend_attempts == before_end.blend_attempts);
-    TEST_CHECK(draw_attempts == before_end.draw_attempts);
-    TEST_CHECK(fill_attempts == before_end.fill_attempts);
-    TEST_CHECK(stroke_attempts == before_end.stroke_attempts);
-    TEST_CHECK(stippled_stroke_attempts
-               == before_end.stippled_stroke_attempts);
-    TEST_CHECK(flush_attempts == before_end.flush_attempts);
-    TEST_CHECK(transform_attempts == before_end.transform_attempts);
-    TEST_CHECK(scissor_attempts == before_end.scissor_attempts);
-    TEST_CHECK(text_attempts == before_end.text_attempts);
-    TEST_CHECK(image_attempts == before_end.image_attempts);
-    TEST_CHECK(image_lookup_attempts == before_end.image_lookup_attempts);
-    TEST_CHECK(map_text_attempts == before_end.map_text_attempts);
-    TEST_CHECK(measure_attempts == before_end.measure_attempts);
-    TEST_CHECK(hud_text_attempts == before_end.hud_text_attempts);
-    TEST_CHECK(setup_moving_attempts == before_end.setup_moving_attempts);
-    TEST_CHECK(setup_stationary_attempts
-               == before_end.setup_stationary_attempts);
-    TEST_CHECK(legacy_begin_calls == before_end.legacy_begin_calls);
-    TEST_CHECK(legacy_vertex_calls == before_end.legacy_vertex_calls);
-    TEST_CHECK(legacy_end_calls == before_end.legacy_end_calls);
-    TEST_CHECK(legacy_color_calls == before_end.legacy_color_calls);
-    TEST_CHECK(legacy_line_stipple_calls
-               == before_end.legacy_line_stipple_calls);
-    TEST_CHECK(legacy_line_width_calls
-               == before_end.legacy_line_width_calls);
-    TEST_CHECK(legacy_texture_bind_calls
-               == before_end.legacy_texture_bind_calls);
-    TEST_CHECK(legacy_light_calls == before_end.legacy_light_calls);
-    TEST_CHECK(fake_sdl_renderer.frame_result
-               == RENDERER_STATUS_BACKEND_ERROR);
-    return 0;
-}
-
 static int check_single_radar_dot_batch(PaintEvent primitive_event)
 {
     TEST_CHECK(preflight_attempts == 1);
@@ -6108,10 +6031,6 @@ int main(void)
     if (check_sticky_failure_gates_setup_switching_world_leaf() != 0)
         return 1;
     if (check_sticky_failure_gates_semantic_and_text_world_leaf() != 0)
-        return 1;
-    if (check_sticky_failure_gates_inactive_asteroid_batch() != 0)
-        return 1;
-    if (check_asteroid_batch_cleanup_survives_sticky_failure() != 0)
         return 1;
     if (check_directional_gravity_geometry_and_order() != 0)
         return 1;

@@ -67,8 +67,31 @@ void Gui_paint_sparks_end(void);
  */
 void Gui_paint_wreck(int x, int y, bool deadly, int wtype, int rot, int size);
 
+/**
+ * Begin a contiguous group of asteroids.
+ *
+ * @remarks Pair this call with Gui_paint_asteroids_end(), including when the
+ *          group is empty.
+ */
 void Gui_paint_asteroids_begin(void);
+/** Finish the current asteroid group. */
 void Gui_paint_asteroids_end(void);
+
+/**
+ * Append one asteroid to the current asteroid group.
+ *
+ * @param x Horizontal center in the current world coordinate space.
+ * @param y Vertical center in the current world coordinate space.
+ * @param type Axis selector in the range 0 through 255; its low three bits
+ *        select the signed rotation axis.
+ * @param rot Rotation phase in the range 0 through 255, reduced modulo
+ *        TABLE_SIZE.
+ * @param size Scale selector in the range 0 through 255; zero contributes no
+ *        geometry.
+ *
+ * @remarks Call this function only between Gui_paint_asteroids_begin() and
+ *          Gui_paint_asteroids_end().
+ */
 void Gui_paint_asteroid(int x, int y, int type, int rot, int size);
 
 void Gui_paint_fastshot(int color, int x, int y);

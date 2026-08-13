@@ -15,7 +15,8 @@ check_PROGRAMS = test-meta-environment \
 	test-sdlpaint-stage test-paintmap-vdecor \
 	test-glwidgets-scissor test-glwidgets-primitives \
 	test-sdlmeta-primitives test-sdlgui-appearing \
-	test-sdlgui-hud-primitives test-sdlgui-sparks test-sdlgui-ships \
+	test-sdlgui-hud-primitives test-sdlgui-asteroids \
+	test-sdlgui-sparks test-sdlgui-ships \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
 TESTS = test-meta-environment \
@@ -29,7 +30,8 @@ TESTS = test-meta-environment \
 	test-sdlpaint-stage test-paintmap-vdecor \
 	test-sdl-renderer-scissor test-glwidgets-scissor \
 	test-glwidgets-primitives test-sdlmeta-primitives \
-	test-sdlgui-appearing test-sdlgui-hud-primitives test-sdlgui-sparks \
+	test-sdlgui-appearing test-sdlgui-hud-primitives \
+	test-sdlgui-asteroids test-sdlgui-sparks \
 	test-sdlgui-ships \
 	test-text-geometry \
 	test-text-atlas test-text-ttf-atlas test-text-renderer \
@@ -92,6 +94,7 @@ test_gl_legacy_CFLAGS = $(AM_CFLAGS) -DXPILOT_GL_TEST_HOOKS \
 	-ffunction-sections -fdata-sections
 test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=glGetString -Wl,--wrap=glGenLists \
+	-Wl,--wrap=glDeleteLists \
 	-Wl,--wrap=glGenTextures -Wl,--wrap=TTF_OpenFont \
 	-Wl,--wrap=TTF_CloseFont
 test_gl_legacy_LDADD = @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
@@ -231,6 +234,35 @@ test_sdlgui_hud_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_sdlgui_hud_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdlgui_hud_primitives_LDADD = @SDL2_LIBS@
+
+test_sdlgui_asteroids_SOURCES = test_sdlgui_asteroids.c \
+	$(top_srcdir)/src/client/sdl/sdlgui.c \
+	$(top_srcdir)/src/client/sdl/asteroid_batch_test_support.h \
+	$(top_srcdir)/src/client/paintobjects.c
+test_sdlgui_asteroids_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_ASTEROID_BATCH_TEST_HOOKS
+test_sdlgui_asteroids_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+test_sdlgui_asteroids_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=realloc -Wl,--wrap=free \
+	-Wl,--wrap=Gui_paint_item_object \
+	-Wl,--wrap=Gui_paint_ball \
+	-Wl,--wrap=Gui_paint_ball_connector \
+	-Wl,--wrap=Gui_paint_mine \
+	-Wl,--wrap=Gui_paint_sparks_begin \
+	-Wl,--wrap=Gui_paint_spark \
+	-Wl,--wrap=Gui_paint_sparks_end \
+	-Wl,--wrap=Gui_paint_wreck \
+	-Wl,--wrap=Gui_paint_setup_worm \
+	-Wl,--wrap=Gui_paint_fastshot \
+	-Wl,--wrap=Gui_paint_teamshot \
+	-Wl,--wrap=Gui_paint_missiles_begin \
+	-Wl,--wrap=Gui_paint_missiles_end \
+	-Wl,--wrap=Gui_paint_missile \
+	-Wl,--wrap=Gui_paint_lasers_begin \
+	-Wl,--wrap=Gui_paint_lasers_end \
+	-Wl,--wrap=Gui_paint_laser
+test_sdlgui_asteroids_LDADD = @SDL2_LIBS@
 
 test_sdlgui_sparks_SOURCES = test_sdlgui_sparks.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \

@@ -43,6 +43,9 @@
 #ifdef XPILOT_SPARK_BATCH_TEST_HOOKS
 #include "spark_batch_test_support.h"
 #endif
+#ifdef XPILOT_ASTEROID_BATCH_TEST_HOOKS
+#include "asteroid_batch_test_support.h"
+#endif
 
 #include <float.h>
 #include <limits.h>
@@ -137,8 +140,6 @@ static bool texturedShips;
 static GLuint polyListBase = 0;
 static GLuint polyEdgeListBase = 0;
 static GLsizei polyListCount = 0;
-static GLuint asteroid = 0;
-static bool asteroid_batch_active = false;
 
 irec_t *select_bounds;
 
@@ -148,6 +149,7 @@ string_tex_t HUD_texs[MAX_HUD_TEXS+MAX_SCORE_OBJECTS];
 
 int Gui_init(void);
 void Gui_cleanup(void);
+static void Discard_semantic_asteroid_batch(void);
 
 static bool Ensure_cached_text(font_data *font, const char *text,
 			       string_tex_t *cache)
@@ -292,40 +294,10 @@ static void tessellate_polygon(GLUtriangulatorObj *tess, int ind)
     glEndList();
 }
 
-static int asteroid_init(void)
-{
-    int i;
-    if ((asteroid = glGenLists(1)) == 0) 
-	return -1;
-    glNewList(asteroid, GL_COMPILE);
-    glBegin(GL_TRIANGLES);
-    for (i = 0; i < VERTEX_COUNT; i++) {
-	glNormal3fv(normal_vectors[i]); 
-	glTexCoord2fv(uv_vectors[i]);
-	glVertex3fv(vertex_vectors[i]);
-    }
-    glEnd();
-    glEndList();
-    return 0;
-}
-
-static void asteroid_cleanup(void)
-{
-    if (asteroid) {
-	glDeleteLists(asteroid, 1);
-        asteroid = 0;
-    }
-}
-
 int Gui_init(void)
 {
     int i;
     GLUtriangulatorObj *tess = NULL;
-
-    if (asteroid_init() == -1) {
-	error("failed to initialize asteroids");
-	return -1;
-    }
     
     if (num_polygons == 0) return 0;
 
@@ -375,6 +347,7 @@ fail:
 
 void Gui_cleanup(void)
 {
+    Discard_semantic_asteroid_batch();
     if (polyListBase) {
 	glDeleteLists(polyListBase, polyListCount);
         polyListBase = 0;
@@ -384,16 +357,12 @@ void Gui_cleanup(void)
         polyEdgeListBase = 0;
     }
     polyListCount = 0;
-    asteroid_cleanup();
 }
 
 #ifdef XPILOT_GL_TEST_HOOKS
-void Gui_test_get_display_lists(GLuint *asteroid_list,
-				GLuint *polygon_fill_list_base,
+void Gui_test_get_display_lists(GLuint *polygon_fill_list_base,
 				GLuint *polygon_edge_list_base)
 {
-    if (asteroid_list != NULL)
-	*asteroid_list = asteroid;
     if (polygon_fill_list_base != NULL)
 	*polygon_fill_list_base = polyListBase;
     if (polygon_edge_list_base != NULL)
@@ -2253,62 +2222,452 @@ void Gui_paint_wreck(int x, int y, bool deadly, int wtype, int rot, int size)
 	RENDERER_BLEND_ALPHA);
 }
 
-void Gui_paint_asteroids_begin(void)
+typedef struct SemanticAsteroidVector3 {
+    double x;
+    double y;
+    double z;
+} SemanticAsteroidVector3;
+
+typedef struct SemanticAsteroidCandidate {
+    double world_x;
+    double world_y;
+    RendererVertex2D vertex;
+} SemanticAsteroidCandidate;
+
+typedef struct SemanticAsteroidBatch {
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    RendererVertex2D *vertices;
+    size_t vertex_count;
+    size_t vertex_capacity;
+    int active;
+} SemanticAsteroidBatch;
+
+static SemanticAsteroidBatch semantic_asteroid_batch;
+
+static size_t Maximum_semantic_asteroid_vertices(void)
 {
-    image_t *img;
-    GLfloat ambient[] = { 0.7F, 0.7F, 0.7F, 1.0F };
+    size_t maximum_vertices = SIZE_MAX / sizeof(RendererVertex2D);
+    size_t pointer_vertices = (size_t)PTRDIFF_MAX
+	/ sizeof(RendererVertex2D);
 
-    asteroid_batch_active = false;
-    if (Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK)
-	return;
-    asteroid_batch_active = true;
-
-    img = Image_get(IMG_ASTEROID);
-    if (img != NULL) {
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, img->legacy_name);
-    }
-    glColor4ub(255, 255, 255, 255);
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
-    glEnable(GL_CULL_FACE);
+    if (maximum_vertices > pointer_vertices)
+	maximum_vertices = pointer_vertices;
+    if (maximum_vertices > (size_t)INT_MAX)
+	maximum_vertices = (size_t)INT_MAX;
+    maximum_vertices -= maximum_vertices % 3;
+    return maximum_vertices;
 }
 
-void Gui_paint_asteroids_end(void)
+static void Discard_semantic_asteroid_batch(void)
 {
-    /* An active legacy batch must restore its GL state despite sticky failure. */
-    (void)Preflight_sdl_paint_leaf();
-    if (!asteroid_batch_active)
-	return;
+    SemanticAsteroidBatch *batch = &semantic_asteroid_batch;
 
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_LIGHT0);
-    glDisable(GL_LIGHTING);
-    glDisable(GL_TEXTURE_2D);
-    asteroid_batch_active = false;
+    free(batch->vertices);
+    memset(batch, 0, sizeof(*batch));
+}
+
+static RendererStatus Track_semantic_asteroid_batch(
+    SemanticAsteroidBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (batch->sdl_renderer == NULL) {
+	if (batch->status == RENDERER_STATUS_OK)
+	    batch->status = status;
+	return batch->status;
+    }
+    batch->status = Sdl_renderer_track_frame_result(
+	batch->sdl_renderer, status);
+    return batch->status;
+}
+
+static void Fail_semantic_asteroid_batch(
+    SemanticAsteroidBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return;
+    (void)Track_semantic_asteroid_batch(batch, status);
+    free(batch->vertices);
+    batch->vertices = NULL;
+    batch->vertex_count = 0;
+    batch->vertex_capacity = 0;
+}
+
+static RendererStatus Rotate_semantic_asteroid_vector(
+    const SemanticAsteroidVector3 *vector,
+    const SemanticAsteroidVector3 *axis,
+    double cosine, double sine, SemanticAsteroidVector3 *result)
+{
+    SemanticAsteroidVector3 cross;
+    double dot;
+    double one_minus_cosine;
+
+    if (vector == NULL || axis == NULL || result == NULL
+	|| !isfinite(vector->x) || !isfinite(vector->y)
+	|| !isfinite(vector->z) || !isfinite(axis->x)
+	|| !isfinite(axis->y) || !isfinite(axis->z)
+	|| !isfinite(cosine) || !isfinite(sine)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    one_minus_cosine = 1.0 - cosine;
+    cross.x = axis->y * vector->z - axis->z * vector->y;
+    cross.y = axis->z * vector->x - axis->x * vector->z;
+    cross.z = axis->x * vector->y - axis->y * vector->x;
+    dot = axis->x * vector->x + axis->y * vector->y
+	+ axis->z * vector->z;
+    if (!isfinite(one_minus_cosine)
+	|| !isfinite(cross.x) || !isfinite(cross.y)
+	|| !isfinite(cross.z) || !isfinite(dot)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    result->x = vector->x * cosine + cross.x * sine
+	+ axis->x * dot * one_minus_cosine;
+    result->y = vector->y * cosine + cross.y * sine
+	+ axis->y * dot * one_minus_cosine;
+    result->z = vector->z * cosine + cross.z * sine
+	+ axis->z * dot * one_minus_cosine;
+    if (!isfinite(result->x) || !isfinite(result->y)
+	|| !isfinite(result->z)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static int Semantic_asteroid_edge_extent_preserved(
+    double first, double second, float first_float, float second_float)
+{
+    return first == second || first_float != second_float;
+}
+
+static RendererStatus Build_semantic_asteroid_vertices(
+    int x, int y, int type, int rot, int size,
+    RendererVertex2D vertices[VERTEX_COUNT], size_t *vertex_count)
+{
+    SemanticAsteroidCandidate candidates[VERTEX_COUNT];
+    SemanticAsteroidVector3 axis;
+    const double axis_length = sqrt(21.0);
+    double cosine;
+    double sine;
+    double scale;
+    size_t output_count = 0;
+    int source_index;
+    int triangle_start;
+
+    if (vertices == NULL || vertex_count == NULL
+	|| type < 0 || type > UINT8_MAX
+	|| rot < 0 || rot > UINT8_MAX
+	|| size < 0 || size > UINT8_MAX) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    *vertex_count = 0;
+    if (size == 0)
+	return RENDERER_STATUS_OK;
+
+    /* Visibility must not hide malformed source data on back-facing faces. */
+    for (source_index = 0; source_index < VERTEX_COUNT; source_index++) {
+	if (!isfinite(vertex_vectors[source_index][0])
+	    || !isfinite(vertex_vectors[source_index][1])
+	    || !isfinite(vertex_vectors[source_index][2])
+	    || !isfinite(normal_vectors[source_index][0])
+	    || !isfinite(normal_vectors[source_index][1])
+	    || !isfinite(normal_vectors[source_index][2])
+	    || !isfinite(uv_vectors[source_index][0])
+	    || !isfinite(uv_vectors[source_index][1])) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+    }
+
+    cosine = tbl_cos[rot % TABLE_SIZE];
+    sine = tbl_sin[rot % TABLE_SIZE];
+    scale = 0.9 * (double)SHIP_SZ * (double)size;
+    axis.x = ((type & 1) != 0 ? 1.0 : -1.0) / axis_length;
+    axis.y = ((type & 2) != 0 ? 2.0 : -2.0) / axis_length;
+    axis.z = ((type & 4) != 0 ? 4.0 : -4.0) / axis_length;
+    if (!isfinite(axis_length) || axis_length <= 0.0
+	|| !isfinite(cosine) || !isfinite(sine) || !isfinite(scale)
+	|| !isfinite(axis.x) || !isfinite(axis.y) || !isfinite(axis.z)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+
+    for (source_index = 0; source_index < VERTEX_COUNT; source_index++) {
+	SemanticAsteroidVector3 source_position;
+	SemanticAsteroidVector3 source_normal;
+	SemanticAsteroidVector3 position;
+	SemanticAsteroidVector3 normal;
+	SemanticAsteroidCandidate *candidate = &candidates[source_index];
+	double local_x;
+	double local_y;
+	double positive_normal_z;
+	double intensity;
+	double quantized_intensity;
+	RendererStatus status;
+
+	source_position.x = vertex_vectors[source_index][0];
+	source_position.y = vertex_vectors[source_index][1];
+	source_position.z = vertex_vectors[source_index][2];
+	source_normal.x = normal_vectors[source_index][0];
+	source_normal.y = normal_vectors[source_index][1];
+	source_normal.z = normal_vectors[source_index][2];
+	status = Rotate_semantic_asteroid_vector(
+	    &source_position, &axis, cosine, sine, &position);
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+	status = Rotate_semantic_asteroid_vector(
+	    &source_normal, &axis, cosine, sine, &normal);
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+
+	local_x = position.x * scale;
+	local_y = position.y * scale;
+	candidate->world_x = (double)x + local_x;
+	candidate->world_y = (double)y + local_y;
+	positive_normal_z = fmax(normal.z, 0.0);
+	intensity = 0.18 + 0.8 * positive_normal_z;
+	if (!isfinite(local_x) || !isfinite(local_y)
+	    || !isfinite(candidate->world_x)
+	    || !isfinite(candidate->world_y)
+	    || !isfinite(positive_normal_z) || !isfinite(intensity)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+	if (intensity < 0.0)
+	    intensity = 0.0;
+	if (intensity > 1.0)
+	    intensity = 1.0;
+	quantized_intensity = floor(intensity * 255.0 + 0.5);
+	if (!isfinite(quantized_intensity)
+	    || quantized_intensity < 0.0 || quantized_intensity > 255.0) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+
+	candidate->vertex.x = (float)candidate->world_x;
+	candidate->vertex.y = (float)candidate->world_y;
+	candidate->vertex.u = uv_vectors[source_index][0];
+	candidate->vertex.v = 1.0f - uv_vectors[source_index][1];
+	if (!isfinite(candidate->vertex.x)
+	    || !isfinite(candidate->vertex.y)
+	    || !isfinite(candidate->vertex.u)
+	    || !isfinite(candidate->vertex.v)
+	    || (local_x != 0.0 && candidate->vertex.x == (float)x)
+	    || (local_y != 0.0 && candidate->vertex.y == (float)y)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+	candidate->vertex.color.red = (uint8_t)quantized_intensity;
+	candidate->vertex.color.green = (uint8_t)quantized_intensity;
+	candidate->vertex.color.blue = (uint8_t)quantized_intensity;
+	candidate->vertex.color.alpha = 255;
+    }
+
+    /* Cull in the same final float coordinate space consumed by the backend. */
+    for (triangle_start = 0; triangle_start < VERTEX_COUNT;
+	 triangle_start += 3) {
+	SemanticAsteroidCandidate *first = &candidates[triangle_start];
+	SemanticAsteroidCandidate *second = &candidates[triangle_start + 1];
+	SemanticAsteroidCandidate *third = &candidates[triangle_start + 2];
+	double area;
+
+	if (!Semantic_asteroid_edge_extent_preserved(
+		first->world_x, second->world_x,
+		first->vertex.x, second->vertex.x)
+	    || !Semantic_asteroid_edge_extent_preserved(
+		first->world_y, second->world_y,
+		first->vertex.y, second->vertex.y)
+	    || !Semantic_asteroid_edge_extent_preserved(
+		second->world_x, third->world_x,
+		second->vertex.x, third->vertex.x)
+	    || !Semantic_asteroid_edge_extent_preserved(
+		second->world_y, third->world_y,
+		second->vertex.y, third->vertex.y)
+	    || !Semantic_asteroid_edge_extent_preserved(
+		third->world_x, first->world_x,
+		third->vertex.x, first->vertex.x)
+	    || !Semantic_asteroid_edge_extent_preserved(
+		third->world_y, first->world_y,
+		third->vertex.y, first->vertex.y)) {
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	}
+	area = ((double)second->vertex.x - first->vertex.x)
+	    * ((double)third->vertex.y - first->vertex.y)
+	    - ((double)second->vertex.y - first->vertex.y)
+	    * ((double)third->vertex.x - first->vertex.x);
+	if (!isfinite(area))
+	    return RENDERER_STATUS_INVALID_ARGUMENT;
+	if (!(area > 0.0))
+	    continue;
+	vertices[output_count++] = first->vertex;
+	vertices[output_count++] = second->vertex;
+	vertices[output_count++] = third->vertex;
+    }
+    *vertex_count = output_count;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Reserve_semantic_asteroid_vertices(
+    SemanticAsteroidBatch *batch, size_t additional_vertices)
+{
+    const size_t maximum_vertices = Maximum_semantic_asteroid_vertices();
+    RendererVertex2D *replacement;
+    size_t needed;
+    size_t capacity;
+
+    if (batch == NULL || batch->vertex_count > maximum_vertices
+	|| additional_vertices > maximum_vertices - batch->vertex_count) {
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    }
+    needed = batch->vertex_count + additional_vertices;
+    if (needed <= batch->vertex_capacity)
+	return RENDERER_STATUS_OK;
+    capacity = batch->vertex_capacity == 0
+	? (size_t)VERTEX_COUNT : batch->vertex_capacity;
+    if (capacity > maximum_vertices)
+	capacity = maximum_vertices;
+    while (capacity < needed) {
+	if (capacity > maximum_vertices / 2) {
+	    capacity = maximum_vertices;
+	    break;
+	}
+	capacity *= 2;
+    }
+    if (capacity < needed
+	|| capacity > SIZE_MAX / sizeof(*batch->vertices)
+	|| capacity > (size_t)PTRDIFF_MAX / sizeof(*batch->vertices)) {
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    }
+    replacement = realloc(
+	batch->vertices, capacity * sizeof(*batch->vertices));
+    if (replacement == NULL)
+	return RENDERER_STATUS_OUT_OF_MEMORY;
+    batch->vertices = replacement;
+    batch->vertex_capacity = capacity;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Resolve_semantic_asteroid_texture(
+    SemanticAsteroidBatch *batch, RendererTexture **texture)
+{
+    image_t *image;
+
+    if (batch == NULL || texture == NULL || batch->renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    *texture = NULL;
+    image = Image_get(IMG_ASTEROID);
+    if (image == NULL)
+	return RENDERER_STATUS_OK;
+    if (image->texture == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    if (image->renderer != batch->renderer)
+	return RENDERER_STATUS_RESOURCE_MISMATCH;
+    *texture = image->texture;
+    return RENDERER_STATUS_OK;
+}
+
+void Gui_paint_asteroids_begin(void)
+{
+    SemanticAsteroidBatch *batch = &semantic_asteroid_batch;
+
+    Discard_semantic_asteroid_batch();
+    batch->active = 1;
+    batch->status = RENDERER_STATUS_INVALID_STATE;
+    batch->sdl_renderer = Get_sdl_renderer();
+    if (batch->sdl_renderer == NULL)
+	return;
+    batch->status = Sdl_renderer_track_frame_result(
+	batch->sdl_renderer, RENDERER_STATUS_OK);
+    if (batch->status != RENDERER_STATUS_OK)
+	return;
+    batch->renderer = Sdl_renderer_frontend(batch->sdl_renderer);
+    if (batch->renderer == NULL) {
+	Fail_semantic_asteroid_batch(
+	    batch, RENDERER_STATUS_INVALID_STATE);
+    }
 }
 
 void Gui_paint_asteroid(int x, int y, int type, int rot, int size)
 {
-    GLfloat real_size;
+    SemanticAsteroidBatch *batch = &semantic_asteroid_batch;
+    RendererVertex2D vertices[VERTEX_COUNT];
+    size_t vertex_count;
+    RendererStatus status;
 
-    if (!asteroid_batch_active
-	|| Preflight_sdl_paint_leaf() != RENDERER_STATUS_OK) {
+    if (!batch->active || batch->status != RENDERER_STATUS_OK)
+	return;
+    status = Build_semantic_asteroid_vertices(
+	x, y, type, rot, size, vertices, &vertex_count);
+    if (status == RENDERER_STATUS_OK && vertex_count != 0)
+	status = Reserve_semantic_asteroid_vertices(batch, vertex_count);
+    if (status != RENDERER_STATUS_OK) {
+	Fail_semantic_asteroid_batch(batch, status);
 	return;
     }
-
-    real_size = 0.9 * SHIP_SZ * size;
-    glPushMatrix();
-    glTranslatef((GLfloat)x, (GLfloat)y, 0.0);
-    glScalef(real_size, real_size, 1.0);
-    glRotatef(360.0 * rot / TABLE_SIZE,
-	   (type & 1) - 0.5,
-	   (type & 2) - 1,
-	   (type & 4) - 2);
-    glCallList(asteroid);
-    glPopMatrix();
+    if (vertex_count == 0)
+	return;
+    memcpy(&batch->vertices[batch->vertex_count], vertices,
+	vertex_count * sizeof(vertices[0]));
+    batch->vertex_count += vertex_count;
 }
+
+void Gui_paint_asteroids_end(void)
+{
+    SemanticAsteroidBatch *batch = &semantic_asteroid_batch;
+    RendererTexture *texture = NULL;
+    RendererStatus status;
+
+    if (!batch->active)
+	return;
+    if (batch->status == RENDERER_STATUS_OK && batch->vertex_count != 0) {
+	status = Resolve_semantic_asteroid_texture(batch, &texture);
+	if (Track_semantic_asteroid_batch(batch, status)
+	    == RENDERER_STATUS_OK) {
+	    status = Renderer_set_blend(
+		batch->renderer, RENDERER_BLEND_OPAQUE);
+	    if (Track_semantic_asteroid_batch(batch, status)
+		== RENDERER_STATUS_OK) {
+		status = Renderer_draw_triangles(
+		    batch->renderer, texture, batch->vertices,
+		    batch->vertex_count);
+		if (Track_semantic_asteroid_batch(batch, status)
+		    == RENDERER_STATUS_OK) {
+		    status = Sdl_renderer_flush_preserving_legacy(
+			batch->sdl_renderer);
+		    (void)Track_semantic_asteroid_batch(batch, status);
+		}
+	    }
+	}
+    }
+    Discard_semantic_asteroid_batch();
+}
+
+#ifdef XPILOT_ASTEROID_BATCH_TEST_HOOKS
+RendererStatus Sdlgui_test_paint_asteroid_batch(
+    const SdlguiTestAsteroid *entries, size_t entry_count)
+{
+    SdlRenderer *renderer;
+    size_t entry_index;
+
+    renderer = Get_sdl_renderer();
+    if (renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    if (entries == NULL && entry_count != 0) {
+	return Sdl_renderer_track_frame_result(
+	    renderer, RENDERER_STATUS_INVALID_ARGUMENT);
+    }
+    if (entry_count
+	> Maximum_semantic_asteroid_vertices() / (size_t)VERTEX_COUNT) {
+	return Sdl_renderer_track_frame_result(
+	    renderer, RENDERER_STATUS_OUT_OF_MEMORY);
+    }
+    Gui_paint_asteroids_begin();
+    for (entry_index = 0; entry_index < entry_count; entry_index++) {
+	Gui_paint_asteroid(
+	    entries[entry_index].x, entries[entry_index].y,
+	    entries[entry_index].type, entries[entry_index].rotation,
+	    entries[entry_index].size);
+    }
+    Gui_paint_asteroids_end();
+    return Sdl_renderer_frame_result(renderer);
+}
+#endif
 
 
 /*

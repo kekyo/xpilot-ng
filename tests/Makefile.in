@@ -106,7 +106,8 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdlmeta-primitives$(EXEEXT) \
 	test-sdlgui-appearing$(EXEEXT) \
 	test-sdlgui-hud-primitives$(EXEEXT) \
-	test-sdlgui-sparks$(EXEEXT) test-sdlgui-ships$(EXEEXT) \
+	test-sdlgui-asteroids$(EXEEXT) test-sdlgui-sparks$(EXEEXT) \
+	test-sdlgui-ships$(EXEEXT) \
 	test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
 	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT)
@@ -127,7 +128,8 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdlmeta-primitives$(EXEEXT) \
 	test-sdlgui-appearing$(EXEEXT) \
 	test-sdlgui-hud-primitives$(EXEEXT) \
-	test-sdlgui-sparks$(EXEEXT) test-sdlgui-ships$(EXEEXT) \
+	test-sdlgui-asteroids$(EXEEXT) test-sdlgui-sparks$(EXEEXT) \
+	test-sdlgui-ships$(EXEEXT) \
 	test-text-geometry$(EXEEXT) \
 	test-text-atlas$(EXEEXT) test-text-ttf-atlas$(EXEEXT) \
 	test-text-renderer$(EXEEXT) test-text-cache-adapter$(EXEEXT) \
@@ -309,6 +311,15 @@ test_sdlgui_hud_primitives_DEPENDENCIES =
 test_sdlgui_hud_primitives_LINK = $(CCLD) \
 	$(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) \
 	$(test_sdlgui_hud_primitives_LDFLAGS) $(LDFLAGS) -o $@
+am_test_sdlgui_asteroids_OBJECTS =  \
+	test_sdlgui_asteroids-test_sdlgui_asteroids.$(OBJEXT) \
+	test_sdlgui_asteroids-sdlgui.$(OBJEXT) \
+	test_sdlgui_asteroids-paintobjects.$(OBJEXT)
+test_sdlgui_asteroids_OBJECTS = $(am_test_sdlgui_asteroids_OBJECTS)
+test_sdlgui_asteroids_DEPENDENCIES =
+test_sdlgui_asteroids_LINK = $(CCLD) \
+	$(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) \
+	$(test_sdlgui_asteroids_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdlgui_ships_OBJECTS =  \
 	test_sdlgui_ships-test_sdlgui_ships.$(OBJEXT) \
 	test_sdlgui_ships-sdlgui.$(OBJEXT) \
@@ -443,6 +454,9 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po \
 	./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po \
+	./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po \
+	./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po \
+	./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po \
 	./$(DEPDIR)/test_sdlgui_ships-paintobjects.Po \
 	./$(DEPDIR)/test_sdlgui_ships-sdlgui.Po \
 	./$(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Po \
@@ -498,6 +512,7 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_sdlmeta_primitives_SOURCES) \
 	$(test_sdlgui_appearing_SOURCES) \
 	$(test_sdlgui_hud_primitives_SOURCES) \
+	$(test_sdlgui_asteroids_SOURCES) \
 	$(test_sdlgui_ships_SOURCES) $(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlpaint_stage_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
@@ -522,6 +537,7 @@ DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_sdl_window_SOURCES) $(test_sdlmeta_primitives_SOURCES) \
 	$(test_sdlgui_appearing_SOURCES) \
 	$(test_sdlgui_hud_primitives_SOURCES) \
+	$(test_sdlgui_asteroids_SOURCES) \
 	$(test_sdlgui_ships_SOURCES) $(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlpaint_stage_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
@@ -953,6 +969,7 @@ test_gl_legacy_CFLAGS = $(AM_CFLAGS) -DXPILOT_GL_TEST_HOOKS \
 
 test_gl_legacy_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=glGetString -Wl,--wrap=glGenLists \
+	-Wl,--wrap=glDeleteLists \
 	-Wl,--wrap=glGenTextures -Wl,--wrap=TTF_OpenFont \
 	-Wl,--wrap=TTF_CloseFont
 
@@ -1104,6 +1121,38 @@ test_sdlgui_hud_primitives_CFLAGS = $(AM_CFLAGS) \
 
 test_sdlgui_hud_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdlgui_hud_primitives_LDADD = @SDL2_LIBS@
+test_sdlgui_asteroids_SOURCES = test_sdlgui_asteroids.c \
+	$(top_srcdir)/src/client/sdl/sdlgui.c \
+	$(top_srcdir)/src/client/sdl/asteroid_batch_test_support.h \
+	$(top_srcdir)/src/client/paintobjects.c
+
+test_sdlgui_asteroids_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_ASTEROID_BATCH_TEST_HOOKS
+
+test_sdlgui_asteroids_CFLAGS = $(AM_CFLAGS) \
+	-ffunction-sections -fdata-sections
+
+test_sdlgui_asteroids_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=realloc -Wl,--wrap=free \
+	-Wl,--wrap=Gui_paint_item_object \
+	-Wl,--wrap=Gui_paint_ball \
+	-Wl,--wrap=Gui_paint_ball_connector \
+	-Wl,--wrap=Gui_paint_mine \
+	-Wl,--wrap=Gui_paint_sparks_begin \
+	-Wl,--wrap=Gui_paint_spark \
+	-Wl,--wrap=Gui_paint_sparks_end \
+	-Wl,--wrap=Gui_paint_wreck \
+	-Wl,--wrap=Gui_paint_setup_worm \
+	-Wl,--wrap=Gui_paint_fastshot \
+	-Wl,--wrap=Gui_paint_teamshot \
+	-Wl,--wrap=Gui_paint_missiles_begin \
+	-Wl,--wrap=Gui_paint_missiles_end \
+	-Wl,--wrap=Gui_paint_missile \
+	-Wl,--wrap=Gui_paint_lasers_begin \
+	-Wl,--wrap=Gui_paint_lasers_end \
+	-Wl,--wrap=Gui_paint_laser
+
+test_sdlgui_asteroids_LDADD = @SDL2_LIBS@
 test_sdlgui_sparks_SOURCES = test_sdlgui_sparks.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/spark_batch_test_support.h \
@@ -1345,6 +1394,10 @@ test-sdlgui-hud-primitives$(EXEEXT): $(test_sdlgui_hud_primitives_OBJECTS) $(tes
 	@rm -f test-sdlgui-hud-primitives$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_hud_primitives_LINK) $(test_sdlgui_hud_primitives_OBJECTS) $(test_sdlgui_hud_primitives_LDADD) $(LIBS)
 
+test-sdlgui-asteroids$(EXEEXT): $(test_sdlgui_asteroids_OBJECTS) $(test_sdlgui_asteroids_DEPENDENCIES) $(EXTRA_test_sdlgui_asteroids_DEPENDENCIES)
+	@rm -f test-sdlgui-asteroids$(EXEEXT)
+	$(AM_V_CCLD)$(test_sdlgui_asteroids_LINK) $(test_sdlgui_asteroids_OBJECTS) $(test_sdlgui_asteroids_LDADD) $(LIBS)
+
 test-sdlgui-ships$(EXEEXT): $(test_sdlgui_ships_OBJECTS) $(test_sdlgui_ships_DEPENDENCIES) $(EXTRA_test_sdlgui_ships_DEPENDENCIES)
 	@rm -f test-sdlgui-ships$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_ships_LINK) $(test_sdlgui_ships_OBJECTS) $(test_sdlgui_ships_LDADD) $(LIBS)
@@ -1457,6 +1510,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_ships-paintobjects.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_ships-sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Po@am__quote@ # am--include-marker
@@ -2269,6 +2325,48 @@ test_sdlgui_hud_primitives-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_hud_primitives_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) -c -o test_sdlgui_hud_primitives-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
 
+test_sdlgui_asteroids-test_sdlgui_asteroids.o: test_sdlgui_asteroids.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -MT test_sdlgui_asteroids-test_sdlgui_asteroids.o -MD -MP -MF $(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Tpo -c -o test_sdlgui_asteroids-test_sdlgui_asteroids.o `test -f 'test_sdlgui_asteroids.c' || echo '$(srcdir)/'`test_sdlgui_asteroids.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Tpo $(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlgui_asteroids.c' object='test_sdlgui_asteroids-test_sdlgui_asteroids.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -c -o test_sdlgui_asteroids-test_sdlgui_asteroids.o `test -f 'test_sdlgui_asteroids.c' || echo '$(srcdir)/'`test_sdlgui_asteroids.c
+
+test_sdlgui_asteroids-test_sdlgui_asteroids.obj: test_sdlgui_asteroids.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -MT test_sdlgui_asteroids-test_sdlgui_asteroids.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Tpo -c -o test_sdlgui_asteroids-test_sdlgui_asteroids.obj `if test -f 'test_sdlgui_asteroids.c'; then $(CYGPATH_W) 'test_sdlgui_asteroids.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_asteroids.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Tpo $(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_sdlgui_asteroids.c' object='test_sdlgui_asteroids-test_sdlgui_asteroids.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -c -o test_sdlgui_asteroids-test_sdlgui_asteroids.obj `if test -f 'test_sdlgui_asteroids.c'; then $(CYGPATH_W) 'test_sdlgui_asteroids.c'; else $(CYGPATH_W) '$(srcdir)/test_sdlgui_asteroids.c'; fi`
+
+test_sdlgui_asteroids-sdlgui.o: $(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -MT test_sdlgui_asteroids-sdlgui.o -MD -MP -MF $(DEPDIR)/test_sdlgui_asteroids-sdlgui.Tpo -c -o test_sdlgui_asteroids-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_asteroids-sdlgui.Tpo $(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_asteroids-sdlgui.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -c -o test_sdlgui_asteroids-sdlgui.o `test -f '$(top_srcdir)/src/client/sdl/sdlgui.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlgui.c
+
+test_sdlgui_asteroids-sdlgui.obj: $(top_srcdir)/src/client/sdl/sdlgui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -MT test_sdlgui_asteroids-sdlgui.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_asteroids-sdlgui.Tpo -c -o test_sdlgui_asteroids-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_asteroids-sdlgui.Tpo $(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlgui.c' object='test_sdlgui_asteroids-sdlgui.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -c -o test_sdlgui_asteroids-sdlgui.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlgui.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlgui.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlgui.c'; fi`
+
+test_sdlgui_asteroids-paintobjects.o: $(top_srcdir)/src/client/paintobjects.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -MT test_sdlgui_asteroids-paintobjects.o -MD -MP -MF $(DEPDIR)/test_sdlgui_asteroids-paintobjects.Tpo -c -o test_sdlgui_asteroids-paintobjects.o `test -f '$(top_srcdir)/src/client/paintobjects.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/paintobjects.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_asteroids-paintobjects.Tpo $(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/paintobjects.c' object='test_sdlgui_asteroids-paintobjects.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -c -o test_sdlgui_asteroids-paintobjects.o `test -f '$(top_srcdir)/src/client/paintobjects.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/paintobjects.c
+
+test_sdlgui_asteroids-paintobjects.obj: $(top_srcdir)/src/client/paintobjects.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -MT test_sdlgui_asteroids-paintobjects.obj -MD -MP -MF $(DEPDIR)/test_sdlgui_asteroids-paintobjects.Tpo -c -o test_sdlgui_asteroids-paintobjects.obj `if test -f '$(top_srcdir)/src/client/paintobjects.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/paintobjects.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/paintobjects.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_asteroids-paintobjects.Tpo $(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/paintobjects.c' object='test_sdlgui_asteroids-paintobjects.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlgui_asteroids_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_asteroids_CFLAGS) $(CFLAGS) -c -o test_sdlgui_asteroids-paintobjects.obj `if test -f '$(top_srcdir)/src/client/paintobjects.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/paintobjects.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/paintobjects.c'; fi`
+
 test_sdlgui_ships-test_sdlgui_ships.o: test_sdlgui_ships.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdlgui_ships_CFLAGS) $(CFLAGS) -MT test_sdlgui_ships-test_sdlgui_ships.o -MD -MP -MF $(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Tpo -c -o test_sdlgui_ships-test_sdlgui_ships.o `test -f 'test_sdlgui_ships.c' || echo '$(srcdir)/'`test_sdlgui_ships.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Tpo $(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Po
@@ -2882,6 +2980,13 @@ test-sdlgui-hud-primitives.log: test-sdlgui-hud-primitives$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-sdlgui-asteroids.log: test-sdlgui-asteroids$(EXEEXT)
+	@p='test-sdlgui-asteroids$(EXEEXT)'; \
+	b='test-sdlgui-asteroids'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdlgui-ships.log: test-sdlgui-ships$(EXEEXT)
 	@p='test-sdlgui-ships$(EXEEXT)'; \
 	b='test-sdlgui-ships'; \
@@ -3106,6 +3211,9 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-paintobjects.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Po
@@ -3242,6 +3350,9 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdlgui_appearing-test_sdlgui_appearing.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-paintobjects.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-sdlgui.Po
+	-rm -f ./$(DEPDIR)/test_sdlgui_asteroids-test_sdlgui_asteroids.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-paintobjects.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-sdlgui.Po
 	-rm -f ./$(DEPDIR)/test_sdlgui_ships-test_sdlgui_ships.Po
