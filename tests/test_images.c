@@ -26,6 +26,8 @@ struct RendererTexture {
 struct SdlRenderer {
     Renderer *frontend;
     unsigned int preserved_state;
+    int frame_active;
+    RendererStatus frame_result;
 };
 
 typedef struct FakeTexture {
@@ -52,7 +54,12 @@ typedef struct FixtureState {
 } FixtureState;
 
 static Renderer fake_renderer;
-static SdlRenderer fake_sdl_renderer = {&fake_renderer, 0x51a7e123u};
+static SdlRenderer fake_sdl_renderer = {
+    &fake_renderer,
+    0x51a7e123u,
+    0,
+    RENDERER_STATUS_OK
+};
 static FakeTexture fake_textures[MAX_FAKE_TEXTURES];
 static FakeDraw fake_draws[MAX_DRAWS];
 static FixtureState fixture_state;
@@ -61,7 +68,11 @@ static int texture_create_attempts;
 static int fail_texture_create_attempt;
 static int texture_destroy_calls;
 static int draw_count;
+static int draw_attempts;
+static int blend_attempts;
 static int preserving_flush_calls;
+static int tracked_result_calls;
+static int pending_draws;
 static int prepare_legacy_calls;
 static int legacy_draw_calls;
 static unsigned int next_legacy_texture = 1001;
@@ -70,6 +81,9 @@ static int legacy_texture_deletes;
 static int legacy_upload_attempts;
 static int fail_legacy_upload_attempt;
 static GLenum pending_gl_error;
+static RendererStatus draw_result = RENDERER_STATUS_OK;
+static RendererStatus blend_result = RENDERER_STATUS_OK;
+static RendererStatus preserving_flush_result = RENDERER_STATUS_OK;
 
 static int float_equal(float actual, float expected)
 {
@@ -297,21 +311,30 @@ RendererStatus Renderer_draw_triangles(Renderer *renderer,
 {
     FakeDraw *draw;
 
-    if (renderer != &fake_renderer || texture == NULL || vertices == NULL
+    draw_attempts++;
+    if (renderer != &fake_renderer || !renderer->frame_active
+        || texture == NULL || vertices == NULL
         || vertex_count != 6 || draw_count >= MAX_DRAWS)
         return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (draw_result != RENDERER_STATUS_OK)
+        return draw_result;
     draw = &fake_draws[draw_count++];
     draw->texture = texture;
     draw->vertex_count = vertex_count;
     memcpy(draw->vertices, vertices, sizeof(draw->vertices));
+    pending_draws++;
     return RENDERER_STATUS_OK;
 }
 
 RendererStatus Renderer_set_blend(Renderer *renderer,
                                   RendererBlendMode blend)
 {
-    return renderer == &fake_renderer && blend == RENDERER_BLEND_ALPHA
-        ? RENDERER_STATUS_OK : RENDERER_STATUS_INVALID_ARGUMENT;
+    blend_attempts++;
+    if (renderer != &fake_renderer || !renderer->frame_active
+        || blend != RENDERER_BLEND_ALPHA) {
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    return blend_result;
 }
 
 RendererStatus Renderer_set_transform_2d(Renderer *renderer,
@@ -348,16 +371,40 @@ Renderer *Sdl_renderer_frontend(SdlRenderer *renderer)
     return renderer == &fake_sdl_renderer ? renderer->frontend : NULL;
 }
 
+RendererStatus Sdl_renderer_track_frame_result(
+    SdlRenderer *renderer, RendererStatus status)
+{
+    tracked_result_calls++;
+    if (renderer != &fake_sdl_renderer)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!renderer->frame_active)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (renderer->frame_result == RENDERER_STATUS_OK
+        && status != RENDERER_STATUS_OK) {
+        renderer->frame_result = status;
+    }
+    return renderer->frame_result;
+}
+
+RendererStatus Sdl_renderer_frame_result(const SdlRenderer *renderer)
+{
+    return renderer == &fake_sdl_renderer
+        ? renderer->frame_result : RENDERER_STATUS_INVALID_ARGUMENT;
+}
+
 RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
 {
     unsigned int original_state;
 
-    if (renderer != &fake_sdl_renderer)
+    if (renderer != &fake_sdl_renderer || !renderer->frame_active)
         return RENDERER_STATUS_INVALID_ARGUMENT;
     original_state = renderer->preserved_state;
     preserving_flush_calls++;
     if (renderer->preserved_state != original_state)
         return RENDERER_STATUS_BACKEND_ERROR;
+    if (preserving_flush_result != RENDERER_STATUS_OK)
+        return preserving_flush_result;
+    pending_draws = 0;
     return RENDERER_STATUS_OK;
 }
 
@@ -550,6 +597,29 @@ void GLAPIENTRY glColor4ub(GLubyte red, GLubyte green,
     (void)blue;
     (void)alpha;
     legacy_draw_calls++;
+}
+
+static void reset_active_frame_capture(void)
+{
+    memset(fake_draws, 0, sizeof(fake_draws));
+    fake_renderer.frame_active = 1;
+    fake_sdl_renderer.frame_active = 1;
+    fake_sdl_renderer.frame_result = RENDERER_STATUS_OK;
+    draw_count = 0;
+    draw_attempts = 0;
+    blend_attempts = 0;
+    preserving_flush_calls = 0;
+    tracked_result_calls = 0;
+    pending_draws = 0;
+    draw_result = RENDERER_STATUS_OK;
+    blend_result = RENDERER_STATUS_OK;
+    preserving_flush_result = RENDERER_STATUS_OK;
+}
+
+static void finish_active_frame(void)
+{
+    fake_sdl_renderer.frame_active = 0;
+    fake_renderer.frame_active = 0;
 }
 
 static int check_registration_prepare_and_pixels(int *ordinary_id,
@@ -746,6 +816,126 @@ static int check_area_and_rotated_draws(int ordinary_id, int rotatable_id)
     return 0;
 }
 
+static int check_image_draw_failures_are_frame_sticky(int ordinary_id)
+{
+    image_t *image;
+    Renderer *original_owner;
+    int tracked_before_retry;
+
+    reset_active_frame_capture();
+    Image_paint(ordinary_id, 10, 20, -1, 0x11223344);
+    TEST_CHECK(Sdl_renderer_frame_result(&fake_sdl_renderer)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(tracked_result_calls == 2);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(preserving_flush_calls == 0);
+    Image_paint(ordinary_id, 30, 40, 0, 0x55667788);
+    TEST_CHECK(tracked_result_calls == 3);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(preserving_flush_calls == 0);
+
+    reset_active_frame_capture();
+    image = Image_get(ordinary_id);
+    TEST_CHECK(image != NULL);
+    original_owner = image->renderer;
+    image->renderer = NULL;
+    Image_paint(ordinary_id, 10, 20, 0, 0x11223344);
+    image->renderer = original_owner;
+    TEST_CHECK(Sdl_renderer_frame_result(&fake_sdl_renderer)
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(tracked_result_calls == 2);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(preserving_flush_calls == 0);
+
+    reset_active_frame_capture();
+    blend_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+
+    Image_paint(ordinary_id, 10, 20, 0, 0x11223344);
+
+    TEST_CHECK(Sdl_renderer_frame_result(&fake_sdl_renderer)
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(tracked_result_calls == 3);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(draw_count == 0);
+    TEST_CHECK(pending_draws == 0);
+    TEST_CHECK(preserving_flush_calls == 0);
+
+    tracked_before_retry = tracked_result_calls;
+    blend_result = RENDERER_STATUS_BACKEND_ERROR;
+    Image_paint(ordinary_id, 30, 40, 0, 0x55667788);
+    TEST_CHECK(Sdl_renderer_frame_result(&fake_sdl_renderer)
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(tracked_result_calls == tracked_before_retry + 1);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(draw_count == 0);
+    TEST_CHECK(preserving_flush_calls == 0);
+
+    reset_active_frame_capture();
+    draw_result = RENDERER_STATUS_OUT_OF_MEMORY;
+
+    Image_paint(ordinary_id, 10, 20, 0, 0x11223344);
+
+    TEST_CHECK(Sdl_renderer_frame_result(&fake_sdl_renderer)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(tracked_result_calls == 4);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(draw_count == 0);
+    TEST_CHECK(pending_draws == 0);
+    TEST_CHECK(preserving_flush_calls == 0);
+
+    tracked_before_retry = tracked_result_calls;
+    draw_result = RENDERER_STATUS_BACKEND_ERROR;
+    Image_paint(ordinary_id, 30, 40, 0, 0x55667788);
+    TEST_CHECK(Sdl_renderer_frame_result(&fake_sdl_renderer)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(tracked_result_calls == tracked_before_retry + 1);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(draw_count == 0);
+    TEST_CHECK(preserving_flush_calls == 0);
+
+    reset_active_frame_capture();
+    preserving_flush_result = RENDERER_STATUS_BACKEND_ERROR;
+
+    Image_paint(ordinary_id, 10, 20, 0, 0x11223344);
+
+    TEST_CHECK(Sdl_renderer_frame_result(&fake_sdl_renderer)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(tracked_result_calls == 5);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(draw_count == 1);
+    TEST_CHECK(pending_draws == 1);
+    TEST_CHECK(preserving_flush_calls == 1);
+
+    tracked_before_retry = tracked_result_calls;
+    preserving_flush_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    Image_paint(ordinary_id, 30, 40, 0, 0x55667788);
+    TEST_CHECK(Sdl_renderer_frame_result(&fake_sdl_renderer)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(tracked_result_calls == tracked_before_retry + 1);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(draw_count == 1);
+    TEST_CHECK(pending_draws == 1);
+    TEST_CHECK(preserving_flush_calls == 1);
+
+    preserving_flush_result = RENDERER_STATUS_OK;
+    TEST_CHECK(Sdl_renderer_flush_preserving_legacy(&fake_sdl_renderer)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(preserving_flush_calls == 2);
+    TEST_CHECK(pending_draws == 0);
+    TEST_CHECK(Sdl_renderer_frame_result(&fake_sdl_renderer)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    return 0;
+}
+
 static int check_cleanup_is_exact(void)
 {
     int index;
@@ -781,10 +971,14 @@ int main(void)
         return 1;
     if (check_late_registration() != 0)
         return 1;
+    reset_active_frame_capture();
     if (check_semantic_world_and_hud_draws(ordinary_id) != 0)
         return 1;
     if (check_area_and_rotated_draws(ordinary_id, rotatable_id) != 0)
         return 1;
+    if (check_image_draw_failures_are_frame_sticky(ordinary_id) != 0)
+        return 1;
+    finish_active_frame();
     TEST_CHECK(map_id >= 0);
     if (check_cleanup_is_exact() != 0)
         return 1;

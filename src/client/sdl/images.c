@@ -472,17 +472,32 @@ static void Image_draw(image_t *image, int frame, RendererRect area,
                        RendererPoint2D position, float radians,
                        ImageGeometrySpace space, int packed_color)
 {
-    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+    SdlRenderer *sdl_renderer;
     Renderer *renderer;
     ImageGeometryAtlas atlas;
     RendererVertex2D vertices[6];
     RendererStatus status;
 
-    if (image == NULL || frame < 0 || sdl_renderer == NULL)
+    if (image == NULL)
+        return;
+    sdl_renderer = Get_sdl_renderer();
+    if (sdl_renderer == NULL)
+        return;
+    status = Sdl_renderer_track_frame_result(
+        sdl_renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
         return;
     renderer = Sdl_renderer_frontend(sdl_renderer);
-    if (renderer == NULL || renderer != image->renderer)
-        return;
+    if (renderer == NULL) {
+        status = Sdl_renderer_track_frame_result(
+            sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+        goto failure;
+    }
+    if (renderer != image->renderer) {
+        status = Sdl_renderer_track_frame_result(
+            sdl_renderer, RENDERER_STATUS_RESOURCE_MISMATCH);
+        goto failure;
+    }
     atlas.texture_width = image->data_width;
     atlas.texture_height = image->data_height;
     atlas.frame_width = image->frame_width;
@@ -491,17 +506,25 @@ static void Image_draw(image_t *image, int frame, RendererRect area,
     status = Image_geometry_sprite(
         &atlas, (size_t)frame, area, position, radians, space,
         Renderer_color_from_rgba32((uint32_t)packed_color), vertices);
+    status = Sdl_renderer_track_frame_result(sdl_renderer, status);
+    if (status != RENDERER_STATUS_OK)
+        goto failure;
+    status = Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA);
+    status = Sdl_renderer_track_frame_result(sdl_renderer, status);
+    if (status != RENDERER_STATUS_OK)
+        goto failure;
+    status = Renderer_draw_triangles(
+        renderer, image->texture, vertices, NELEM(vertices));
+    status = Sdl_renderer_track_frame_result(sdl_renderer, status);
+    if (status != RENDERER_STATUS_OK)
+        goto failure;
+    status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
+    status = Sdl_renderer_track_frame_result(sdl_renderer, status);
     if (status == RENDERER_STATUS_OK)
-        status = Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA);
-    if (status == RENDERER_STATUS_OK) {
-        status = Renderer_draw_triangles(
-            renderer, image->texture, vertices, NELEM(vertices));
-    }
-    if (status == RENDERER_STATUS_OK)
-        status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
-    if (status != RENDERER_STATUS_OK) {
-        warn("Could not draw image %s (%d)", image->filename, (int)status);
-    }
+        return;
+
+failure:
+    warn("Could not draw image %s (%d)", image->filename, (int)status);
 }
 
 void Image_paint(int ind, int x, int y, int frame, int c)

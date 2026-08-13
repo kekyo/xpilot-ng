@@ -142,6 +142,10 @@ void Images_cleanup(void);
  * @param y Destination bottom edge.
  * @param frame Zero-based atlas frame.
  * @param c Packed 0xRRGGBBAA tint.
+ *
+ * @remarks Drawing requires an active frame. Invalid geometry, ownership
+ * mismatches, and renderer failures are retained as the frame's first failure.
+ * An undefined registration remains a no-op.
  */
 void Image_paint(int ind, int x, int y, int frame, int c);
 
@@ -154,6 +158,10 @@ void Image_paint(int ind, int x, int y, int frame, int c);
  * @param frame Zero-based atlas frame.
  * @param r Top-left-origin source area, or NULL for the complete frame.
  * @param c Packed 0xRRGGBBAA tint.
+ *
+ * @remarks Drawing requires an active frame. Invalid geometry, ownership
+ * mismatches, and renderer failures are retained as the frame's first failure.
+ * An undefined registration remains a no-op.
  */
 void Image_paint_area(int ind, int x, int y, int frame, irec_t *r, int c);
 
@@ -165,6 +173,10 @@ void Image_paint_area(int ind, int x, int y, int frame, irec_t *r, int c);
  * @param y Destination top edge.
  * @param frame Zero-based atlas frame.
  * @param c Packed 0xRRGGBBAA tint.
+ *
+ * @remarks Drawing requires an active frame. Invalid geometry, ownership
+ * mismatches, and renderer failures are retained as the frame's first failure.
+ * An undefined registration remains a no-op.
  */
 void Image_paint_hud(int ind, int x, int y, int frame, int c);
 
@@ -176,6 +188,10 @@ void Image_paint_hud(int ind, int x, int y, int frame, int c);
  * @param center_y Destination center Y coordinate.
  * @param dir Counterclockwise angle in TABLE_SIZE units per full turn.
  * @param color Packed 0xRRGGBBAA tint.
+ *
+ * @remarks Drawing requires an active frame. Invalid geometry, ownership
+ * mismatches, and renderer failures are retained as the frame's first failure.
+ * An undefined registration remains a no-op.
  */
 void Image_paint_rotated(int ind, int center_x, int center_y, int dir, int color);
 
