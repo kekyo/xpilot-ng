@@ -248,6 +248,18 @@ static int axis_aligned_quad_equal(const RendererVertex2D *vertices,
             == 2.0f * (max_x - min_x) * (max_y - min_y);
 }
 
+static int ordered_axis_aligned_quad_equal(
+    const RendererVertex2D *vertices, float left, float top,
+    float right, float bottom, RendererColor color)
+{
+    return vertex_equal(vertices[0], left, top, 0.0f, 0.0f, color)
+        && vertex_equal(vertices[1], right, top, 0.0f, 0.0f, color)
+        && vertex_equal(vertices[2], right, bottom, 0.0f, 0.0f, color)
+        && vertex_equal(vertices[3], left, top, 0.0f, 0.0f, color)
+        && vertex_equal(vertices[4], right, bottom, 0.0f, 0.0f, color)
+        && vertex_equal(vertices[5], left, bottom, 0.0f, 0.0f, color);
+}
+
 static int check_quad_triangulation(void)
 {
     const RendererColor black = {0, 0, 0, 255};
@@ -502,6 +514,61 @@ static int check_point_geometry(void)
     TEST_CHECK(vertex_equal(draw->vertices[5], 3.0f, 9.0f,
                             0.0f, 0.0f, color));
 
+    Renderer_destroy(renderer);
+    return 0;
+}
+
+static int check_colored_points_are_one_ordered_physical_draw(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor first_color = {10, 20, 30, 40};
+    const RendererColor second_color = {50, 60, 70, 80};
+    const RendererTransform2D scaled = {
+        {2.0f, 0.0f, 0.0f,
+         0.0f, 3.0f, 0.0f,
+         4.0f, 5.0f, 1.0f}
+    };
+    const RendererTransform2D identity = {
+        {1.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f,
+         0.0f, 0.0f, 1.0f}
+    };
+    RendererColoredPoint2D points[] = {
+        {{3.0f, 4.0f}, {10, 20, 30, 40}},
+        {{6.0f, 2.0f}, {50, 60, 70, 80}}
+    };
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+    const captured_draw_t *draw;
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 40, 40, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_transform_2d(renderer, scaled)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, points, 2, 4.0f) == RENDERER_STATUS_OK);
+
+    points[0].position.x = 99.0f;
+    points[0].color.red = 255;
+    points[1].position.y = 99.0f;
+    points[1].color.blue = 255;
+    TEST_CHECK(backend.draw_count == 0);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 1);
+
+    draw = &backend.draws[0];
+    TEST_CHECK(draw->texture == NULL);
+    TEST_CHECK(draw->vertex_count == 12);
+    TEST_CHECK(transform_equal(draw->transform, identity));
+    TEST_CHECK(ordered_axis_aligned_quad_equal(
+                   draw->vertices, 8.0f, 15.0f, 12.0f, 19.0f,
+                   first_color));
+    TEST_CHECK(ordered_axis_aligned_quad_equal(
+                   draw->vertices + 6, 14.0f, 9.0f, 18.0f, 13.0f,
+                   second_color));
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
     Renderer_destroy(renderer);
     return 0;
 }
@@ -999,6 +1066,7 @@ int main(void)
     TEST_CHECK(check_stroke_geometry() == 0);
     TEST_CHECK(check_closed_and_zero_length_strokes() == 0);
     TEST_CHECK(check_point_geometry() == 0);
+    TEST_CHECK(check_colored_points_are_one_ordered_physical_draw() == 0);
     TEST_CHECK(check_screen_space_stroke_and_point_sizes() == 0);
     TEST_CHECK(check_colored_stroke_geometry() == 0);
     TEST_CHECK(check_colored_stroke_validation() == 0);

@@ -3,6 +3,9 @@
 #include "renderer.h"
 #include "renderer_backend.h"
 
+#include <float.h>
+#include <limits.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1110,6 +1113,256 @@ static int check_stippled_rejects_inactive_renderer(void)
     return 0;
 }
 
+static int check_colored_points_command_state_copy_order_and_retry(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor first_color = {10, 20, 30, 40};
+    const RendererColor second_color = {50, 60, 70, 80};
+    const RendererTransform2D transform = {
+        {2.0f, 0.0f, 0.0f,
+         0.0f, 3.0f, 0.0f,
+         4.0f, 5.0f, 1.0f}
+    };
+    const RendererTransform2D identity = {
+        {1.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f,
+         0.0f, 0.0f, 1.0f}
+    };
+    const RendererRect scissor = {2, 3, 14, 12};
+    RendererColoredPoint2D first[] = {
+        {{1.0f, 2.0f}, {10, 20, 30, 40}},
+        {{4.0f, 2.0f}, {50, 60, 70, 80}}
+    };
+    RendererColoredPoint2D second[] = {
+        {{1.0f, 5.0f}, {90, 100, 110, 120}}
+    };
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 32, 32, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_transform_2d(renderer, transform)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_scissor(renderer, &scissor)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, first, 2, 2.0f) == RENDERER_STATUS_OK);
+    first[0].position.x = 99.0f;
+    first[0].color.red = 255;
+
+    TEST_CHECK(Renderer_set_transform_2d(renderer, identity)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_blend(renderer, RENDERER_BLEND_ADDITIVE)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_set_scissor(renderer, NULL)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, second, 1, 2.0f) == RENDERER_STATUS_OK);
+    second[0].position.y = 99.0f;
+    second[0].color.green = 255;
+
+    backend.fail_draw_attempt = 2;
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(backend.draw_attempt_count == 2);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(backend.flush_count == 0);
+    TEST_CHECK(backend.draws[0].vertex_count == 12);
+    TEST_CHECK(transform_equal(backend.draws[0].transform, identity));
+    TEST_CHECK(backend.draws[0].blend == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(backend.draws[0].scissor_enabled);
+    TEST_CHECK(rect_equal(backend.draws[0].scissor, scissor));
+    TEST_CHECK(color_equal(
+                   backend.draws[0].vertices[0].color, first_color));
+    TEST_CHECK(color_equal(
+                   backend.draws[0].vertices[6].color, second_color));
+    TEST_CHECK(backend.draws[0].vertices[0].x == 5.0f);
+    TEST_CHECK(backend.draws[0].vertices[0].y == 10.0f);
+    TEST_CHECK(backend.draws[0].vertices[6].x == 11.0f);
+    TEST_CHECK(backend.draws[0].vertices[6].y == 10.0f);
+
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, first, 2, 2.0f)
+               == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_attempt_count == 3);
+    TEST_CHECK(backend.draw_count == 2);
+    TEST_CHECK(backend.flush_count == 1);
+    TEST_CHECK(backend.draws[1].vertex_count == 6);
+    TEST_CHECK(transform_equal(backend.draws[1].transform, identity));
+    TEST_CHECK(backend.draws[1].blend == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(!backend.draws[1].scissor_enabled);
+    TEST_CHECK(backend.draws[1].vertices[0].x == 0.0f);
+    TEST_CHECK(backend.draws[1].vertices[0].y == 4.0f);
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
+static int check_colored_points_allocation_failure_is_atomic(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor first_color = {10, 20, 30, 40};
+    const RendererColoredPoint2D first[] = {
+        {{2.0f, 2.0f}, {10, 20, 30, 40}}
+    };
+    const RendererColoredPoint2D second[] = {
+        {{6.0f, 6.0f}, {50, 60, 70, 80}}
+    };
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 32, 32, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, first, 1, 2.0f) == RENDERER_STATUS_OK);
+
+    fail_next_malloc = 1;
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, second, 1, 2.0f)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(fail_next_malloc == 0);
+    TEST_CHECK(backend.draw_attempt_count == 0);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(axis_aligned_draw_equal(
+                   &backend.draws[0], 1.0f, 1.0f, 3.0f, 3.0f,
+                   first_color));
+
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, first, 1, 2.0f) == RENDERER_STATUS_OK);
+    fail_next_calloc = 1;
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, second, 1, 2.0f)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(fail_next_calloc == 0);
+    TEST_CHECK(backend.draw_attempt_count == 1);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 2);
+    TEST_CHECK(axis_aligned_draw_equal(
+                   &backend.draws[1], 1.0f, 1.0f, 3.0f, 3.0f,
+                   first_color));
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
+static int check_colored_points_validation_is_batch_atomic(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor color = {90, 100, 110, 120};
+    const RendererTransform2D overflowing_transform = {
+        {FLT_MAX, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f,
+         0.0f, 0.0f, 1.0f}
+    };
+    const RendererTransform2D identity = {
+        {1.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f,
+         0.0f, 0.0f, 1.0f}
+    };
+    const RendererColoredPoint2D valid[] = {
+        {{2.0f, 2.0f}, {90, 100, 110, 120}}
+    };
+    const RendererColoredPoint2D invalid_later[] = {
+        {{2.0f, 2.0f}, {90, 100, 110, 120}},
+        {{NAN, 6.0f}, {90, 100, 110, 120}}
+    };
+    const RendererColoredPoint2D infinite_center[] = {
+        {{2.0f, INFINITY}, {90, 100, 110, 120}}
+    };
+    const RendererColoredPoint2D unexpandable_center[] = {
+        {{FLT_MAX, 2.0f}, {90, 100, 110, 120}}
+    };
+    const float smallest_positive = nextafterf(0.0f, 1.0f);
+    size_t maximum_point_count = (size_t)INT_MAX / 6;
+    size_t allocation_point_count = SIZE_MAX
+        / sizeof(RendererVertex2D) / 6;
+    size_t backend_byte_point_count = (size_t)PTRDIFF_MAX
+        / sizeof(RendererVertex2D) / 6;
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+
+    if (maximum_point_count > allocation_point_count)
+        maximum_point_count = allocation_point_count;
+    if (maximum_point_count > backend_byte_point_count)
+        maximum_point_count = backend_byte_point_count;
+    TEST_CHECK(Renderer_draw_colored_points(
+                   NULL, valid, 1, 2.0f)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, valid, 1, 2.0f)
+               == RENDERER_STATUS_INVALID_STATE);
+    TEST_CHECK(Renderer_begin_frame(renderer, 32, 32, black)
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_fill_rect(
+                   renderer, 10.0f, 10.0f, 2.0f, 2.0f, color)
+               == RENDERER_STATUS_OK);
+
+    fail_next_malloc = 1;
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, invalid_later, 2, 2.0f)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(fail_next_malloc == 1);
+    fail_next_malloc = 0;
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, NULL, 1, 2.0f)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, valid, 0, 2.0f)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, valid, 1, 0.0f)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, valid, 1, NAN)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, valid, 1, INFINITY)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, valid, 1, smallest_positive)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, infinite_center, 1, 2.0f)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, unexpandable_center, 1, 2.0f)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+
+    TEST_CHECK(Renderer_set_transform_2d(
+                   renderer, overflowing_transform) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, valid, 1, 2.0f)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(Renderer_set_transform_2d(renderer, identity)
+               == RENDERER_STATUS_OK);
+
+    fail_next_malloc = 1;
+    TEST_CHECK(Renderer_draw_colored_points(
+                   renderer, valid, maximum_point_count + 1, 2.0f)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(fail_next_malloc == 1);
+    fail_next_malloc = 0;
+
+    TEST_CHECK(backend.draw_attempt_count == 0);
+    TEST_CHECK(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(axis_aligned_draw_equal(
+                   &backend.draws[0], 10.0f, 10.0f, 12.0f, 12.0f,
+                   color));
+
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    Renderer_destroy(renderer);
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(check_color_conversion() == 0);
@@ -1126,5 +1379,8 @@ int main(void)
     TEST_CHECK(check_stippled_command_state_copy_order_and_retry() == 0);
     TEST_CHECK(check_stippled_allocation_failure_is_atomic() == 0);
     TEST_CHECK(check_stippled_rejects_inactive_renderer() == 0);
+    TEST_CHECK(check_colored_points_command_state_copy_order_and_retry() == 0);
+    TEST_CHECK(check_colored_points_allocation_failure_is_atomic() == 0);
+    TEST_CHECK(check_colored_points_validation_is_batch_atomic() == 0);
     return 0;
 }

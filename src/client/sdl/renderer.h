@@ -70,6 +70,14 @@ typedef struct RendererPoint2D {
     float y;
 } RendererPoint2D;
 
+/** Center position and color of one independently colored square point. */
+typedef struct RendererColoredPoint2D {
+    /** Center in the current local coordinate space. */
+    RendererPoint2D position;
+    /** Unpremultiplied point color. */
+    RendererColor color;
+} RendererColoredPoint2D;
+
 /** Vertex consumed by triangle-based two-dimensional renderer commands. */
 typedef struct RendererVertex2D {
     /** Horizontal position. */
@@ -321,15 +329,40 @@ RendererStatus Renderer_stroke_stippled_path(
 /**
  * Queue a square point centered at the supplied position.
  *
+ * The center is transformed before the square is expanded, so @p size is
+ * measured in physical framebuffer pixels. The resulting square must have
+ * finite, distinct edges.
+ *
  * @param renderer Renderer with an active frame.
- * @param x Center horizontal coordinate.
- * @param y Center vertical coordinate.
- * @param size Positive square size in pixels.
+ * @param x Finite center horizontal coordinate.
+ * @param y Finite center vertical coordinate.
+ * @param size Positive finite square size in pixels.
  * @param color Vertex color.
  * @return Operation status.
  */
 RendererStatus Renderer_draw_point(Renderer *renderer, float x, float y,
                                    float size, RendererColor color);
+
+/**
+ * Queue independently colored square points as one draw command.
+ *
+ * Every center is transformed before its square is expanded, so @p size is
+ * measured in physical framebuffer pixels. Point order determines primitive
+ * order, and the point data is copied before this function returns. Every
+ * resulting square must have finite, distinct edges.
+ *
+ * @param renderer Renderer with an active frame.
+ * @param points Finite point centers and colors in submission order.
+ * @param point_count Positive number of points.
+ * @param size Positive finite common square size in pixels.
+ * @return Operation status. If the expanded points cannot fit one backend
+ *         command, RENDERER_STATUS_OUT_OF_MEMORY is returned.
+ *
+ * @remarks A failure queues no portion of the supplied points.
+ */
+RendererStatus Renderer_draw_colored_points(
+    Renderer *renderer, const RendererColoredPoint2D *points,
+    size_t point_count, float size);
 
 /**
  * Queue a textured rectangle as two triangles.

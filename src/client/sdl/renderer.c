@@ -1023,30 +1023,85 @@ RendererStatus Renderer_stroke_stippled_path(
                          identity_transform);
 }
 
-RendererStatus Renderer_draw_point(Renderer *renderer, float x, float y,
-                                   float size, RendererColor color)
+RendererStatus Renderer_draw_colored_points(
+    Renderer *renderer, const RendererColoredPoint2D *points,
+    size_t point_count, float size)
 {
     RendererStatus status = Check_draw_state(renderer);
-    RendererPoint2D center;
+    RendererVertex2D *vertices;
+    size_t maximum_vertex_count;
+    size_t vertex_count;
+    size_t point_index;
     float half_size;
 
     if (status != RENDERER_STATUS_OK)
         return status;
-    if (!isfinite(x) || !isfinite(y) || !isfinite(size) || size <= 0.0f)
+    if (points == NULL || point_count == 0
+        || !isfinite(size) || size <= 0.0f) {
         return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
     half_size = size * 0.5f;
     if (!isfinite(half_size))
         return RENDERER_STATUS_INVALID_ARGUMENT;
-    center.x = x;
-    center.y = y;
-    center = Transform_point(renderer->transform, center);
-    if (!isfinite(center.x) || !isfinite(center.y))
-        return RENDERER_STATUS_INVALID_ARGUMENT;
-    return Queue_quad(renderer,
-                      center.x - half_size, center.y - half_size,
-                      center.x + half_size, center.y + half_size,
-                      0.0f, 0.0f, 0.0f, 0.0f, color, NULL,
-                      identity_transform);
+
+    maximum_vertex_count = SIZE_MAX / sizeof(*vertices);
+    if (maximum_vertex_count
+        > (size_t)PTRDIFF_MAX / sizeof(*vertices)) {
+        maximum_vertex_count = (size_t)PTRDIFF_MAX / sizeof(*vertices);
+    }
+    if (maximum_vertex_count > (size_t)INT_MAX)
+        maximum_vertex_count = (size_t)INT_MAX;
+    if (point_count > maximum_vertex_count / 6)
+        return RENDERER_STATUS_OUT_OF_MEMORY;
+
+    /* Validate every transformed square before accepting any batch prefix. */
+    for (point_index = 0; point_index < point_count; point_index++) {
+        RendererPoint2D center = points[point_index].position;
+
+        if (!isfinite(center.x) || !isfinite(center.y))
+            return RENDERER_STATUS_INVALID_ARGUMENT;
+        center = Transform_point(renderer->transform, center);
+        if (!Float_rect_valid(
+                center.x - half_size, center.y - half_size,
+                center.x + half_size, center.y + half_size)) {
+            return RENDERER_STATUS_INVALID_ARGUMENT;
+        }
+    }
+
+    vertex_count = point_count * 6;
+    vertices = malloc(vertex_count * sizeof(*vertices));
+    if (vertices == NULL)
+        return RENDERER_STATUS_OUT_OF_MEMORY;
+    for (point_index = 0; point_index < point_count; point_index++) {
+        const RendererColoredPoint2D *point = &points[point_index];
+        RendererPoint2D center = Transform_point(
+            renderer->transform, point->position);
+        float left = center.x - half_size;
+        float top = center.y - half_size;
+        float right = center.x + half_size;
+        float bottom = center.y + half_size;
+        RendererVertex2D *quad = &vertices[point_index * 6];
+
+        Set_vertex(&quad[0], left, top, 0.0f, 0.0f, point->color);
+        Set_vertex(&quad[1], right, top, 0.0f, 0.0f, point->color);
+        Set_vertex(&quad[2], right, bottom, 0.0f, 0.0f, point->color);
+        Set_vertex(&quad[3], left, top, 0.0f, 0.0f, point->color);
+        Set_vertex(&quad[4], right, bottom, 0.0f, 0.0f, point->color);
+        Set_vertex(&quad[5], left, bottom, 0.0f, 0.0f, point->color);
+    }
+    return Queue_command(renderer, vertices, vertex_count, NULL, NULL,
+                         identity_transform);
+}
+
+RendererStatus Renderer_draw_point(Renderer *renderer, float x, float y,
+                                   float size, RendererColor color)
+{
+    RendererColoredPoint2D point;
+
+    point.position.x = x;
+    point.position.y = y;
+    point.color = color;
+    return Renderer_draw_colored_points(renderer, &point, 1, size);
 }
 
 RendererStatus Renderer_draw_sprite(Renderer *renderer,
