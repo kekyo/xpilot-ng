@@ -96,7 +96,8 @@ check_PROGRAMS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) \
 	test-renderer-gl-backends$(EXEEXT) \
 	test-paint-transform$(EXEEXT) test-image-geometry$(EXEEXT) \
-	test-gfx2d-picture$(EXEEXT) test-images$(EXEEXT) \
+	test-polygon-geometry$(EXEEXT) test-gfx2d-picture$(EXEEXT) \
+	test-images$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
 	test-sdl-renderer-scissor$(EXEEXT) test-sdlpaint-stage$(EXEEXT) \
@@ -118,7 +119,8 @@ TESTS = test-meta-environment$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-renderer-commands$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) test-paint-transform$(EXEEXT) \
 	run-gl-legacy.sh test-image-geometry$(EXEEXT) \
-	test-gfx2d-picture$(EXEEXT) test-images$(EXEEXT) \
+	test-polygon-geometry$(EXEEXT) test-gfx2d-picture$(EXEEXT) \
+	test-images$(EXEEXT) \
 	test-radar-renderer$(EXEEXT) test-sdl-ui-image$(EXEEXT) \
 	test-sdl-meta-frame$(EXEEXT) test-sdl-game-frame$(EXEEXT) \
 	test-sdlpaint-stage$(EXEEXT) test-paintmap-vdecor$(EXEEXT) \
@@ -184,6 +186,9 @@ am_test_image_geometry_OBJECTS = test_image_geometry.$(OBJEXT) \
 	image_geometry.$(OBJEXT)
 test_image_geometry_OBJECTS = $(am_test_image_geometry_OBJECTS)
 test_image_geometry_LDADD = $(LDADD)
+am_test_polygon_geometry_OBJECTS = test_polygon_geometry.$(OBJEXT)
+test_polygon_geometry_OBJECTS = $(am_test_polygon_geometry_OBJECTS)
+test_polygon_geometry_LDADD = $(LDADD)
 am_test_images_OBJECTS = test_images-test_images.$(OBJEXT) \
 	test_images-images.$(OBJEXT) \
 	test_images-image_geometry.$(OBJEXT) \
@@ -416,6 +421,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po \
 	./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po \
 	./$(DEPDIR)/test_image_geometry.Po \
+	./$(DEPDIR)/test_polygon_geometry.Po \
 	./$(DEPDIR)/test_images-image_geometry.Po \
 	./$(DEPDIR)/test_images-images.Po \
 	./$(DEPDIR)/test_images-strdup.Po \
@@ -500,6 +506,7 @@ SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
 	$(test_meta_environment_SOURCES) \
 	$(test_paint_transform_SOURCES) $(test_paintmap_vdecor_SOURCES) \
+	$(test_polygon_geometry_SOURCES) \
 	$(test_radar_renderer_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
@@ -525,6 +532,7 @@ DIST_SOURCES = $(test_gfx2d_picture_SOURCES) $(test_gl_legacy_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
 	$(test_meta_environment_SOURCES) \
 	$(test_paint_transform_SOURCES) $(test_paintmap_vdecor_SOURCES) \
+	$(test_polygon_geometry_SOURCES) \
 	$(test_radar_renderer_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
@@ -997,6 +1005,9 @@ test_paint_transform_SOURCES = test_paint_transform.c \
 test_image_geometry_SOURCES = test_image_geometry.c \
 	$(top_srcdir)/src/client/sdl/image_geometry.c
 
+test_polygon_geometry_SOURCES = test_polygon_geometry.c \
+	$(top_srcdir)/src/client/sdl/polygon_geometry.h
+
 test_gfx2d_picture_SOURCES = test_gfx2d_picture.c \
 	$(top_srcdir)/src/client/gfx2d.c
 
@@ -1310,6 +1321,10 @@ test-image-geometry$(EXEEXT): $(test_image_geometry_OBJECTS) $(test_image_geomet
 	@rm -f test-image-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_image_geometry_OBJECTS) $(test_image_geometry_LDADD) $(LIBS)
 
+test-polygon-geometry$(EXEEXT): $(test_polygon_geometry_OBJECTS) $(test_polygon_geometry_DEPENDENCIES) $(EXTRA_test_polygon_geometry_DEPENDENCIES)
+	@rm -f test-polygon-geometry$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_polygon_geometry_OBJECTS) $(test_polygon_geometry_LDADD) $(LIBS)
+
 test-images$(EXEEXT): $(test_images_OBJECTS) $(test_images_DEPENDENCIES) $(EXTRA_test_images_DEPENDENCIES)
 	@rm -f test-images$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_images_OBJECTS) $(test_images_LDADD) $(LIBS)
@@ -1471,6 +1486,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_image_geometry.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_polygon_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-image_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-images.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-strdup.Po@am__quote@ # am--include-marker
@@ -2896,6 +2912,13 @@ test-image-geometry.log: test-image-geometry$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-polygon-geometry.log: test-polygon-geometry$(EXEEXT)
+	@p='test-polygon-geometry$(EXEEXT)'; \
+	b='test-polygon-geometry'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-gfx2d-picture.log: test-gfx2d-picture$(EXEEXT)
 	@p='test-gfx2d-picture$(EXEEXT)'; \
 	b='test-gfx2d-picture'; \
@@ -3172,6 +3195,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po
 	-rm -f ./$(DEPDIR)/test_image_geometry.Po
+	-rm -f ./$(DEPDIR)/test_polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_images-image_geometry.Po
 	-rm -f ./$(DEPDIR)/test_images-images.Po
 	-rm -f ./$(DEPDIR)/test_images-strdup.Po
@@ -3311,6 +3335,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_glwidgets_scissor-test_glwidgets_scissor.Po
 	-rm -f ./$(DEPDIR)/test_image_geometry.Po
+	-rm -f ./$(DEPDIR)/test_polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_images-image_geometry.Po
 	-rm -f ./$(DEPDIR)/test_images-images.Po
 	-rm -f ./$(DEPDIR)/test_images-strdup.Po
