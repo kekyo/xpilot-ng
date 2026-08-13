@@ -4604,6 +4604,237 @@ static int check_directional_gravity_failures_are_sticky(void)
     return check_no_world_legacy_state();
 }
 
+static int check_ball_connector_stroke(
+    const float expected_points[][2], uint32_t expected_color)
+{
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(image_attempts == 0);
+    TEST_CHECK(check_world_stroke(
+        0, expected_points, 2, expected_color, 0,
+        RENDERER_BLEND_ADDITIVE, 71) == 0);
+    return check_no_world_legacy_state();
+}
+
+static int check_item_outline_and_ball_connector_are_semantic(void)
+{
+    static const float item_points[][2] = {
+        {36.0f, 46.0f}, {20.0f, 14.0f}, {4.0f, 46.0f}
+    };
+    static const float connector_points[][2] = {
+        {-100.0f, 250.0f}, {300.0f, -450.0f}
+    };
+
+    reset_frame();
+    whiteRGBA = UINT32_C(0x10203040);
+    blueRGBA = UINT32_C(0x50607080);
+    Gui_paint_item_object(3, 20, 30);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(last_image.index == IMG_ALL_ITEMS);
+    TEST_CHECK(last_image.x == 12);
+    TEST_CHECK(last_image.y == 26);
+    TEST_CHECK(last_image.frame == 3);
+    TEST_CHECK(last_image.color == (int)UINT32_C(0x10203040));
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(check_world_stroke(
+        0, item_points, 3, UINT32_C(0x50607080), 1,
+        RENDERER_BLEND_ALPHA, 71) == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    connColorRGBA = UINT32_C(0x90abcdef);
+    Gui_paint_ball_connector(-100, 250, 300, -450);
+
+    return check_ball_connector_stroke(
+        connector_points, UINT32_C(0x90abcdef));
+}
+
+static int check_invalid_item_outline_result_is_sticky(
+    int expected_image_attempts)
+{
+    PaintOperationCounts before_blocked_leaf;
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(event_count == expected_image_attempts);
+    if (expected_image_attempts != 0)
+        TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(image_attempts == expected_image_attempts);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    before_blocked_leaf = paint_operation_counts();
+    Gui_paint_ball_connector(10, 20, 30, 40);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+    return fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT
+           ? 0 : 1;
+}
+
+static int check_item_outline_and_ball_connector_boundaries(void)
+{
+    static const float int_min_connector_points[][2] = {
+        {(float)INT_MIN, (float)INT_MIN},
+        {(float)(INT_MIN + 256), (float)(INT_MIN + 256)}
+    };
+    const int large_coordinate = 1 << 30;
+
+    reset_frame();
+    Gui_paint_ball_connector(INT_MAX, INT_MIN, INT_MAX, INT_MIN);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(stippled_stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(image_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+
+    reset_frame();
+    connColorRGBA = UINT32_C(0x01020304);
+    Gui_paint_ball_connector(
+        INT_MIN, INT_MIN, INT_MIN + 256, INT_MIN + 256);
+    TEST_CHECK(check_ball_connector_stroke(
+        int_min_connector_points, UINT32_C(0x01020304)) == 0);
+
+    reset_frame();
+    Gui_paint_ball_connector(
+        large_coordinate, 20, large_coordinate + 1, 20);
+    TEST_CHECK(image_attempts == 0);
+    TEST_CHECK(check_invalid_world_line_result_is_sticky() == 0);
+
+    reset_frame();
+    Gui_paint_item_object(3, INT_MIN, 20);
+    TEST_CHECK(check_invalid_item_outline_result_is_sticky(0) == 0);
+
+    reset_frame();
+    Gui_paint_item_object(3, INT_MAX, 20);
+    TEST_CHECK(last_image.x == INT_MAX - 8);
+    TEST_CHECK(last_image.y == 16);
+    TEST_CHECK(check_invalid_item_outline_result_is_sticky(1) == 0);
+
+    reset_frame();
+    Gui_paint_item_object(3, large_coordinate, 20);
+    TEST_CHECK(last_image.x == large_coordinate - 8);
+    TEST_CHECK(last_image.y == 16);
+    return check_invalid_item_outline_result_is_sticky(1);
+}
+
+static int check_simple_world_object_failures_are_sticky(void)
+{
+    PaintOperationCounts before_blocked_leaf;
+
+    reset_frame();
+    image_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    Gui_paint_item_object(3, 20, 30);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+    before_blocked_leaf = paint_operation_counts();
+    Gui_paint_ball_connector(10, 20, 30, 40);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+
+    reset_frame();
+    blend_failure_attempt = 1;
+    blend_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+    Gui_paint_item_object(3, 20, 30);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+    before_blocked_leaf = paint_operation_counts();
+    Gui_paint_ball_connector(10, 20, 30, 40);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+
+    reset_frame();
+    stroke_failure_attempt = 1;
+    stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    Gui_paint_ball_connector(10, 20, 30, 40);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+    before_blocked_leaf = paint_operation_counts();
+    Gui_paint_item_object(3, 20, 30);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+
+    reset_frame();
+    connColorRGBA = UINT32_C(0xaabbccdd);
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    Gui_paint_ball_connector(10, 20, 30, 40);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(check_no_world_legacy_state() == 0);
+    before_blocked_leaf = paint_operation_counts();
+    Gui_paint_item_object(3, 20, 30);
+    TEST_CHECK(check_paint_operation_counts_unchanged(
+        before_blocked_leaf) == 0);
+    return fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR
+           ? 0 : 1;
+}
+
 static int check_visible_border_setup_failures_restore_safely(void)
 {
     static const float rectangle_points[][2] = {
@@ -5616,6 +5847,12 @@ int main(void)
     if (check_directional_gravity_numeric_boundaries_are_checked() != 0)
         return 1;
     if (check_directional_gravity_failures_are_sticky() != 0)
+        return 1;
+    if (check_item_outline_and_ball_connector_are_semantic() != 0)
+        return 1;
+    if (check_item_outline_and_ball_connector_boundaries() != 0)
+        return 1;
+    if (check_simple_world_object_failures_are_sticky() != 0)
         return 1;
     if (check_world_decor_paths_are_semantic() != 0)
         return 1;

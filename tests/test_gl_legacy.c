@@ -500,13 +500,6 @@ static void check_procedural_baseline(void)
     glDeleteTextures(1, &color_texture);
 }
 
-static void check_known_legacy_draw_paths(void)
-{
-    drain_gl_errors();
-    Gui_paint_ball_connector(0, 0, 1, 1);
-    CHECK_CONTINUE(drain_gl_errors() == 0);
-}
-
 static void check_gui_display_list_lifecycle(void)
 {
     static ipos_t points[] = {
@@ -786,7 +779,6 @@ int main(int argc, char **argv)
 
     CHECK_CONTINUE(glGetString(GL_VERSION) != NULL);
     check_procedural_baseline();
-    check_known_legacy_draw_paths();
     check_gui_display_list_lifecycle();
     CHECK_CONTINUE(Renderer_gl_legacy_create(load_current_gl_proc, NULL,
                                              &font_renderer)
