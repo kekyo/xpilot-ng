@@ -3,14 +3,18 @@
 #include "xpclient_sdl.h"
 
 #include "renderer.h"
+#include "images.h"
 #include "sdlinit.h"
 #include "sdlrenderer.h"
 #include "text.h"
 
 #include <GL/gl.h>
 
+#include <float.h>
 #include <limits.h>
 #include <math.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -37,7 +41,10 @@ typedef enum PaintEvent {
     PAINT_EVENT_FILL,
     PAINT_EVENT_STROKE,
     PAINT_EVENT_FLUSH,
-    PAINT_EVENT_TEXT
+    PAINT_EVENT_TEXT,
+    PAINT_EVENT_IMAGE,
+    PAINT_EVENT_MEASURE,
+    PAINT_EVENT_HUD_TEXT
 } PaintEvent;
 
 typedef struct FakeDraw {
@@ -55,6 +62,7 @@ typedef struct FakeFill {
     float width;
     float height;
     RendererColor color;
+    RendererBlendMode blend;
     int transform_token;
     int scissor_token;
 } FakeFill;
@@ -80,6 +88,24 @@ typedef struct FakeText {
     bool on_hud;
 } FakeText;
 
+typedef struct FakeImage {
+    int index;
+    int x;
+    int y;
+    int frame;
+    int color;
+} FakeImage;
+
+typedef struct FakeHudText {
+    font_data *font;
+    int color;
+    int horizontal_alignment;
+    int vertical_alignment;
+    int x;
+    int y;
+    char text[50];
+} FakeHudText;
+
 static Renderer fake_renderer;
 static SdlRenderer fake_sdl_renderer = {
     &fake_renderer,
@@ -90,6 +116,9 @@ static FakeDraw draws[MAX_DRAWS];
 static FakeFill last_fill;
 static FakeStroke strokes[MAX_STROKES];
 static FakeText last_text;
+static FakeImage last_image;
+static FakeHudText last_hud_text;
+static char last_measured_text[50];
 static int event_count;
 static int operation_result_pending;
 static int preflight_attempts;
@@ -104,6 +133,9 @@ static int flush_attempts;
 static int transform_attempts;
 static int scissor_attempts;
 static int text_attempts;
+static int image_attempts;
+static int measure_attempts;
+static int hud_text_attempts;
 static int legacy_begin_calls;
 static int legacy_vertex_calls;
 static int legacy_end_calls;
@@ -120,6 +152,10 @@ static int stroke_failure_attempt;
 static RendererStatus stroke_failure_result;
 static RendererStatus flush_result;
 static RendererStatus text_result;
+static RendererStatus measure_result;
+static RendererStatus hud_text_result;
+static float measured_width;
+static float measured_height;
 
 static setup_t fake_setup = {
     .frames_per_second = 60
@@ -166,6 +202,19 @@ int active_view_height;
 int hudRadarDotSize;
 double hudRadarScale;
 double hudRadarLimit;
+int hudSize;
+instruments_t instruments;
+u_byte numItems[NUM_ITEMS];
+u_byte lastNumItems[NUM_ITEMS];
+int numItemsTime[NUM_ITEMS];
+double showItemsTime;
+byte lose_item;
+int lose_item_active;
+double fuelTime;
+double fuelCritical;
+double fuelWarning;
+double fuelNotify;
+long loopsSlow;
 
 static int bms_ball_state;
 static int bms_cover_state;
@@ -200,6 +249,8 @@ extern Uint32 hudRadarOtherColorRGBA;
 extern Uint32 hudRadarObjectColorRGBA;
 extern Uint32 msgScanBallColorRGBA;
 extern Uint32 msgScanCoverColorRGBA;
+extern Uint32 hudItemsColorRGBA;
+extern Uint32 fuelGaugeColorRGBA;
 extern float hudRadarMapScale;
 extern int hudRadarEnemyShape;
 extern int hudRadarOtherShape;
@@ -298,6 +349,9 @@ static void reset_frame(void)
     memset(&last_fill, 0, sizeof(last_fill));
     memset(strokes, 0, sizeof(strokes));
     memset(&last_text, 0, sizeof(last_text));
+    memset(&last_image, 0, sizeof(last_image));
+    memset(&last_hud_text, 0, sizeof(last_hud_text));
+    memset(last_measured_text, 0, sizeof(last_measured_text));
     memset(&gamefont, 0, sizeof(gamefont));
     memset(blend_modes, 0, sizeof(blend_modes));
     memset(tbl_sin, 0, sizeof(tbl_sin));
@@ -318,6 +372,9 @@ static void reset_frame(void)
     transform_attempts = 0;
     scissor_attempts = 0;
     text_attempts = 0;
+    image_attempts = 0;
+    measure_attempts = 0;
+    hud_text_attempts = 0;
     legacy_begin_calls = 0;
     legacy_vertex_calls = 0;
     legacy_end_calls = 0;
@@ -333,6 +390,10 @@ static void reset_frame(void)
     stroke_failure_result = RENDERER_STATUS_OK;
     flush_result = RENDERER_STATUS_OK;
     text_result = RENDERER_STATUS_OK;
+    measure_result = RENDERER_STATUS_OK;
+    hud_text_result = RENDERER_STATUS_OK;
+    measured_width = 7.0f;
+    measured_height = 12.0f;
     fake_renderer.frame_active = 1;
     fake_renderer.transform_token = 71;
     fake_renderer.scissor_token = 83;
@@ -380,6 +441,20 @@ static void reset_frame(void)
     hudRadarDotSize = 4;
     hudRadarScale = 1.0;
     hudRadarLimit = 0.5;
+    hudSize = 50;
+    memset(&instruments, 0, sizeof(instruments));
+    instruments.showItems = true;
+    memset(numItems, 0, sizeof(numItems));
+    memset(lastNumItems, 0, sizeof(lastNumItems));
+    memset(numItemsTime, 0, sizeof(numItemsTime));
+    showItemsTime = 2.0;
+    lose_item = NO_ITEM;
+    lose_item_active = 0;
+    fuelTime = 0.0;
+    fuelCritical = 20.0;
+    fuelWarning = 60.0;
+    fuelNotify = 100.0;
+    loopsSlow = 0;
     hudColorRGBA = 0;
     dirPtrColorRGBA = 0;
     hudRadarEnemyColorRGBA = 0;
@@ -390,6 +465,8 @@ static void reset_frame(void)
     hudRadarObjectShape = 0;
     msgScanBallColorRGBA = 0;
     msgScanCoverColorRGBA = 0;
+    hudItemsColorRGBA = 0;
+    fuelGaugeColorRGBA = 0;
     hudRadarMapScale = 0.0f;
     bms_ball_state = 0;
     bms_cover_state = 0;
@@ -539,6 +616,7 @@ RendererStatus Renderer_fill_rect(Renderer *renderer,
     last_fill.width = width;
     last_fill.height = height;
     last_fill.color = color;
+    last_fill.blend = current_blend;
     last_fill.transform_token = renderer->transform_token;
     last_fill.scissor_token = renderer->scissor_token;
     successful_fills++;
@@ -615,6 +693,66 @@ RendererStatus disp_text(string_tex_t *texture, int color,
     last_text.y = y;
     last_text.on_hud = on_hud;
     return text_result;
+}
+
+void Image_paint_hud(int index, int x, int y, int frame, int color)
+{
+    image_attempts++;
+    record_event(PAINT_EVENT_IMAGE);
+    last_image.index = index;
+    last_image.x = x;
+    last_image.y = y;
+    last_image.frame = frame;
+    last_image.color = color;
+}
+
+RendererStatus printsize(font_data *font, fontbounds *bounds,
+                         const char *format, ...)
+{
+    va_list arguments;
+
+    measure_attempts++;
+    record_event(PAINT_EVENT_MEASURE);
+    va_start(arguments, format);
+    vsnprintf(last_measured_text, sizeof(last_measured_text),
+              format, arguments);
+    va_end(arguments);
+    if (measure_result != RENDERER_STATUS_OK) {
+        if (fake_sdl_renderer.frame_result == RENDERER_STATUS_OK)
+            fake_sdl_renderer.frame_result = measure_result;
+        return measure_result;
+    }
+    if (font == NULL || bounds == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    bounds->width = measured_width;
+    bounds->height = measured_height;
+    return RENDERER_STATUS_OK;
+}
+
+RendererStatus HUDprint(font_data *font, int color,
+                        int horizontal_alignment,
+                        int vertical_alignment, int x, int y,
+                        const char *format, ...)
+{
+    va_list arguments;
+
+    hud_text_attempts++;
+    record_event(PAINT_EVENT_HUD_TEXT);
+    last_hud_text.font = font;
+    last_hud_text.color = color;
+    last_hud_text.horizontal_alignment = horizontal_alignment;
+    last_hud_text.vertical_alignment = vertical_alignment;
+    last_hud_text.x = x;
+    last_hud_text.y = y;
+    va_start(arguments, format);
+    vsnprintf(last_hud_text.text, sizeof(last_hud_text.text),
+              format, arguments);
+    va_end(arguments);
+    if (fake_sdl_renderer.frame_result == RENDERER_STATUS_OK
+        && hud_text_result != RENDERER_STATUS_OK) {
+        fake_sdl_renderer.frame_result = hud_text_result;
+    }
+    return hud_text_result;
 }
 
 bool Bms_test_state(msg_bms_t bms)
@@ -1934,6 +2072,475 @@ static int check_selection_flush_failure_is_sticky(void)
     return check_no_legacy_primitives();
 }
 
+static void reset_hud_status_fixture(void)
+{
+    reset_frame();
+    hudItemsColorRGBA = UINT32_C(0x2468ace0);
+    fuelGaugeColorRGBA = UINT32_C(0x13579bdf);
+}
+
+static void show_test_lose_item(void)
+{
+    numItems[ITEM_MINE] = 3;
+    lose_item = ITEM_MINE;
+    lose_item_active = -2;
+}
+
+static int check_hud_lose_item_outline_precedes_count_text(void)
+{
+    static const float outline_points[][2] = {
+        {49.0f, 31.0f},
+        {67.0f, 31.0f},
+        {67.0f, 49.0f},
+        {49.0f, 49.0f}
+    };
+    RendererStatus result;
+
+    reset_hud_status_fixture();
+    show_test_lose_item();
+
+    result = Sdlgui_test_paint_hud_items(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(events[4] == PAINT_EVENT_MEASURE);
+    TEST_CHECK(events[5] == PAINT_EVENT_HUD_TEXT);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(last_image.index == IMG_HUD_ITEMS);
+    TEST_CHECK(last_image.x == 51);
+    TEST_CHECK(last_image.y == 33);
+    TEST_CHECK(last_image.frame == ITEM_MINE);
+    TEST_CHECK(last_image.color == (int)UINT32_C(0x2468ace0));
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(strokes[0].blend == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(check_stroke(
+        0, outline_points, 4, UINT32_C(0x2468ace0), 1) == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(measure_attempts == 1);
+    TEST_CHECK(strcmp(last_measured_text, "3") == 0);
+    TEST_CHECK(hud_text_attempts == 1);
+    TEST_CHECK(last_hud_text.font == &gamefont);
+    TEST_CHECK(last_hud_text.color == (int)UINT32_C(0x2468ace0));
+    TEST_CHECK(last_hud_text.horizontal_alignment == RIGHT);
+    TEST_CHECK(last_hud_text.vertical_alignment == UP);
+    TEST_CHECK(last_hud_text.x == 48);
+    TEST_CHECK(last_hud_text.y == 71);
+    TEST_CHECK(strcmp(last_hud_text.text, "3") == 0);
+    TEST_CHECK(lastNumItems[ITEM_MINE] == 3);
+    TEST_CHECK(lose_item_active == -1);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    return check_no_legacy_primitives();
+}
+
+static int check_hud_item_visibility_and_active_side_effects(void)
+{
+    RendererStatus result;
+
+    reset_hud_status_fixture();
+    numItems[ITEM_MINE] = 3;
+    lose_item = ITEM_MINE;
+
+    result = Sdlgui_test_paint_hud_items(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 0);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(events[1] == PAINT_EVENT_MEASURE);
+    TEST_CHECK(events[2] == PAINT_EVENT_HUD_TEXT);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(lose_item_active == 0);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_hud_status_fixture();
+    lose_item = ITEM_MINE;
+    lose_item_active = -2;
+
+    result = Sdlgui_test_paint_hud_items(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(preflight_attempts == 0);
+    TEST_CHECK(lastNumItems[ITEM_MINE] == 0);
+    TEST_CHECK(lose_item_active == -2);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_hud_status_fixture();
+    numItems[ITEM_MINE] = 3;
+    lose_item = ITEM_MINE;
+    lose_item_active = -1;
+
+    result = Sdlgui_test_paint_hud_items(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(lose_item_active == 0);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_hud_status_fixture();
+    instruments.showItems = false;
+    numItems[ITEM_MINE] = 4;
+    lastNumItems[ITEM_MINE] = 4;
+    numItemsTime[ITEM_MINE] = 1;
+    lose_item = ITEM_MINE;
+    lose_item_active = 1;
+
+    result = Sdlgui_test_paint_hud_items(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(numItemsTime[ITEM_MINE] == 0);
+    TEST_CHECK(lose_item_active == 1);
+    TEST_CHECK(image_attempts == 1);
+
+    result = Sdlgui_test_paint_hud_items(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(numItemsTime[ITEM_MINE] == 0);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(lose_item_active == 1);
+    return check_no_legacy_primitives();
+}
+
+static int check_hud_item_failures_stop_later_work(void)
+{
+    RendererStatus result;
+
+    reset_hud_status_fixture();
+    show_test_lose_item();
+    stroke_failure_attempt = 1;
+    stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+
+    result = Sdlgui_test_paint_hud_items(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(successful_strokes == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(measure_attempts == 0);
+    TEST_CHECK(hud_text_attempts == 0);
+    TEST_CHECK(lose_item_active == -1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_hud_status_fixture();
+    show_test_lose_item();
+    measure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+
+    result = Sdlgui_test_paint_hud_items(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(event_count == 5);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(events[4] == PAINT_EVENT_MEASURE);
+    TEST_CHECK(hud_text_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_hud_status_fixture();
+    show_test_lose_item();
+    hud_text_result = RENDERER_STATUS_BACKEND_ERROR;
+
+    result = Sdlgui_test_paint_hud_items(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(events[5] == PAINT_EVENT_HUD_TEXT);
+    TEST_CHECK(hud_text_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    return check_no_legacy_primitives();
+}
+
+static int check_hud_fuel_visibility_table(void)
+{
+    static const struct {
+        Uint32 color;
+        double time;
+        double sum;
+        long loop;
+        int visible;
+    } cases[] = {
+        {0, 1.0, 1000.0, 0, 0},
+        {UINT32_C(0x13579bdf), 1.0, 1000.0, 0, 1},
+        {UINT32_C(0x13579bdf), 0.0, 10.0, 0, 1},
+        {UINT32_C(0x13579bdf), 0.0, 10.0, 2, 0},
+        {UINT32_C(0x13579bdf), 0.0, 50.0, 3, 1},
+        {UINT32_C(0x13579bdf), 0.0, 50.0, 4, 0},
+        {UINT32_C(0x13579bdf), 0.0, 80.0, 7, 1},
+        {UINT32_C(0x13579bdf), 0.0, 20.0, 0, 0},
+        {UINT32_C(0x13579bdf), 0.0, 60.0, 0, 0},
+        {UINT32_C(0x13579bdf), 0.0, 100.0, 0, 0}
+    };
+    size_t case_index;
+
+    for (case_index = 0;
+         case_index < sizeof(cases) / sizeof(cases[0]);
+         case_index++) {
+        RendererStatus result;
+
+        reset_hud_status_fixture();
+        fuelGaugeColorRGBA = cases[case_index].color;
+        fuelTime = cases[case_index].time;
+        fuelSum = cases[case_index].sum;
+        loopsSlow = cases[case_index].loop;
+
+        result = Sdlgui_test_paint_hud_fuel_gauge(100, 60);
+
+        TEST_CHECK(result == RENDERER_STATUS_OK);
+        TEST_CHECK(preflight_attempts == cases[case_index].visible);
+        TEST_CHECK(event_count == (cases[case_index].visible ? 4 : 0));
+        TEST_CHECK(blend_attempts == cases[case_index].visible);
+        TEST_CHECK(stroke_attempts == cases[case_index].visible);
+        TEST_CHECK(fill_attempts == cases[case_index].visible);
+        TEST_CHECK(flush_attempts == cases[case_index].visible);
+        TEST_CHECK(fuelTime == cases[case_index].time);
+        if (check_no_legacy_primitives() != 0)
+            return 1;
+    }
+    return 0;
+}
+
+static int check_hud_fuel_exact_and_unbounded_geometry(void)
+{
+    static const float outline_points[][2] = {
+        {135.0f, 35.0f},
+        {135.0f, 166.0f},
+        {146.0f, 166.0f},
+        {146.0f, 35.0f}
+    };
+    RendererStatus result;
+
+    reset_hud_status_fixture();
+    fuelTime = 1.0;
+
+    result = Sdlgui_test_paint_hud_fuel_gauge(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_FILL);
+    TEST_CHECK(events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(check_stroke(
+        0, outline_points, 4, UINT32_C(0x13579bdf), 1) == 0);
+    TEST_CHECK(strokes[0].blend == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(last_fill.x == 137.0f);
+    TEST_CHECK(last_fill.y == 133.0f);
+    TEST_CHECK(last_fill.width == 8.0f);
+    TEST_CHECK(last_fill.height == 32.0f);
+    TEST_CHECK(color_equal(
+        last_fill.color,
+        Renderer_color_from_rgba32(UINT32_C(0x13579bdf))));
+    TEST_CHECK(last_fill.blend == RENDERER_BLEND_ADDITIVE);
+    TEST_CHECK(last_fill.transform_token == 71);
+    TEST_CHECK(last_fill.scissor_token == 83);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_hud_status_fixture();
+    fuelTime = 1.0;
+    fuelSum = -25.0;
+
+    result = Sdlgui_test_paint_hud_fuel_gauge(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(last_fill.x == 137.0f);
+    TEST_CHECK(last_fill.y == 165.0f);
+    TEST_CHECK(last_fill.width == 8.0f);
+    TEST_CHECK(last_fill.height == 32.0f);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_hud_status_fixture();
+    fuelTime = 1.0;
+    fuelSum = 150.0;
+
+    result = Sdlgui_test_paint_hud_fuel_gauge(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(last_fill.x == 137.0f);
+    TEST_CHECK(last_fill.y == -27.0f);
+    TEST_CHECK(last_fill.width == 8.0f);
+    TEST_CHECK(last_fill.height == 192.0f);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_hud_status_fixture();
+    fuelTime = 1.0;
+    fuelSum = 0.0;
+
+    result = Sdlgui_test_paint_hud_fuel_gauge(100, 60);
+
+    TEST_CHECK(result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(successful_fills == 0);
+    TEST_CHECK(flush_attempts == 1);
+    return check_no_legacy_primitives();
+}
+
+static int check_hud_fuel_invalid_math_and_partial_failure(void)
+{
+    static const struct {
+        double sum;
+        double maximum;
+    } invalid_cases[] = {
+        {NAN, 100.0},
+        {25.0, 0.0},
+        {25.0, NAN},
+        {HUGE_VAL, 1.0},
+        {25.0, HUGE_VAL},
+        {DBL_MAX, 1.0},
+        {(double)INT_MAX, 1.0},
+        {(double)INT_MIN, 1.0}
+    };
+    static const float outline_points[][2] = {
+        {135.0f, 35.0f},
+        {135.0f, 166.0f},
+        {146.0f, 166.0f},
+        {146.0f, 35.0f}
+    };
+    size_t case_index;
+
+    for (case_index = 0;
+         case_index < sizeof(invalid_cases) / sizeof(invalid_cases[0]);
+         case_index++) {
+        RendererStatus result;
+
+        reset_hud_status_fixture();
+        fuelTime = 1.0;
+        fuelSum = invalid_cases[case_index].sum;
+        fuelMax = invalid_cases[case_index].maximum;
+
+        result = Sdlgui_test_paint_hud_fuel_gauge(100, 60);
+
+        TEST_CHECK(result == RENDERER_STATUS_INVALID_ARGUMENT);
+        TEST_CHECK(preflight_attempts == 2);
+        TEST_CHECK(event_count == 0);
+        TEST_CHECK(blend_attempts == 0);
+        TEST_CHECK(stroke_attempts == 0);
+        TEST_CHECK(fill_attempts == 0);
+        TEST_CHECK(flush_attempts == 0);
+        TEST_CHECK(fake_sdl_renderer.frame_result
+                   == RENDERER_STATUS_INVALID_ARGUMENT);
+        fuelSum = 25.0;
+        fuelMax = 100.0;
+        result = Sdlgui_test_paint_hud_fuel_gauge(100, 60);
+        TEST_CHECK(result == RENDERER_STATUS_INVALID_ARGUMENT);
+        TEST_CHECK(preflight_attempts == 3);
+        TEST_CHECK(event_count == 0);
+        if (check_no_legacy_primitives() != 0)
+            return 1;
+    }
+
+    reset_hud_status_fixture();
+    fuelTime = 1.0;
+    fill_result = RENDERER_STATUS_OUT_OF_MEMORY;
+
+    {
+        RendererStatus result =
+            Sdlgui_test_paint_hud_fuel_gauge(100, 60);
+
+        TEST_CHECK(result == RENDERER_STATUS_OUT_OF_MEMORY);
+    }
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[2] == PAINT_EVENT_FILL);
+    TEST_CHECK(events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(successful_fills == 0);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(check_stroke(
+        0, outline_points, 4, UINT32_C(0x13579bdf), 1) == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    fill_result = RENDERER_STATUS_BACKEND_ERROR;
+    TEST_CHECK(Sdlgui_test_paint_hud_fuel_gauge(100, 60)
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(flush_attempts == 1);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    reset_hud_status_fixture();
+    fuelTime = 1.0;
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+
+    {
+        RendererStatus result =
+            Sdlgui_test_paint_hud_fuel_gauge(100, 60);
+
+        TEST_CHECK(result == RENDERER_STATUS_BACKEND_ERROR);
+    }
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    if (check_no_legacy_primitives() != 0)
+        return 1;
+
+    flush_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    TEST_CHECK(Sdlgui_test_paint_hud_fuel_gauge(100, 60)
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(flush_attempts == 1);
+    return check_no_legacy_primitives();
+}
+
 static int check_fuel_meter_fill_uses_inherited_hud_state(void)
 {
     reset_frame();
@@ -2279,6 +2886,18 @@ int main(void)
     if (check_selection_stroke_failure_is_sticky() != 0)
         return 1;
     if (check_selection_flush_failure_is_sticky() != 0)
+        return 1;
+    if (check_hud_lose_item_outline_precedes_count_text() != 0)
+        return 1;
+    if (check_hud_item_visibility_and_active_side_effects() != 0)
+        return 1;
+    if (check_hud_item_failures_stop_later_work() != 0)
+        return 1;
+    if (check_hud_fuel_visibility_table() != 0)
+        return 1;
+    if (check_hud_fuel_exact_and_unbounded_geometry() != 0)
+        return 1;
+    if (check_hud_fuel_invalid_math_and_partial_failure() != 0)
         return 1;
     if (check_fuel_meter_fill_uses_inherited_hud_state() != 0)
         return 1;

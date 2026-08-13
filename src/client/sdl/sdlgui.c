@@ -1615,6 +1615,15 @@ typedef struct SemanticHudRadarScene {
     int draw_cover_scan;
 } SemanticHudRadarScene;
 
+typedef struct SemanticHudFuelGaugeGeometry {
+    RendererPoint2D outline[4];
+    float fill_x;
+    float fill_y;
+    float fill_width;
+    float fill_height;
+    int draw_fill;
+} SemanticHudFuelGaugeGeometry;
+
 typedef struct SemanticMeterGeometry {
     float fill_x;
     float fill_y;
@@ -1804,7 +1813,7 @@ RendererStatus Sdlgui_test_paint_hud_pointers(void)
 }
 #endif
 
-static int Semantic_meter_float(int64_t value, float *result)
+static int Semantic_hud_integer_float(int64_t value, float *result)
 {
     if (result == NULL || (double)value < -(double)FLT_MAX
 	|| (double)value > (double)FLT_MAX) {
@@ -1870,24 +1879,25 @@ static RendererStatus Build_semantic_meter_geometry(
     fill_height = (int64_t)meterHeight - INT64_C(1);
     geometry->draw_fill = width != 0 && fill_height > 0;
     if (geometry->draw_fill
-	&& (!Semantic_meter_float(fill_left, &geometry->fill_x)
-	    || !Semantic_meter_float((int64_t)y, &geometry->fill_y)
-	    || !Semantic_meter_float(width, &geometry->fill_width)
-	    || !Semantic_meter_float(fill_height,
-		&geometry->fill_height))) {
+	&& (!Semantic_hud_integer_float(fill_left, &geometry->fill_x)
+	    || !Semantic_hud_integer_float((int64_t)y, &geometry->fill_y)
+	    || !Semantic_hud_integer_float(width, &geometry->fill_width)
+	    || !Semantic_hud_integer_float(fill_height,
+				     &geometry->fill_height))) {
 	return RENDERER_STATUS_INVALID_ARGUMENT;
     }
 
     border_right = x + (int64_t)meterWidth;
     border_bottom = (int64_t)y + (int64_t)meterHeight;
-    if (!Semantic_meter_float(x, &geometry->border[0].x)
-	|| !Semantic_meter_float((int64_t)y, &geometry->border[0].y)
-	|| !Semantic_meter_float(x, &geometry->border[1].x)
-	|| !Semantic_meter_float(border_bottom, &geometry->border[1].y)
-	|| !Semantic_meter_float(border_right, &geometry->border[2].x)
-	|| !Semantic_meter_float(border_bottom, &geometry->border[2].y)
-	|| !Semantic_meter_float(border_right, &geometry->border[3].x)
-	|| !Semantic_meter_float((int64_t)y, &geometry->border[3].y)) {
+    if (!Semantic_hud_integer_float(x, &geometry->border[0].x)
+	|| !Semantic_hud_integer_float((int64_t)y, &geometry->border[0].y)
+	|| !Semantic_hud_integer_float(x, &geometry->border[1].x)
+	|| !Semantic_hud_integer_float(border_bottom, &geometry->border[1].y)
+	|| !Semantic_hud_integer_float(border_right, &geometry->border[2].x)
+	|| !Semantic_hud_integer_float(border_bottom, &geometry->border[2].y)
+	|| !Semantic_hud_integer_float(border_right, &geometry->border[3].x)
+	|| !Semantic_hud_integer_float((int64_t)y,
+					 &geometry->border[3].y)) {
 	return RENDERER_STATUS_INVALID_ARGUMENT;
     }
 
@@ -1903,13 +1913,13 @@ static RendererStatus Build_semantic_meter_geometry(
 	int64_t tick_bottom = border_bottom
 	    + tick_bottom_offsets[tick_index];
 
-	if (!Semantic_meter_float(
+	if (!Semantic_hud_integer_float(
 		tick_x, &geometry->ticks[tick_index][0].x)
-	    || !Semantic_meter_float(
+	    || !Semantic_hud_integer_float(
 		tick_top, &geometry->ticks[tick_index][0].y)
-	    || !Semantic_meter_float(
+	    || !Semantic_hud_integer_float(
 		tick_x, &geometry->ticks[tick_index][1].x)
-	    || !Semantic_meter_float(
+	    || !Semantic_hud_integer_float(
 		tick_bottom, &geometry->ticks[tick_index][1].y)) {
 	    return RENDERER_STATUS_INVALID_ARGUMENT;
 	}
@@ -2083,13 +2093,13 @@ void Paint_meters(void)
     }
 }
 
-static void Paint_lock(int hud_pos_x, int hud_pos_y)
+static RendererStatus Paint_lock(int hud_pos_x, int hud_pos_y)
 {
     other_t *target;
     const int BORDER = 2;
 
     if ((target = Other_by_id(lock_id)) == NULL)
-	return;
+	return RENDERER_STATUS_OK;
 
     if (hudColorRGBA) {
 	int color = Life_color(target);
@@ -2097,15 +2107,12 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 	if (!color)
 	    color = hudColorRGBA;
 
-	HUDnprint(&gamefont,
-		  color,CENTER,CENTER,
-		  hud_pos_x,
-		  hud_pos_y -(- hudSize + HUD_OFFSET - BORDER),
-		  strlen(target->id_string),"%s",target->id_string);
-
+	return HUDnprint(
+	    &gamefont, color, CENTER, CENTER, hud_pos_x,
+	    hud_pos_y - (-hudSize + HUD_OFFSET - BORDER),
+	    strlen(target->id_string), "%s", target->id_string);
     }
-
-
+    return RENDERER_STATUS_OK;
 }
 
 static int Semantic_hud_radar_dot_visible(
@@ -2652,13 +2659,66 @@ RendererStatus Sdlgui_test_paint_hud_radar_and_scans(void)
 }
 #endif
 
-static void Paint_HUD_items(int hud_pos_x, int hud_pos_y)
+static RendererStatus Build_semantic_hud_item_outline(
+    int horiz_pos, int vert_pos, RendererPoint2D points[4])
+{
+    int64_t left;
+    int64_t top;
+    int64_t right;
+    int64_t bottom;
+
+    if (points == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+
+    left = (int64_t)horiz_pos - (int64_t)ITEM_SIZE - INT64_C(2);
+    top = (int64_t)vert_pos - INT64_C(2);
+    right = (int64_t)horiz_pos;
+    bottom = (int64_t)vert_pos + (int64_t)ITEM_SIZE;
+    if (!Semantic_hud_integer_float(left, &points[0].x)
+	|| !Semantic_hud_integer_float(top, &points[0].y)
+	|| !Semantic_hud_integer_float(right, &points[1].x)
+	|| !Semantic_hud_integer_float(top, &points[1].y)
+	|| !Semantic_hud_integer_float(right, &points[2].x)
+	|| !Semantic_hud_integer_float(bottom, &points[2].y)
+	|| !Semantic_hud_integer_float(left, &points[3].x)
+	|| !Semantic_hud_integer_float(bottom, &points[3].y)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Paint_semantic_hud_item_outline(
+    int horiz_pos, int vert_pos)
+{
+    SemanticHudBatch batch;
+    RendererPoint2D points[4];
+    RendererStatus operation_status;
+
+    if (Begin_semantic_hud_batch(&batch) != RENDERER_STATUS_OK)
+	return batch.status;
+    operation_status = Build_semantic_hud_item_outline(
+	horiz_pos, vert_pos, points);
+    if (operation_status != RENDERER_STATUS_OK)
+	return Track_semantic_hud_batch(&batch, operation_status);
+    operation_status = Renderer_set_blend(
+	batch.renderer, RENDERER_BLEND_ADDITIVE);
+    if (Track_semantic_hud_batch(&batch, operation_status)
+	== RENDERER_STATUS_OK) {
+	operation_status = Renderer_stroke_path(
+	    batch.renderer, points, 4, 1.0f,
+	    Renderer_color_from_rgba32(hudItemsColorRGBA), 1);
+	Accept_semantic_hud_command(&batch, operation_status);
+    }
+    return Finish_semantic_hud_batch(&batch);
+}
+
+static RendererStatus Paint_HUD_items(int hud_pos_x, int hud_pos_y)
 {
     const int		BORDER = 3;
     char		str[50];
-    int     	    	vert_pos, horiz_pos, minx, miny, maxx, maxy;
-    int     	    	i, maxWidth = -1,
-			rect_x, rect_y, rect_width = 0, rect_height = 0;
+    int     	    	vert_pos, horiz_pos;
+    int     	    	i, maxWidth = -1;
+    RendererStatus	status;
     static int		vertSpacing = -1;
     static fontbounds	fb;
 
@@ -2669,10 +2729,6 @@ static void Paint_HUD_items(int hud_pos_x, int hud_pos_y)
     /* find the scaled location, then work in pixels */
     vert_pos = hud_pos_y - hudSize+HUD_OFFSET + BORDER;
     horiz_pos = hud_pos_x - hudSize+HUD_OFFSET - BORDER;
-    rect_width = 0;
-    rect_height = 0;
-    rect_x = horiz_pos;
-    rect_y = vert_pos;
 
     for (i = 0; i < NUM_ITEMS; i++) {
 	int num = numItems[i];
@@ -2706,70 +2762,196 @@ static void Paint_HUD_items(int hud_pos_x, int hud_pos_y)
 		if (lose_item_active != 0) {
 		    if (lose_item_active < 0)
 			lose_item_active++;
-			minx = horiz_pos-ITEM_SIZE-2;
-			maxx = horiz_pos;
-			miny = vert_pos-2;
-			maxy = vert_pos + ITEM_SIZE;
-			
-    	    	    	glBegin(GL_LINE_LOOP);
-    	    	    	    glVertex2i(minx , miny);
-    	    	    	    glVertex2i(maxx , miny);
-    	    	    	    glVertex2i(maxx , maxy);
-    	    	    	    glVertex2i(minx , maxy);
-    	    	    	glEnd();
+		    status = Paint_semantic_hud_item_outline(
+			horiz_pos, vert_pos);
+		    if (status != RENDERER_STATUS_OK)
+			return status;
 		}
 	    }
 
 	    /* Paint item count */
 	    sprintf(str, "%d", num);
-	    if (printsize(&gamefont, &fb, "%s", str)
-		!= RENDERER_STATUS_OK) {
-		return;
-	    }
+	    status = printsize(&gamefont, &fb, "%s", str);
+	    if (status != RENDERER_STATUS_OK)
+		return status;
 
 	    maxWidth = MAX(maxWidth, fb.width + BORDER + ITEM_SIZE);
 	    
-	    HUDprint(&gamefont,hudItemsColorRGBA,RIGHT,UP,horiz_pos - ITEM_SIZE - BORDER
-	    	    ,draw_height - vert_pos - ITEM_SIZE,"%s",str);
+	    status = HUDprint(
+		&gamefont, hudItemsColorRGBA, RIGHT, UP,
+		horiz_pos - ITEM_SIZE - BORDER,
+		draw_height - vert_pos - ITEM_SIZE, "%s", str);
+	    if (status != RENDERER_STATUS_OK)
+		return status;
 
 	    vert_pos += vertSpacing;
 
 	    if (vert_pos+vertSpacing
 		> hud_pos_y+hudSize-HUD_OFFSET-BORDER) {
-		rect_width += maxWidth + 2*BORDER;
-		rect_height = MAX(rect_height, vert_pos - rect_y);
-		horiz_pos -= maxWidth + 2*BORDER;
-		vert_pos = hud_pos_y - hudSize+HUD_OFFSET + BORDER;
-		maxWidth = -1;
+			horiz_pos -= maxWidth + 2*BORDER;
+			vert_pos = hud_pos_y - hudSize+HUD_OFFSET + BORDER;
+			maxWidth = -1;
 	    }
 	}
     }
-    if (maxWidth != -1)
-	rect_width += maxWidth + BORDER;
-
-    if (rect_width > 0) {
-	if (rect_height == 0)
-	    rect_height = vert_pos - rect_y;
-	rect_x -= rect_width;
-    }
-
+    return RENDERER_STATUS_OK;
 }
 
-void Paint_HUD(void)
+static int Semantic_hud_fuel_gauge_visible(void)
+{
+    return fuelGaugeColorRGBA
+	&& (fuelTime > 0.0
+	    || (fuelSum < fuelNotify
+		&& ((fuelSum < fuelCritical && (loopsSlow % 4) < 2)
+		    || (fuelSum < fuelWarning
+			&& fuelSum > fuelCritical
+			&& (loopsSlow % 8) < 4)
+		    || fuelSum > fuelWarning)));
+}
+
+static RendererStatus Build_semantic_hud_fuel_gauge_geometry(
+    int hud_pos_x, int hud_pos_y, SemanticHudFuelGaugeGeometry *geometry)
+{
+    double fill_size_value;
+    int fill_size;
+    int64_t outline_left;
+    int64_t outline_top;
+    int64_t outline_right;
+    int64_t outline_bottom;
+    int64_t fill_left;
+    int64_t fill_top;
+    int64_t fill_width;
+    int64_t fill_height;
+    int64_t fill_bottom;
+
+    if (geometry == NULL || !isfinite(fuelSum) || !isfinite(fuelMax)
+	|| fuelMax == 0.0) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    fill_size_value = (double)HUD_FUEL_GAUGE_SIZE * fuelSum / fuelMax;
+    if (!isfinite(fill_size_value)
+	|| fill_size_value < (double)INT_MIN
+	|| fill_size_value > (double)INT_MAX) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    fill_size = (int)fill_size_value;
+
+    outline_left = (int64_t)hud_pos_x + (int64_t)hudSize
+	- (int64_t)HUD_OFFSET + (int64_t)FUEL_GAUGE_OFFSET - INT64_C(1);
+    outline_top = (int64_t)hud_pos_y - (int64_t)hudSize
+	+ (int64_t)HUD_OFFSET + (int64_t)FUEL_GAUGE_OFFSET - INT64_C(1);
+    outline_right = outline_left
+	+ (int64_t)(HUD_OFFSET - 2 * FUEL_GAUGE_OFFSET + 3);
+    outline_bottom = outline_top + (int64_t)(HUD_FUEL_GAUGE_SIZE + 3);
+    if (!Semantic_hud_integer_float(
+	    outline_left, &geometry->outline[0].x)
+	|| !Semantic_hud_integer_float(
+	    outline_top, &geometry->outline[0].y)
+	|| !Semantic_hud_integer_float(
+	    outline_left, &geometry->outline[1].x)
+	|| !Semantic_hud_integer_float(
+	    outline_bottom, &geometry->outline[1].y)
+	|| !Semantic_hud_integer_float(
+	    outline_right, &geometry->outline[2].x)
+	|| !Semantic_hud_integer_float(
+	    outline_bottom, &geometry->outline[2].y)
+	|| !Semantic_hud_integer_float(
+	    outline_right, &geometry->outline[3].x)
+	|| !Semantic_hud_integer_float(
+	    outline_top, &geometry->outline[3].y)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+
+    geometry->draw_fill = fill_size != 0;
+    if (!geometry->draw_fill)
+	return RENDERER_STATUS_OK;
+
+    fill_left = (int64_t)hud_pos_x + (int64_t)hudSize
+	- (int64_t)HUD_OFFSET + (int64_t)FUEL_GAUGE_OFFSET + INT64_C(1);
+    fill_bottom = (int64_t)hud_pos_y - (int64_t)hudSize
+	+ (int64_t)HUD_OFFSET + (int64_t)FUEL_GAUGE_OFFSET
+	+ (int64_t)HUD_FUEL_GAUGE_SIZE + INT64_C(1);
+    fill_top = fill_bottom - (int64_t)fill_size;
+    fill_width = (int64_t)(HUD_OFFSET - 2 * FUEL_GAUGE_OFFSET);
+    fill_height = (int64_t)fill_size;
+    if (fill_height < 0) {
+	fill_top += fill_height;
+	fill_height = -fill_height;
+    }
+    if (!Semantic_hud_integer_float(fill_left, &geometry->fill_x)
+	|| !Semantic_hud_integer_float(fill_top, &geometry->fill_y)
+	|| !Semantic_hud_integer_float(fill_width, &geometry->fill_width)
+	|| !Semantic_hud_integer_float(fill_height, &geometry->fill_height)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Paint_semantic_hud_fuel_gauge(
+    int hud_pos_x, int hud_pos_y)
+{
+    SemanticHudBatch batch;
+    SemanticHudFuelGaugeGeometry geometry;
+    RendererColor color;
+    RendererStatus operation_status;
+
+    if (!Semantic_hud_fuel_gauge_visible())
+	return RENDERER_STATUS_OK;
+    if (Begin_semantic_hud_batch(&batch) != RENDERER_STATUS_OK)
+	return batch.status;
+    operation_status = Build_semantic_hud_fuel_gauge_geometry(
+	hud_pos_x, hud_pos_y, &geometry);
+    if (operation_status != RENDERER_STATUS_OK)
+	return Track_semantic_hud_batch(&batch, operation_status);
+
+    operation_status = Renderer_set_blend(
+	batch.renderer, RENDERER_BLEND_ADDITIVE);
+    Track_semantic_hud_batch(&batch, operation_status);
+    color = Renderer_color_from_rgba32(fuelGaugeColorRGBA);
+    if (batch.status == RENDERER_STATUS_OK) {
+	operation_status = Renderer_stroke_path(
+	    batch.renderer, geometry.outline, 4, 1.0f, color, 1);
+	Accept_semantic_hud_command(&batch, operation_status);
+    }
+    if (batch.status == RENDERER_STATUS_OK && geometry.draw_fill) {
+	operation_status = Renderer_fill_rect(
+	    batch.renderer, geometry.fill_x, geometry.fill_y,
+	    geometry.fill_width, geometry.fill_height, color);
+	Accept_semantic_hud_command(&batch, operation_status);
+    }
+    return Finish_semantic_hud_batch(&batch);
+}
+
+#ifdef XPILOT_SDLGUI_TEST_HOOKS
+RendererStatus Sdlgui_test_paint_hud_items(int hud_pos_x, int hud_pos_y)
+{
+    return Paint_HUD_items(hud_pos_x, hud_pos_y);
+}
+
+RendererStatus Sdlgui_test_paint_hud_fuel_gauge(
+    int hud_pos_x, int hud_pos_y)
+{
+    return Paint_semantic_hud_fuel_gauge(hud_pos_x, hud_pos_y);
+}
+#endif
+
+RendererStatus Paint_HUD_checked(void)
 {
     const int		BORDER = 3;
     char		str[50];
-    int			hud_pos_x, hud_pos_y, size;
+    int			hud_pos_x, hud_pos_y;
     int			did_fuel = 0;
-    int			i, j, tex_index, modlen = 0;
+    int			i, j, tex_index;
     static char		autopilot[] = "Autopilot";
-    int tempx,tempy,tempw,temph;
     fontbounds dummy;
+    RendererStatus status;
 
-    if (Paint_semantic_hud_pointers() != RENDERER_STATUS_OK)
-	return;
-    if (Paint_semantic_hud_radar_and_scans() != RENDERER_STATUS_OK)
-	return;
+    status = Paint_semantic_hud_pointers();
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    status = Paint_semantic_hud_radar_and_scans();
+    if (status != RENDERER_STATUS_OK)
+	return status;
     tex_index = 0;
     /* The remaining compatibility HUD is additive and still needs blending. */
     glEnable(GL_BLEND);
@@ -2806,8 +2988,11 @@ void Paint_HUD(void)
     }
     glDisable(GL_LINE_STIPPLE);
 
-    if (hudItemsColorRGBA)
-	Paint_HUD_items(hud_pos_x, hud_pos_y);
+    if (hudItemsColorRGBA) {
+	status = Paint_HUD_items(hud_pos_x, hud_pos_y);
+	if (status != RENDERER_STATUS_OK)
+	    goto finish_hud;
+    }
 
     /* Fuel notify, HUD meter on */
     if (hudColorRGBA && (fuelTime > 0.0 || fuelSum < fuelNotify)) {
@@ -2816,9 +3001,12 @@ void Paint_HUD(void)
 	sprintf(str, "%04d", (int)fuelSum);
 	tex_index=0;
 	if (Ensure_cached_text(&gamefont, str, &HUD_texs[tex_index])) {
-	    disp_text(&HUD_texs[tex_index], hudColorRGBA, LEFT, DOWN,
-		      hud_pos_x + hudSize - HUD_OFFSET + BORDER,
-		      hud_pos_y - (hudSize - HUD_OFFSET + BORDER), true);
+	    status = disp_text(
+		&HUD_texs[tex_index], hudColorRGBA, LEFT, DOWN,
+		hud_pos_x + hudSize - HUD_OFFSET + BORDER,
+		hud_pos_y - (hudSize - HUD_OFFSET + BORDER), true);
+	    if (status != RENDERER_STATUS_OK)
+		goto finish_hud;
 	}
 
 	if (numItems[ITEM_TANK]) {
@@ -2829,26 +3017,30 @@ void Paint_HUD(void)
 
 	    tex_index=1;
 	    if (Ensure_cached_text(&gamefont, str, &HUD_texs[tex_index])) {
-		disp_text(&HUD_texs[tex_index], hudColorRGBA, LEFT, DOWN,
-			  hud_pos_x + hudSize - HUD_OFFSET + BORDER,
-			  hud_pos_y - hudSize - HUD_OFFSET + BORDER, true);
+		status = disp_text(
+		    &HUD_texs[tex_index], hudColorRGBA, LEFT, DOWN,
+		    hud_pos_x + hudSize - HUD_OFFSET + BORDER,
+		    hud_pos_y - hudSize - HUD_OFFSET + BORDER, true);
+		if (status != RENDERER_STATUS_OK)
+		    goto finish_hud;
 	    }
 
 	}
     }
 
     /* Update the lock display */
-    Paint_lock(hud_pos_x, hud_pos_y);
+    status = Paint_lock(hud_pos_x, hud_pos_y);
+    if (status != RENDERER_STATUS_OK)
+	goto finish_hud;
 
     /* Draw last score on hud if it is an message attached to it */
     if (hudColorRGBA) {
 	for (i = 0, j = 0; i < MAX_SCORE_OBJECTS; i++) {
 	    score_object_t*	sobj = &score_objects[(i+score_object)%MAX_SCORE_OBJECTS];
 	    if (sobj->hud_msg_len > 0) {
-		if (printsize(&gamefont, &dummy, "%s", sobj->hud_msg)
-		    != RENDERER_STATUS_OK) {
-		    return;
-		}
+		status = printsize(&gamefont, &dummy, "%s", sobj->hud_msg);
+		if (status != RENDERER_STATUS_OK)
+		    goto finish_hud;
 		if (sobj->hud_msg_width == -1)
 		    sobj->hud_msg_width = (int)dummy.width;
 		if (j == 0 &&
@@ -2859,10 +3051,13 @@ void Paint_HUD(void)
 		tex_index=MAX_HUD_TEXS+i;
 		if (Ensure_cached_text(&gamefont, sobj->hud_msg,
 				       &HUD_texs[tex_index])) {
-		    disp_text(&HUD_texs[tex_index], hudColorRGBA,
-			      CENTER, DOWN, hud_pos_x,
-			      hud_pos_y - (hudSize - HUD_OFFSET + BORDER
-				      + j * HUD_texs[tex_index].height), true);
+		    status = disp_text(
+			&HUD_texs[tex_index], hudColorRGBA,
+			CENTER, DOWN, hud_pos_x,
+			hud_pos_y - (hudSize - HUD_OFFSET + BORDER
+				+ j * HUD_texs[tex_index].height), true);
+		    if (status != RENDERER_STATUS_OK)
+			goto finish_hud;
 		}
 		j++;
 	    }
@@ -2872,20 +3067,25 @@ void Paint_HUD(void)
 	    sprintf(str, "%3d:%02d", (int)(time_left / 60), (int)(time_left % 60));
 	    tex_index=3;
 	    if (Ensure_cached_text(&gamefont, str, &HUD_texs[tex_index])) {
-		disp_text(&HUD_texs[tex_index], hudColorRGBA, RIGHT, DOWN,
-			  hud_pos_x - hudSize + HUD_OFFSET - BORDER,
-			  hud_pos_y + hudSize + HUD_OFFSET + BORDER, true);
+		status = disp_text(
+		    &HUD_texs[tex_index], hudColorRGBA, RIGHT, DOWN,
+		    hud_pos_x - hudSize + HUD_OFFSET - BORDER,
+		    hud_pos_y + hudSize + HUD_OFFSET + BORDER, true);
+		if (status != RENDERER_STATUS_OK)
+		    goto finish_hud;
 	    }
 	}
 
 	/* Update the modifiers */
-	modlen = strlen(mods);
 	tex_index=4;
 	if(strlen(mods)) {
 	    if (Ensure_cached_text(&gamefont, mods, &HUD_texs[tex_index])) {
-		disp_text(&HUD_texs[tex_index], hudColorRGBA, RIGHT, UP,
-			  hud_pos_x - hudSize + HUD_OFFSET - BORDER,
-			  hud_pos_y - hudSize + HUD_OFFSET - BORDER, true);
+		status = disp_text(
+		    &HUD_texs[tex_index], hudColorRGBA, RIGHT, UP,
+		    hud_pos_x - hudSize + HUD_OFFSET - BORDER,
+		    hud_pos_y - hudSize + HUD_OFFSET - BORDER, true);
+		if (status != RENDERER_STATUS_OK)
+		    goto finish_hud;
 	    }
     	}
 
@@ -2893,10 +3093,13 @@ void Paint_HUD(void)
 	    tex_index=5;
 	    if (Ensure_cached_text(&gamefont, autopilot,
 				   &HUD_texs[tex_index])) {
-		disp_text(&HUD_texs[tex_index], hudColorRGBA, RIGHT, DOWN,
-			  hud_pos_x,
-			  hud_pos_y + hudSize + HUD_OFFSET + BORDER
-			      + HUD_texs[tex_index].height * 2, true);
+		status = disp_text(
+		    &HUD_texs[tex_index], hudColorRGBA, RIGHT, DOWN,
+		    hud_pos_x,
+		    hud_pos_y + hudSize + HUD_OFFSET + BORDER
+			+ HUD_texs[tex_index].height * 2, true);
+		if (status != RENDERER_STATUS_OK)
+		    goto finish_hud;
 	    }
 	}
     }
@@ -2907,41 +3110,16 @@ void Paint_HUD(void)
 	    fuelTime = 0.0;
     }
 
-    /* draw fuel gauge */
-    if (fuelGaugeColorRGBA &&
-	((fuelTime > 0.0)
-	 || (fuelSum < fuelNotify
-	     && ((fuelSum < fuelCritical && (loopsSlow % 4) < 2)
-		 || (fuelSum < fuelWarning
-		     && fuelSum > fuelCritical
-		     && (loopsSlow % 8) < 4)
-		 || (fuelSum > fuelWarning))))) {
+    status = Paint_semantic_hud_fuel_gauge(hud_pos_x, hud_pos_y);
 
-	set_alphacolor(fuelGaugeColorRGBA);
-	tempx = hud_pos_x + hudSize - HUD_OFFSET + FUEL_GAUGE_OFFSET - 1;
-	tempy = hud_pos_y - hudSize + HUD_OFFSET + FUEL_GAUGE_OFFSET - 1;
-	tempw = HUD_OFFSET - (2*FUEL_GAUGE_OFFSET) + 3;
-	temph = HUD_FUEL_GAUGE_SIZE + 3;
-	glBegin(GL_LINE_LOOP);
-	    glVertex2i(tempx,tempy);
-	    glVertex2i(tempx,tempy+temph);
-	    glVertex2i(tempx+tempw,tempy+temph);
-	    glVertex2i(tempx+tempw,tempy);
-	glEnd();
-
-	size = (int)((HUD_FUEL_GAUGE_SIZE * fuelSum) / fuelMax);
-	tempx = hud_pos_x + hudSize - HUD_OFFSET + FUEL_GAUGE_OFFSET + 1;
-    	tempy = hud_pos_y - hudSize + HUD_OFFSET + FUEL_GAUGE_OFFSET + HUD_FUEL_GAUGE_SIZE - size + 1;
-    	tempw = HUD_OFFSET - (2*FUEL_GAUGE_OFFSET);
-    	temph = size;
-	glBegin(GL_POLYGON);
-	    glVertex2i(tempx,tempy);
-	    glVertex2i(tempx,tempy+temph);
-	    glVertex2i(tempx+tempw,tempy+temph);
-	    glVertex2i(tempx+tempw,tempy);
-	glEnd();
-    }
+finish_hud:
     glDisable(GL_BLEND);
+    return status;
+}
+
+void Paint_HUD(void)
+{
+    (void)Paint_HUD_checked();
 }
 
 typedef struct alert_timeout_struct alert_timeout;

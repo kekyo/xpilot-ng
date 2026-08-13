@@ -72,6 +72,17 @@ extern irec_t *select_bounds;
  */
 extern RendererStatus Paint_select(void);
 
+/**
+ * Draw the SDL HUD and report semantic renderer failures.
+ *
+ * @return The sticky result for the active renderer frame.
+ * @remarks Compatibility OpenGL blend state is cleaned up before every
+ *          return after HUD compatibility drawing begins. The generic
+ *          Paint_HUD() entry point remains available as a void wrapper for
+ *          the shared client paint interface.
+ */
+extern RendererStatus Paint_HUD_checked(void);
+
 #ifdef XPILOT_SDLGUI_TEST_HOOKS
 /**
  * Draw only the semantic HUD speed and direction pointers for tests.
@@ -108,6 +119,33 @@ extern RendererStatus Sdlgui_test_paint_hud_radar_dot(
  *          state and is available only to the SDL GUI primitive test target.
  */
 extern RendererStatus Sdlgui_test_paint_hud_radar_and_scans(void);
+
+/**
+ * Paint the real HUD item list, including the semantic lose-item outline.
+ *
+ * @param hud_pos_x Horizontal HUD center in inherited HUD coordinates.
+ * @param hud_pos_y Vertical HUD center in inherited HUD coordinates.
+ * @return The sticky result for the active renderer frame.
+ * @remarks This hook exercises the production item visibility, state-update,
+ *          image, outline, measurement, and text path. It is available only
+ *          to the SDL GUI primitive test target.
+ */
+extern RendererStatus Sdlgui_test_paint_hud_items(
+    int hud_pos_x, int hud_pos_y);
+
+/**
+ * Paint the semantic HUD fuel gauge when its production visibility rule
+ * selects it.
+ *
+ * @param hud_pos_x Horizontal HUD center in inherited HUD coordinates.
+ * @param hud_pos_y Vertical HUD center in inherited HUD coordinates.
+ * @return The sticky result for the active renderer frame, or
+ *         RENDERER_STATUS_OK when the gauge is hidden.
+ * @remarks This hook preserves the renderer's current transform and scissor
+ *          state and is available only to the SDL GUI primitive test target.
+ */
+extern RendererStatus Sdlgui_test_paint_hud_fuel_gauge(
+    int hud_pos_x, int hud_pos_y);
 #endif
 
 #endif

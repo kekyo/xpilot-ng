@@ -465,13 +465,21 @@ void Paint_frame(void)
 
 	setupPaint_HUD();
 
-    	Paint_meters();
-    	Paint_HUD();
-    	Paint_HUD_values();
-	Gl_diagnostics_check("HUD");
-
-	Paint_messages();
-	renderer_status = Console_paint();
+	Paint_meters();
+	renderer_status = Sdl_renderer_frame_result(sdl_renderer);
+	if (renderer_status == RENDERER_STATUS_OK)
+	    renderer_status = Paint_HUD_checked();
+	if (renderer_status == RENDERER_STATUS_OK) {
+	    Paint_HUD_values();
+	    renderer_status = Sdl_renderer_frame_result(sdl_renderer);
+	}
+	if (renderer_status == RENDERER_STATUS_OK) {
+	    Gl_diagnostics_check("HUD");
+	    Paint_messages();
+	    renderer_status = Sdl_renderer_frame_result(sdl_renderer);
+	}
+	if (renderer_status == RENDERER_STATUS_OK)
+	    renderer_status = Console_paint();
 	if (renderer_status == RENDERER_STATUS_OK) {
 	    renderer_status = Paint_select();
 	    if (renderer_status == RENDERER_STATUS_OK) {
