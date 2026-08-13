@@ -846,6 +846,16 @@ extern void xpilotShutdown(void);
 /*
  * mapdata.c
  */
+/**
+ * Makes the texture package referenced by a map available to the client.
+ *
+ * An already extracted package is reused first.  A bundled package whose
+ * filename matches the URL is copied and extracted before a network download
+ * is attempted.
+ *
+ * @param urlstr HTTP URL supplied by the map.
+ * @return Nonzero when the map texture directory is available, zero on error.
+ */
 extern int Mapdata_setup(const char *);
 
 

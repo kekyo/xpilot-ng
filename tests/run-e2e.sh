@@ -34,7 +34,7 @@ fi
 
 client="${XPILOT_TEST_BINDIR:?XPILOT_TEST_BINDIR is required}/xpilot-ng-sdl"
 server="${XPILOT_TEST_BINDIR}/xpilot-ng-server"
-map="${XPILOT_TEST_PKGDATADIR:?XPILOT_TEST_PKGDATADIR is required}/maps/circle2.xp2"
+map="${XPILOT_TEST_PKGDATADIR:?XPILOT_TEST_PKGDATADIR is required}/maps/ndh.xp2"
 
 for required_file in "$client" "$server" "$map"; do
     if test ! -r "$required_file"; then
@@ -257,7 +257,10 @@ window_resized()
         | grep -q '^WIDTH=900$'
 }
 
-: >"$runtime_dir/xpilotrc"
+mkdir -p -- "$runtime_dir/textures"
+printf 'xpilot.texturePath: %s:%s\n' \
+    "$runtime_dir/textures" "$XPILOT_TEST_PKGDATADIR/textures" \
+    >"$runtime_dir/xpilotrc"
 export XPILOTRC="$runtime_dir/xpilotrc"
 
 node -e '
@@ -379,6 +382,10 @@ wait_until "game text renderers" 10 \
         "$runtime_dir/client.log"
 wait_until "successful semantic game frame presentation" 20 \
     game_frame_ready
+test -r "$runtime_dir/textures/ndh-1.3/bakedmud.pnm" \
+    || fail "bundled map data was not extracted into the configured texture path"
+test ! -e "$XPILOT_TEST_PKGDATADIR/textures/ndh-1.3.xpd" \
+    || fail "bundled map data modified the installed texture directory"
 
 xdotool windowsize "$window_id" 900 700 >/dev/null 2>&1 \
     || fail "could not request an SDL window resize"
