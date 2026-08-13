@@ -268,6 +268,7 @@ extern Uint32 selectionColorRGBA;
 extern Uint32 whiteRGBA;
 extern Uint32 blueRGBA;
 extern Uint32 redRGBA;
+extern Uint32 wallColorRGBA;
 extern Uint32 hudColorRGBA;
 extern Uint32 hudHLineColorRGBA;
 extern Uint32 hudVLineColorRGBA;
@@ -3512,8 +3513,160 @@ static int check_invalid_laser_geometry_is_sticky(void)
     return check_no_legacy_primitives();
 }
 
+static int check_single_map_fill(
+    const float expected_points[][2], uint32_t rgba)
+{
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_TRIANGLES);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(successful_draws == 1);
+    TEST_CHECK(flush_attempts == 1);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    TEST_CHECK(check_draw(
+        0, expected_points, 6, rgba, RENDERER_BLEND_ALPHA) == 0);
+    return check_no_legacy_primitives();
+}
+
+static int check_map_constant_fills_are_semantic(void)
+{
+    static const float decor_dot[][2] = {
+        {24.0f, 10.0f}, {24.0f, 16.0f}, {30.0f, 16.0f},
+        {24.0f, 10.0f}, {30.0f, 16.0f}, {30.0f, 10.0f}
+    };
+    static const float filled_slice[][2] = {
+        {-4.0f, 20.0f}, {1.0f, 55.0f}, {9.0f, 55.0f},
+        {-4.0f, 20.0f}, {9.0f, 55.0f}, {13.0f, 20.0f}
+    };
+    const uint32_t transparent_color = UINT32_C(0x12345600);
+
+    reset_frame();
+    wallColorRGBA = transparent_color;
+    Gui_paint_decor_dot(10, -4, 6);
+    TEST_CHECK(check_single_map_fill(decor_dot, transparent_color) == 0);
+
+    reset_frame();
+    wallColorRGBA = transparent_color;
+    Gui_paint_filled_slice(-4, 1, 9, 13, 20);
+    return check_single_map_fill(filled_slice, transparent_color);
+}
+
+static int check_map_fill_degenerate_geometry_is_preserved(void)
+{
+    static const float zero_size_dot[][2] = {
+        {14.0f, 25.0f}, {14.0f, 25.0f}, {14.0f, 25.0f},
+        {14.0f, 25.0f}, {14.0f, 25.0f}, {14.0f, 25.0f}
+    };
+    static const float negative_size_dot[][2] = {
+        {16.0f, 27.0f}, {16.0f, 23.0f}, {12.0f, 23.0f},
+        {16.0f, 27.0f}, {12.0f, 23.0f}, {12.0f, 27.0f}
+    };
+    static const float negative_odd_half_dot[][2] = {
+        {33.0f, 44.0f}, {33.0f, 6.0f}, {-5.0f, 6.0f},
+        {33.0f, 44.0f}, {-5.0f, 6.0f}, {-5.0f, 44.0f}
+    };
+    static const float degenerate_slice[][2] = {
+        {7.0f, -35.0f}, {7.0f, 0.0f}, {7.0f, 0.0f},
+        {7.0f, -35.0f}, {7.0f, 0.0f}, {7.0f, -35.0f}
+    };
+    const uint32_t color = UINT32_C(0xabcdef00);
+
+    reset_frame();
+    wallColorRGBA = color;
+    Gui_paint_decor_dot(-3, 8, 0);
+    TEST_CHECK(check_single_map_fill(zero_size_dot, color) == 0);
+
+    reset_frame();
+    wallColorRGBA = color;
+    Gui_paint_decor_dot(-3, 8, -4);
+    TEST_CHECK(check_single_map_fill(negative_size_dot, color) == 0);
+
+    reset_frame();
+    wallColorRGBA = color;
+    Gui_paint_decor_dot(-3, 8, -38);
+    TEST_CHECK(check_single_map_fill(negative_odd_half_dot, color) == 0);
+
+    reset_frame();
+    wallColorRGBA = color;
+    Gui_paint_filled_slice(7, 7, 7, 7, -35);
+    return check_single_map_fill(degenerate_slice, color);
+}
+
+static int check_map_fill_failures_are_sticky(void)
+{
+    reset_frame();
+    wallColorRGBA = UINT32_C(0x12345600);
+    blend_failure_attempt = 1;
+    blend_failure_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    Gui_paint_decor_dot(10, -4, 6);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_RESOURCE_MISMATCH);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    Gui_paint_filled_slice(-4, 1, 9, 13, 20);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_legacy_primitives() == 0);
+
+    reset_frame();
+    wallColorRGBA = UINT32_C(0x12345600);
+    draw_failure_attempt = 1;
+    draw_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    Gui_paint_filled_slice(-4, 1, 9, 13, 20);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_OUT_OF_MEMORY);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_TRIANGLES);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(successful_draws == 0);
+    TEST_CHECK(flush_attempts == 0);
+    Gui_paint_decor_dot(10, -4, 6);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_no_legacy_primitives() == 0);
+
+    reset_frame();
+    wallColorRGBA = UINT32_C(0x12345600);
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    Gui_paint_decor_dot(10, -4, 6);
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(events[0] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[1] == PAINT_EVENT_TRIANGLES);
+    TEST_CHECK(events[2] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(successful_draws == 1);
+    TEST_CHECK(flush_attempts == 1);
+    Gui_paint_filled_slice(-4, 1, 9, 13, 20);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 3);
+    TEST_CHECK(draw_attempts == 1);
+    TEST_CHECK(flush_attempts == 1);
+    return check_no_legacy_primitives();
+}
+
 int main(void)
 {
+    if (check_map_constant_fills_are_semantic() != 0)
+        return 1;
+    if (check_map_fill_degenerate_geometry_is_preserved() != 0)
+        return 1;
+    if (check_map_fill_failures_are_sticky() != 0)
+        return 1;
     if (check_laser_batch_is_semantic() != 0)
         return 1;
     if (check_empty_and_first_failure_laser_batches() != 0)

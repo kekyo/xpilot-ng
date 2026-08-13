@@ -739,19 +739,95 @@ void Gui_paint_setup_asteroid_concentrator(int x, int y)
     Image_paint_rotated(IMG_ASTEROIDCONC, x, y, (loopsSlow << 4) % TABLE_SIZE, whiteRGBA);
 }
 
+static void Set_semantic_map_vertex(
+    RendererVertex2D *vertex, RendererPoint2D point, RendererColor color)
+{
+    vertex->x = point.x;
+    vertex->y = point.y;
+    vertex->u = 0.0f;
+    vertex->v = 0.0f;
+    vertex->color = color;
+}
+
+static RendererStatus Paint_semantic_map_quad(
+    const RendererPoint2D points[4], Uint32 packed_color)
+{
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererVertex2D vertices[6];
+    RendererColor color;
+    RendererStatus status;
+    RendererStatus operation_status;
+    size_t vertex_index;
+    static const size_t point_indices[6] = {0, 1, 2, 0, 2, 3};
+
+    if (points == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    sdl_renderer = Get_sdl_renderer();
+    if (sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    renderer = Sdl_renderer_frontend(sdl_renderer);
+    if (renderer == NULL) {
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    }
+
+    color = Renderer_color_from_rgba32(packed_color);
+    for (vertex_index = 0; vertex_index < NELEM(vertices); vertex_index++) {
+	Set_semantic_map_vertex(
+	    &vertices[vertex_index], points[point_indices[vertex_index]], color);
+    }
+    operation_status = Renderer_set_blend(
+	renderer, RENDERER_BLEND_ALPHA);
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, operation_status);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    operation_status = Renderer_draw_triangles(
+	renderer, NULL, vertices, NELEM(vertices));
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, operation_status);
+    if (operation_status != RENDERER_STATUS_OK)
+	return status;
+    operation_status = Sdl_renderer_flush_preserving_legacy(sdl_renderer);
+    return Sdl_renderer_track_frame_result(
+	sdl_renderer, operation_status);
+}
+
+static int64_t Semantic_map_arithmetic_half(int64_t value)
+{
+    int64_t half = value / INT64_C(2);
+
+    if (value < 0 && value % INT64_C(2) != 0)
+	half--;
+    return half;
+}
+
 void Gui_paint_decor_dot(int x, int y, int size)
 {
-	set_alphacolor(wallColorRGBA);
-	glBegin(GL_QUADS);
-	glVertex2i(x + ((BLOCK_SZ - size) >> 1),
-			   y + ((BLOCK_SZ - size) >> 1));
-	glVertex2i(x + ((BLOCK_SZ - size) >> 1),
-			   y + ((BLOCK_SZ + size) >> 1));
-	glVertex2i(x + ((BLOCK_SZ + size) >> 1),
-			   y + ((BLOCK_SZ + size) >> 1));
-	glVertex2i(x + ((BLOCK_SZ + size) >> 1),
-			   y + ((BLOCK_SZ - size) >> 1));
-	glEnd();
+    RendererPoint2D points[4];
+    int64_t low_x = (int64_t)x
+	+ Semantic_map_arithmetic_half(
+	    (int64_t)BLOCK_SZ - (int64_t)size);
+    int64_t low_y = (int64_t)y
+	+ Semantic_map_arithmetic_half(
+	    (int64_t)BLOCK_SZ - (int64_t)size);
+    int64_t high_x = (int64_t)x
+	+ Semantic_map_arithmetic_half(
+	    (int64_t)BLOCK_SZ + (int64_t)size);
+    int64_t high_y = (int64_t)y
+	+ Semantic_map_arithmetic_half(
+	    (int64_t)BLOCK_SZ + (int64_t)size);
+
+    points[0] = (RendererPoint2D){(float)low_x, (float)low_y};
+    points[1] = (RendererPoint2D){(float)low_x, (float)high_y};
+    points[2] = (RendererPoint2D){(float)high_x, (float)high_y};
+    points[3] = (RendererPoint2D){(float)high_x, (float)low_y};
+    (void)Paint_semantic_map_quad(points, wallColorRGBA);
 }
 
 void Gui_paint_setup_target(int x, int y, int team, double damage, bool own)
@@ -820,13 +896,15 @@ void Gui_paint_walls(int x, int y, int type)
 
 void Gui_paint_filled_slice(int bl, int tl, int tr, int br, int y)
 {
-    set_alphacolor(wallColorRGBA);
-    glBegin(GL_QUADS);
-    glVertex2i(bl, y);
-    glVertex2i(tl, y + BLOCK_SZ);
-    glVertex2i(tr, y + BLOCK_SZ);
-    glVertex2i(br, y);
-    glEnd();
+    RendererPoint2D points[4];
+    float bottom = (float)y;
+    float top = (float)((int64_t)y + (int64_t)BLOCK_SZ);
+
+    points[0] = (RendererPoint2D){(float)bl, bottom};
+    points[1] = (RendererPoint2D){(float)tl, top};
+    points[2] = (RendererPoint2D){(float)tr, top};
+    points[3] = (RendererPoint2D){(float)br, bottom};
+    (void)Paint_semantic_map_quad(points, wallColorRGBA);
 }
 
 void Gui_paint_polygon(int i, int xoff, int yoff)
