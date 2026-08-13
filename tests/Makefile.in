@@ -236,7 +236,7 @@ test_renderer_geometry_LDADD = $(LDADD)
 am_test_renderer_gl_backends_OBJECTS =  \
 	test_renderer_gl_backends.$(OBJEXT) renderer.$(OBJEXT) \
 	renderer_gl_legacy.$(OBJEXT) renderer_gl_core.$(OBJEXT) \
-	sdlrenderer.$(OBJEXT)
+	sdlrenderer.$(OBJEXT) text_geometry.$(OBJEXT)
 test_renderer_gl_backends_OBJECTS =  \
 	$(am_test_renderer_gl_backends_OBJECTS)
 test_renderer_gl_backends_DEPENDENCIES =
@@ -1014,7 +1014,8 @@ test_renderer_gl_backends_SOURCES = test_renderer_gl_backends.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_legacy.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
-	$(top_srcdir)/src/client/sdl/sdlrenderer.c
+	$(top_srcdir)/src/client/sdl/sdlrenderer.c \
+	$(top_srcdir)/src/client/sdl/text_geometry.c
 
 test_renderer_gl_backends_LDADD = @SDL2_LIBS@ @GL_LIBS@
 test_paint_transform_SOURCES = test_paint_transform.c \

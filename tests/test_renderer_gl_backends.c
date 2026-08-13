@@ -5,6 +5,7 @@
 #include "renderer_gl_core.h"
 #include "renderer_gl_legacy.h"
 #include "sdlrenderer.h"
+#include "text_geometry.h"
 
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -14,10 +15,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define FRAME_WIDTH 32
-#define FRAME_HEIGHT 24
+#define FRAME_WIDTH 64
+#define FRAME_HEIGHT 56
 #define PIXEL_COMPONENTS 4
-#define PIXEL_TOLERANCE 2
+#define EXPECTED_PIXEL_TOLERANCE 2
+#define STRICT_PIXEL_TOLERANCE 0
+#define LINE_PIXEL_TOLERANCE 2
+#define TEXT_PIXEL_TOLERANCE 2
+#define COMPARISON_TEXT_ATLAS_WIDTH 8
+#define COMPARISON_TEXT_ATLAS_HEIGHT 4
 
 #define TEST_CHECK_CLEANUP(condition)                                       \
     do {                                                                    \
@@ -149,6 +155,12 @@ typedef struct PixelExpectation {
     int alpha;
 } PixelExpectation;
 
+typedef struct PixelComparisonRegion {
+    const char *label;
+    RendererRect bounds;
+    int tolerance;
+} PixelComparisonRegion;
+
 static const PixelExpectation semantic_pixels[] = {
     {13, 10,   8,  16,  24, 255},
     { 4,  4, 255,   0,   0, 255},
@@ -165,6 +177,75 @@ static const PixelExpectation semantic_pixels[] = {
     {20, 18,   0,   0, 255, 255},
     {26, 17,   0, 255,   0, 255}
 };
+
+static const PixelComparisonRegion strict_feature_regions[] = {
+    {"triangle interior", {35, 4, 3, 4}, STRICT_PIXEL_TOLERANCE},
+    {"sprite interior", {49, 3, 6, 6}, STRICT_PIXEL_TOLERANCE},
+    {"blend opaque interior", {35, 17, 2, 6}, STRICT_PIXEL_TOLERANCE},
+    {"blend alpha interior", {39, 17, 2, 6}, STRICT_PIXEL_TOLERANCE},
+    {"blend additive interior", {43, 17, 2, 6}, STRICT_PIXEL_TOLERANCE},
+    {"scissor inside", {51, 17, 2, 4}, STRICT_PIXEL_TOLERANCE},
+    {"scissor outside left", {49, 17, 1, 4}, STRICT_PIXEL_TOLERANCE},
+    {"scissor outside right", {55, 17, 2, 4}, STRICT_PIXEL_TOLERANCE},
+    {"scissor outside top", {51, 15, 2, 1}, STRICT_PIXEL_TOLERANCE},
+    {"scissor outside bottom", {51, 23, 2, 1}, STRICT_PIXEL_TOLERANCE}
+};
+
+static const PixelComparisonRegion tolerant_feature_regions[] = {
+    {"line", {32, 27, 28, 12}, LINE_PIXEL_TOLERANCE},
+    {"text", {32, 43, 14, 10}, TEXT_PIXEL_TOLERANCE}
+};
+
+static const uint8_t comparison_text_atlas_pixels[] = {
+    /* A row 0, gap, B row 0, gap. */
+      0,   0,   0,   0, 255, 255, 255, 128,
+      0,   0,   0,   0,   0,   0,   0,   0,
+    255, 255, 255, 255, 255, 255, 255, 128,
+      0,   0,   0,   0,   0,   0,   0,   0,
+    /* A row 1, gap, B row 1, gap. */
+    255, 255, 255, 128,   0,   0,   0,   0,
+    255, 255, 255, 128,   0,   0,   0,   0,
+    255, 255, 255, 255,   0,   0,   0,   0,
+    255, 255, 255, 128,   0,   0,   0,   0,
+    /* A row 2, gap, B row 2, gap. */
+    255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255,   0,   0,   0,   0,
+    255, 255, 255, 255, 255, 255, 255, 128,
+      0,   0,   0,   0,   0,   0,   0,   0,
+    /* A row 3, gap, B row 3, gap. */
+    255, 255, 255, 255,   0,   0,   0,   0,
+    255, 255, 255, 255,   0,   0,   0,   0,
+    255, 255, 255, 255,   0,   0,   0,   0,
+    255, 255, 255, 128,   0,   0,   0,   0
+};
+
+static TextGeometryFont make_comparison_text_font(void)
+{
+    TextGeometryFont font;
+
+    memset(&font, 0, sizeof(font));
+    font.atlas_width = COMPARISON_TEXT_ATLAS_WIDTH;
+    font.atlas_height = COMPARISON_TEXT_ATLAS_HEIGHT;
+    font.ascent = 4.0f;
+    font.line_height = 4.0f;
+    font.line_spacing = 5.0f;
+    font.fallback_byte = (unsigned char)'?';
+
+    font.glyphs[(unsigned char)'A'].atlas_bounds
+        = (RendererRect){0, 0, 3, 4};
+    font.glyphs[(unsigned char)'A'].bearing_top = 4.0f;
+    font.glyphs[(unsigned char)'A'].advance = 4.0f;
+    font.glyphs[(unsigned char)'A'].available = 1;
+
+    font.glyphs[(unsigned char)'B'].atlas_bounds
+        = (RendererRect){4, 0, 3, 4};
+    font.glyphs[(unsigned char)'B'].bearing_top = 4.0f;
+    font.glyphs[(unsigned char)'B'].advance = 4.0f;
+    font.glyphs[(unsigned char)'B'].available = 1;
+
+    font.glyphs[(unsigned char)'?'] = font.glyphs[(unsigned char)'A'];
+    return font;
+}
 
 static const GLenum legacy_draw_capabilities[
     LEGACY_DRAW_CAPABILITY_COUNT] = {
@@ -599,14 +680,32 @@ static int render_scene(RendererFactory factory, TestContext *test_context,
         {30.0f, 2.0f, 0.0f, 0.0f, {128, 64, 192, 128}},
         {24.0f, 10.0f, 0.0f, 0.0f, {128, 64, 192, 128}}
     };
+    static const RendererVertex2D strict_triangle_vertices[] = {
+        {34.0f, 2.0f, 0.0f, 0.0f, {255, 32, 16, 255}},
+        {46.0f, 2.0f, 0.0f, 0.0f, {255, 32, 16, 255}},
+        {34.0f, 12.0f, 0.0f, 0.0f, {255, 32, 16, 255}}
+    };
+    static const RendererPoint2D line_points[] = {
+        {34.0f, 30.0f}, {58.0f, 34.0f}
+    };
+    static const unsigned char comparison_text[] = {'A', 'B'};
     const RendererTextureDesc texture_desc = {
         .width = 2,
         .height = 2,
         .filter = RENDERER_TEXTURE_FILTER_NEAREST,
         .wrap = RENDERER_TEXTURE_WRAP_CLAMP
     };
+    const RendererTextureDesc comparison_text_texture_desc = {
+        .width = COMPARISON_TEXT_ATLAS_WIDTH,
+        .height = COMPARISON_TEXT_ATLAS_HEIGHT,
+        .filter = RENDERER_TEXTURE_FILTER_NEAREST,
+        .wrap = RENDERER_TEXTURE_WRAP_CLAMP
+    };
+    const TextGeometryFont comparison_text_font
+        = make_comparison_text_font();
     const RendererColor clear = {8, 16, 24, 255};
     const RendererRect scissor = {18, 2, 4, 6};
+    const RendererRect strict_scissor = {50, 16, 4, 6};
     const RendererTransform2D translation = {
         {1.0f, 0.0f, 0.0f,
          0.0f, 1.0f, 0.0f,
@@ -619,7 +718,9 @@ static int render_scene(RendererFactory factory, TestContext *test_context,
     };
     Renderer *renderer = NULL;
     RendererTexture *texture = NULL;
+    RendererTexture *comparison_text_texture = NULL;
     RendererMesh *mesh = NULL;
+    RendererVertex2D comparison_text_vertices[12];
     CoreBorrowedState core_borrowed_state;
     GLuint unpack_buffer = 0;
     int result = 1;
@@ -652,9 +753,32 @@ static int render_scene(RendererFactory factory, TestContext *test_context,
                        == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(check_borrowed_upload_state(
                            test_context, unpack_buffer) == 0);
+    TEST_CHECK_CLEANUP(sizeof(comparison_text_atlas_pixels)
+                       == COMPARISON_TEXT_ATLAS_WIDTH
+                          * COMPARISON_TEXT_ATLAS_HEIGHT
+                          * PIXEL_COMPONENTS);
+    TEST_CHECK_CLEANUP(Renderer_texture_create_with_desc(
+                           renderer, &comparison_text_texture_desc,
+                           comparison_text_atlas_pixels,
+                           COMPARISON_TEXT_ATLAS_WIDTH * PIXEL_COMPONENTS,
+                           &comparison_text_texture)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(check_borrowed_upload_state(
+                           test_context, unpack_buffer) == 0);
     end_borrowed_upload_state(test_context, &unpack_buffer);
     TEST_CHECK_CLEANUP(Renderer_mesh_create(renderer, mesh_vertices, 3,
                                              &mesh)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Text_geometry_build(
+                           &comparison_text_font,
+                           comparison_text, sizeof(comparison_text),
+                           (RendererPoint2D){34.0f, 46.0f},
+                           TEXT_GEOMETRY_ALIGN_LEFT,
+                           TEXT_GEOMETRY_ALIGN_TOP,
+                           (RendererColor){160, 224, 96, 255},
+                           comparison_text_vertices,
+                           sizeof(comparison_text_vertices)
+                               / sizeof(comparison_text_vertices[0]))
                        == RENDERER_STATUS_OK);
 
     TEST_CHECK_CLEANUP(Renderer_begin_frame(renderer, FRAME_WIDTH,
@@ -705,6 +829,65 @@ static int render_scene(RendererFactory factory, TestContext *test_context,
                            (RendererColor){255, 255, 255, 255})
                        == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(Renderer_draw_mesh(renderer, texture, mesh)
+                       == RENDERER_STATUS_OK);
+
+    /* These isolated regions make strict backend parity a property of one
+     * semantic feature at a time. Comparisons use stable interior coverage;
+     * implementation-dependent rasterization edges are excluded. */
+    TEST_CHECK_CLEANUP(Renderer_set_blend(renderer, RENDERER_BLEND_OPAQUE)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_draw_triangles(
+                           renderer, NULL, strict_triangle_vertices, 3)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_draw_sprite(
+                           renderer, texture,
+                           48.0f, 2.0f, 56.0f, 10.0f,
+                           0.0f, 0.0f, 1.0f, 1.0f,
+                           (RendererColor){255, 255, 255, 255})
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_fill_rect(
+                           renderer, 34.0f, 16.0f, 12.0f, 8.0f,
+                           (RendererColor){0, 0, 0, 255})
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_fill_rect(
+                           renderer, 38.0f, 16.0f, 4.0f, 8.0f,
+                           (RendererColor){255, 255, 255, 128})
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_set_blend(
+                           renderer, RENDERER_BLEND_ADDITIVE)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_fill_rect(
+                           renderer, 42.0f, 16.0f, 4.0f, 8.0f,
+                           (RendererColor){64, 32, 16, 128})
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_set_blend(renderer, RENDERER_BLEND_OPAQUE)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_set_scissor(renderer, &strict_scissor)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_fill_rect(
+                           renderer, 48.0f, 14.0f, 10.0f, 10.0f,
+                           (RendererColor){32, 255, 64, 255})
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_set_scissor(renderer, NULL)
+                       == RENDERER_STATUS_OK);
+
+    TEST_CHECK_CLEANUP(Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_stroke_path(
+                           renderer, line_points,
+                           sizeof(line_points) / sizeof(line_points[0]),
+                           3.0f, (RendererColor){220, 40, 80, 255}, 0)
+                       == RENDERER_STATUS_OK);
+    /* Text_geometry_build plus the immutable atlas follows the same
+     * semantic triangle path used by Text_renderer_draw without depending
+     * on host font rasterization. */
+    TEST_CHECK_CLEANUP(Renderer_draw_triangles(
+                           renderer, comparison_text_texture,
+                           comparison_text_vertices,
+                           sizeof(comparison_text_vertices)
+                               / sizeof(comparison_text_vertices[0]))
                        == RENDERER_STATUS_OK);
     TEST_CHECK_CLEANUP(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
 
@@ -845,13 +1028,20 @@ static const GLubyte *pixel_at(const GLubyte *pixels, int x, int y)
                      * PIXEL_COMPONENTS);
 }
 
-static int component_near(GLubyte actual, int expected)
+static int components_within_tolerance(GLubyte first, GLubyte second,
+                                       int tolerance)
 {
-    int difference = (int)actual - expected;
+    int difference = (int)first - (int)second;
 
     if (difference < 0)
         difference = -difference;
-    return difference <= PIXEL_TOLERANCE;
+    return difference <= tolerance;
+}
+
+static int component_near(GLubyte actual, int expected)
+{
+    return components_within_tolerance(
+        actual, (GLubyte)expected, EXPECTED_PIXEL_TOLERANCE);
 }
 
 static int check_rgb(const GLubyte *pixels, int x, int y,
@@ -1707,6 +1897,77 @@ static int check_semantic_pixels(const GLubyte *pixels)
     return 0;
 }
 
+static int check_comparison_feature_pixels(const GLubyte *pixels)
+{
+    TEST_CHECK(check_rgba(pixels, 36, 4, 255, 32, 16, 255) == 0);
+    TEST_CHECK(check_rgba(pixels, 49, 3, 255, 255, 0, 255) == 0);
+    TEST_CHECK(check_rgba(pixels, 35, 18, 0, 0, 0, 255) == 0);
+    TEST_CHECK(check_rgba(pixels, 39, 18, 128, 128, 128, 191) == 0);
+    TEST_CHECK(check_rgba(pixels, 43, 18, 32, 16, 8, 255) == 0);
+    TEST_CHECK(check_rgba(pixels, 49, 18, 8, 16, 24, 255) == 0);
+    TEST_CHECK(check_rgba(pixels, 51, 18, 32, 255, 64, 255) == 0);
+    TEST_CHECK(check_rgba(pixels, 55, 18, 8, 16, 24, 255) == 0);
+    TEST_CHECK(check_rgba(pixels, 51, 15, 8, 16, 24, 255) == 0);
+    TEST_CHECK(check_rgba(pixels, 51, 23, 8, 16, 24, 255) == 0);
+    TEST_CHECK(check_rgba(pixels, 46, 32, 220, 40, 80, 255) == 0);
+    TEST_CHECK(check_rgba(pixels, 34, 48, 160, 224, 96, 255) == 0);
+    return 0;
+}
+
+static int compare_pixel_region(const GLubyte *legacy,
+                                const GLubyte *core,
+                                const PixelComparisonRegion *region)
+{
+    int x;
+    int y;
+
+    TEST_CHECK(region != NULL);
+    TEST_CHECK(region->bounds.x >= 0 && region->bounds.y >= 0);
+    TEST_CHECK(region->bounds.width > 0 && region->bounds.height > 0);
+    TEST_CHECK(region->bounds.x + region->bounds.width <= FRAME_WIDTH);
+    TEST_CHECK(region->bounds.y + region->bounds.height <= FRAME_HEIGHT);
+    TEST_CHECK(region->tolerance >= 0);
+
+    for (y = region->bounds.y;
+         y < region->bounds.y + region->bounds.height; y++) {
+        for (x = region->bounds.x;
+             x < region->bounds.x + region->bounds.width; x++) {
+            const GLubyte *legacy_pixel = pixel_at(legacy, x, y);
+            const GLubyte *core_pixel = pixel_at(core, x, y);
+            size_t component;
+
+            for (component = 0; component < PIXEL_COMPONENTS; component++) {
+                if (!components_within_tolerance(
+                        legacy_pixel[component], core_pixel[component],
+                        region->tolerance)) {
+                    fprintf(stderr,
+                            "%s legacy/core mismatch at (%d,%d), "
+                            "component %lu with tolerance %d: %u != %u\n",
+                            region->label, x, y, (unsigned long)component,
+                            region->tolerance,
+                            (unsigned int)legacy_pixel[component],
+                            (unsigned int)core_pixel[component]);
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+static int compare_feature_regions(
+    const GLubyte *legacy, const GLubyte *core,
+    const PixelComparisonRegion *regions, size_t region_count)
+{
+    size_t region_index;
+
+    for (region_index = 0; region_index < region_count; region_index++) {
+        TEST_CHECK(compare_pixel_region(
+                       legacy, core, &regions[region_index]) == 0);
+    }
+    return 0;
+}
+
 static int compare_interior_samples(const GLubyte *legacy,
                                     const GLubyte *core)
 {
@@ -1726,7 +1987,7 @@ static int compare_interior_samples(const GLubyte *legacy,
 
             if (difference < 0)
                 difference = -difference;
-            if (difference > PIXEL_TOLERANCE) {
+            if (difference > EXPECTED_PIXEL_TOLERANCE) {
                 fprintf(stderr, "legacy/core mismatch at (%d,%d), "
                         "component %lu: %u != %u\n",
                         sample->x, sample->y, (unsigned long)component,
@@ -1894,6 +2155,18 @@ int main(void)
                        == 0);
     TEST_CHECK_CLEANUP(check_semantic_pixels(legacy_pixels) == 0);
     TEST_CHECK_CLEANUP(check_semantic_pixels(core_pixels) == 0);
+    TEST_CHECK_CLEANUP(check_comparison_feature_pixels(legacy_pixels) == 0);
+    TEST_CHECK_CLEANUP(check_comparison_feature_pixels(core_pixels) == 0);
+    TEST_CHECK_CLEANUP(compare_feature_regions(
+                           legacy_pixels, core_pixels,
+                           strict_feature_regions,
+                           sizeof(strict_feature_regions)
+                               / sizeof(strict_feature_regions[0])) == 0);
+    TEST_CHECK_CLEANUP(compare_feature_regions(
+                           legacy_pixels, core_pixels,
+                           tolerant_feature_regions,
+                           sizeof(tolerant_feature_regions)
+                               / sizeof(tolerant_feature_regions[0])) == 0);
     TEST_CHECK_CLEANUP(compare_interior_samples(legacy_pixels,
                                                 core_pixels) == 0);
     result = 0;
