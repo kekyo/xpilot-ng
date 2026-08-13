@@ -830,30 +830,191 @@ void Gui_paint_decor_dot(int x, int y, int size)
     (void)Paint_semantic_map_quad(points, wallColorRGBA);
 }
 
+typedef struct SemanticTargetGeometry {
+    RendererPoint2D outline[4];
+    float fill_x;
+    float fill_y;
+    float fill_width;
+    float fill_height;
+    int draw_fill;
+} SemanticTargetGeometry;
+
+static int Semantic_target_float(int64_t value, float *result)
+{
+    if (result == NULL || (double)value < -(double)FLT_MAX
+	|| (double)value > (double)FLT_MAX) {
+	return 0;
+    }
+    *result = (float)value;
+    return isfinite(*result);
+}
+
+static int Semantic_target_coordinate_float(int64_t value, float *result)
+{
+    return value >= INT_MIN && value <= INT_MAX
+	&& Semantic_target_float(value, result);
+}
+
+static int Semantic_target_float_rect_valid(
+    float left, float top, float right, float bottom)
+{
+    return isfinite(left) && isfinite(top)
+	&& isfinite(right) && isfinite(bottom)
+	&& right > left && bottom > top;
+}
+
+static RendererStatus Build_semantic_target_geometry(
+    int x, int y, double damage, SemanticTargetGeometry *geometry)
+{
+    double scaled_damage;
+    int damage_offset;
+    int64_t left;
+    int64_t right;
+    int64_t top;
+    int64_t bottom;
+    int64_t damage_y;
+    int64_t fill_top;
+    int64_t fill_height;
+
+    if (geometry == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+
+    scaled_damage = (BLOCK_SZ - 3) * (damage / TARGET_DAMAGE);
+    if (!isfinite(scaled_damage)
+	|| scaled_damage < (double)INT_MIN
+	|| scaled_damage > (double)INT_MAX) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    damage_offset = (int)scaled_damage;
+
+    left = (int64_t)x;
+    right = left + INT64_C(5);
+    top = (int64_t)y + INT64_C(3);
+    bottom = (int64_t)y + (int64_t)BLOCK_SZ;
+    damage_y = (int64_t)y + (int64_t)damage_offset;
+    if (!Semantic_target_coordinate_float(left, &geometry->outline[0].x)
+	|| !Semantic_target_coordinate_float(top, &geometry->outline[0].y)
+	|| !Semantic_target_coordinate_float(left, &geometry->outline[1].x)
+	|| !Semantic_target_coordinate_float(bottom,
+					       &geometry->outline[1].y)
+	|| !Semantic_target_coordinate_float(right, &geometry->outline[2].x)
+	|| !Semantic_target_coordinate_float(bottom,
+					       &geometry->outline[2].y)
+	|| !Semantic_target_coordinate_float(right, &geometry->outline[3].x)
+	|| !Semantic_target_coordinate_float(top, &geometry->outline[3].y)
+	|| !Semantic_target_coordinate_float(damage_y,
+					       &geometry->fill_y)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    if (!Semantic_target_float_rect_valid(
+	    geometry->outline[0].x, geometry->outline[0].y,
+	    geometry->outline[2].x, geometry->outline[1].y)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+
+    geometry->draw_fill = damage_y != top;
+    if (!geometry->draw_fill)
+	return RENDERER_STATUS_OK;
+
+    fill_top = damage_y < top ? damage_y : top;
+    fill_height = damage_y < top ? top - damage_y : damage_y - top;
+    if (!Semantic_target_coordinate_float(left, &geometry->fill_x)
+	|| !Semantic_target_coordinate_float(fill_top, &geometry->fill_y)
+	|| !Semantic_target_float(right - left, &geometry->fill_width)
+	|| !Semantic_target_float(fill_height, &geometry->fill_height)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    if (!Semantic_target_float_rect_valid(
+	    geometry->fill_x, geometry->fill_y,
+	    geometry->fill_x + geometry->fill_width,
+	    geometry->fill_y + geometry->fill_height)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    return RENDERER_STATUS_OK;
+}
+
 void Gui_paint_setup_target(int x, int y, int team, double damage, bool own)
 {
-	int damage_y;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    SemanticTargetGeometry geometry;
+    RendererStatus status;
+    RendererStatus operation_status;
+    RendererColor color;
+    int has_accepted_commands = 0;
 
-	Image_paint(IMG_TARGET, x, y, 0, whiteRGBA);
-	if (BIT(Setup->mode, TEAM_PLAY)) {
-		mapprint(&mapfont, whiteRGBA, RIGHT, UP, x + BLOCK_SZ, y, "%d", team);
+    Image_paint(IMG_TARGET, x, y, 0, whiteRGBA);
+    sdl_renderer = Get_sdl_renderer();
+    if (sdl_renderer == NULL)
+	return;
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
+	return;
+
+    if (BIT(Setup->mode, TEAM_PLAY)) {
+	int64_t map_x = (int64_t)x + (int64_t)BLOCK_SZ;
+
+	if (map_x < INT_MIN || map_x > INT_MAX) {
+	    (void)Sdl_renderer_track_frame_result(
+		sdl_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
+	    return;
 	}
-	if (damage != TARGET_DAMAGE) {
-		damage_y = y + (int)((BLOCK_SZ - 3) * (damage / TARGET_DAMAGE));
-		set_alphacolor(own ? blueRGBA : redRGBA);
-		glBegin(GL_LINE_LOOP);
-		glVertex2i(x, y + 3);
-		glVertex2i(x, y + BLOCK_SZ);
-		glVertex2i(x + 5, y + BLOCK_SZ);
-		glVertex2i(x + 5, y + 3);
-		glEnd();
-		glBegin(GL_QUADS);
-		glVertex2i(x, y + 3);
-		glVertex2i(x, damage_y);
-		glVertex2i(x + 5, damage_y);
-		glVertex2i(x + 5, y + 3);	
-		glEnd();
-	}
+	operation_status = mapprint(
+	    &mapfont, whiteRGBA, RIGHT, UP, (int)map_x, y, "%d", team);
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, operation_status);
+	if (status != RENDERER_STATUS_OK)
+	    return;
+    }
+
+    if (damage == TARGET_DAMAGE)
+	return;
+    operation_status = Build_semantic_target_geometry(
+	x, y, damage, &geometry);
+    if (operation_status != RENDERER_STATUS_OK) {
+	(void)Sdl_renderer_track_frame_result(
+	    sdl_renderer, operation_status);
+	return;
+    }
+
+    renderer = Sdl_renderer_frontend(sdl_renderer);
+    if (renderer == NULL) {
+	(void)Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+	return;
+    }
+    operation_status = Renderer_set_blend(
+	renderer, RENDERER_BLEND_ALPHA);
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, operation_status);
+    if (status != RENDERER_STATUS_OK)
+	return;
+
+    color = Renderer_color_from_rgba32(own ? blueRGBA : redRGBA);
+    operation_status = Renderer_stroke_path(
+	renderer, geometry.outline, NELEM(geometry.outline), 1.0f,
+	color, 1);
+    if (operation_status == RENDERER_STATUS_OK)
+	has_accepted_commands = 1;
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, operation_status);
+    if (status == RENDERER_STATUS_OK && geometry.draw_fill) {
+	operation_status = Renderer_fill_rect(
+	    renderer, geometry.fill_x, geometry.fill_y,
+	    geometry.fill_width, geometry.fill_height, color);
+	if (operation_status == RENDERER_STATUS_OK)
+	    has_accepted_commands = 1;
+	(void)Sdl_renderer_track_frame_result(
+	    sdl_renderer, operation_status);
+    }
+
+    if (has_accepted_commands) {
+	operation_status = Sdl_renderer_flush_preserving_legacy(
+	    sdl_renderer);
+	(void)Sdl_renderer_track_frame_result(
+	    sdl_renderer, operation_status);
+    }
 }
 
 void Gui_paint_setup_treasure(int x, int y, int team, bool own)

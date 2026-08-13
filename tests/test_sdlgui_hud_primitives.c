@@ -46,6 +46,7 @@ typedef enum PaintEvent {
     PAINT_EVENT_FLUSH,
     PAINT_EVENT_TEXT,
     PAINT_EVENT_IMAGE,
+    PAINT_EVENT_MAP_TEXT,
     PAINT_EVENT_MEASURE,
     PAINT_EVENT_HUD_TEXT
 } PaintEvent;
@@ -112,6 +113,16 @@ typedef struct FakeImage {
     int color;
 } FakeImage;
 
+typedef struct FakeMapText {
+    font_data *font;
+    int color;
+    int horizontal_alignment;
+    int vertical_alignment;
+    int x;
+    int y;
+    char text[50];
+} FakeMapText;
+
 typedef struct FakeHudText {
     font_data *font;
     int color;
@@ -134,6 +145,7 @@ static FakeStroke strokes[MAX_STROKES];
 static FakeStippledStroke stippled_strokes[MAX_STIPPLED_STROKES];
 static FakeText last_text;
 static FakeImage last_image;
+static FakeMapText last_map_text;
 static FakeHudText last_hud_text;
 static char last_measured_text[50];
 static int event_count;
@@ -153,6 +165,7 @@ static int transform_attempts;
 static int scissor_attempts;
 static int text_attempts;
 static int image_attempts;
+static int map_text_attempts;
 static int measure_attempts;
 static int hud_text_attempts;
 static int legacy_begin_calls;
@@ -175,6 +188,8 @@ static int stippled_stroke_failure_attempt;
 static RendererStatus stippled_stroke_failure_result;
 static RendererStatus flush_result;
 static RendererStatus text_result;
+static RendererStatus image_result;
+static RendererStatus map_text_result;
 static RendererStatus measure_result;
 static RendererStatus hud_text_result;
 static float measured_width;
@@ -186,6 +201,7 @@ static setup_t fake_setup = {
 
 setup_t *Setup = &fake_setup;
 font_data gamefont;
+font_data mapfont;
 unsigned draw_width;
 unsigned draw_height;
 short ext_view_width;
@@ -408,9 +424,11 @@ static void reset_frame(void)
     memset(stippled_strokes, 0, sizeof(stippled_strokes));
     memset(&last_text, 0, sizeof(last_text));
     memset(&last_image, 0, sizeof(last_image));
+    memset(&last_map_text, 0, sizeof(last_map_text));
     memset(&last_hud_text, 0, sizeof(last_hud_text));
     memset(last_measured_text, 0, sizeof(last_measured_text));
     memset(&gamefont, 0, sizeof(gamefont));
+    memset(&mapfont, 0, sizeof(mapfont));
     memset(blend_modes, 0, sizeof(blend_modes));
     memset(tbl_sin, 0, sizeof(tbl_sin));
     memset(tbl_cos, 0, sizeof(tbl_cos));
@@ -433,6 +451,7 @@ static void reset_frame(void)
     scissor_attempts = 0;
     text_attempts = 0;
     image_attempts = 0;
+    map_text_attempts = 0;
     measure_attempts = 0;
     hud_text_attempts = 0;
     legacy_begin_calls = 0;
@@ -454,6 +473,8 @@ static void reset_frame(void)
     stippled_stroke_failure_result = RENDERER_STATUS_OK;
     flush_result = RENDERER_STATUS_OK;
     text_result = RENDERER_STATUS_OK;
+    image_result = RENDERER_STATUS_OK;
+    map_text_result = RENDERER_STATUS_OK;
     measure_result = RENDERER_STATUS_OK;
     hud_text_result = RENDERER_STATUS_OK;
     measured_width = 7.0f;
@@ -470,6 +491,7 @@ static void reset_frame(void)
     active_view_height = 120;
     fake_setup.width = 256;
     fake_setup.height = 128;
+    fake_setup.mode = 0;
     RadarHeight = 128;
     gamefont.requested_height = 12;
     fuelSum = 25.0;
@@ -675,6 +697,13 @@ RendererStatus Renderer_fill_rect(Renderer *renderer,
     record_event(PAINT_EVENT_FILL);
     if (renderer != &fake_renderer || !renderer->frame_active)
         return RENDERER_STATUS_INVALID_STATE;
+    if (!isfinite(x) || !isfinite(y)
+        || !isfinite(width) || !isfinite(height)
+        || !isfinite(x + width) || !isfinite(y + height)
+        || width <= 0.0f || height <= 0.0f
+        || x + width <= x || y + height <= y) {
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
     if (fill_result != RENDERER_STATUS_OK)
         return fill_result;
     last_fill.x = x;
@@ -797,6 +826,25 @@ RendererStatus disp_text(string_tex_t *texture, int color,
     return text_result;
 }
 
+void Image_paint(int index, int x, int y, int frame, int color)
+{
+    RendererStatus status = Sdl_renderer_track_frame_result(
+        &fake_sdl_renderer, RENDERER_STATUS_OK);
+
+    if (status != RENDERER_STATUS_OK)
+        return;
+    image_attempts++;
+    record_event(PAINT_EVENT_IMAGE);
+    last_image.index = index;
+    last_image.x = x;
+    last_image.y = y;
+    last_image.frame = frame;
+    last_image.color = color;
+    operation_result_pending = 1;
+    (void)Sdl_renderer_track_frame_result(
+        &fake_sdl_renderer, image_result);
+}
+
 void Image_paint_hud(int index, int x, int y, int frame, int color)
 {
     image_attempts++;
@@ -806,6 +854,28 @@ void Image_paint_hud(int index, int x, int y, int frame, int color)
     last_image.y = y;
     last_image.frame = frame;
     last_image.color = color;
+}
+
+RendererStatus mapprint(font_data *font, int color,
+                        int horizontal_alignment,
+                        int vertical_alignment, int x, int y,
+                        const char *format, ...)
+{
+    va_list arguments;
+
+    map_text_attempts++;
+    record_event(PAINT_EVENT_MAP_TEXT);
+    last_map_text.font = font;
+    last_map_text.color = color;
+    last_map_text.horizontal_alignment = horizontal_alignment;
+    last_map_text.vertical_alignment = vertical_alignment;
+    last_map_text.x = x;
+    last_map_text.y = y;
+    va_start(arguments, format);
+    vsnprintf(last_map_text.text, sizeof(last_map_text.text),
+              format, arguments);
+    va_end(arguments);
+    return map_text_result;
 }
 
 RendererStatus printsize(font_data *font, fontbounds *bounds,
@@ -3659,8 +3729,472 @@ static int check_map_fill_failures_are_sticky(void)
     return check_no_legacy_primitives();
 }
 
+static int check_target_image(void)
+{
+    TEST_CHECK(last_image.index == IMG_TARGET);
+    TEST_CHECK(last_image.x == 10);
+    TEST_CHECK(last_image.y == 20);
+    TEST_CHECK(last_image.frame == 0);
+    TEST_CHECK(last_image.color == (int)UINT32_C(0x11223344));
+    return 0;
+}
+
+static int check_target_outline(uint32_t color)
+{
+    static const float expected_points[][2] = {
+        {10.0f, 23.0f}, {10.0f, 55.0f},
+        {15.0f, 55.0f}, {15.0f, 23.0f}
+    };
+
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(strokes[0].blend == RENDERER_BLEND_ALPHA);
+    return check_stroke(0, expected_points, 4, color, 1);
+}
+
+static int check_target_fill(
+    float expected_y, float expected_height, uint32_t color)
+{
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(last_fill.x == 10.0f);
+    TEST_CHECK(last_fill.y == expected_y);
+    TEST_CHECK(last_fill.width == 5.0f);
+    TEST_CHECK(last_fill.height == expected_height);
+    TEST_CHECK(color_equal(
+        last_fill.color, Renderer_color_from_rgba32(color)));
+    TEST_CHECK(last_fill.blend == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(last_fill.transform_token == 71);
+    TEST_CHECK(last_fill.scissor_token == 83);
+    return 0;
+}
+
+static int check_target_primitives(
+    float expected_fill_y, float expected_fill_height, uint32_t color)
+{
+    TEST_CHECK(check_target_image() == 0);
+    TEST_CHECK(check_target_outline(color) == 0);
+    TEST_CHECK(check_target_fill(
+        expected_fill_y, expected_fill_height, color) == 0);
+    TEST_CHECK(transform_attempts == 0);
+    TEST_CHECK(scissor_attempts == 0);
+    return check_no_legacy_primitives();
+}
+
+static int check_target_full_order_and_geometry(void)
+{
+    reset_frame();
+    fake_setup.mode = TEAM_PLAY;
+    whiteRGBA = UINT32_C(0x11223344);
+    blueRGBA = UINT32_C(0x55667788);
+
+    Gui_paint_setup_target(10, 20, 7, 125.0, true);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 3);
+    TEST_CHECK(event_count == 6);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(events[1] == PAINT_EVENT_MAP_TEXT);
+    TEST_CHECK(events[2] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[3] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[4] == PAINT_EVENT_FILL);
+    TEST_CHECK(events[5] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(map_text_attempts == 1);
+    TEST_CHECK(last_map_text.font == &mapfont);
+    TEST_CHECK(last_map_text.color == (int)UINT32_C(0x11223344));
+    TEST_CHECK(last_map_text.horizontal_alignment == RIGHT);
+    TEST_CHECK(last_map_text.vertical_alignment == UP);
+    TEST_CHECK(last_map_text.x == 45);
+    TEST_CHECK(last_map_text.y == 20);
+    TEST_CHECK(strcmp(last_map_text.text, "7") == 0);
+    TEST_CHECK(blend_attempts == 1);
+    TEST_CHECK(blend_modes[0] == RENDERER_BLEND_ALPHA);
+    TEST_CHECK(stroke_attempts == 1);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(flush_attempts == 1);
+    return check_target_primitives(
+        23.0f, 13.0f, UINT32_C(0x55667788));
+}
+
+static int check_target_optional_paths_and_own_color(void)
+{
+    reset_frame();
+    whiteRGBA = UINT32_C(0x11223344);
+    redRGBA = UINT32_C(0xa1b2c3d4);
+
+    Gui_paint_setup_target(10, 20, 9, 0.0, false);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 2);
+    TEST_CHECK(event_count == 5);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_FILL);
+    TEST_CHECK(events[4] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(map_text_attempts == 0);
+    TEST_CHECK(check_target_primitives(
+        20.0f, 3.0f, UINT32_C(0xa1b2c3d4)) == 0);
+
+    reset_frame();
+    fake_setup.mode = TEAM_PLAY;
+    whiteRGBA = UINT32_C(0x11223344);
+
+    Gui_paint_setup_target(10, 20, -3, TARGET_DAMAGE, true);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(preflight_attempts == 3);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(events[1] == PAINT_EVENT_MAP_TEXT);
+    TEST_CHECK(strcmp(last_map_text.text, "-3") == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(check_target_image() == 0);
+    return check_no_legacy_primitives();
+}
+
+static int check_target_unbounded_finite_damage(void)
+{
+    reset_frame();
+    whiteRGBA = UINT32_C(0x11223344);
+    blueRGBA = UINT32_C(0x55667788);
+
+    Gui_paint_setup_target(10, -4, 0, 1.0, true);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(last_image.index == IMG_TARGET);
+    TEST_CHECK(last_image.x == 10);
+    TEST_CHECK(last_image.y == -4);
+    TEST_CHECK(last_image.frame == 0);
+    TEST_CHECK(last_image.color == (int)UINT32_C(0x11223344));
+    TEST_CHECK(successful_strokes == 1);
+    TEST_CHECK(strokes[0].points[0].x == 10.0f);
+    TEST_CHECK(strokes[0].points[0].y == -1.0f);
+    TEST_CHECK(strokes[0].points[1].x == 10.0f);
+    TEST_CHECK(strokes[0].points[1].y == 31.0f);
+    TEST_CHECK(strokes[0].points[2].x == 15.0f);
+    TEST_CHECK(strokes[0].points[2].y == 31.0f);
+    TEST_CHECK(strokes[0].points[3].x == 15.0f);
+    TEST_CHECK(strokes[0].points[3].y == -1.0f);
+    TEST_CHECK(check_target_fill(
+        -4.0f, 3.0f, UINT32_C(0x55667788)) == 0);
+    TEST_CHECK(check_no_legacy_primitives() == 0);
+
+    reset_frame();
+    whiteRGBA = UINT32_C(0x11223344);
+    blueRGBA = UINT32_C(0x55667788);
+
+    Gui_paint_setup_target(10, 20, 0, 23.4375, true);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(event_count == 4);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(events[1] == PAINT_EVENT_BLEND);
+    TEST_CHECK(events[2] == PAINT_EVENT_STROKE);
+    TEST_CHECK(events[3] == PAINT_EVENT_FLUSH);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(check_target_image() == 0);
+    TEST_CHECK(check_target_outline(UINT32_C(0x55667788)) == 0);
+    TEST_CHECK(check_no_legacy_primitives() == 0);
+
+    reset_frame();
+    whiteRGBA = UINT32_C(0x11223344);
+    redRGBA = UINT32_C(0xa1b2c3d4);
+
+    Gui_paint_setup_target(10, 20, 0, -125.0, false);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(check_target_primitives(
+        4.0f, 19.0f, UINT32_C(0xa1b2c3d4)) == 0);
+
+    reset_frame();
+    whiteRGBA = UINT32_C(0x11223344);
+    redRGBA = UINT32_C(0xa1b2c3d4);
+
+    Gui_paint_setup_target(10, 20, 0, -1.0, false);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(check_target_primitives(
+        20.0f, 3.0f, UINT32_C(0xa1b2c3d4)) == 0);
+
+    reset_frame();
+    whiteRGBA = UINT32_C(0x11223344);
+    redRGBA = UINT32_C(0xa1b2c3d4);
+
+    Gui_paint_setup_target(10, 20, 0, 500.0, false);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    return check_target_primitives(
+        23.0f, 61.0f, UINT32_C(0xa1b2c3d4));
+}
+
+static int check_target_invalid_damage_is_sticky(void)
+{
+    static const double invalid_damage[] = {
+        NAN, INFINITY, -INFINITY,
+        ((double)INT_MAX + 1.0) * TARGET_DAMAGE / (BLOCK_SZ - 3),
+        ((double)INT_MIN - 1.0) * TARGET_DAMAGE / (BLOCK_SZ - 3),
+        DBL_MAX, -DBL_MAX
+    };
+    size_t damage_index;
+
+    for (damage_index = 0; damage_index < NELEM(invalid_damage);
+         damage_index++) {
+        reset_frame();
+        whiteRGBA = UINT32_C(0x11223344);
+
+        Gui_paint_setup_target(
+            10, 20, 0, invalid_damage[damage_index], false);
+
+        TEST_CHECK(fake_sdl_renderer.frame_result
+                   == RENDERER_STATUS_INVALID_ARGUMENT);
+        TEST_CHECK(event_count == 1);
+        TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+        TEST_CHECK(blend_attempts == 0);
+        TEST_CHECK(stroke_attempts == 0);
+        TEST_CHECK(fill_attempts == 0);
+        TEST_CHECK(flush_attempts == 0);
+        Gui_paint_setup_target(10, 20, 0, 125.0, false);
+        TEST_CHECK(event_count == 1);
+        TEST_CHECK(image_attempts == 1);
+        TEST_CHECK(blend_attempts == 0);
+        TEST_CHECK(check_no_legacy_primitives() == 0);
+    }
+    return 0;
+}
+
+static int check_target_int_coordinate_overflow_is_sticky(void)
+{
+    reset_frame();
+    whiteRGBA = UINT32_C(0x11223344);
+
+    Gui_paint_setup_target(INT_MAX, 20, 0, 125.0, false);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    Gui_paint_setup_target(10, 20, 0, 125.0, false);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(check_no_legacy_primitives() == 0);
+
+    reset_frame();
+    whiteRGBA = UINT32_C(0x11223344);
+
+    Gui_paint_setup_target(10, INT_MAX, 0, 125.0, false);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+
+    reset_frame();
+    fake_setup.mode = TEAM_PLAY;
+    whiteRGBA = UINT32_C(0x11223344);
+
+    Gui_paint_setup_target(
+        INT_MAX, 20, 7, TARGET_DAMAGE, false);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(map_text_attempts == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+
+    reset_frame();
+    whiteRGBA = UINT32_C(0x11223344);
+
+    Gui_paint_setup_target(10, INT_MIN, 0, -125.0, false);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    return check_no_legacy_primitives();
+}
+
+static int check_target_float_extent_collapse_is_sticky(void)
+{
+    reset_frame();
+    whiteRGBA = UINT32_C(0x11223344);
+
+    Gui_paint_setup_target(INT_MAX - 5, 20, 0, 125.0, false);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(map_text_attempts == 0);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    Gui_paint_setup_target(10, 20, 0, 125.0, false);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(image_attempts == 1);
+
+    reset_frame();
+    fake_setup.mode = TEAM_PLAY;
+    whiteRGBA = UINT32_C(0x11223344);
+
+    Gui_paint_setup_target(10, INT64_C(1) << 26, 7, 0.0, false);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(events[1] == PAINT_EVENT_MAP_TEXT);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(map_text_attempts == 1);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(stroke_attempts == 0);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    Gui_paint_setup_target(10, 20, 7, 125.0, false);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(map_text_attempts == 1);
+    return check_no_legacy_primitives();
+}
+
+static int check_failed_target_stage_is_sticky(
+    PaintEvent expected_last_event, RendererStatus expected_result)
+{
+    int prior_event_count;
+    int prior_image_attempts;
+    int prior_map_text_attempts;
+    int prior_blend_attempts;
+    int prior_stroke_attempts;
+    int prior_fill_attempts;
+    int prior_flush_attempts;
+
+    Gui_paint_setup_target(10, 20, 7, 125.0, true);
+    TEST_CHECK(fake_sdl_renderer.frame_result == expected_result);
+    TEST_CHECK(event_count > 0);
+    TEST_CHECK(events[event_count - 1] == expected_last_event);
+    TEST_CHECK(check_no_legacy_primitives() == 0);
+
+    prior_event_count = event_count;
+    prior_image_attempts = image_attempts;
+    prior_map_text_attempts = map_text_attempts;
+    prior_blend_attempts = blend_attempts;
+    prior_stroke_attempts = stroke_attempts;
+    prior_fill_attempts = fill_attempts;
+    prior_flush_attempts = flush_attempts;
+    Gui_paint_setup_target(10, 20, 7, 125.0, true);
+    TEST_CHECK(fake_sdl_renderer.frame_result == expected_result);
+    TEST_CHECK(event_count == prior_event_count);
+    TEST_CHECK(image_attempts == prior_image_attempts);
+    TEST_CHECK(map_text_attempts == prior_map_text_attempts);
+    TEST_CHECK(blend_attempts == prior_blend_attempts);
+    TEST_CHECK(stroke_attempts == prior_stroke_attempts);
+    TEST_CHECK(fill_attempts == prior_fill_attempts);
+    TEST_CHECK(flush_attempts == prior_flush_attempts);
+    return check_no_legacy_primitives();
+}
+
+static int check_target_failures_stop_later_work(void)
+{
+    reset_frame();
+    fake_setup.mode = TEAM_PLAY;
+    image_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    TEST_CHECK(check_failed_target_stage_is_sticky(
+        PAINT_EVENT_IMAGE, RENDERER_STATUS_RESOURCE_MISMATCH) == 0);
+    TEST_CHECK(map_text_attempts == 0);
+    TEST_CHECK(blend_attempts == 0);
+
+    reset_frame();
+    fake_setup.mode = TEAM_PLAY;
+    map_text_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    TEST_CHECK(check_failed_target_stage_is_sticky(
+        PAINT_EVENT_MAP_TEXT, RENDERER_STATUS_OUT_OF_MEMORY) == 0);
+    TEST_CHECK(blend_attempts == 0);
+
+    reset_frame();
+    fake_setup.mode = TEAM_PLAY;
+    blend_failure_attempt = 1;
+    blend_failure_result = RENDERER_STATUS_BACKEND_ERROR;
+    TEST_CHECK(check_failed_target_stage_is_sticky(
+        PAINT_EVENT_BLEND, RENDERER_STATUS_BACKEND_ERROR) == 0);
+    TEST_CHECK(stroke_attempts == 0);
+
+    reset_frame();
+    fake_setup.mode = TEAM_PLAY;
+    stroke_failure_attempt = 1;
+    stroke_failure_result = RENDERER_STATUS_OUT_OF_MEMORY;
+    TEST_CHECK(check_failed_target_stage_is_sticky(
+        PAINT_EVENT_STROKE, RENDERER_STATUS_OUT_OF_MEMORY) == 0);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+
+    reset_frame();
+    fake_setup.mode = TEAM_PLAY;
+    fill_result = RENDERER_STATUS_INVALID_ARGUMENT;
+    TEST_CHECK(check_failed_target_stage_is_sticky(
+        PAINT_EVENT_FLUSH, RENDERER_STATUS_INVALID_ARGUMENT) == 0);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 0);
+    TEST_CHECK(flush_attempts == 1);
+
+    reset_frame();
+    fake_setup.mode = TEAM_PLAY;
+    fill_result = RENDERER_STATUS_INVALID_ARGUMENT;
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    TEST_CHECK(check_failed_target_stage_is_sticky(
+        PAINT_EVENT_FLUSH, RENDERER_STATUS_INVALID_ARGUMENT) == 0);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 0);
+    TEST_CHECK(flush_attempts == 1);
+
+    reset_frame();
+    fake_setup.mode = TEAM_PLAY;
+    flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    TEST_CHECK(check_failed_target_stage_is_sticky(
+        PAINT_EVENT_FLUSH, RENDERER_STATUS_BACKEND_ERROR) == 0);
+    TEST_CHECK(fill_attempts == 1);
+    TEST_CHECK(successful_fills == 1);
+    TEST_CHECK(flush_attempts == 1);
+    return 0;
+}
+
 int main(void)
 {
+    if (check_target_full_order_and_geometry() != 0)
+        return 1;
+    if (check_target_optional_paths_and_own_color() != 0)
+        return 1;
+    if (check_target_unbounded_finite_damage() != 0)
+        return 1;
+    if (check_target_invalid_damage_is_sticky() != 0)
+        return 1;
+    if (check_target_int_coordinate_overflow_is_sticky() != 0)
+        return 1;
+    if (check_target_float_extent_collapse_is_sticky() != 0)
+        return 1;
+    if (check_target_failures_stop_later_work() != 0)
+        return 1;
     if (check_map_constant_fills_are_semantic() != 0)
         return 1;
     if (check_map_fill_degenerate_geometry_is_preserved() != 0)
