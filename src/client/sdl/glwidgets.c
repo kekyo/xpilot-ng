@@ -1542,6 +1542,9 @@ static void Paint_BoolChooserWidget( GLWidget *widget )
 {
     /*static int name_color   = 0xffff66ff;*/
     BoolChooserWidget *wid_info;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
 
     if (!widget) {
     	error("Paint_BoolChooserWidget: widget missing!");
@@ -1557,15 +1560,15 @@ static void Paint_BoolChooserWidget( GLWidget *widget )
     	error("Paint_BoolChooserWidget: wid_info missing!");
 	return;
     }
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
 
     if ( (wid_info->bgcolor) && *(wid_info->bgcolor) ) {
-    	set_alphacolor( *(wid_info->bgcolor) );
-    	glBegin(GL_QUADS);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y+widget->bounds.h	);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y+widget->bounds.h	);
-    	glEnd();
+	status = Fill_semantic_widget_bounds(
+	    sdl_renderer, renderer, &widget->bounds, *(wid_info->bgcolor));
+	if (status != RENDERER_STATUS_OK)
+	    warn("Could not draw boolean chooser background");
     }
 }
 
@@ -1802,6 +1805,10 @@ static void IntChooserWidget_Subtract( void *data )
 static void Paint_IntChooserWidget( GLWidget *widget )
 {
     IntChooserWidget *wid_info;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    Uint32 color;
 
     if (!widget) {
     	error("Paint_IntChooserWidget: argument is NULL!");
@@ -1814,23 +1821,31 @@ static void Paint_IntChooserWidget( GLWidget *widget )
     	error("Paint_IntChooserWidget: wid_info missing");
 	return;
     }
-    
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
+
     if (wid_info->direction > 0) --(wid_info->direction);
     else if (wid_info->direction < 0) ++(wid_info->direction);
 
     if ( (wid_info->bgcolor) && *(wid_info->bgcolor) ) {
-    	set_alphacolor(*(wid_info->bgcolor));
-    	glBegin(GL_QUADS);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y+widget->bounds.h	);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y+widget->bounds.h	);
-    	glEnd();
+	status = Fill_semantic_widget_bounds(
+	    sdl_renderer, renderer, &widget->bounds, *(wid_info->bgcolor));
+	if (status != RENDERER_STATUS_OK) {
+	    warn("Could not draw integer chooser background");
+	    return;
+	}
     }
-    if ( wid_info->fgcolor )
-    	disp_text(&(wid_info->valuetex), *(wid_info->fgcolor), RIGHT, CENTER, wid_info->rightarrow->bounds.x-1/*value_>*/-2/*>_|*/, draw_height - widget->bounds.y - widget->bounds.h/2, true );
-    else
-    	disp_text(&(wid_info->valuetex), whiteRGBA, RIGHT, CENTER, wid_info->rightarrow->bounds.x-1/*value_>*/-2/*>_|*/, draw_height - widget->bounds.y - widget->bounds.h/2, true );
+    color = wid_info->fgcolor ? *(wid_info->fgcolor) : whiteRGBA;
+    status = Track_semantic_widget(
+	sdl_renderer,
+	disp_text(
+	    &(wid_info->valuetex), color, RIGHT, CENTER,
+	    wid_info->rightarrow->bounds.x - 1/*value_>*/ - 2/*>_|*/,
+	    draw_height - widget->bounds.y - widget->bounds.h / 2,
+	    true));
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw integer chooser value");
 }
 
 GLWidget *Init_IntChooserWidget( const char *name, int *value, int minval, int maxval, Uint32 *fgcolor,
@@ -2063,6 +2078,10 @@ static void DoubleChooserWidget_Subtract( void *data )
 static void Paint_DoubleChooserWidget( GLWidget *widget )
 {
     DoubleChooserWidget *wid_info;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    Uint32 color;
 
     if (!widget) {
     	error("Paint_DoubleChooserWidget: argument is NULL!");
@@ -2075,24 +2094,31 @@ static void Paint_DoubleChooserWidget( GLWidget *widget )
     	error("Paint_DoubleChooserWidget: wid_info missing");
 	return;
     }
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
 
     if (wid_info->direction > 0) --(wid_info->direction);
     else if (wid_info->direction < 0) ++(wid_info->direction);
 
     if ( (wid_info->bgcolor) && *(wid_info->bgcolor) ) {
-    	set_alphacolor(*(wid_info->bgcolor));
-    	glBegin(GL_QUADS);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y+widget->bounds.h	);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y+widget->bounds.h	);
-    	glEnd();
+	status = Fill_semantic_widget_bounds(
+	    sdl_renderer, renderer, &widget->bounds, *(wid_info->bgcolor));
+	if (status != RENDERER_STATUS_OK) {
+	    warn("Could not draw double chooser background");
+	    return;
+	}
     }
-
-    if ( wid_info->fgcolor )
-    	disp_text(&(wid_info->valuetex), *(wid_info->fgcolor), RIGHT, CENTER, wid_info->rightarrow->bounds.x-1/*value_>*/-2/*>_|*/, draw_height - widget->bounds.y - widget->bounds.h/2, true );
-    else
-    	disp_text(&(wid_info->valuetex), whiteRGBA, RIGHT, CENTER, wid_info->rightarrow->bounds.x-1/*value_>*/-2/*>_|*/, draw_height - widget->bounds.y - widget->bounds.h/2, true );
+    color = wid_info->fgcolor ? *(wid_info->fgcolor) : whiteRGBA;
+    status = Track_semantic_widget(
+	sdl_renderer,
+	disp_text(
+	    &(wid_info->valuetex), color, RIGHT, CENTER,
+	    wid_info->rightarrow->bounds.x - 1/*value_>*/ - 2/*>_|*/,
+	    draw_height - widget->bounds.y - widget->bounds.h / 2,
+	    true));
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw double chooser value");
 }
 
 GLWidget *Init_DoubleChooserWidget( const char *name, double *value, double minval, double maxval,

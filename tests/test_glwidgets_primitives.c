@@ -103,19 +103,30 @@ static RendererStatus flush_result;
 static RendererStatus text_result;
 static int clipboard_attempts;
 static char clipboard_text[64];
+static int live_text_allocations;
 
 static TextRenderer fake_text_renderer = {1};
 static TextRendererCache fake_text_cache = {1};
+static setup_t fake_setup = {
+    .frames_per_second = 60
+};
 
 long loopsSlow;
 unsigned draw_width = 160;
 unsigned draw_height = 101;
 double clientFPS = 60.0;
 double tbl_sin[TABLE_SIZE];
+int maxFPS = 60;
 Uint32 redRGBA = 0xff0000ff;
 Uint32 greenRGBA = 0x00ff00ff;
 Uint32 whiteRGBA = 0xffffffff;
+Uint32 yellowRGBA = 0xffff00ff;
+Uint32 nullRGBA = 0x00000000;
 font_data gamefont;
+setup_t *Setup = &fake_setup;
+GLWidget *MainWidget;
+GLWidget *clicktarget[NUM_MOUSE_BUTTONS];
+GLWidget *hovertarget;
 
 static int color_equal(RendererColor actual, RendererColor expected)
 {
@@ -312,6 +323,7 @@ RendererStatus Sdl_renderer_flush_preserving_legacy(SdlRenderer *renderer)
 bool render_text(font_data *font, const char *text,
                  string_tex_t *string_texture)
 {
+    string_tex_t replacement = {0};
     size_t length;
     char *copy;
 
@@ -322,13 +334,18 @@ bool render_text(font_data *font, const char *text,
     if (copy == NULL)
         return false;
     memcpy(copy, text, length + 1);
-    memset(string_texture, 0, sizeof(*string_texture));
-    string_texture->text_renderer = &fake_text_renderer;
-    string_texture->cache = &fake_text_cache;
-    string_texture->text = copy;
-    string_texture->width = 13;
-    string_texture->height = 7;
-    string_texture->font_height = 7;
+    replacement.text_renderer = &fake_text_renderer;
+    replacement.cache = &fake_text_cache;
+    replacement.text = copy;
+    replacement.width = 13;
+    replacement.height = 7;
+    replacement.font_height = 7;
+    if (string_texture->text != NULL) {
+        free(string_texture->text);
+        live_text_allocations--;
+    }
+    *string_texture = replacement;
+    live_text_allocations++;
     return true;
 }
 
@@ -363,7 +380,10 @@ void free_string_texture(string_tex_t *string_texture)
 {
     if (string_texture == NULL)
         return;
-    free(string_texture->text);
+    if (string_texture->text != NULL) {
+        free(string_texture->text);
+        live_text_allocations--;
+    }
     memset(string_texture, 0, sizeof(*string_texture));
 }
 
@@ -638,6 +658,24 @@ static int check_successful_text_without_background(
     return 0;
 }
 
+static int check_successful_preflight_only(void)
+{
+    TEST_CHECK(event_count == 0);
+    TEST_CHECK(preflight_attempts == 1);
+    TEST_CHECK(preflight_order == 1);
+    TEST_CHECK(call_order == 1);
+    TEST_CHECK(blend_attempts == 0);
+    TEST_CHECK(draw_attempts == 0);
+    TEST_CHECK(fill_attempts == 0);
+    TEST_CHECK(flush_attempts == 0);
+    TEST_CHECK(text_attempts == 0);
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(legacy_begin_calls == 0);
+    TEST_CHECK(legacy_vertex_calls == 0);
+    TEST_CHECK(legacy_color_calls == 0);
+    return 0;
+}
+
 static int check_direction_geometry(void)
 {
     static const ArrowWidget_dir_t directions[4] = {
@@ -881,10 +919,21 @@ static int check_radio_background_text_and_toggle(void)
     return 0;
 }
 
+static int decayed_direction(int direction)
+{
+    if (direction > 0)
+        return direction - 1;
+    if (direction < 0)
+        return direction + 1;
+    return 0;
+}
+
 static int check_text_failure_short_circuit_for_widget(
-    GLWidget *widget, int has_background)
+    GLWidget *widget, int has_background, int *direction)
 {
     int expected_event_count = has_background ? 4 : 1;
+    int expected_direction = direction == NULL
+        ? 0 : decayed_direction(*direction);
     int blend_attempts_after_failure;
     int fill_attempts_after_failure;
     int flush_attempts_after_failure;
@@ -893,6 +942,8 @@ static int check_text_failure_short_circuit_for_widget(
     reset_frame();
     text_result = RENDERER_STATUS_BACKEND_ERROR;
     widget->Draw(widget);
+    if (direction != NULL)
+        TEST_CHECK(*direction == expected_direction);
     TEST_CHECK(event_count == expected_event_count);
     TEST_CHECK(events[expected_event_count - 1] == DRAW_EVENT_TEXT);
     TEST_CHECK(preflight_attempts == 1);
@@ -921,6 +972,8 @@ static int check_text_failure_short_circuit_for_widget(
     flush_attempts_after_failure = flush_attempts;
     text_result = RENDERER_STATUS_OK;
     widget->Draw(widget);
+    if (direction != NULL)
+        TEST_CHECK(*direction == expected_direction);
     TEST_CHECK(preflight_attempts == 2);
     TEST_CHECK(event_count == expected_event_count);
     TEST_CHECK(blend_attempts == blend_attempts_after_failure);
@@ -954,8 +1007,10 @@ static int check_text_failure_short_circuit(void)
         &on_texture, &off_texture, NULL, NULL, false);
     TEST_CHECK(label != NULL);
     TEST_CHECK(radio != NULL);
-    TEST_CHECK(check_text_failure_short_circuit_for_widget(label, 0) == 0);
-    TEST_CHECK(check_text_failure_short_circuit_for_widget(radio, 1) == 0);
+    TEST_CHECK(check_text_failure_short_circuit_for_widget(
+        label, 0, NULL) == 0);
+    TEST_CHECK(check_text_failure_short_circuit_for_widget(
+        radio, 1, NULL) == 0);
 
     destroy_widget(label);
     destroy_widget(radio);
@@ -1231,13 +1286,20 @@ static int check_slide_failure_short_circuit(void)
     return 0;
 }
 
-static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
+static int check_fill_failure_short_circuit_for_widget(
+    GLWidget *widget, int *direction)
 {
+    int expected_direction;
+
     TEST_CHECK(widget != NULL);
 
     reset_frame();
     blend_result = RENDERER_STATUS_INVALID_ARGUMENT;
+    expected_direction = direction == NULL
+        ? 0 : decayed_direction(*direction);
     widget->Draw(widget);
+    if (direction != NULL)
+        TEST_CHECK(*direction == expected_direction);
     TEST_CHECK(event_count == 1);
     TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
     TEST_CHECK(preflight_attempts == 1);
@@ -1250,6 +1312,8 @@ static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_INVALID_ARGUMENT);
     widget->Draw(widget);
+    if (direction != NULL)
+        TEST_CHECK(*direction == expected_direction);
     TEST_CHECK(preflight_attempts == 2);
     TEST_CHECK(event_count == 1);
     TEST_CHECK(blend_attempts == 1);
@@ -1262,7 +1326,11 @@ static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
 
     reset_frame();
     fill_result = RENDERER_STATUS_RESOURCE_MISMATCH;
+    expected_direction = direction == NULL
+        ? 0 : decayed_direction(*direction);
     widget->Draw(widget);
+    if (direction != NULL)
+        TEST_CHECK(*direction == expected_direction);
     TEST_CHECK(event_count == 2);
     TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
     TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
@@ -1278,6 +1346,8 @@ static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_RESOURCE_MISMATCH);
     widget->Draw(widget);
+    if (direction != NULL)
+        TEST_CHECK(*direction == expected_direction);
     TEST_CHECK(preflight_attempts == 2);
     TEST_CHECK(event_count == 2);
     TEST_CHECK(blend_attempts == 1);
@@ -1291,7 +1361,11 @@ static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
 
     reset_frame();
     flush_result = RENDERER_STATUS_BACKEND_ERROR;
+    expected_direction = direction == NULL
+        ? 0 : decayed_direction(*direction);
     widget->Draw(widget);
+    if (direction != NULL)
+        TEST_CHECK(*direction == expected_direction);
     TEST_CHECK(event_count == 3);
     TEST_CHECK(events[0] == DRAW_EVENT_BLEND);
     TEST_CHECK(events[1] == DRAW_EVENT_FILL_RECT);
@@ -1309,6 +1383,8 @@ static int check_fill_failure_short_circuit_for_widget(GLWidget *widget)
     TEST_CHECK(fake_sdl_renderer.frame_result
                == RENDERER_STATUS_BACKEND_ERROR);
     widget->Draw(widget);
+    if (direction != NULL)
+        TEST_CHECK(*direction == expected_direction);
     TEST_CHECK(preflight_attempts == 2);
     TEST_CHECK(event_count == 3);
     TEST_CHECK(blend_attempts == 1);
@@ -1339,8 +1415,10 @@ static int check_fill_failure_short_circuit(void)
     TEST_CHECK(scrollbar != NULL);
     SetBounds_GLWidget(button, &bounds);
     SetBounds_GLWidget(scrollbar, &bounds);
-    TEST_CHECK(check_fill_failure_short_circuit_for_widget(button) == 0);
-    TEST_CHECK(check_fill_failure_short_circuit_for_widget(scrollbar) == 0);
+    TEST_CHECK(check_fill_failure_short_circuit_for_widget(
+        button, NULL) == 0);
+    TEST_CHECK(check_fill_failure_short_circuit_for_widget(
+        scrollbar, NULL) == 0);
 
     destroy_widget(button);
     destroy_widget(scrollbar);
@@ -1365,11 +1443,263 @@ static int check_label_radio_background_failure_short_circuit(void)
         &on_texture, &off_texture, NULL, NULL, false);
     TEST_CHECK(label != NULL);
     TEST_CHECK(radio != NULL);
-    TEST_CHECK(check_fill_failure_short_circuit_for_widget(label) == 0);
-    TEST_CHECK(check_fill_failure_short_circuit_for_widget(radio) == 0);
+    TEST_CHECK(check_fill_failure_short_circuit_for_widget(
+        label, NULL) == 0);
+    TEST_CHECK(check_fill_failure_short_circuit_for_widget(
+        radio, NULL) == 0);
 
     destroy_widget(label);
     destroy_widget(radio);
+    return 0;
+}
+
+typedef struct ChooserUpdateCapture {
+    int calls;
+    const char *value;
+} ChooserUpdateCapture;
+
+static void capture_chooser_update(void *data, const char *value)
+{
+    ChooserUpdateCapture *capture = data;
+
+    capture->calls++;
+    capture->value = value;
+}
+
+static int check_bool_chooser_parent_paint(void)
+{
+    const RendererColor background_color = {0x90, 0xab, 0xcd, 0xef};
+    Uint32 foreground = 0x12345678;
+    Uint32 background = 0x90abcdef;
+    Uint32 zero_background = 0;
+    SDL_Rect bounds = {7, 9, 41, 13};
+    ChooserUpdateCapture capture = {0, NULL};
+    bool value = false;
+    int allocations_before = live_text_allocations;
+    GLWidget *widget;
+    BoolChooserWidget *info;
+    LabeledRadiobuttonWidget *button_info;
+
+    widget = Init_BoolChooserWidget(
+        "Boolean", &value, &foreground, &background,
+        capture_chooser_update, &capture);
+    TEST_CHECK(widget != NULL);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+    TEST_CHECK(widget->children == info->name);
+    TEST_CHECK(info->name->next == info->buttonwidget);
+    TEST_CHECK(info->buttonwidget->next == NULL);
+    button_info = info->buttonwidget->wid_info;
+    TEST_CHECK(button_info != NULL);
+    TEST_CHECK(!button_info->state);
+    SetBounds_GLWidget(widget, &bounds);
+
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_fill(
+        7.0f, 9.0f, 41.0f, 13.0f, background_color) == 0);
+    TEST_CHECK(text_attempts == 0);
+    TEST_CHECK(!value);
+    TEST_CHECK(!button_info->state);
+    TEST_CHECK(capture.calls == 0);
+
+    TEST_CHECK(check_fill_failure_short_circuit_for_widget(
+        widget, NULL) == 0);
+    TEST_CHECK(!value);
+    TEST_CHECK(!button_info->state);
+    TEST_CHECK(capture.calls == 0);
+    destroy_widget(widget);
+    TEST_CHECK(live_text_allocations == allocations_before);
+
+    widget = Init_BoolChooserWidget(
+        "Null background", &value, &foreground, NULL,
+        capture_chooser_update, &capture);
+    TEST_CHECK(widget != NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_preflight_only() == 0);
+    destroy_widget(widget);
+    TEST_CHECK(live_text_allocations == allocations_before);
+
+    widget = Init_BoolChooserWidget(
+        "Zero background", &value, &foreground, &zero_background,
+        capture_chooser_update, &capture);
+    TEST_CHECK(widget != NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_preflight_only() == 0);
+    destroy_widget(widget);
+    TEST_CHECK(live_text_allocations == allocations_before);
+    return 0;
+}
+
+static int check_int_chooser_parent_paint(void)
+{
+    const RendererColor background_color = {0x23, 0x45, 0x67, 0x00};
+    Uint32 foreground = 0x12345678;
+    Uint32 background = 0x23456700;
+    SDL_Rect bounds = {11, 17, 53, 9};
+    ChooserUpdateCapture capture = {0, NULL};
+    int value = 4;
+    int allocations_before = live_text_allocations;
+    int allocations_before_update;
+    GLWidget *widget = Init_IntChooserWidget(
+        "Integer", &value, 0, 10, &foreground, &background,
+        capture_chooser_update, &capture);
+    IntChooserWidget *info;
+    ArrowWidget *right_arrow;
+
+    TEST_CHECK(widget != NULL);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+    TEST_CHECK(widget->children == info->name);
+    TEST_CHECK(info->name->next == info->leftarrow);
+    TEST_CHECK(info->leftarrow->next == info->rightarrow);
+    TEST_CHECK(info->rightarrow->next == NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    TEST_CHECK(info->rightarrow->bounds.x == 59);
+    TEST_CHECK(info->rightarrow->bounds.y == 20);
+    TEST_CHECK(info->rightarrow->bounds.w == 3);
+    TEST_CHECK(info->rightarrow->bounds.h == 3);
+
+    right_arrow = info->rightarrow->wid_info;
+    TEST_CHECK(right_arrow != NULL);
+    TEST_CHECK(!right_arrow->locked);
+    TEST_CHECK(!right_arrow->tap);
+    allocations_before_update = live_text_allocations;
+    info->rightarrow->button(
+        2, SDL_PRESSED, 0, 0, info->rightarrow->buttondata);
+    TEST_CHECK(value == 5);
+    TEST_CHECK(info->direction == 2);
+    TEST_CHECK(right_arrow->tap);
+    TEST_CHECK(capture.calls == 1);
+    TEST_CHECK(capture.value == NULL);
+    TEST_CHECK(strcmp(info->valuetex.text, "5") == 0);
+    TEST_CHECK(live_text_allocations == allocations_before_update);
+
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_background_text(
+        11.0f, 17.0f, 53.0f, 9.0f, background_color,
+        &info->valuetex, 0x12345678, RIGHT, CENTER, 56, 80) == 0);
+    TEST_CHECK(info->direction == 1);
+    TEST_CHECK(right_arrow->tap);
+    TEST_CHECK(value == 5);
+    TEST_CHECK(capture.calls == 1);
+
+    foreground = 0;
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_background_text(
+        11.0f, 17.0f, 53.0f, 9.0f, background_color,
+        &info->valuetex, 0x00000000, RIGHT, CENTER, 56, 80) == 0);
+    TEST_CHECK(info->direction == 0);
+    TEST_CHECK(right_arrow->tap);
+
+    info->direction = 2;
+    TEST_CHECK(check_fill_failure_short_circuit_for_widget(
+        widget, &info->direction) == 0);
+    TEST_CHECK(right_arrow->tap);
+    TEST_CHECK(value == 5);
+    TEST_CHECK(capture.calls == 1);
+
+    info->direction = 2;
+    TEST_CHECK(check_text_failure_short_circuit_for_widget(
+        widget, 1, &info->direction) == 0);
+    TEST_CHECK(right_arrow->tap);
+    TEST_CHECK(value == 5);
+    TEST_CHECK(capture.calls == 1);
+
+    destroy_widget(widget);
+    TEST_CHECK(live_text_allocations == allocations_before);
+    return 0;
+}
+
+static int check_double_chooser_parent_paint(void)
+{
+    const RendererColor background_color = {0x90, 0xab, 0xcd, 0xef};
+    Uint32 background = 0x90abcdef;
+    SDL_Rect bounds = {23, 29, 55, 11};
+    ChooserUpdateCapture capture = {0, NULL};
+    double value = 1.25;
+    int allocations_before = live_text_allocations;
+    int allocations_before_update;
+    GLWidget *widget = Init_DoubleChooserWidget(
+        "Double", &value, 0.0, 2.0, NULL, NULL,
+        capture_chooser_update, &capture);
+    DoubleChooserWidget *info;
+    ArrowWidget *left_arrow;
+
+    TEST_CHECK(widget != NULL);
+    info = widget->wid_info;
+    TEST_CHECK(info != NULL);
+    TEST_CHECK(widget->children == info->name);
+    TEST_CHECK(info->name->next == info->leftarrow);
+    TEST_CHECK(info->leftarrow->next == info->rightarrow);
+    TEST_CHECK(info->rightarrow->next == NULL);
+    SetBounds_GLWidget(widget, &bounds);
+    TEST_CHECK(info->rightarrow->bounds.x == 73);
+    TEST_CHECK(info->rightarrow->bounds.y == 33);
+    TEST_CHECK(info->rightarrow->bounds.w == 3);
+    TEST_CHECK(info->rightarrow->bounds.h == 3);
+
+    left_arrow = info->leftarrow->wid_info;
+    TEST_CHECK(left_arrow != NULL);
+    TEST_CHECK(!left_arrow->locked);
+    TEST_CHECK(!left_arrow->tap);
+    allocations_before_update = live_text_allocations;
+    info->leftarrow->button(
+        2, SDL_PRESSED, 0, 0, info->leftarrow->buttondata);
+    TEST_CHECK(value > 1.239 && value < 1.241);
+    TEST_CHECK(info->direction == -2);
+    TEST_CHECK(left_arrow->tap);
+    TEST_CHECK(capture.calls == 1);
+    TEST_CHECK(capture.value == NULL);
+    TEST_CHECK(strcmp(info->valuetex.text, "1.24") == 0);
+    TEST_CHECK(live_text_allocations == allocations_before_update);
+
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_text_without_background(
+        &info->valuetex, 0xffffffff,
+        RIGHT, CENTER, 70, 67) == 0);
+    TEST_CHECK(info->direction == -1);
+    TEST_CHECK(left_arrow->tap);
+    TEST_CHECK(capture.calls == 1);
+
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_text_without_background(
+        &info->valuetex, 0xffffffff,
+        RIGHT, CENTER, 70, 67) == 0);
+    TEST_CHECK(info->direction == 0);
+    TEST_CHECK(left_arrow->tap);
+
+    info->direction = -2;
+    TEST_CHECK(check_text_failure_short_circuit_for_widget(
+        widget, 0, &info->direction) == 0);
+    TEST_CHECK(left_arrow->tap);
+    TEST_CHECK(capture.calls == 1);
+
+    info->bgcolor = &background;
+    info->direction = -2;
+    TEST_CHECK(check_fill_failure_short_circuit_for_widget(
+        widget, &info->direction) == 0);
+    TEST_CHECK(left_arrow->tap);
+    TEST_CHECK(capture.calls == 1);
+
+    reset_frame();
+    widget->Draw(widget);
+    TEST_CHECK(check_successful_background_text(
+        23.0f, 29.0f, 55.0f, 11.0f, background_color,
+        &info->valuetex, 0xffffffff, RIGHT, CENTER, 70, 67) == 0);
+    TEST_CHECK(info->direction == 0);
+    TEST_CHECK(left_arrow->tap);
+
+    destroy_widget(widget);
+    TEST_CHECK(live_text_allocations == allocations_before);
     return 0;
 }
 
@@ -1431,6 +1761,10 @@ int main(void)
     TEST_CHECK(check_radio_background_text_and_toggle() == 0);
     TEST_CHECK(check_text_failure_short_circuit() == 0);
     TEST_CHECK(check_label_radio_background_failure_short_circuit() == 0);
+    TEST_CHECK(check_bool_chooser_parent_paint() == 0);
+    TEST_CHECK(check_int_chooser_parent_paint() == 0);
+    TEST_CHECK(check_double_chooser_parent_paint() == 0);
     TEST_CHECK(check_label_scrap_button() == 0);
+    TEST_CHECK(live_text_allocations == 0);
     return 0;
 }
