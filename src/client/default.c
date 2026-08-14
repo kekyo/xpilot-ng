@@ -637,7 +637,8 @@ xp_option_t default_options[] = {
 	&clientPortStart,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Use UDP ports clientPortStart - clientPortEnd (for firewalls).\n"
+	"Use TCP and UDP ports clientPortStart - clientPortEnd "
+	"(for firewalls).\n"
 	/* TODO: describe what value 0 means */),
 
     XP_INT_OPTION(
@@ -648,7 +649,8 @@ xp_option_t default_options[] = {
 	&clientPortEnd,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Use UDP ports clientPortStart - clientPortEnd (for firewalls).\n"),
+	"Use TCP and UDP ports clientPortStart - clientPortEnd "
+	"(for firewalls).\n"),
 
     XP_DOUBLE_OPTION(
 	"power",

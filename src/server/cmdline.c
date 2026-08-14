@@ -4,11 +4,11 @@
  * Copyright (C) 2000-2004 by
  *
  *      Uoti Urpala          <uau@users.sourceforge.net>
- *      Kristian Söderblom   <kps@users.sourceforge.net>
+ *      Kristian SÃ¶derblom   <kps@users.sourceforge.net>
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -3543,7 +3543,8 @@ static option_desc opts[] = {
 	&options.clientPortStart,
 	valInt,
 	tuner_dummy,
-	"Use UDP ports clientPortStart - clientPortEnd (for firewalls)\n",
+	"Use TCP ports clientPortStart - clientPortEnd for gameplay "
+	"connections (for firewalls)\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
@@ -3553,7 +3554,8 @@ static option_desc opts[] = {
 	&options.clientPortEnd,
 	valInt,
 	tuner_dummy,
-	"Use UDP ports clientPortStart - clientPortEnd (for firewalls)\n",
+	"Use TCP ports clientPortStart - clientPortEnd for gameplay "
+	"connections (for firewalls)\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {

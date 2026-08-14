@@ -151,7 +151,7 @@ int	maxMouseTurnsPS = 0;
 int	mouseMovementInterval = 0;
 int	cumulativeMouseMovement = 0;
 
-int	clientPortStart = 0;	/* First UDP port for clients */
+int	clientPortStart = 0;	/* First network port for clients */
 int	clientPortEnd = 0;	/* Last one (these are for firewalls) */
 
 byte	lose_item;		/* index for dropping owned item */

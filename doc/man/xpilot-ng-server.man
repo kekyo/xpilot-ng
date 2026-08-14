@@ -7,7 +7,7 @@ xpilot-ng-server \- server for multiplayer space war game.
 [ \fIoptions \fR]
 .SH DESCRIPTION
 .IP
-Copyright © 1991\-2005 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha Lindström, Kristian Söderblom and Erik Andersson.
+Copyright Â© 1991\-2005 by BjÃ¸rn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha LindstrÃ¶m, Kristian SÃ¶derblom and Erik Andersson.
 XPilot NG 4.7.2 comes with ABSOLUTELY NO WARRANTY; for details see the
 provided COPYING file.
 .PP
@@ -1510,12 +1510,14 @@ the password file instead is recommended.
 .HP
 \fB\-clientPortStart\fR <integer>
 .IP
-Use UDP ports clientPortStart \- clientPortEnd (for firewalls)
+Use TCP ports clientPortStart \- clientPortEnd for gameplay connections
+(for firewalls)
 [ Flags: command, defaults ]
 .HP
 \fB\-clientPortEnd\fR <integer>
 .IP
-Use UDP ports clientPortStart \- clientPortEnd (for firewalls)
+Use TCP ports clientPortStart \- clientPortEnd for gameplay connections
+(for firewalls)
 [ Flags: command, defaults ]
 .HP
 \fB\-maxPauseTime\fR <integer>

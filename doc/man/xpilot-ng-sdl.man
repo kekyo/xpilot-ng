@@ -70,12 +70,12 @@ The default value is: 15345.
 .HP
 \fB\-clientPortStart\fR <value>
 .IP
-Use UDP ports clientPortStart \- clientPortEnd (for firewalls).
+Use TCP and UDP ports clientPortStart \- clientPortEnd (for firewalls).
 The default value is: 0.
 .HP
 \fB\-clientPortEnd\fR <value>
 .IP
-Use UDP ports clientPortStart \- clientPortEnd (for firewalls).
+Use TCP and UDP ports clientPortStart \- clientPortEnd (for firewalls).
 The default value is: 0.
 .HP
 \fB\-power\fR <value>

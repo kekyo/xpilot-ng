@@ -81,10 +81,10 @@ static char		talk_str[MAX_CHARS];
 
 /*
  * Initialize the function dispatch tables.
- * There are two tables.  One for the semi-important unreliable
- * data like frame updates.
- * The other one is for the reliable data stream, which is
- * received as part of the unreliable data packets.
+ * There are two tables.  One is for semi-important frame data that may
+ * still be discarded when rendering or sending cannot keep up.
+ * The other is for the protocol's reliable data stream, retained even
+ * though the gameplay transport now provides ordered delivery.
  */
 static void Receive_init(void)
 {
@@ -367,8 +367,8 @@ int Net_setup(void)
 /*
  * Send the first packet to the server with our name,
  * nick and display contained in it.
- * The server uses this data to verify that the packet
- * is from the right UDP connection, it already has
+ * The server uses this data to verify that the stream
+ * belongs to the right contact request, since it already has
  * this info from the ENTER_GAME_pack.
  */
 #define	MAX_VERIFY_RETRIES	5
@@ -456,8 +456,8 @@ int Net_verify(char *user_name, char *nick_name, char *disp)
  * Currently there are three different buffers used:
  * 1) wbuf is used only for sending packets (write/printf).
  * 2) rbuf is used for receiving packets in (read/scanf).
- * 3) cbuf is used to copy the reliable data stream
- *    into from the raw and unreliable rbuf packets.
+ * 3) cbuf receives the protocol's reliable data stream copied
+ *    from framed records in rbuf.
  */
 int Net_init(char *server, int port)
 {
@@ -913,9 +913,10 @@ static void Net_keyboard_track(void)
 }
 
 /*
- * Do some (simple) packet loss/drop measurement
- * the results of which can be drawn on the display.
- * This is mainly for debugging and analysis.
+ * Measure skipped or discarded frame updates.  TCP prevents transport
+ * packet loss, but rendering and bounded send buffers may still cause
+ * logical frame updates to be discarded.  The result is drawn using the
+ * existing packet loss/drop display and is mainly for debugging.
  */
 static void Net_measurement(long loop, int status)
 {
