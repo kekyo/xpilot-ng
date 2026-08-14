@@ -168,7 +168,8 @@ static int Sockbuf_drain_frame_output(sockbuf_t *sbuf, sockbuf_io_fn writer)
 	    continue;
 	if (len < 0 && (errno == EWOULDBLOCK || errno == EAGAIN))
 	    return 0;
-	return Sockbuf_set_frame_error(sbuf, len == 0 ? EPIPE : errno);
+	return Sockbuf_set_frame_error(
+	    sbuf, len == 0 ? EPIPE : (errno != 0 ? errno : EIO));
     }
 
     sbuf->frame_output_len = 0;
