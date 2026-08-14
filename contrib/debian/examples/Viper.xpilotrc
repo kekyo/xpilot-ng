@@ -93,8 +93,6 @@ xpilot.sounds:			/home/mwk20/.etc/x/xpilot/sounds
 
 xpilot.maxVolume:		70
 
-xpilot.recordFile:		/home/mwk20/xpilotvid
-xpilot.keyToggleRecord:		F12
 
 xpilot.msg1:			#t:****** BALL ******
 xpilot.msg2:			#t:****** BALL - #ln ******

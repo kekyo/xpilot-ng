@@ -1,32 +1,21 @@
 #! /bin/sh
 
-# This script assumes you have the programs you want to make man pages for
-# (xpilot-ng-x11, xpilot-ng-sdl, xpilot-ng-server and/or xpilot-ng-replay)
-# in your path.
+# This script assumes xpilot-ng-sdl and/or xpilot-ng-server are in PATH.
 
-test -z "$(which help2man)" && echo "help2man not found." && exit 1
+if ! command -v help2man >/dev/null 2>&1; then
+    echo "help2man not found." >&2
+    exit 1
+fi
 
 OPTS="--no-info"
 
-test ! -z "$(which xpilot-ng-x11)" && \
-echo "Making manpage for xpilot-ng-x11 ..." && \
-help2man $OPTS --name="X11 client for multiplayer space war game." --section=6 --manual=Games --source=xpilot.sourceforge.net xpilot-ng-x11 > xpilot-ng-x11.man
-
-test ! -z "$(which xpilot-ng-sdl)" && \
+command -v xpilot-ng-sdl >/dev/null 2>&1 && \
 echo "Making manpage for xpilot-ng-sdl ..." && \
 help2man $OPTS --name="an SDL/OpenGL XPilot client." --section=6 --manual=Games --source=xpilot.sourceforge.net xpilot-ng-sdl > xpilot-ng-sdl.man
 
-test ! -z "$(which xpilot-ng-server)" && \
+command -v xpilot-ng-server >/dev/null 2>&1 && \
 echo "Making manpage for xpilot-ng-server ..." && \
 help2man $OPTS --name="server for multiplayer space war game." --section=6 --manual=Games --source=xpilot.sourceforge.net xpilot-ng-server > xpilot-ng-server.man
-
-test ! -z "$(which xpilot-ng-replay)" && \
-echo "Making manpage for xpilot-ng-replay ..." && \
-help2man $OPTS --name="Playback an XPilot session." --section=6 --manual=Games --source=xpilot.sourceforge.net xpilot-ng-replay > xpilot-ng-replay.man
-
-test ! -z "$(which xpilot-ng-xp-mapedit)" && \
-echo "Making manpage for xpilot-ng-xp-mapedit ..." && \
-help2man $OPTS --name="Edit block based XPilot maps." --section=6 --manual=Games --source=xpilot.sourceforge.net xpilot-ng-xp-mapedit > xpilot-ng-xp-mapedit.man
 # change /home/kps/install to /usr/local in man files
 # assuming PREFIX was /home/kps/install
 for i in *.man; do sed -i 's/\/home\/kps\/install/\/usr\/local/g' "$i"; done

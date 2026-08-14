@@ -185,7 +185,7 @@ am__define_uniq_tagged_files = \
   unique=`for i in $$list; do \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
-DIST_SUBDIRS = src lib doc contrib tests
+DIST_SUBDIRS = src lib doc tests
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/README.in \
 	$(srcdir)/config.h.in $(top_srcdir)/config/compile \
 	$(top_srcdir)/config/config.guess \
@@ -360,7 +360,7 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-SUBDIRS = src lib doc contrib $(am__append_1)
+SUBDIRS = src lib doc $(am__append_1)
 dist_pkgdata_DATA = mapconvert.py
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive

@@ -1,4 +1,4 @@
-SUBDIRS = src lib doc contrib
+SUBDIRS = src lib doc
 
 if COND_SDL_CLIENT
 SUBDIRS += tests

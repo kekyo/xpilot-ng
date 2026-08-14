@@ -126,6 +126,23 @@ assert_configuration_programs()
             return 1
         fi
     done
+
+    server_man="$install_prefix/share/man/man6/xpilot-ng-server.6"
+    if test ! -f "$server_man"; then
+        echo "Missing server manual: $server_man" >&2
+        return 1
+    fi
+
+    sdl_man="$install_prefix/share/man/man6/xpilot-ng-sdl.6"
+    if test "$configuration_name" = default; then
+        if test ! -f "$sdl_man"; then
+            echo "Missing SDL client manual: $sdl_man" >&2
+            return 1
+        fi
+    elif test -e "$sdl_man"; then
+        echo "Unexpected SDL client manual in server-only install: $sdl_man" >&2
+        return 1
+    fi
 }
 
 assert_runtime_help_surface()
@@ -180,7 +197,8 @@ assert_distribution_surface()
             src/client/sdl/res/ \
             src/client/sdl/xpilot.rc \
             src/client/sdl/xpilot_sdl.dsp \
-            src/client/sdl/xpilot_sdl.dsw
+            src/client/sdl/xpilot_sdl.dsw \
+            contrib/xpngcc/
         do
             case "$distribution_listing" in
                 *"/$legacy_path"*)

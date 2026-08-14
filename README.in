@@ -2,60 +2,50 @@ This is the README file for @PACKAGE_STRING@.
 
 @XP_COPYRIGHT@.
 
-Please see the COPYING file for further details.  You may not
-distribute this project without all the documentation,
-source code, and the COPYING file.
+See COPYING for the license terms.
 
 
+SUPPORTED PROGRAMS
 
-Installation instructions are in the INSTALL file.
+The supported runtime programs are:
 
-The documentation for @PACKAGE_NAME@ is far from complete.
+    xpilot-ng-sdl       SDL2/OpenGL game client
+    xpilot-ng-server    Dedicated game server
 
-For further reading, see the manuals in the doc/man directory.
+SDL is the sole graphical client platform layer. The former native X11
+client, client-side replay viewer, and block-map editor are not part of this
+source tree. A server-only build remains available.
+
+This cleanup prepares the client architecture for later portability work. It
+does not provide a WebAssembly or browser build yet.
 
 
+BUILDING
 
-OTHER SOURCES OF INFORMATION ON THE INTERNET
+Installation instructions and dependencies are documented in INSTALL. The
+usual build is:
 
-XPilot NG: http://xpilot.sourceforge.net/
+    ./configure
+    make
+    make check
+    make install
 
-XPilot FAQ: telnet meta.xpilot.org 4402
-	(also in the doc/ subdirectory)
+To omit the SDL client and build only the server and shared data, configure
+with:
 
-XPilot Page on WWW: http://www.xpilot.org/
+    ./configure --disable-sdl-client
 
-XPilot for Windows info on WWW: http://www.buckosoft.com/xpilot/
-
-XPilot Newbie Manual on WWW: http://bau2.uibk.ac.at/erwin/NM/www
-
-XPilot FTP archive: ftp://ftp.xpilot.org/pub/
-
-XPilot newsgroup: rec.games.computer.xpilot
+Manual pages for the programs are in doc/man.
 
 
 CONTRIBUTED SOFTWARE
 
-Check out the contrib directory subdirectory for some extra nifty programs.
-
-Also try the xp2 mapeditor which is included in this XPilot distribution.
-It is a nifty graphical editor with which you can design a new XPilot world.
-
-
-REPORTING PROBLEMS AND BUGS
-
-If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
-
-        @PACKAGE_BUGREPORT@
-
-Remember to include the version of @PACKAGE_NAME@, your platform and the
-symptoms in as much detail as possible.
+The contrib directory contains standalone tools that are not part of the
+normal build or source distribution. In particular, contrib/jxpmap contains a
+separate editor for polygon-based map files.
 
 
-DEVELOPERS CORNER
+REPORTING PROBLEMS
 
-A wider group of developers are discussing technical internals of the
-software on the mailing list xpilot-hacks@nslug.ns.ca. If you want to
-discuss your potential contributions to the source code, please see the
-URL http://nslug.ns.ca/mailman/listinfo/xpilot-hacks for further
-information.
+When reporting a problem to @PACKAGE_BUGREPORT@, include the version,
+platform, build configuration, and enough detail to reproduce the symptom.
