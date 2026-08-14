@@ -205,7 +205,6 @@ if test x$enable_sdl_client = xyes; then
 	PKG_CHECK_MODULES([SDL2_IMAGE], [SDL2_image >= 2.0.0])
 	PKG_CHECK_MODULES([SDL2_TTF], [SDL2_ttf >= 2.0.12])
 	PKG_CHECK_MODULES([GL], [gl])
-	PKG_CHECK_MODULES([GLU], [glu])
 	AC_DEFINE([HAVE_SDL_IMAGE], 1,
 		  [Define to 1 if you have the SDL_image library.])
 fi

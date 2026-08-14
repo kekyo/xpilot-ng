@@ -222,8 +222,6 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
-GLU_CFLAGS = @GLU_CFLAGS@
-GLU_LIBS = @GLU_LIBS@
 GL_CFLAGS = @GL_CFLAGS@
 GL_LIBS = @GL_LIBS@
 INSTALL = @INSTALL@
@@ -330,7 +328,9 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" -I$(top_srcdir)/src/common
+AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
+	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common
+
 xpilot_ng_server_SOURCES = \
 	alliance.c asteroid.c asteroid.h \
 	cannon.c cannon.h cell.c cmdline.c collision.c \

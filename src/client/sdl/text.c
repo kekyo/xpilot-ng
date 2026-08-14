@@ -36,8 +36,6 @@
     License along with this library; if not, write to the Free
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-    The SDL_GL_* functions in this file are available in the public domain.
-
     Sam Lantinga
     slouken@libsdl.org
 */
@@ -45,435 +43,257 @@
 /* $Id: text.c,v 1.36 2005/09/08 11:09:05 maximan Exp $ */
 /* modified for xpilot by Erik Andersson deity_at_home.se */
 
-#ifdef _WINDOWS
-# include <windows.h>
-# define vsnprintf _vsnprintf
-# ifndef GL_BGR
-#  define GL_BGR 0x80E0 /* OpenGL 1.2, for which I did not have headers */
-# endif
-#endif
+#include <limits.h>
 
 #include "xpclient_sdl.h"
 
-#include "sdlcompat.h"
 #include "text.h"
+#include "text_ttf_atlas.h"
 
 #define BUFSIZE 1024
 
-float modelview_matrix[16];
-int renderstyle;
-enum rendertype rendertype;
+static bool Font_is_empty(const font_data *font);
 
-void pushScreenCoordinateMatrix(void);
-void pop_projection_matrix(void);
-int next_p2 ( int a );
-void print(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, int length, const char *text, bool onHUD);
-int FTinit(font_data *font, const char * fontname, int ptsize);
-
-int next_p2 ( int a )
+static bool Font_is_empty(const font_data *font)
 {
-	int rval=1;
-	while(rval<a) rval<<=1;
-	return rval;
+    return font->requested_height == 0 && font->atlas == NULL
+	&& font->text_renderer == NULL;
 }
 
-GLuint SDL_GL_LoadTexture(SDL_Surface *surface, texcoord_t *texcoord)
+RendererStatus fontinit(font_data *ft_font, Renderer *renderer,
+			const char *fname, unsigned int size)
 {
-    GLuint texture;
-    int w, h;
-    SDL_Surface *image;
-    SDL_Rect area;
+    TTF_Font *ttf_font;
+    TextAtlas *atlas = NULL;
+    RendererStatus status;
 
-    /* Use the surface width and height expanded to powers of 2 */
-    w = next_p2(surface->w);
-    h = next_p2(surface->h);
-    texcoord->MinX = 0.0f;		 /* Min X */
-    texcoord->MinY = 0.0f;		 /* Min Y */
-    texcoord->MaxX = (GLfloat)surface->w / w;  /* Max X */
-    texcoord->MaxY = (GLfloat)surface->h / h;  /* Max Y */
-
-    image = SDL_CreateRGBSurface(
-		    0,
-    		    w, h,
-    		    32,
-		    RMASK,
-		    GMASK,
-		    BMASK,
-		    AMASK
-    		   );
-    if ( image == NULL ) {
-    	    return 0;
+    if (ft_font == NULL || renderer == NULL || fname == NULL
+	|| size == 0 || size > INT_MAX || !Font_is_empty(ft_font)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
     }
-
-    /* Copy the surface into the GL texture image */
-    area.x = 0;
-    area.y = 0;
-    area.w = surface->w;
-    area.h = surface->h;
-    if (Sdl_blit_surface_unblended(surface, &area, image, &area) < 0) {
-	fprintf(stderr, "Couldn't copy font surface: %s\n", SDL_GetError());
-	SDL_FreeSurface(image);
-	return 0;
+    ttf_font = TTF_OpenFont(fname, (int)size);
+    if (ttf_font == NULL) {
+	fprintf(stderr, "Couldn't load %u pt font from %s: %s\n", size,
+		fname, TTF_GetError());
+	return RENDERER_STATUS_BACKEND_ERROR;
     }
+    TTF_SetFontStyle(ttf_font, TTF_STYLE_NORMAL);
+    status = Text_ttf_atlas_create(renderer, ttf_font, &atlas);
+    TTF_CloseFont(ttf_font);
+    if (status != RENDERER_STATUS_OK)
+	return status;
 
-    /* Create an OpenGL texture for the image */
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D,
-    		 0,
-    		 GL_RGBA,
-    		 w, h,
-    		 0,
-    		 GL_RGBA,
-    		 GL_UNSIGNED_BYTE,
-    		 image->pixels);
-    SDL_FreeSurface(image); /* No longer needed */
-
-    return texture;
+    ft_font->requested_height = size;
+    ft_font->atlas = atlas;
+    return RENDERER_STATUS_OK;
 }
 
-int FTinit(font_data *font, const char * fontname, int ptsize)
+RendererStatus font_text_renderer_attach(font_data *ft_font,
+					 SdlRenderer *sdl_renderer)
 {
-    int i;
-    SDL_Color white = { 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE };
-    SDL_Color *forecol;
-    GLenum gl_error;
-    texcoord_t texcoords;
-    int minx = 0,miny = 0,maxx = 0,maxy = 0;
-
-    if (font == NULL || fontname == NULL || ptsize <= 0)
-	return 2;
-
-    memset(font, 0, sizeof(*font));
-
-    /* We might support changing theese later */
-    /* Look for special rendering types */
-    renderstyle = TTF_STYLE_NORMAL;
-    rendertype = RENDER_LATIN1;
-    /* Default is black and white */
-    forecol = &white;
-    
-    /* Initialize the TTF library */
-    /*if ( TTF_Init() < 0 ) {
-    	fprintf(stderr, "Couldn't initialize TTF: %s\n",SDL_GetError());
-    	return(2);
-    }*/
-    font->ttffont = TTF_OpenFont(fontname, ptsize);
-    if ( font->ttffont == NULL ) {
-    	fprintf(stderr, "Couldn't load %d pt font from %s: %s\n", ptsize, fontname, SDL_GetError());
-    	return(2);
+    if (ft_font == NULL || sdl_renderer == NULL || ft_font->atlas == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (ft_font->text_renderer != NULL) {
+	return Text_renderer_matches(ft_font->text_renderer, sdl_renderer,
+				     ft_font->atlas)
+	    ? RENDERER_STATUS_OK : RENDERER_STATUS_RESOURCE_MISMATCH;
     }
-    TTF_SetFontStyle(font->ttffont, renderstyle);
-    font->list_base=glGenLists(next_p2(NUMCHARS));
-    if (font->list_base == 0) {
-	fprintf(stderr, "Couldn't create OpenGL font display lists\n");
-	TTF_CloseFont(font->ttffont);
-	font->ttffont = NULL;
-	return 2;
-    }
-    /* Get the recommended spacing between lines of text for this font */
-    font->linespacing = TTF_FontLineSkip(font->ttffont);
-    font->h = ptsize;
-
-    for( i = 0; i < NUMCHARS; i++ ) {
-	SDL_Surface *glyph = NULL;
-	GLuint height = 0; /* kps - added default value */
-
-	memset(&texcoords, 0, sizeof(texcoords));
-	minx = miny = maxx = maxy = 0;
-
-	forecol = &white;
-	
-    	glyph = TTF_RenderGlyph_Blended( font->ttffont, i, *forecol );
-    	if(glyph) {
-	    glGetError();
-    	    font->textures[i] = SDL_GL_LoadTexture(glyph, &texcoords);
-	    gl_error = glGetError();
-	    if (font->textures[i] == 0 || gl_error != GL_NO_ERROR)
-	    	printf("Warning: Couldn't create texture: 0x%x\n", gl_error);
-	    
-    	    font->W[i] = glyph->w;
-    	    height = glyph->h;
-    	    TTF_GlyphMetrics( font->ttffont, i, &minx,&maxx,&miny,&maxy,NULL);
-   	}    
-    	SDL_FreeSurface(glyph);
-		
-    	glNewList(font->list_base+i,GL_COMPILE);
-
-    	glBindTexture(GL_TEXTURE_2D, font->textures[i]);
-    	glTranslatef(1,0,0);
-    	glPushMatrix();
-    	glBegin(GL_TRIANGLE_STRIP);
-    	    glTexCoord2f(texcoords.MinX, texcoords.MaxY);
-	    glVertex2i(0 , miny);
-     	    glTexCoord2f(texcoords.MaxX, texcoords.MaxY);
-	    glVertex2i(font->W[i] , miny);
-    	    glTexCoord2f(texcoords.MinX, texcoords.MinY);
-	    glVertex2i(0 ,miny+height );
-   	    glTexCoord2f(texcoords.MaxX, texcoords.MinY);
-	    glVertex2i(font->W[i] , miny+height);
-    	glEnd();
-    	glPopMatrix();
-    	glTranslatef((font->W[i]>3)?font->W[i]:(font->W[i] = 3) + 1,0,0);
-	/*one would think this should be += 2... I guess they overlap or the edge
-	 * isn't painted
-	 */
-	font->W[i] += 1;
-
-    	glEndList();
-    }
-    
-    /*TTF_CloseFont(font->ttffont);*/
-    /*TTF_Quit();*/
-    return 0;
+    return Text_renderer_create(sdl_renderer, ft_font->atlas,
+				&ft_font->text_renderer);
 }
 
-int fontinit(font_data *ft_font, const char * fname, unsigned int size)
+RendererStatus fontclean(font_data *ft_font)
 {
-    return FTinit(ft_font,fname,size);
-}
+    RendererStatus status;
 
-void fontclean(font_data *ft_font)
-{
     if (ft_font == NULL)
-	return;
+	return RENDERER_STATUS_INVALID_ARGUMENT;
 
-    if (ft_font->list_base != 0) {
-	glDeleteLists(ft_font->list_base, next_p2(NUMCHARS));
-	ft_font->list_base = 0;
-    }
-    glDeleteTextures(NUMCHARS, ft_font->textures);
-    memset(ft_font->textures, 0, sizeof(ft_font->textures));
+    status = Text_atlas_destroy(&ft_font->atlas);
+    if (status != RENDERER_STATUS_OK)
+	return status;
 
-    if (ft_font->ttffont != NULL) {
-	TTF_CloseFont(ft_font->ttffont);
-	ft_font->ttffont = NULL;
-    }
+    /* The facade destroy path is deliberately CPU-only. Keeping it until the
+     * fallible atlas release succeeds preserves all font state for retry. */
+    Text_renderer_destroy(&ft_font->text_renderer);
+    memset(ft_font, 0, sizeof(*ft_font));
+    return RENDERER_STATUS_OK;
 }
 
-/* A fairly straight forward function that pushes
- * a projection matrix that will make object world 
- * coordinates identical to window coordinates.
- */
-void pushScreenCoordinateMatrix(void)
+static RendererStatus Text_format(char text[BUFSIZE], const char *fmt,
+				  va_list args, size_t *text_length)
 {
-	GLint	viewport[4];
-	glPushAttrib(GL_TRANSFORM_BIT);
-	glGetIntegerv(GL_VIEWPORT, viewport);
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
-	gluOrtho2D(viewport[0],viewport[2],viewport[1],viewport[3]);
-	glPopAttrib();
+    int result;
+
+    if (text == NULL || text_length == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (fmt == NULL) {
+	text[0] = '\0';
+	*text_length = 0;
+	return RENDERER_STATUS_OK;
+    }
+    result = vsnprintf(text, BUFSIZE, fmt, args);
+    text[BUFSIZE - 1] = '\0';
+    if (result < 0) {
+	text[0] = '\0';
+	return RENDERER_STATUS_BACKEND_ERROR;
+    }
+    *text_length = strlen(text);
+    return RENDERER_STATUS_OK;
 }
 
-/* Pops the projection matrix without changing the current
- * MatrixMode.
- */
-void pop_projection_matrix(void)
+static RendererStatus Text_adapter_failure(font_data *ft_font,
+					    RendererStatus status)
 {
-	glPushAttrib(GL_TRANSFORM_BIT);
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glPopAttrib();
+    if (ft_font != NULL && ft_font->text_renderer != NULL
+	&& status != RENDERER_STATUS_OK) {
+	return Text_renderer_track_failure(ft_font->text_renderer, status);
+    }
+    return status;
 }
 
-
-fontbounds nprintsize(font_data *ft_font, int length, const char *fmt, ...)
+static RendererStatus Text_measure_bytes(font_data *ft_font,
+					 const char *text, size_t text_length,
+					 fontbounds *bounds)
 {
-    int i=0,j,textlength;
-    float len;
-    fontbounds returnval;
-    int start,end,toklen;
-	char text[BUFSIZE];  /* Holds Our String */
-	va_list ap;
-    
-    returnval.width=0.0;
-    returnval.height=0.0;
-    
-    if (ft_font == NULL) return returnval;
+    TextGeometryMetrics metrics;
+    fontbounds candidate;
+    RendererStatus status;
 
-    if (fmt == NULL)	    	    /* If There's No Text */
-    	*text=0;    	    	    /* Do Nothing */
-    else {
-    	va_start(ap, fmt);  	    /* Parses The String For Variables */
-    	vsnprintf(text, BUFSIZE, fmt, ap);    /* And Converts Symbols To Actual Numbers */
-    	va_end(ap); 	    	    /* Results Are Stored In Text */
+    if (ft_font == NULL || ft_font->text_renderer == NULL || text == NULL
+	|| bounds == NULL) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
     }
-    if (!(textlength = MIN((int)strlen(text),length))) {
-    	return returnval;
-    }
-
-    start = 0;
-    for (;;) {
-	
-	for (end=start;end<textlength;++end)
-	    if (text[end] == '\n') {
-	    	break;
-	    }
-	
-	toklen = end - start;
-	
-	len = 0.0;
-	for (j=start;j<=end-1;++j)
-	    len = len + ft_font->W[(GLubyte)text[j]];
-	
-    	if (len > returnval.width)
-	    returnval.width = len;	
-
-    	++i;
-	
-	if (end >= textlength - 1) break;
-	
-	start = end + 1;
-    }
-    /* i should be atleast 1 if we get here...*/
-    returnval.height = ft_font->h + (i-1)*ft_font->linespacing;
-    
-    return returnval;
+    status = Text_renderer_measure(
+	ft_font->text_renderer, (const unsigned char *)text, text_length,
+	&metrics);
+    if (status != RENDERER_STATUS_OK)
+	return Text_adapter_failure(ft_font, status);
+    candidate.width = metrics.width;
+    candidate.height = metrics.height;
+    *bounds = candidate;
+    return RENDERER_STATUS_OK;
 }
 
-fontbounds printsize(font_data *ft_font, const char *fmt, ...)
+RendererStatus nprintsize(font_data *ft_font, int length,
+			  fontbounds *bounds, const char *fmt, ...)
 {
-    fontbounds returnval;
-    char text[BUFSIZE];  /* Holds Our String */
-    va_list ap; 	    /* Pointer To List Of Arguments */
-    
-    returnval.width=0.0;
-    returnval.height=0.0;
-    
-    if (ft_font == NULL) return returnval;
+    char text[BUFSIZE];
+    size_t text_length;
+    RendererStatus status;
+    va_list args;
 
-
-    if (fmt == NULL)	    	    /* If There's No Text */
-    	*text=0;    	    	    /* Do Nothing */
-    else {
-    	va_start(ap, fmt);  	    /* Parses The String For Variables */
-    	vsnprintf(text, BUFSIZE, fmt, ap);    /* And Converts Symbols To Actual Numbers */
-    	va_end(ap); 	    	    /* Results Are Stored In Text */
+    if (length < 0 || bounds == NULL || ft_font == NULL
+	|| ft_font->text_renderer == NULL) {
+	return Text_adapter_failure(ft_font,
+				    RENDERER_STATUS_INVALID_ARGUMENT);
     }
-    return nprintsize(ft_font, BUFSIZE, "%s", text);
+    va_start(args, fmt);
+    status = Text_format(text, fmt, args, &text_length);
+    va_end(args);
+    if (status != RENDERER_STATUS_OK)
+	return Text_adapter_failure(ft_font, status);
+    if (text_length > (size_t)length)
+	text_length = (size_t)length;
+    return Text_measure_bytes(ft_font, text, text_length, bounds);
+}
+
+RendererStatus printsize(font_data *ft_font, fontbounds *bounds,
+			 const char *fmt, ...)
+{
+    char text[BUFSIZE];
+    size_t text_length;
+    RendererStatus status;
+    va_list args;
+
+    if (bounds == NULL || ft_font == NULL
+	|| ft_font->text_renderer == NULL) {
+	return Text_adapter_failure(ft_font,
+				    RENDERER_STATUS_INVALID_ARGUMENT);
+    }
+    va_start(args, fmt);
+    status = Text_format(text, fmt, args, &text_length);
+    va_end(args);
+    if (status != RENDERER_STATUS_OK)
+	return Text_adapter_failure(ft_font, status);
+    return Text_measure_bytes(ft_font, text, text_length, bounds);
 }
 
 bool render_text(font_data *ft_font, const char *text, string_tex_t *string_tex)
 {
-    SDL_Color white = { 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE };
-    SDL_Color *forecol;
-    SDL_Surface *string_glyph = NULL;
-    SDL_Surface *glyph = NULL;
-    SDL_Rect src, dest;
-    string_tex_t rendered = { NULL, NULL, 0, 0, 0 };
-    GLenum gl_error;
+    const char *normalized_text;
+    TextRendererCache *candidate_cache = NULL;
+    TextRendererCache *old_cache;
+    TextGeometryMetrics metrics;
+    RendererStatus status;
+    char *candidate_text;
+    char *old_text;
+    size_t text_length;
+    int width;
+    int height;
 
-    if (!(ft_font)) return false;
-    if (!(ft_font->ttffont)) return false;
-    if (!(string_tex)) return false;
-    if (!(text)) return false;
-#if 0
-    if (!strlen(text)) return false; /* something is printing an empty string each frame */
-#else
-    /* kps - fix for empty author field in cannon dodgers */
-    if (!strlen(text))
-	text = " ";
-#endif
-
-    forecol = &white;
-	
-    string_glyph = TTF_RenderText_Blended( ft_font->ttffont, text, *forecol );
-
-    if (string_glyph) {
-	int i, num = (string_glyph->w + 253) / 254;
-
-	rendered.font_height = ft_font->h;
-	rendered.height = string_glyph->h;
-	rendered.tex_list = Arraylist_alloc(sizeof(tex_t));
-	if (rendered.tex_list == NULL)
-	    goto fail;
-	rendered.text = strdup(text);
-	if (rendered.text == NULL)
-	    goto fail;
-	for( i=0 ; i<num ; ++i ) {
-	    tex_t tex;
-	    
-	    tex.texture = 0;
-	    tex.texcoords.MinX = 0.0;
-	    tex.texcoords.MaxX = 0.0;
-	    tex.texcoords.MinY = 0.0;
-	    tex.texcoords.MaxY = 0.0;
-	    tex.width = 0;
-	    
-    	    src.x   = i*254;
-	    dest.x  = 0;
-    	    src.y = dest.y = 0;
-	    if (i==num-1)
-	    	dest.w = src.w = string_glyph->w - i*254;
-	    else
-	    	dest.w = src.w = 254;
-    	    src.h = dest.h = string_glyph->h;
-	    
-	    glyph = SDL_CreateRGBSurface(0,dest.w,dest.h,32,0,0,0,0);
-	    if (glyph == NULL ||
-		SDL_SetColorKey(glyph, SDL_TRUE, 0x00000000) < 0 ||
-		SDL_BlitSurface(string_glyph, &src, glyph, &dest) < 0)
-		goto fail;
-    
-  	    glGetError();
-	    tex.texture = SDL_GL_LoadTexture(glyph,&(tex.texcoords));
-	    gl_error = glGetError();
-	    if (tex.texture == 0 || gl_error != GL_NO_ERROR) {
-		if (tex.texture != 0)
-		    glDeleteTextures(1, &tex.texture);
-		goto fail;
-	    }
-
-	    tex.width = dest.w;
-	    rendered.width += dest.w;
-	    
-	    SDL_FreeSurface(glyph);
-	    glyph = NULL;
-
-	    if (Arraylist_add(rendered.tex_list, &tex) < 0) {
-		glDeleteTextures(1, &tex.texture);
-		goto fail;
-	    }
-	}
-	SDL_FreeSurface(string_glyph);
-	*string_tex = rendered;
-    } else {
-	error("TTF_RenderText_Blended failed for [%s]: %s", text,
-	      TTF_GetError());
+    if (ft_font == NULL || ft_font->text_renderer == NULL
+	|| text == NULL || string_tex == NULL
+	|| ft_font->requested_height > INT_MAX) {
 	return false;
     }
+
+    /* Keep the old empty-author compatibility without creating a transient
+     * surface or texture for the replacement string. */
+    normalized_text = text[0] != '\0' ? text : " ";
+    if (string_tex->text_renderer == ft_font->text_renderer
+	&& string_tex->cache != NULL && string_tex->text != NULL
+	&& strcmp(string_tex->text, normalized_text) == 0) {
+	return true;
+    }
+
+    text_length = strlen(normalized_text);
+    status = Text_renderer_cache_replace(
+	&candidate_cache, ft_font->text_renderer,
+	(const unsigned char *)normalized_text, text_length);
+    if (status != RENDERER_STATUS_OK)
+	return false;
+    status = Text_renderer_cache_metrics(candidate_cache, &metrics);
+    if (status != RENDERER_STATUS_OK || metrics.width != metrics.width
+	|| metrics.height != metrics.height || metrics.width < 0.0f
+	|| metrics.height < 0.0f || (double)metrics.width > (double)INT_MAX
+	|| (double)metrics.height > (double)INT_MAX) {
+	Text_renderer_cache_destroy(&candidate_cache);
+	return false;
+    }
+    width = (int)metrics.width;
+    height = (int)metrics.height;
+    candidate_text = xp_strdup(normalized_text);
+    if (candidate_text == NULL) {
+	Text_renderer_cache_destroy(&candidate_cache);
+	return false;
+    }
+
+    old_cache = string_tex->cache;
+    old_text = string_tex->text;
+    string_tex->text_renderer = ft_font->text_renderer;
+    string_tex->cache = candidate_cache;
+    string_tex->text = candidate_text;
+    string_tex->width = width;
+    string_tex->height = height;
+    string_tex->font_height = (int)ft_font->requested_height;
+    Text_renderer_cache_destroy(&old_cache);
+    free(old_text);
     return true;
-
-fail:
-    if (glyph != NULL)
-	SDL_FreeSurface(glyph);
-    SDL_FreeSurface(string_glyph);
-    free_string_texture(&rendered);
-    return false;
 }
 
-bool draw_text(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *text, bool savetex, string_tex_t *string_tex, bool onHUD)
-{
-    return draw_text_fraq(ft_font, color, XALIGN, YALIGN, x, y, text, 0.0f, 1.0f, 0.0f, 1.0f, savetex, string_tex, onHUD);
-}
-
-bool draw_text_fraq(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *text
-    	    	    , float xstart
-    	    	    , float xstop
-    	    	    , float ystart
-    	    	    , float ystop
-		    , bool savetex, string_tex_t *string_tex, bool onHUD)
+bool draw_text(font_data *ft_font, int color, int XALIGN, int YALIGN,
+	       int x, int y, const char *text, bool savetex,
+	       string_tex_t *string_tex, bool onHUD)
 {
     bool remove_tex = false;
     bool rendered;
-    if (!(ft_font)) return false;
-    if (!(ft_font->ttffont)) return false;
+    RendererStatus draw_status = RENDERER_STATUS_INVALID_ARGUMENT;
+
+    if (ft_font == NULL || ft_font->text_renderer == NULL)
+	return false;
         
-    if (!string_tex) {
+    if (string_tex == NULL) {
     	remove_tex = true;
 	string_tex = XCALLOC(string_tex_t, 1);
 	if (string_tex == NULL)
@@ -481,264 +301,203 @@ bool draw_text_fraq(font_data *ft_font, int color, int XALIGN, int YALIGN, int x
     }
 
     rendered = render_text(ft_font, text, string_tex);
-    if (rendered) {
-    	disp_text_fraq(string_tex, color, XALIGN, YALIGN, x, y, xstart, xstop, ystart, ystop, onHUD);
-    }
+    if (rendered)
+	draw_status = disp_text(string_tex, color, XALIGN, YALIGN,
+				x, y, onHUD);
     
     if (!savetex || remove_tex)
     	free_string_texture(string_tex);
     if (remove_tex)
 	XFREE(string_tex);
 
-    return rendered;
+    return rendered && draw_status == RENDERER_STATUS_OK;
 }
 
-void disp_text(string_tex_t *string_tex, int color, int XALIGN, int YALIGN, int x, int y, bool onHUD)
+static RendererStatus Text_horizontal_alignment(
+    int legacy_alignment, TextGeometryHorizontalAlign *alignment)
 {
-    disp_text_fraq(string_tex, color, XALIGN, YALIGN, x, y, 0.0f, 1.0f, 0.0f, 1.0f, onHUD);
-}
-
-void disp_text_fraq(string_tex_t *string_tex, int color, int XALIGN, int YALIGN, int x, int y
-    	    	    , float xstart
-    	    	    , float xstop
-    	    	    , float ystart
-    	    	    , float ystop
-    	    	    , bool onHUD)
-{
-    int i,num,xpos;
-    
-    if (!(string_tex)) return;
-    set_alphacolor(color);
-    
-    x -= (int)(string_tex->width/2.0f*XALIGN);
-    y += (int)(string_tex->height/2.0f*YALIGN - string_tex->height);
-    
-    if (onHUD) pushScreenCoordinateMatrix();
-    
-    xpos=x;
-    num = Arraylist_get_num_elements(string_tex->tex_list);
-    for (i=0;i<num;++i) {
-    	tex_t tex = *((tex_t *)Arraylist_get(string_tex->tex_list,i));
-    	
-	glBindTexture(GL_TEXTURE_2D, tex.texture);
-    	
-	glEnable(GL_TEXTURE_2D);
-    	glEnable(GL_BLEND);
-    	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    	glBegin(GL_TRIANGLE_STRIP);
-    	    glTexCoord2f(   xstart*tex.texcoords.MaxX	, ystop*tex.texcoords.MaxY 	    );
-	    glVertex2f(     xpos + xstart*tex.width	, y  + ystart*string_tex->height    );
-
-     	    glTexCoord2f(   xstop*tex.texcoords.MaxX	, ystop*tex.texcoords.MaxY 	    );
-	    glVertex2f(     xpos + xstop*tex.width 	, y  + ystart*string_tex->height    );
-
-    	    glTexCoord2f(   xstart*tex.texcoords.MaxX	, ystart*tex.texcoords.MaxY	    );
-	    glVertex2f(     xpos + xstart*tex.width	, y + ystop*string_tex->height	    ); 
-
-   	    glTexCoord2f(   xstop*tex.texcoords.MaxX	, ystart*tex.texcoords.MaxY	    );
-	    glVertex2f(     xpos + xstop*tex.width 	, y + ystop*string_tex->height	    ); 
-    	glEnd();
-	
-    	glDisable(GL_TEXTURE_2D);
-	
-	xpos += tex.width;
+    if (alignment == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    switch (legacy_alignment) {
+    case LEFT:
+	*alignment = TEXT_GEOMETRY_ALIGN_LEFT;
+	return RENDERER_STATUS_OK;
+    case CENTER:
+	*alignment = TEXT_GEOMETRY_ALIGN_CENTER;
+	return RENDERER_STATUS_OK;
+    case RIGHT:
+	*alignment = TEXT_GEOMETRY_ALIGN_RIGHT;
+	return RENDERER_STATUS_OK;
+    default:
+	return RENDERER_STATUS_INVALID_ARGUMENT;
     }
-    
-    if (onHUD) pop_projection_matrix();
+}
+
+static RendererStatus Text_vertical_alignment(
+    int legacy_alignment, TextGeometryVerticalAlign *alignment)
+{
+    if (alignment == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    switch (legacy_alignment) {
+    case DOWN:
+	*alignment = TEXT_GEOMETRY_ALIGN_TOP;
+	return RENDERER_STATUS_OK;
+    case CENTER:
+	*alignment = TEXT_GEOMETRY_ALIGN_MIDDLE;
+	return RENDERER_STATUS_OK;
+    case UP:
+	*alignment = TEXT_GEOMETRY_ALIGN_BOTTOM;
+	return RENDERER_STATUS_OK;
+    default:
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+}
+
+RendererStatus disp_text(string_tex_t *string_tex, int color,
+			 int XALIGN, int YALIGN, int x, int y,
+			 bool onHUD)
+{
+    TextGeometryHorizontalAlign horizontal;
+    TextGeometryVerticalAlign vertical;
+    RendererPoint2D anchor;
+    RendererStatus status;
+
+    if (string_tex == NULL || string_tex->text_renderer == NULL
+	|| string_tex->cache == NULL || string_tex->text == NULL) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    status = Text_horizontal_alignment(XALIGN, &horizontal);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    status = Text_vertical_alignment(YALIGN, &vertical);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+
+    anchor.x = (float)x;
+    anchor.y = onHUD ? (float)draw_height - (float)y : (float)y;
+    return Text_renderer_draw_cached(
+	string_tex->text_renderer, string_tex->cache, anchor,
+	horizontal, vertical, Renderer_color_from_rgba32((uint32_t)color),
+	onHUD ? TEXT_RENDERER_SPACE_HUD : TEXT_RENDERER_SPACE_WORLD);
 }
 
 void free_string_texture(string_tex_t *string_tex)
 {
-    if (string_tex) {
-    	if (string_tex->tex_list) {
-	    int i,num = Arraylist_get_num_elements(string_tex->tex_list);
-	    for (i=0;i<num;++i) {
-	    	tex_t tex;
-	    	tex = *((tex_t *)Arraylist_get(string_tex->tex_list,i));
-		glDeleteTextures(1,&(tex.texture));
-	    }
-	    Arraylist_free(string_tex->tex_list);
-	    string_tex->tex_list = NULL;
-	}
-	XFREE(string_tex->text);
-    }
+    if (string_tex == NULL)
+	return;
+    Text_renderer_cache_destroy(&string_tex->cache);
+    XFREE(string_tex->text);
+    string_tex->text_renderer = NULL;
+    string_tex->width = 0;
+    string_tex->height = 0;
+    string_tex->font_height = 0;
 }
 
-void print(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, int length, const char *text, bool onHUD)
+static RendererStatus Text_draw_bytes(
+    font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y,
+    const char *text, size_t text_length, bool onHUD)
 {
-    int i=0,j,textlength;
-    fontbounds returnval,dummy;
-    float xoff = 0.0,yoff = 0.0;
-    int start,end,toklen;
-    int X,Y;
-	GLuint font;
-    
-    returnval.width = 0.0;
-    returnval.height = 0.0;
+    TextGeometryHorizontalAlign horizontal;
+    TextGeometryVerticalAlign vertical;
+    RendererPoint2D anchor;
+    RendererStatus status;
 
-    if (!(textlength = MIN(strlen(text),length))) return;
-    
-    font=ft_font->list_base;
+    if (ft_font == NULL || ft_font->text_renderer == NULL || text == NULL)
+	return Text_adapter_failure(ft_font,
+				    RENDERER_STATUS_INVALID_ARGUMENT);
+    status = Text_horizontal_alignment(XALIGN, &horizontal);
+    if (status != RENDERER_STATUS_OK)
+	return Text_adapter_failure(ft_font, status);
+    status = Text_vertical_alignment(YALIGN, &vertical);
+    if (status != RENDERER_STATUS_OK)
+	return Text_adapter_failure(ft_font, status);
+    if (text_length == 0) {
+	TextGeometryMetrics metrics;
 
-    returnval = nprintsize(ft_font,length,"%s",text);
-    
-    yoff = (returnval.height/2.0f)*((float)YALIGN) - ft_font->h;
-
-    glListBase(font);
-
-    if (onHUD) pushScreenCoordinateMatrix();					
-    
-    glPushAttrib(GL_LIST_BIT | GL_CURRENT_BIT  | GL_ENABLE_BIT | GL_TRANSFORM_BIT);	
-    glMatrixMode(GL_MODELVIEW);
-    glDisable(GL_LIGHTING);
-    glEnable(GL_TEXTURE_2D);
-    glDisable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	
-
-    glGetFloatv(GL_MODELVIEW_MATRIX, modelview_matrix);
-
-    /* This is where the text display actually happens.
-     * For each line of text we reset the modelview matrix
-     * so that the line's text will start in the correct position.
-     * Notice that we need to reset the matrix, rather than just translating
-     * down by h. This is because when each character is
-     * draw it modifies the current matrix so that the next character
-     * will be drawn immediatly after it. 
-     */
-    /* make sure not to use mytok until we are done!!! */
-    start = 0;
-    for (;;) {
-	
-	for (end=start;end<textlength;++end)
-	    if (text[end] == '\n') {
-	    	break;
-	    }
-	
-	toklen = end - start;
-	
-	dummy.width = 0.0;
-	for (j=start;j<=end-1;++j)
-	    dummy.width = dummy.width + ft_font->W[(GLubyte)text[j]];
-	
-	xoff = - (dummy.width/2.0f)*((float)XALIGN);
-
-    	glPushMatrix();
-    	glLoadIdentity();
-	
-    	X = (int)(x + xoff);
-    	Y = (int)(y - ft_font->linespacing*i + yoff);
-	
-    	if (color) set_alphacolor(color);
-	if (onHUD) glTranslatef(X, Y, 0);
-	else glTranslatef(X * clData.scale,Y * clData.scale, 0);
-    	glMultMatrixf(modelview_matrix);
-
-    	glCallLists(toklen, GL_UNSIGNED_BYTE, (GLubyte *) &text[start]);
-		
-    	glPopMatrix();
-   	
-	++i;
-	
-	if (end >= textlength - 1) break;
-	
-	start = end + 1;
+	return Text_renderer_measure(
+	    ft_font->text_renderer, (const unsigned char *)text,
+	    text_length, &metrics);
     }
-    glPopAttrib();		
 
-    if (onHUD) pop_projection_matrix();
-
+    anchor.x = (float)x;
+    anchor.y = onHUD ? (float)draw_height - (float)y : (float)y;
+    return Text_renderer_draw(
+	ft_font->text_renderer, (const unsigned char *)text, text_length,
+	anchor, horizontal, vertical,
+	Renderer_color_from_rgba32((uint32_t)color),
+	onHUD ? TEXT_RENDERER_SPACE_HUD : TEXT_RENDERER_SPACE_WORLD);
 }
 
-void mapnprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, int length, const char *fmt,...)
+static RendererStatus Text_vprint(
+    font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y,
+    int length, const char *fmt, va_list args, bool onHUD)
 {
-    int textlength;
-    
-    char		text[BUFSIZE];  /* Holds Our String */
-    va_list		ap; 	    /* Pointer To List Of Arguments */
-    
-    if (fmt == NULL)	    	    /* If There's No Text */
-    	*text=0;    	    	    /* Do Nothing */
-    else {
-    	va_start(ap, fmt);  	    /* Parses The String For Variables */
-    	vsnprintf(text, BUFSIZE, fmt, ap);    /* And Converts Symbols To Actual Numbers */
-    	va_end(ap); 	    	    /* Results Are Stored In Text */
-    }
-    if (!(textlength = MIN((int)strlen(text),length))) {
-    	return;
-    }
+    char text[BUFSIZE];
+    size_t text_length;
+    RendererStatus status;
 
-    if (ft_font == NULL) return;
-
-    print(ft_font, color, XALIGN, YALIGN, x, y, length, text, false);
+    if (length < 0)
+	return Text_adapter_failure(ft_font,
+				    RENDERER_STATUS_INVALID_ARGUMENT);
+    status = Text_format(text, fmt, args, &text_length);
+    if (status != RENDERER_STATUS_OK)
+	return Text_adapter_failure(ft_font, status);
+    if (text_length > (size_t)length)
+	text_length = (size_t)length;
+    return Text_draw_bytes(ft_font, color, XALIGN, YALIGN, x, y,
+			   text, text_length, onHUD);
 }
 
-void HUDnprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, int length, const char *fmt, ...)
+RendererStatus mapnprint(font_data *ft_font, int color, int XALIGN,
+			 int YALIGN, int x, int y, int length,
+			 const char *fmt, ...)
 {
-    int textlength;
-    
-    char		text[BUFSIZE];  /* Holds Our String */
-    va_list		ap; 	    /* Pointer To List Of Arguments */
-    
-    if (fmt == NULL)	    	    /* If There's No Text */
-    	*text=0;    	    	    /* Do Nothing */
-    else {
-    	va_start(ap, fmt);  	    /* Parses The String For Variables */
-    	vsnprintf(text, BUFSIZE, fmt, ap);    /* And Converts Symbols To Actual Numbers */
-    	va_end(ap); 	    	    /* Results Are Stored In Text */
-    }
-    if (!(textlength = MIN((int)strlen(text),length))) {
-    	return;
-    }
-    
-    if (ft_font == NULL) return;
+    RendererStatus status;
+    va_list args;
 
-    print( ft_font, color, XALIGN, YALIGN, x, y, length, text, true);
+    va_start(args, fmt);
+    status = Text_vprint(ft_font, color, XALIGN, YALIGN, x, y, length,
+			 fmt, args, false);
+    va_end(args);
+    return status;
 }
 
-void mapprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *fmt,...)
+RendererStatus HUDnprint(font_data *ft_font, int color, int XALIGN,
+			 int YALIGN, int x, int y, int length,
+			 const char *fmt, ...)
 {
-    unsigned int textlength;
-    
-    char		text[BUFSIZE];  /* Holds Our String */
-    va_list		ap; 	    /* Pointer To List Of Arguments */
-    
-    if (fmt == NULL)	    	    /* If There's No Text */
-    	*text=0;    	    	    /* Do Nothing */
-    else {
-    	va_start(ap, fmt);  	    /* Parses The String For Variables */
-    	vsnprintf(text, BUFSIZE, fmt, ap);    /* And Converts Symbols To Actual Numbers */
-    	va_end(ap); 	    	    /* Results Are Stored In Text */
-    }
-    if (!(textlength = strlen(text))) {
-    	return;
-    }
+    RendererStatus status;
+    va_list args;
 
-    if (ft_font == NULL) return;
-
-    print(ft_font, color, XALIGN, YALIGN, x, y, BUFSIZE, text, false);
+    va_start(args, fmt);
+    status = Text_vprint(ft_font, color, XALIGN, YALIGN, x, y, length,
+			 fmt, args, true);
+    va_end(args);
+    return status;
 }
 
-void HUDprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *fmt, ...)
+RendererStatus mapprint(font_data *ft_font, int color, int XALIGN,
+			int YALIGN, int x, int y, const char *fmt, ...)
 {
-    unsigned int textlength;
-    
-    char		text[BUFSIZE];  /* Holds Our String */
-    va_list		ap; 	    /* Pointer To List Of Arguments */
-    
-    if (fmt == NULL)	    	    /* If There's No Text */
-    	*text=0;    	    	    /* Do Nothing */
-    else {
-    	va_start(ap, fmt);  	    /* Parses The String For Variables */
-    	vsnprintf(text, BUFSIZE, fmt, ap);    /* And Converts Symbols To Actual Numbers */
-    	va_end(ap); 	    	    /* Results Are Stored In Text */
-    }
-    if (!(textlength = strlen(text))) {
-    	return;
-    }
-    
-    if (ft_font == NULL) return;
+    RendererStatus status;
+    va_list args;
 
-    print( ft_font, color, XALIGN, YALIGN, x, y, BUFSIZE, text, true);
+    va_start(args, fmt);
+    status = Text_vprint(ft_font, color, XALIGN, YALIGN, x, y,
+			 BUFSIZE - 1, fmt, args, false);
+    va_end(args);
+    return status;
+}
+
+RendererStatus HUDprint(font_data *ft_font, int color, int XALIGN,
+			int YALIGN, int x, int y, const char *fmt, ...)
+{
+    RendererStatus status;
+    va_list args;
+
+    va_start(args, fmt);
+    status = Text_vprint(ft_font, color, XALIGN, YALIGN, x, y,
+			 BUFSIZE - 1, fmt, args, true);
+    va_end(args);
+    return status;
 }

@@ -173,8 +173,6 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
-GLU_CFLAGS = @GLU_CFLAGS@
-GLU_LIBS = @GLU_LIBS@
 GL_CFLAGS = @GL_CFLAGS@
 GL_LIBS = @GL_LIBS@
 INSTALL = @INSTALL@
@@ -289,7 +287,7 @@ xpilotmap_DATA = \
 	dodgers-legacy.xp2 \
 	dragon-1.0.xp2 \
 	ndh.xp2 \
-	ndh.xpd \
+	ndh-1.3.xpd \
 	polybloods.xp2 \
 	sadistic_bastard_v2.xp2 \
 	spaceball.xp2 \

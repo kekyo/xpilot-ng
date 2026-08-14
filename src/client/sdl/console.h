@@ -22,9 +22,27 @@
 #define CONSOLE_H
 
 #include "xpclient_sdl.h"
+#include "renderer.h"
 
 int Console_init(void);
-void Console_paint(void);
+/**
+ * Update console animation and publish dirty pixels to the renderer.
+ *
+ * @param renderer Renderer that owns the console texture.
+ * @return Zero on success, or -1 when the console cannot be prepared.
+ *
+ * @remarks This function must be called outside an active renderer frame.
+ */
+int Console_prepare(Renderer *renderer);
+/**
+ * Draw the visible console and its frame in the active renderer frame.
+ *
+ * @return The renderer status, or RENDERER_STATUS_OK when hidden.
+ *
+ * @remarks A failure is retained by the SDL renderer and the containing
+ * frame must not be presented.
+ */
+RendererStatus Console_paint(void);
 void Console_show(void);
 void Console_hide(void);
 int Console_isVisible(void);

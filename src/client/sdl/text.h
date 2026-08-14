@@ -24,6 +24,8 @@
 #include "xpclient_sdl.h"
 
 #include "sdlpaint.h"
+#include "text_atlas.h"
+#include "text_renderer.h"
 
 #define LEFT 0
 #define DOWN 0
@@ -31,92 +33,253 @@
 #define RIGHT 2
 #define UP 2
 
-#define NUMCHARS 256
-
+/** Renderer-backed font resources used by the SDL client. */
 typedef struct {
-    GLfloat MinX;
-    GLfloat MinY;
-    GLfloat MaxX;
-    GLfloat MaxY;
-} texcoord_t;    
-
-typedef struct {
-    GLuint textures[NUMCHARS]; /* texture indexes for the characters */
-    GLuint W[NUMCHARS]; /* holds paint width fr each character */
-    GLuint list_base; /* start of the texture list for this font */
-    GLuint h; /* char height */
-    GLuint linespacing; /* proper line spacing according to FT */
-    TTF_Font *ttffont;
+    /** Requested point height retained for compatibility layout. */
+    unsigned int requested_height;
+    /** Immutable renderer-backed glyph atlas for this font. */
+    TextAtlas *atlas;
+    /** Owned semantic text facade borrowing this font's atlas renderer. */
+    TextRenderer *text_renderer;
 } font_data;
 
+/** CPU-side cached text and its semantic renderer identity. */
 typedef struct {
-    GLuint texture;
-    texcoord_t texcoords;
-    int width;
-} tex_t;
-
-typedef struct {
-    arraylist_t *tex_list;
+    /** Borrowed text renderer that owns the cache's font identity. */
+    TextRenderer *text_renderer;
+    /** Owned CPU-side byte-string cache. */
+    TextRendererCache *cache;
+    /** Owned NUL-terminated copy of the normalized byte string. */
     char *text;
+    /** Measured logical width in pixels. */
     int width;
+    /** Measured logical height in pixels. */
     int height;
+    /** Requested font height retained for compatibility layout. */
     int font_height;
 } string_tex_t;
 
-extern int renderstyle;
-extern enum rendertype {
-	RENDER_LATIN1,
-	RENDER_UTF8,
-	RENDER_UNICODE
-} rendertype;
-
+/** Logical bounds of a formatted byte string. */
 typedef struct {
-    	float width;
-	float height;
+    /** Maximum line width in logical pixels. */
+    float width;
+    /** Total block height in logical pixels. */
+    float height;
 } fontbounds;
 
-/* The init function will create a font of
- * of the height h from the file fname.
+/**
+ * Create a font and its renderer-backed drawing resources.
+ *
+ * @param ft_font Zero-initialized empty destination that receives the font on
+ * success.
+ * @param renderer Renderer that owns the font atlas.
+ * @param fname Font file to load.
+ * @param size Requested point size.
+ * @return Operation status.
+ *
+ * @remarks Creation is atomic and must occur outside an active renderer
+ * frame. The SDL_ttf font is used only during this call and is closed before
+ * return. The renderer must remain alive until fontclean() succeeds.
  */
-int fontinit(font_data *ft_font, const char * fname, unsigned int size);
+RendererStatus fontinit(font_data *ft_font, Renderer *renderer,
+			const char *fname, unsigned int size);
 
-/* Free all the resources assosiated with the font.*/
-void fontclean(font_data *ft_font);
-
-/* loads a SDL surface onto a GL texture */
-GLuint SDL_GL_LoadTexture(SDL_Surface *surface, texcoord_t *texcoord);
-
-/* Calcs the bounding width,height for the text if it were printed
- * to screen with given font
+/**
+ * Attach a semantic text drawing facade to a fully initialized font.
+ *
+ * @param ft_font Font whose immutable atlas is already initialized.
+ * @param sdl_renderer SDL renderer facade owning the atlas renderer.
+ * @return Operation status.
+ *
+ * @remarks Reattaching an already attached font is an idempotent operation;
+ * every call for that font must pass the same SDL renderer or the operation
+ * returns RENDERER_STATUS_RESOURCE_MISMATCH. Failure leaves every existing
+ * font resource unchanged. The SDL renderer must outlive the font and all
+ * cached strings created from it.
  */
-fontbounds nprintsize(font_data *ft_font, int length, const char *fmt, ...);
-fontbounds printsize(font_data *ft_font, const char *fmt, ...);
+RendererStatus font_text_renderer_attach(font_data *ft_font,
+					 SdlRenderer *sdl_renderer);
 
-/* 
- * NOTE: passing color 0x00000000 causes the painting to *not* set color,
- * it does *not* mean the text will be drawn with color 0x00000000, you
- * should check for that before calling this function.
+/**
+ * Free all resources associated with a font.
+ *
+ * @param ft_font Font to clean; an already-empty font is valid.
+ * @return Operation status.
+ *
+ * @remarks If atlas destruction is rejected, all font resources, including
+ * the semantic text facade, remain intact so cleanup can be retried after the
+ * active frame ends.
  */
-void HUDnprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, int length, const char *fmt, ...);
-void mapnprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, int length, const char *fmt,...);
-void HUDprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *fmt, ...);
-void mapprint(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *fmt,...);
+RendererStatus fontclean(font_data *ft_font);
 
-bool draw_text(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *text, bool savetex, string_tex_t *string_tex, bool onHUD);
-bool draw_text_fraq(font_data *ft_font, int color, int XALIGN, int YALIGN, int x, int y, const char *text
-    	    	    , float xstart
-    	    	    , float xstop
-    	    	    , float ystart
-    	    	    , float ystop
-		    , bool savetex, string_tex_t *string_tex, bool onHUD);
+/**
+ * Measure at most a given number of formatted bytes.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param length Maximum formatted byte count; must be nonnegative.
+ * @param bounds Receives logical bounds on success and remains unchanged on
+ *        failure.
+ * @param fmt printf-style format, or NULL for an empty string.
+ * @return Operation status.
+ *
+ * @remarks This operation requires an active renderer frame. Formatting is
+ * limited to 1023 bytes before @p length is applied. Bytes unavailable in
+ * the printable-ASCII atlas use the font's fallback glyph.
+ */
+RendererStatus nprintsize(font_data *ft_font, int length,
+			  fontbounds *bounds, const char *fmt, ...);
+
+/**
+ * Measure one formatted byte string.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param bounds Receives logical bounds on success and remains unchanged on
+ *        failure.
+ * @param fmt printf-style format, or NULL for an empty string.
+ * @return Operation status.
+ *
+ * @remarks This operation requires an active renderer frame. Formatting is
+ * limited to 1023 bytes. Bytes unavailable in the printable-ASCII atlas use
+ * the font's fallback glyph.
+ */
+RendererStatus printsize(font_data *ft_font, fontbounds *bounds,
+			 const char *fmt, ...);
+
+/**
+ * Draw at most a given number of formatted bytes in HUD coordinates.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param color Unpremultiplied RGBA value.
+ * @param XALIGN Legacy horizontal alignment value.
+ * @param YALIGN Legacy vertical alignment value.
+ * @param x Legacy horizontal anchor.
+ * @param y Legacy bottom-left HUD anchor.
+ * @param length Maximum formatted byte count; must be nonnegative.
+ * @param fmt printf-style format, or NULL for an empty string.
+ * @return Operation status.
+ *
+ * @remarks This operation requires an active renderer frame. Formatting is
+ * limited to 1023 bytes before @p length is applied. Bytes unavailable in
+ * the printable-ASCII atlas use the font's fallback glyph. Any failure is
+ * retained so the incomplete frame is not presented.
+ */
+RendererStatus HUDnprint(font_data *ft_font, int color, int XALIGN,
+			 int YALIGN, int x, int y, int length,
+			 const char *fmt, ...);
+
+/**
+ * Draw at most a given number of formatted bytes in world coordinates.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param color Unpremultiplied RGBA value.
+ * @param XALIGN Legacy horizontal alignment value.
+ * @param YALIGN Legacy vertical alignment value.
+ * @param x World-space horizontal anchor.
+ * @param y World-space vertical anchor.
+ * @param length Maximum formatted byte count; must be nonnegative.
+ * @param fmt printf-style format, or NULL for an empty string.
+ * @return Operation status.
+ *
+ * @remarks This operation requires an active renderer frame. Formatting is
+ * limited to 1023 bytes before @p length is applied. Bytes unavailable in
+ * the printable-ASCII atlas use the font's fallback glyph. Any failure is
+ * retained so the incomplete frame is not presented.
+ */
+RendererStatus mapnprint(font_data *ft_font, int color, int XALIGN,
+			 int YALIGN, int x, int y, int length,
+			 const char *fmt, ...);
+
+/**
+ * Draw one formatted byte string in HUD coordinates.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param color Unpremultiplied RGBA value.
+ * @param XALIGN Legacy horizontal alignment value.
+ * @param YALIGN Legacy vertical alignment value.
+ * @param x Legacy horizontal anchor.
+ * @param y Legacy bottom-left HUD anchor.
+ * @param fmt printf-style format, or NULL for an empty string.
+ * @return Operation status.
+ *
+ * @remarks This operation requires an active renderer frame. Formatting is
+ * limited to 1023 bytes. Bytes unavailable in the printable-ASCII atlas use
+ * the font's fallback glyph. Any failure is retained so the incomplete
+ * frame is not presented.
+ */
+RendererStatus HUDprint(font_data *ft_font, int color, int XALIGN,
+			int YALIGN, int x, int y, const char *fmt, ...);
+
+/**
+ * Draw one formatted byte string in world coordinates.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param color Unpremultiplied RGBA value.
+ * @param XALIGN Legacy horizontal alignment value.
+ * @param YALIGN Legacy vertical alignment value.
+ * @param x World-space horizontal anchor.
+ * @param y World-space vertical anchor.
+ * @param fmt printf-style format, or NULL for an empty string.
+ * @return Operation status.
+ *
+ * @remarks This operation requires an active renderer frame. Formatting is
+ * limited to 1023 bytes. Bytes unavailable in the printable-ASCII atlas use
+ * the font's fallback glyph. Any failure is retained so the incomplete
+ * frame is not presented.
+ */
+RendererStatus mapprint(font_data *ft_font, int color, int XALIGN,
+			int YALIGN, int x, int y, const char *fmt, ...);
+
+/**
+ * Cache and draw one byte string through the semantic text renderer.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param color Unpremultiplied RGBA value.
+ * @param XALIGN Legacy horizontal alignment value.
+ * @param YALIGN Legacy vertical alignment value.
+ * @param x Legacy horizontal anchor.
+ * @param y Legacy vertical anchor.
+ * @param text NUL-terminated byte string.
+ * @param savetex Whether to retain @p string_tex after drawing.
+ * @param string_tex Optional zero-initialized or previously populated cache.
+ * @param onHUD Whether the anchor uses legacy HUD coordinates.
+ * @return True only when caching and drawing both succeed.
+ */
+bool draw_text(font_data *ft_font, int color, int XALIGN, int YALIGN,
+	       int x, int y, const char *text, bool savetex,
+	       string_tex_t *string_tex, bool onHUD);
+
+/**
+ * Atomically replace a cached byte string without allocating GPU resources.
+ *
+ * @param ft_font Font with an attached semantic text renderer.
+ * @param text NUL-terminated byte string. Empty input is normalized to one
+ *        space for legacy layout compatibility.
+ * @param string_tex Zero-initialized or previously populated destination.
+ * @return True on success. Failure leaves the destination unchanged.
+ */
 bool render_text(font_data *ft_font, const char *text, string_tex_t *string_tex);
-void disp_text(string_tex_t *string_tex, int color, int XALIGN, int YALIGN, int x, int y, bool onHUD);
-void disp_text_fraq(string_tex_t *string_tex, int color, int XALIGN, int YALIGN, int x, int y
-    	    	    , float xstart
-    	    	    , float xstop
-    	    	    , float ystart
-    	    	    , float ystop
-		    , bool onHUD);
+
+/**
+ * Draw a cached string using legacy alignment and coordinate conventions.
+ *
+ * @param string_tex Populated cached string.
+ * @param color Unpremultiplied RGBA value.
+ * @param XALIGN Legacy horizontal alignment value.
+ * @param YALIGN Legacy vertical alignment value.
+ * @param x Legacy horizontal anchor.
+ * @param y Legacy vertical anchor.
+ * @param onHUD Whether to convert the bottom-left HUD anchor to top-left.
+ * @return Operation status.
+ */
+RendererStatus disp_text(string_tex_t *string_tex, int color,
+			 int XALIGN, int YALIGN, int x, int y,
+			 bool onHUD);
+
+/**
+ * Release a cached string without issuing GPU resource operations.
+ *
+ * @param string_tex Cache to clear, or NULL for no operation.
+ */
 void free_string_texture(string_tex_t *string_tex);
 
 extern font_data gamefont;

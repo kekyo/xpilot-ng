@@ -293,6 +293,11 @@ void Gui_paint_mine(int x, int y, int teammine, char *name)
 }
 
 
+void Gui_paint_sparks_begin(void)
+{
+}
+
+
 void Gui_paint_spark(int color, int x, int y)
 {
     color = spark_color[color];
@@ -302,6 +307,11 @@ void Gui_paint_spark(int color, int x, int y)
 		  y - sparkSize/2,
 		  sparkSize, sparkSize);
 
+}
+
+
+void Gui_paint_sparks_end(void)
+{
 }
 
 
@@ -540,6 +550,11 @@ void Gui_paint_paused(int x, int y, int count)
 
 
 /* Create better graphics for this. */
+void Gui_paint_appearing_begin(void)
+{
+}
+
+
 void Gui_paint_appearing(int x, int y, int id, int count)
 {
     const unsigned hsize = 3 * BLOCK_SZ / 7;
@@ -562,6 +577,11 @@ void Gui_paint_appearing(int x, int y, int id, int count)
 		     SCALEY(y - (int)hsize + (int)(count / 180. * hsize + 1)),
 		     UWINSCALE(2 * hsize + 1),
 		     UWINSCALE((unsigned)(count / 180. * hsize + 1)));
+}
+
+
+void Gui_paint_appearing_end(void)
+{
 }
 
 

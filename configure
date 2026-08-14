@@ -669,8 +669,6 @@ COND_WINDOWS_FALSE
 COND_WINDOWS_TRUE
 COND_CLIENT_FALSE
 COND_CLIENT_TRUE
-GLU_LIBS
-GLU_CFLAGS
 GL_LIBS
 GL_CFLAGS
 SDL2_TTF_LIBS
@@ -835,9 +833,7 @@ SDL2_IMAGE_LIBS
 SDL2_TTF_CFLAGS
 SDL2_TTF_LIBS
 GL_CFLAGS
-GL_LIBS
-GLU_CFLAGS
-GLU_LIBS'
+GL_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1523,8 +1519,6 @@ Some influential environment variables:
               linker flags for SDL2_TTF, overriding pkg-config
   GL_CFLAGS   C compiler flags for GL, overriding pkg-config
   GL_LIBS     linker flags for GL, overriding pkg-config
-  GLU_CFLAGS  C compiler flags for GLU, overriding pkg-config
-  GLU_LIBS    linker flags for GLU, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -6559,97 +6553,6 @@ See \`config.log' for more details" "$LINENO" 5; }
 else
         GL_CFLAGS=$pkg_cv_GL_CFLAGS
         GL_LIBS=$pkg_cv_GL_LIBS
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
-
-fi
-
-pkg_failed=no
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for glu" >&5
-printf %s "checking for glu... " >&6; }
-
-if test -n "$GLU_CFLAGS"; then
-    pkg_cv_GLU_CFLAGS="$GLU_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"glu\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "glu") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_GLU_CFLAGS=`$PKG_CONFIG --cflags "glu" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$GLU_LIBS"; then
-    pkg_cv_GLU_LIBS="$GLU_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"glu\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "glu") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_GLU_LIBS=`$PKG_CONFIG --libs "glu" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-                GLU_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "glu" 2>&1`
-        else
-                GLU_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "glu" 2>&1`
-        fi
-        # Put the nasty error message in config.log where it belongs
-        echo "$GLU_PKG_ERRORS" >&5
-
-        as_fn_error $? "Package requirements (glu) were not met:
-
-$GLU_PKG_ERRORS
-
-Consider adjusting the PKG_CONFIG_PATH environment variable if you
-installed software in a non-standard prefix.
-
-Alternatively, you may set the environment variables GLU_CFLAGS
-and GLU_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details." "$LINENO" 5
-elif test $pkg_failed = untried; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-        { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
-is in your PATH or set the PKG_CONFIG environment variable to the full
-path to pkg-config.
-
-Alternatively, you may set the environment variables GLU_CFLAGS
-and GLU_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-
-To get pkg-config, see <http://pkg-config.freedesktop.org/>.
-See \`config.log' for more details" "$LINENO" 5; }
-else
-        GLU_CFLAGS=$pkg_cv_GLU_CFLAGS
-        GLU_LIBS=$pkg_cv_GLU_LIBS
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
 

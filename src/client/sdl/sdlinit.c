@@ -28,6 +28,9 @@
 #include "glwidgets.h"
 #include "sdlpaint.h"
 #include "sdlinit.h"
+#include "gl_diagnostics.h"
+#include "sdlrenderer.h"
+#include "images.h"
 
 /* These are only needed for the polygon tessellation */
 /* I'd like to move them to Paint_init/cleanup but because it */
@@ -38,6 +41,7 @@ extern void Gui_cleanup(void);
 
 static SDL_Window *main_window;
 static SDL_GLContext main_gl_context;
+static SdlRenderer *main_renderer;
 static bool sdl_initialized;
 static bool image_initialized;
 static bool ttf_initialized;
@@ -74,6 +78,14 @@ static bool file_exists(const char *path)
 
 int Init_playing_windows(void)
 {
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+
+    if (sdl_renderer == NULL
+	|| Images_prepare(Sdl_renderer_frontend(sdl_renderer)) != 0) {
+	error("image preparation failed");
+	return -1;
+    }
+
     /*
     sdl_init_colors();
     Init_spark_colors();
@@ -101,6 +113,14 @@ int Init_playing_windows(void)
 
 static void cleanup_window_system(void)
 {
+    if (gamefont_initialized || mapfont_initialized) {
+	error("Refusing to destroy the window system while fonts remain initialized");
+	return;
+    }
+    if (main_renderer != NULL) {
+	Sdl_renderer_destroy(main_renderer);
+	main_renderer = NULL;
+    }
     if (main_gl_context != NULL) {
 	SDL_GL_DeleteContext(main_gl_context);
 	main_gl_context = NULL;
@@ -136,26 +156,32 @@ static void apply_window_size(int width, int height)
     if (MainWidget != NULL)
 	SetBounds_GLWidget(MainWidget, &bounds);
 
-    glViewport(0, 0, (GLint)draw_width, (GLint)draw_height);
-    if (MainWidget != NULL) {
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluOrtho2D(0, draw_width, 0, draw_height);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-    }
 }
 
-static void cleanup_fonts(void)
+static bool cleanup_fonts(void)
 {
+    bool cleaned = true;
+    RendererStatus status;
+
     if (mapfont_initialized) {
-	fontclean(&mapfont);
-	mapfont_initialized = false;
+	status = fontclean(&mapfont);
+	if (status == RENDERER_STATUS_OK) {
+	    mapfont_initialized = false;
+	} else {
+	    error("Could not clean up the map font (%d)", (int)status);
+	    cleaned = false;
+	}
     }
     if (gamefont_initialized) {
-	fontclean(&gamefont);
-	gamefont_initialized = false;
+	status = fontclean(&gamefont);
+	if (status == RENDERER_STATUS_OK) {
+	    gamefont_initialized = false;
+	} else {
+	    error("Could not clean up the game font (%d)", (int)status);
+	    cleaned = false;
+	}
     }
+    return cleaned;
 }
 
 static bool closest_display_mode(int width, int height, SDL_DisplayMode *mode)
@@ -177,6 +203,7 @@ int Init_window(void)
 {
     int value;
     int image_flags;
+    RendererStatus renderer_status;
     char defaultfontname[] = CONF_FONTDIR "FreeSansBoldOblique.ttf";
     bool gf_exists = true,df_exists = true,gf_init = false, mf_init = false;
 
@@ -208,6 +235,21 @@ int Init_window(void)
 
     num_spark_colors=8;
 
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) < 0) {
+	error("Could not request OpenGL context major version 3: %s",
+	      SDL_GetError());
+	goto fail;
+    }
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) < 0) {
+	error("Could not request OpenGL context minor version 3: %s",
+	      SDL_GetError());
+	goto fail;
+    }
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+			    SDL_GL_CONTEXT_PROFILE_CORE) < 0) {
+	error("Could not request an OpenGL core profile: %s", SDL_GetError());
+	goto fail;
+    }
     if (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1) < 0) {
 	error("Could not enable OpenGL double buffering: %s", SDL_GetError());
 	goto fail;
@@ -229,6 +271,14 @@ int Init_window(void)
 	error("Could not create an OpenGL context: %s", SDL_GetError());
 	goto fail;
     }
+    Gl_diagnostics_log_context();
+    Gl_diagnostics_check("context creation");
+    renderer_status = Sdl_renderer_create(main_window, &main_renderer);
+    if (renderer_status != RENDERER_STATUS_OK) {
+	error("Could not initialize the OpenGL core renderer (%d)",
+	      (int)renderer_status);
+	goto fail;
+    }
     SDL_StopTextInput();
     windowed_width = draw_width;
     windowed_height = draw_height;
@@ -241,14 +291,6 @@ int Init_window(void)
     printf("%d ", value);
     SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &value);
     printf("Bit Depth is %d\n",value);
-
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glViewport(0, 0, draw_width, draw_height);
-    glMatrixMode(GL_PROJECTION);
-    gluOrtho2D(0, draw_width, 0, draw_height);
-    glMatrixMode(GL_MODELVIEW);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     /* this prevents a freetype crash if you pass non existant fonts */
     if (!file_exists(gamefontname)) {
@@ -270,14 +312,20 @@ int Init_window(void)
     }
       
     if (gf_exists) {
-    	if (fontinit(&gamefont,gamefontname,gameFontSize)) {
-    	    error("Font initialization failed with %s", gamefontname);
+	renderer_status = fontinit(&gamefont,
+				   Sdl_renderer_frontend(main_renderer),
+				   gamefontname, gameFontSize);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Font initialization failed with %s", gamefontname);
 	} else gf_init = true;
     }
     if (!gf_init && df_exists) {
-    	if (fontinit(&gamefont,defaultfontname,gameFontSize)) {
-    	    error("Default font initialization failed with %s", defaultfontname);
-    	} else gf_init = true;
+	renderer_status = fontinit(&gamefont,
+				   Sdl_renderer_frontend(main_renderer),
+				   defaultfontname, gameFontSize);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Default font initialization failed with %s", defaultfontname);
+	} else gf_init = true;
     }
     
     if (!gf_init) {
@@ -287,14 +335,20 @@ int Init_window(void)
     gamefont_initialized = true;
     
     if (gf_exists) {
-    	if (fontinit(&mapfont,gamefontname,mapFontSize)) {
-    	    error("Font initialization failed with %s", gamefontname);
+	renderer_status = fontinit(&mapfont,
+				   Sdl_renderer_frontend(main_renderer),
+				   gamefontname, mapFontSize);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Font initialization failed with %s", gamefontname);
 	} else mf_init = true;
     }
     if (!mf_init && df_exists) {
-    	if (fontinit(&mapfont,defaultfontname,mapFontSize)) {
-    	    error("Default font initialization failed with %s", defaultfontname);
-    	} else mf_init = true;
+	renderer_status = fontinit(&mapfont,
+				   Sdl_renderer_frontend(main_renderer),
+				   defaultfontname, mapFontSize);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Default font initialization failed with %s", defaultfontname);
+	} else mf_init = true;
     }
 
     if (!mf_init) {
@@ -303,14 +357,32 @@ int Init_window(void)
     }
     mapfont_initialized = true;
 
+    renderer_status = font_text_renderer_attach(&gamefont, main_renderer);
+    if (renderer_status == RENDERER_STATUS_OK) {
+	renderer_status = font_text_renderer_attach(&mapfont, main_renderer);
+    }
+    if (renderer_status != RENDERER_STATUS_OK
+	|| gamefont.text_renderer == NULL || mapfont.text_renderer == NULL) {
+	error("Font text renderer initialization failed (%d)",
+	      (int)renderer_status);
+	goto fail;
+    }
+    printf("Font text renderers ready: game=renderer map=renderer\n");
+    fflush(stdout);
+
     return 0;
 
 fail:
     mapfont_initialized = mf_init;
     gamefont_initialized = gf_init;
-    cleanup_fonts();
-    cleanup_window_system();
+    if (cleanup_fonts())
+	cleanup_window_system();
     return -1;
+}
+
+SdlRenderer *Get_sdl_renderer(void)
+{
+    return main_renderer;
 }
 
 /* function to reset our viewport after a window resize */
@@ -351,8 +423,10 @@ void Window_size_changed(int width, int height)
 
 void Swap_buffers(void)
 {
-    if (main_window != NULL)
+    if (main_window != NULL) {
 	SDL_GL_SwapWindow(main_window);
+        Gl_diagnostics_check("buffer swap");
+    }
 }
 
 void Set_window_grab(bool on)
@@ -404,8 +478,8 @@ void Platform_specific_cleanup(void)
 	Console_cleanup();
 	playing_windows_initialized = false;
     }
-    cleanup_fonts();
-    cleanup_window_system();
+    if (cleanup_fonts())
+	cleanup_window_system();
 }
 
 static bool Set_geometry(xp_option_t *opt, const char *s)

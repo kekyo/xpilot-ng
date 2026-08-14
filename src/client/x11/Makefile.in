@@ -201,8 +201,6 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
-GLU_CFLAGS = @GLU_CFLAGS@
-GLU_LIBS = @GLU_LIBS@
 GL_CFLAGS = @GL_CFLAGS@
 GL_LIBS = @GL_LIBS@
 INSTALL = @INSTALL@
@@ -309,7 +307,10 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" -I$(top_srcdir)/src/common -I$(top_srcdir)/src/client
+AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
+	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
+	-I$(top_srcdir)/src/client
+
 xpilot_ng_x11_SOURCES = \
 	about.c \
 	bitmaps.c bitmaps.h \
