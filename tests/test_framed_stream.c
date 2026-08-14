@@ -2,6 +2,8 @@
 
 #include <string.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <unistd.h>
 
 #include "net.h"
@@ -132,11 +134,47 @@ static int test_eof_is_error(void)
     return 0;
 }
 
+static int test_tcp_socket_connection(void)
+{
+    int option;
+    int port;
+    socklen_t option_size = sizeof(option);
+    sock_t listener;
+    sock_t client;
+    sock_t accepted;
+
+    TEST_CHECK(sock_open_tcp_listener(&listener, "127.0.0.1", 0) == 0);
+    port = sock_get_port(&listener);
+    TEST_CHECK(port > 0);
+    TEST_CHECK(sock_open_tcp_bound(&client, "127.0.0.1", 0) == 0);
+    TEST_CHECK(sock_connect(&client, "127.0.0.1", port) == 0);
+    TEST_CHECK(sock_accept(&listener, &accepted) == 0);
+
+    option = 0;
+    TEST_CHECK(getsockopt(accepted.fd, SOL_SOCKET, SO_TYPE,
+                          &option, &option_size) == 0);
+    TEST_CHECK(option == SOCK_STREAM);
+    TEST_CHECK(strcmp(sock_get_last_addr(&accepted), "127.0.0.1") == 0);
+
+    TEST_CHECK(sock_set_tcp_nodelay(&accepted, 1) == 0);
+    option = 0;
+    option_size = sizeof(option);
+    TEST_CHECK(getsockopt(accepted.fd, IPPROTO_TCP, TCP_NODELAY,
+                          &option, &option_size) == 0);
+    TEST_CHECK(option != 0);
+
+    sock_close(&accepted);
+    sock_close(&client);
+    sock_close(&listener);
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(test_segmented_record() == 0);
     TEST_CHECK(test_coalesced_records() == 0);
     TEST_CHECK(test_framed_write() == 0);
     TEST_CHECK(test_eof_is_error() == 0);
+    TEST_CHECK(test_tcp_socket_connection() == 0);
     return 0;
 }

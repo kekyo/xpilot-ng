@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -66,30 +66,15 @@
  * but should not get frame updates yet until it has acknowledged its last
  * reliable data.
  *
- * Communication between the server and the clients is only done
- * using UDP datagrams.  The first client/serverized version of XPilot
- * was using TCP only, but this was too unplayable across the Internet,
- * because TCP is a data stream always sending the next byte.
- * If a packet gets lost then the server has to wait for a
- * timeout before a retransmission can occur.  This is too slow
- * for a real-time program like this game, which is more interested
- * in recent events than in sequenced/reliable events.
- * Therefore UDP is now used which gives more network control to the
- * program.
- * Because some data is considered crucial, like the names of
- * new players and so on, there also had to be a mechanism which
- * enabled reliable data transmission.  Here this is done by creating
- * a data stream which is piggybacked on top of the unreliable data
- * packets.  The client acknowledges this reliable data by sending
- * its byte position in the reliable data stream.  So if the client gets
- * a new reliable data packet and it has not had this data before and
- * there is also no data packet missing inbetween, then it advances
- * its byte position and acknowledges this new position to the server.
- * Otherwise it discards the packet and sends its old byte position
- * to the server meaning that it detected a packet loss.
- * The server maintains an acknowledgement timeout timer for each
- * connection so that it can retransmit a reliable data packet
- * if the acknowledgement timer expires.
+ * Gameplay communication uses TCP streams.  Each logical packet keeps the
+ * former datagram payload and is prefixed with a two-byte payload length.
+ * The UDP contact, discovery, and metaserver paths remain separate.
+ *
+ * The protocol's reliable-data packets and acknowledgements are retained for
+ * compatibility with the existing state machine.  TCP already provides
+ * ordered reliable delivery, so this layer is redundant at the transport
+ * level, but keeping it avoids changing gameplay packet formats and setup
+ * transitions as part of the transport conversion.
  */
 
 #include "xpserver.h"
@@ -357,16 +342,14 @@ static void Conn_set_state(connection_t *connp, int state, int drain_state)
 
 /*
  * Cleanup a connection.  The client may not know yet that
- * it is thrown out of the game so we send it a quit packet.
- * We send it twice because of UDP it could get lost.
- * Since 3.0.6 the client receives a short message
- * explaining why the connection was terminated.
+ * it is thrown out of the game so we send it a quit packet when its TCP
+ * stream has already been accepted.  Since 3.0.6 the client receives a
+ * short message explaining why the connection was terminated.
  */
 void Destroy_connection(connection_t *connp, const char *reason)
 {
-    int id, len;
+    int id;
     sock_t *sock;
-    char pkt[MAX_CHARS];
 
     if (connp->state == CONN_FREE) {
 	warn("Cannot destroy empty connection (\"%s\")", reason);
@@ -376,12 +359,10 @@ void Destroy_connection(connection_t *connp, const char *reason)
     sock = &connp->w.sock;
     remove_input(sock->fd);
 
-    pkt[0] = PKT_QUIT;
-    strlcpy(&pkt[1], reason, sizeof(pkt) - 1);
-    len = strlen(pkt) + 1;
-    if (sock_writeRec(sock, pkt, len) != len) {
-	sock_get_errorRec(sock);
-	sock_writeRec(sock, pkt, len);
+    if (BIT(sock->flags, SOCK_FLAG_CONNECT) != 0) {
+	Sockbuf_clear(&connp->w);
+	if (Packet_printf(&connp->w, "%c%s", PKT_QUIT, (char *)reason) > 0)
+	    Sockbuf_flushRec(&connp->w);
     }
     xpprintf("%s Goodbye %s=%s@%s|%s (\"%s\")\n",
 	     showtime(),
@@ -418,10 +399,6 @@ void Destroy_connection(connection_t *connp, const char *reason)
 
     num_logouts++;
 
-    if (sock_writeRec(sock, pkt, len) != len) {
-	sock_get_errorRec(sock);
-	sock_writeRec(sock, pkt, len);
-    }
     sock_closeRec(sock);
 
     memset(connp, 0, sizeof(*connp));
@@ -462,15 +439,15 @@ static void Create_client_socket(sock_t *sock, int *port)
     if (!options.clientPortStart || !options.clientPortEnd ||
 	(options.clientPortStart > options.clientPortEnd)) {
 
-        if (sock_open_udp(sock, serverAddr, 0) == SOCK_IS_ERROR) {
-            error("Cannot create datagram socket (%d)", sock->error.error);
+	if (sock_open_tcp_listener(sock, serverAddr, 0) == SOCK_IS_ERROR) {
+	    error("Cannot create TCP listener (%d)", sock->error.error);
 	    sock->fd = -1;
 	    return;
         }
     }
     else {
         for (i = options.clientPortStart; i <= options.clientPortEnd; i++) {
-            if (sock_open_udp(sock, serverAddr, i) != SOCK_IS_ERROR)
+	    if (sock_open_tcp_listener(sock, serverAddr, i) != SOCK_IS_ERROR)
 		goto found;
 	}
 	error("Could not find a usable port in given port range");
@@ -686,7 +663,9 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
 	}
     } else {
 	sock_init(&sock);
-	sock.flags |= SOCK_FLAG_UDP;
+	/* Playback has no listener to accept; recorded input represents the
+	 * already accepted TCP stream. */
+	sock.flags |= SOCK_FLAG_TCP | SOCK_FLAG_CONNECT;
 	sock.fd = *playback_ei++;
 	my_port = *playback_ei++;
     }
@@ -694,10 +673,10 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
  	return -1;
 
     Sockbuf_init(&connp->w, &sock, SERVER_SEND_SIZE,
-		 SOCKBUF_WRITE | SOCKBUF_DGRAM);
+		 SOCKBUF_WRITE | SOCKBUF_FRAMED);
 
     Sockbuf_init(&connp->r, &sock, SERVER_RECV_SIZE,
-		 SOCKBUF_READ | SOCKBUF_DGRAM);
+		 SOCKBUF_READ | SOCKBUF_FRAMED);
 
     Sockbuf_init(&connp->c, (sock_t *) NULL, MAX_SOCKBUF_SIZE,
 		 SOCKBUF_WRITE | SOCKBUF_READ | SOCKBUF_LOCK);
@@ -757,8 +736,66 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
     return my_port;
 }
 
+static int Accept_client_connection(connection_t *connp)
+{
+    int listener_fd = connp->w.sock.fd;
+    sock_t accepted;
+    char *peer_addr;
+
+    errno = 0;
+    if (sock_accept(&connp->w.sock, &accepted) == SOCK_IS_ERROR) {
+	if (errno == EWOULDBLOCK || errno == EAGAIN)
+	    return 0;
+	error("Cannot accept TCP gameplay connection (%d)", errno);
+	return -1;
+    }
+
+    peer_addr = sock_get_last_addr(&accepted);
+    if (strcmp(peer_addr, connp->addr) != 0) {
+	warn("Ignoring TCP gameplay connection from %s; expected %s",
+	     peer_addr, connp->addr);
+	sock_close(&accepted);
+	return 0;
+    }
+    connp->his_port = sock_get_last_port(&accepted);
+
+    if (sock_set_non_blocking(&accepted, 1) == SOCK_IS_ERROR
+	|| sock_set_tcp_nodelay(&accepted, 1) == SOCK_IS_ERROR) {
+	error("Cannot configure accepted TCP gameplay connection");
+	sock_close(&accepted);
+	return -1;
+    }
+    if (sock_set_receive_buffer_size(&accepted,
+				     SERVER_RECV_SIZE + 256) == SOCK_IS_ERROR)
+	error("Cannot set receive buffer size to %d", SERVER_RECV_SIZE + 256);
+    if (sock_set_send_buffer_size(&accepted,
+				  SERVER_SEND_SIZE + 256) == SOCK_IS_ERROR)
+	error("Cannot set send buffer size to %d", SERVER_SEND_SIZE + 256);
+
+    /* The recording scheduler identifies handlers by descriptor offset.
+     * Keep the listener descriptor so recorded and live handler indices stay
+     * identical after accept().  dup2() atomically closes the listener. */
+    if (accepted.fd != listener_fd) {
+	int accepted_fd = accepted.fd;
+
+	if (dup2(accepted_fd, listener_fd) == -1) {
+	    error("Cannot preserve TCP gameplay descriptor");
+	    sock_close(&accepted);
+	    return -1;
+	}
+	close(accepted_fd);
+	accepted.fd = listener_fd;
+    }
+
+    connp->w.sock = accepted;
+    connp->r.sock = accepted;
+    xpprintf("%s TCP gameplay connection established on port %d.\n",
+	     showtime(), connp->my_port);
+    return 1;
+}
+
 /*
- * Handle a connection that is in the listening state.
+ * Accept and verify a connection that is in the listening state.
  */
 static int Handle_listening(connection_t *connp)
 {
@@ -770,40 +807,24 @@ static int Handle_listening(connection_t *connp)
 	Destroy_connection(connp, "not listening");
 	return -1;
     }
+    if (BIT(connp->w.sock.flags, SOCK_FLAG_CONNECT) == 0) {
+	n = Accept_client_connection(connp);
+	if (n <= 0) {
+	    if (n < 0)
+		Destroy_connection(connp, "accept error");
+	    return n;
+	}
+    }
+
     Sockbuf_clear(&connp->r);
     errno = 0;
-    n = sock_receive_anyRec(&connp->r.sock, connp->r.buf, connp->r.size);
+    n = Sockbuf_readRec(&connp->r);
     if (n <= 0) {
 	if (n == 0 || errno == EWOULDBLOCK || errno == EAGAIN)
 	    n = 0;
-	else if (n != 0)
+	else
 	    Destroy_connection(connp, "read first packet error");
 	return n;
-    }
-    connp->r.len = n;
-    connp->his_port = sock_get_last_portRec(&connp->r.sock);
-    if (sock_connectRec(&connp->w.sock, connp->addr, connp->his_port) == -1) {
-	error("Cannot connect datagram socket (%s,%d,%d,%d,%d)",
-	      connp->addr, connp->his_port,
-	      connp->w.sock.error.error,
-	      connp->w.sock.error.call,
-	      connp->w.sock.error.line);
-	if (sock_get_error(&connp->w.sock)) {
-	    error("sock_get_error fails too, giving up");
-	    Destroy_connection(connp, "connect error");
-	    return -1;
-	}
-	errno = 0;
-	if (sock_connectRec(&connp->w.sock, connp->addr, connp->his_port)
-	    == -1) {
-	    error("Still cannot connect datagram socket (%s,%d,%d,%d,%d)",
-		  connp->addr, connp->his_port,
-		  connp->w.sock.error.error,
-		  connp->w.sock.error.call,
-		  connp->w.sock.error.line);
-	    Destroy_connection(connp, "connect error");
-	    return -1;
-	}
     }
     xpprintf("%s Welcome %s=%s@%s|%s (%s/%d)", showtime(),
 	     connp->nick, connp->user, connp->host, connp->dpy,

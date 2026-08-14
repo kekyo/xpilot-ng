@@ -205,6 +205,15 @@ client_accepted()
     grep -q "Welcome .*SDL2Smoke" "$runtime_dir/server.log" 2>/dev/null
 }
 
+tcp_gameplay_connected()
+{
+    if ! kill -0 "$server_pid" 2>/dev/null; then
+        fail "server stopped before accepting the TCP gameplay stream"
+    fi
+    grep -q "TCP gameplay connection established" \
+        "$runtime_dir/server.log" 2>/dev/null
+}
+
 game_frame_ready()
 {
     if ! kill -0 "$client_pid" 2>/dev/null; then
@@ -375,6 +384,7 @@ client_pid=$!
 window_owner_pid=$client_pid
 wait_until "SDL game window" 20 find_game_window
 wait_until "local client acceptance" 20 client_accepted
+wait_until "TCP gameplay connection" 10 tcp_gameplay_connected
 wait_until "game core OpenGL context diagnostics" 10 \
     core_context_logged "$runtime_dir/client.log"
 wait_until "game text renderers" 10 \
