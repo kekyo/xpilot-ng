@@ -110,7 +110,7 @@ ARFLAGS = cru
 AM_V_AR = $(am__v_AR_@AM_V@)
 am__v_AR_ = $(am__v_AR_@AM_DEFAULT_V@)
 am__v_AR_0 = @echo "  AR      " $@;
-am__v_AR_1 =
+am__v_AR_1 = 
 libxp_libtess2_a_AR = $(AR) $(ARFLAGS)
 libxp_libtess2_a_LIBADD =
 am__dirstamp = $(am__leading_dot)dirstamp
@@ -167,11 +167,11 @@ am__v_P_1 = :
 AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN     " $@;
-am__v_GEN_1 =
+am__v_GEN_1 = 
 AM_V_at = $(am__v_at_@AM_V@)
 am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
-am__v_at_1 =
+am__v_at_1 = 
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
@@ -207,13 +207,13 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 AM_V_CC = $(am__v_CC_@AM_V@)
 am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
 am__v_CC_0 = @echo "  CC      " $@;
-am__v_CC_1 =
+am__v_CC_1 = 
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
-am__v_CCLD_1 =
+am__v_CCLD_1 = 
 SOURCES = $(libxp_libtess2_a_SOURCES) $(xpilot_ng_sdl_SOURCES)
 DIST_SOURCES = $(libxp_libtess2_a_SOURCES) \
 	$(am__xpilot_ng_sdl_SOURCES_DIST)
@@ -252,7 +252,6 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
-CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CSCOPE = @CSCOPE@
 CTAGS = @CTAGS@
@@ -304,17 +303,11 @@ SOUND_LIBS = @SOUND_LIBS@
 STRIP = @STRIP@
 VERSION = @VERSION@
 W32_LIBS = @W32_LIBS@
-XMKMF = @XMKMF@
 XP_AUTHORS = @XP_AUTHORS@
 XP_COPYRIGHT = @XP_COPYRIGHT@
 XP_COPYRIGHTDATE = @XP_COPYRIGHTDATE@
 XP_DATADIR = @XP_DATADIR@
 XP_RELEASEDATE = @XP_RELEASEDATE@
-X_CFLAGS = @X_CFLAGS@
-X_EXTENSIONS_LIB = @X_EXTENSIONS_LIB@
-X_EXTRA_LIBS = @X_EXTRA_LIBS@
-X_LIBS = @X_LIBS@
-X_PRE_LIBS = @X_PRE_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -531,12 +524,12 @@ third_party/libtess2/Source/tess.$(OBJEXT):  \
 	third_party/libtess2/Source/$(am__dirstamp) \
 	third_party/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
 
-libxp_libtess2.a: $(libxp_libtess2_a_OBJECTS) $(libxp_libtess2_a_DEPENDENCIES) $(EXTRA_libxp_libtess2_a_DEPENDENCIES)
+libxp_libtess2.a: $(libxp_libtess2_a_OBJECTS) $(libxp_libtess2_a_DEPENDENCIES) $(EXTRA_libxp_libtess2_a_DEPENDENCIES) 
 	$(AM_V_at)-rm -f libxp_libtess2.a
 	$(AM_V_AR)$(libxp_libtess2_a_AR) libxp_libtess2.a $(libxp_libtess2_a_OBJECTS) $(libxp_libtess2_a_LIBADD)
 	$(AM_V_at)$(RANLIB) libxp_libtess2.a
 
-xpilot-ng-sdl$(EXEEXT): $(xpilot_ng_sdl_OBJECTS) $(xpilot_ng_sdl_DEPENDENCIES) $(EXTRA_xpilot_ng_sdl_DEPENDENCIES)
+xpilot-ng-sdl$(EXEEXT): $(xpilot_ng_sdl_OBJECTS) $(xpilot_ng_sdl_DEPENDENCIES) $(EXTRA_xpilot_ng_sdl_DEPENDENCIES) 
 	@rm -f xpilot-ng-sdl$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(xpilot_ng_sdl_OBJECTS) $(xpilot_ng_sdl_LDADD) $(LIBS)
 

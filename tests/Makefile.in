@@ -417,11 +417,11 @@ am__v_P_1 = :
 AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN     " $@;
-am__v_GEN_1 =
+am__v_GEN_1 = 
 AM_V_at = $(am__v_at_@AM_V@)
 am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
-am__v_at_1 =
+am__v_at_1 = 
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
@@ -520,19 +520,19 @@ am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
-am__v_lt_1 =
+am__v_lt_1 = 
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 AM_V_CC = $(am__v_CC_@AM_V@)
 am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
 am__v_CC_0 = @echo "  CC      " $@;
-am__v_CC_1 =
+am__v_CC_1 = 
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
-am__v_CCLD_1 =
+am__v_CCLD_1 = 
 SOURCES = $(test_gfx2d_picture_SOURCES) \
 	$(test_gl_core_resources_SOURCES) \
 	$(test_glwidgets_primitives_SOURCES) \
@@ -832,7 +832,6 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
-CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CSCOPE = @CSCOPE@
 CTAGS = @CTAGS@
@@ -884,17 +883,11 @@ SOUND_LIBS = @SOUND_LIBS@
 STRIP = @STRIP@
 VERSION = @VERSION@
 W32_LIBS = @W32_LIBS@
-XMKMF = @XMKMF@
 XP_AUTHORS = @XP_AUTHORS@
 XP_COPYRIGHT = @XP_COPYRIGHT@
 XP_COPYRIGHTDATE = @XP_COPYRIGHTDATE@
 XP_DATADIR = @XP_DATADIR@
 XP_RELEASEDATE = @XP_RELEASEDATE@
-X_CFLAGS = @X_CFLAGS@
-X_EXTENSIONS_LIB = @X_EXTENSIONS_LIB@
-X_EXTRA_LIBS = @X_EXTRA_LIBS@
-X_LIBS = @X_LIBS@
-X_PRE_LIBS = @X_PRE_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -1401,163 +1394,163 @@ $(am__aclocal_m4_deps):
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
 
-test-gfx2d-picture$(EXEEXT): $(test_gfx2d_picture_OBJECTS) $(test_gfx2d_picture_DEPENDENCIES) $(EXTRA_test_gfx2d_picture_DEPENDENCIES)
+test-gfx2d-picture$(EXEEXT): $(test_gfx2d_picture_OBJECTS) $(test_gfx2d_picture_DEPENDENCIES) $(EXTRA_test_gfx2d_picture_DEPENDENCIES) 
 	@rm -f test-gfx2d-picture$(EXEEXT)
 	$(AM_V_CCLD)$(test_gfx2d_picture_LINK) $(test_gfx2d_picture_OBJECTS) $(test_gfx2d_picture_LDADD) $(LIBS)
 
-test-gl-core-resources$(EXEEXT): $(test_gl_core_resources_OBJECTS) $(test_gl_core_resources_DEPENDENCIES) $(EXTRA_test_gl_core_resources_DEPENDENCIES)
+test-gl-core-resources$(EXEEXT): $(test_gl_core_resources_OBJECTS) $(test_gl_core_resources_DEPENDENCIES) $(EXTRA_test_gl_core_resources_DEPENDENCIES) 
 	@rm -f test-gl-core-resources$(EXEEXT)
 	$(AM_V_CCLD)$(test_gl_core_resources_LINK) $(test_gl_core_resources_OBJECTS) $(test_gl_core_resources_LDADD) $(LIBS)
 
-test-glwidgets-primitives$(EXEEXT): $(test_glwidgets_primitives_OBJECTS) $(test_glwidgets_primitives_DEPENDENCIES) $(EXTRA_test_glwidgets_primitives_DEPENDENCIES)
+test-glwidgets-primitives$(EXEEXT): $(test_glwidgets_primitives_OBJECTS) $(test_glwidgets_primitives_DEPENDENCIES) $(EXTRA_test_glwidgets_primitives_DEPENDENCIES) 
 	@rm -f test-glwidgets-primitives$(EXEEXT)
 	$(AM_V_CCLD)$(test_glwidgets_primitives_LINK) $(test_glwidgets_primitives_OBJECTS) $(test_glwidgets_primitives_LDADD) $(LIBS)
 
-test-glwidgets-scissor$(EXEEXT): $(test_glwidgets_scissor_OBJECTS) $(test_glwidgets_scissor_DEPENDENCIES) $(EXTRA_test_glwidgets_scissor_DEPENDENCIES)
+test-glwidgets-scissor$(EXEEXT): $(test_glwidgets_scissor_OBJECTS) $(test_glwidgets_scissor_DEPENDENCIES) $(EXTRA_test_glwidgets_scissor_DEPENDENCIES) 
 	@rm -f test-glwidgets-scissor$(EXEEXT)
 	$(AM_V_CCLD)$(test_glwidgets_scissor_LINK) $(test_glwidgets_scissor_OBJECTS) $(test_glwidgets_scissor_LDADD) $(LIBS)
 
-test-image-geometry$(EXEEXT): $(test_image_geometry_OBJECTS) $(test_image_geometry_DEPENDENCIES) $(EXTRA_test_image_geometry_DEPENDENCIES)
+test-image-geometry$(EXEEXT): $(test_image_geometry_OBJECTS) $(test_image_geometry_DEPENDENCIES) $(EXTRA_test_image_geometry_DEPENDENCIES) 
 	@rm -f test-image-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_image_geometry_OBJECTS) $(test_image_geometry_LDADD) $(LIBS)
 
-test-images$(EXEEXT): $(test_images_OBJECTS) $(test_images_DEPENDENCIES) $(EXTRA_test_images_DEPENDENCIES)
+test-images$(EXEEXT): $(test_images_OBJECTS) $(test_images_DEPENDENCIES) $(EXTRA_test_images_DEPENDENCIES) 
 	@rm -f test-images$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_images_OBJECTS) $(test_images_LDADD) $(LIBS)
 
-test-meta-environment$(EXEEXT): $(test_meta_environment_OBJECTS) $(test_meta_environment_DEPENDENCIES) $(EXTRA_test_meta_environment_DEPENDENCIES)
+test-meta-environment$(EXEEXT): $(test_meta_environment_OBJECTS) $(test_meta_environment_DEPENDENCIES) $(EXTRA_test_meta_environment_DEPENDENCIES) 
 	@rm -f test-meta-environment$(EXEEXT)
 	$(AM_V_CCLD)$(test_meta_environment_LINK) $(test_meta_environment_OBJECTS) $(test_meta_environment_LDADD) $(LIBS)
 
-test-paint-transform$(EXEEXT): $(test_paint_transform_OBJECTS) $(test_paint_transform_DEPENDENCIES) $(EXTRA_test_paint_transform_DEPENDENCIES)
+test-paint-transform$(EXEEXT): $(test_paint_transform_OBJECTS) $(test_paint_transform_DEPENDENCIES) $(EXTRA_test_paint_transform_DEPENDENCIES) 
 	@rm -f test-paint-transform$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_paint_transform_OBJECTS) $(test_paint_transform_LDADD) $(LIBS)
 
-test-paintmap-vdecor$(EXEEXT): $(test_paintmap_vdecor_OBJECTS) $(test_paintmap_vdecor_DEPENDENCIES) $(EXTRA_test_paintmap_vdecor_DEPENDENCIES)
+test-paintmap-vdecor$(EXEEXT): $(test_paintmap_vdecor_OBJECTS) $(test_paintmap_vdecor_DEPENDENCIES) $(EXTRA_test_paintmap_vdecor_DEPENDENCIES) 
 	@rm -f test-paintmap-vdecor$(EXEEXT)
 	$(AM_V_CCLD)$(test_paintmap_vdecor_LINK) $(test_paintmap_vdecor_OBJECTS) $(test_paintmap_vdecor_LDADD) $(LIBS)
 
-test-polygon-geometry$(EXEEXT): $(test_polygon_geometry_OBJECTS) $(test_polygon_geometry_DEPENDENCIES) $(EXTRA_test_polygon_geometry_DEPENDENCIES)
+test-polygon-geometry$(EXEEXT): $(test_polygon_geometry_OBJECTS) $(test_polygon_geometry_DEPENDENCIES) $(EXTRA_test_polygon_geometry_DEPENDENCIES) 
 	@rm -f test-polygon-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_polygon_geometry_OBJECTS) $(test_polygon_geometry_LDADD) $(LIBS)
 
-test-radar-renderer$(EXEEXT): $(test_radar_renderer_OBJECTS) $(test_radar_renderer_DEPENDENCIES) $(EXTRA_test_radar_renderer_DEPENDENCIES)
+test-radar-renderer$(EXEEXT): $(test_radar_renderer_OBJECTS) $(test_radar_renderer_DEPENDENCIES) $(EXTRA_test_radar_renderer_DEPENDENCIES) 
 	@rm -f test-radar-renderer$(EXEEXT)
 	$(AM_V_CCLD)$(test_radar_renderer_LINK) $(test_radar_renderer_OBJECTS) $(test_radar_renderer_LDADD) $(LIBS)
 
-test-renderer-commands$(EXEEXT): $(test_renderer_commands_OBJECTS) $(test_renderer_commands_DEPENDENCIES) $(EXTRA_test_renderer_commands_DEPENDENCIES)
+test-renderer-commands$(EXEEXT): $(test_renderer_commands_OBJECTS) $(test_renderer_commands_DEPENDENCIES) $(EXTRA_test_renderer_commands_DEPENDENCIES) 
 	@rm -f test-renderer-commands$(EXEEXT)
 	$(AM_V_CCLD)$(test_renderer_commands_LINK) $(test_renderer_commands_OBJECTS) $(test_renderer_commands_LDADD) $(LIBS)
 
-test-renderer-geometry$(EXEEXT): $(test_renderer_geometry_OBJECTS) $(test_renderer_geometry_DEPENDENCIES) $(EXTRA_test_renderer_geometry_DEPENDENCIES)
+test-renderer-geometry$(EXEEXT): $(test_renderer_geometry_OBJECTS) $(test_renderer_geometry_DEPENDENCIES) $(EXTRA_test_renderer_geometry_DEPENDENCIES) 
 	@rm -f test-renderer-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_renderer_geometry_OBJECTS) $(test_renderer_geometry_LDADD) $(LIBS)
 
-test-renderer-gl-core$(EXEEXT): $(test_renderer_gl_core_OBJECTS) $(test_renderer_gl_core_DEPENDENCIES) $(EXTRA_test_renderer_gl_core_DEPENDENCIES)
+test-renderer-gl-core$(EXEEXT): $(test_renderer_gl_core_OBJECTS) $(test_renderer_gl_core_DEPENDENCIES) $(EXTRA_test_renderer_gl_core_DEPENDENCIES) 
 	@rm -f test-renderer-gl-core$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_renderer_gl_core_OBJECTS) $(test_renderer_gl_core_LDADD) $(LIBS)
 
-test-sdl-clipboard$(EXEEXT): $(test_sdl_clipboard_OBJECTS) $(test_sdl_clipboard_DEPENDENCIES) $(EXTRA_test_sdl_clipboard_DEPENDENCIES)
+test-sdl-clipboard$(EXEEXT): $(test_sdl_clipboard_OBJECTS) $(test_sdl_clipboard_DEPENDENCIES) $(EXTRA_test_sdl_clipboard_DEPENDENCIES) 
 	@rm -f test-sdl-clipboard$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_clipboard_OBJECTS) $(test_sdl_clipboard_LDADD) $(LIBS)
 
-test-sdl-console$(EXEEXT): $(test_sdl_console_OBJECTS) $(test_sdl_console_DEPENDENCIES) $(EXTRA_test_sdl_console_DEPENDENCIES)
+test-sdl-console$(EXEEXT): $(test_sdl_console_OBJECTS) $(test_sdl_console_DEPENDENCIES) $(EXTRA_test_sdl_console_DEPENDENCIES) 
 	@rm -f test-sdl-console$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_console_OBJECTS) $(test_sdl_console_LDADD) $(LIBS)
 
-test-sdl-event$(EXEEXT): $(test_sdl_event_OBJECTS) $(test_sdl_event_DEPENDENCIES) $(EXTRA_test_sdl_event_DEPENDENCIES)
+test-sdl-event$(EXEEXT): $(test_sdl_event_OBJECTS) $(test_sdl_event_DEPENDENCIES) $(EXTRA_test_sdl_event_DEPENDENCIES) 
 	@rm -f test-sdl-event$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_event_OBJECTS) $(test_sdl_event_LDADD) $(LIBS)
 
-test-sdl-game-frame$(EXEEXT): $(test_sdl_game_frame_OBJECTS) $(test_sdl_game_frame_DEPENDENCIES) $(EXTRA_test_sdl_game_frame_DEPENDENCIES)
+test-sdl-game-frame$(EXEEXT): $(test_sdl_game_frame_OBJECTS) $(test_sdl_game_frame_DEPENDENCIES) $(EXTRA_test_sdl_game_frame_DEPENDENCIES) 
 	@rm -f test-sdl-game-frame$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_game_frame_OBJECTS) $(test_sdl_game_frame_LDADD) $(LIBS)
 
-test-sdl-init-core-profile$(EXEEXT): $(test_sdl_init_core_profile_OBJECTS) $(test_sdl_init_core_profile_DEPENDENCIES) $(EXTRA_test_sdl_init_core_profile_DEPENDENCIES)
+test-sdl-init-core-profile$(EXEEXT): $(test_sdl_init_core_profile_OBJECTS) $(test_sdl_init_core_profile_DEPENDENCIES) $(EXTRA_test_sdl_init_core_profile_DEPENDENCIES) 
 	@rm -f test-sdl-init-core-profile$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdl_init_core_profile_LINK) $(test_sdl_init_core_profile_OBJECTS) $(test_sdl_init_core_profile_LDADD) $(LIBS)
 
-test-sdl-keys$(EXEEXT): $(test_sdl_keys_OBJECTS) $(test_sdl_keys_DEPENDENCIES) $(EXTRA_test_sdl_keys_DEPENDENCIES)
+test-sdl-keys$(EXEEXT): $(test_sdl_keys_OBJECTS) $(test_sdl_keys_DEPENDENCIES) $(EXTRA_test_sdl_keys_DEPENDENCIES) 
 	@rm -f test-sdl-keys$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_keys_OBJECTS) $(test_sdl_keys_LDADD) $(LIBS)
 
-test-sdl-meta-frame$(EXEEXT): $(test_sdl_meta_frame_OBJECTS) $(test_sdl_meta_frame_DEPENDENCIES) $(EXTRA_test_sdl_meta_frame_DEPENDENCIES)
+test-sdl-meta-frame$(EXEEXT): $(test_sdl_meta_frame_OBJECTS) $(test_sdl_meta_frame_DEPENDENCIES) $(EXTRA_test_sdl_meta_frame_DEPENDENCIES) 
 	@rm -f test-sdl-meta-frame$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_meta_frame_OBJECTS) $(test_sdl_meta_frame_LDADD) $(LIBS)
 
-test-sdl-renderer-core-context$(EXEEXT): $(test_sdl_renderer_core_context_OBJECTS) $(test_sdl_renderer_core_context_DEPENDENCIES) $(EXTRA_test_sdl_renderer_core_context_DEPENDENCIES)
+test-sdl-renderer-core-context$(EXEEXT): $(test_sdl_renderer_core_context_OBJECTS) $(test_sdl_renderer_core_context_DEPENDENCIES) $(EXTRA_test_sdl_renderer_core_context_DEPENDENCIES) 
 	@rm -f test-sdl-renderer-core-context$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_renderer_core_context_OBJECTS) $(test_sdl_renderer_core_context_LDADD) $(LIBS)
 
-test-sdl-renderer-scissor$(EXEEXT): $(test_sdl_renderer_scissor_OBJECTS) $(test_sdl_renderer_scissor_DEPENDENCIES) $(EXTRA_test_sdl_renderer_scissor_DEPENDENCIES)
+test-sdl-renderer-scissor$(EXEEXT): $(test_sdl_renderer_scissor_OBJECTS) $(test_sdl_renderer_scissor_DEPENDENCIES) $(EXTRA_test_sdl_renderer_scissor_DEPENDENCIES) 
 	@rm -f test-sdl-renderer-scissor$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdl_renderer_scissor_LINK) $(test_sdl_renderer_scissor_OBJECTS) $(test_sdl_renderer_scissor_LDADD) $(LIBS)
 
-test-sdl-surface$(EXEEXT): $(test_sdl_surface_OBJECTS) $(test_sdl_surface_DEPENDENCIES) $(EXTRA_test_sdl_surface_DEPENDENCIES)
+test-sdl-surface$(EXEEXT): $(test_sdl_surface_OBJECTS) $(test_sdl_surface_DEPENDENCIES) $(EXTRA_test_sdl_surface_DEPENDENCIES) 
 	@rm -f test-sdl-surface$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_surface_OBJECTS) $(test_sdl_surface_LDADD) $(LIBS)
 
-test-sdl-ui-image$(EXEEXT): $(test_sdl_ui_image_OBJECTS) $(test_sdl_ui_image_DEPENDENCIES) $(EXTRA_test_sdl_ui_image_DEPENDENCIES)
+test-sdl-ui-image$(EXEEXT): $(test_sdl_ui_image_OBJECTS) $(test_sdl_ui_image_DEPENDENCIES) $(EXTRA_test_sdl_ui_image_DEPENDENCIES) 
 	@rm -f test-sdl-ui-image$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdl_ui_image_LINK) $(test_sdl_ui_image_OBJECTS) $(test_sdl_ui_image_LDADD) $(LIBS)
 
-test-sdl-window$(EXEEXT): $(test_sdl_window_OBJECTS) $(test_sdl_window_DEPENDENCIES) $(EXTRA_test_sdl_window_DEPENDENCIES)
+test-sdl-window$(EXEEXT): $(test_sdl_window_OBJECTS) $(test_sdl_window_DEPENDENCIES) $(EXTRA_test_sdl_window_DEPENDENCIES) 
 	@rm -f test-sdl-window$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_window_OBJECTS) $(test_sdl_window_LDADD) $(LIBS)
 
-test-sdlgui-appearing$(EXEEXT): $(test_sdlgui_appearing_OBJECTS) $(test_sdlgui_appearing_DEPENDENCIES) $(EXTRA_test_sdlgui_appearing_DEPENDENCIES)
+test-sdlgui-appearing$(EXEEXT): $(test_sdlgui_appearing_OBJECTS) $(test_sdlgui_appearing_DEPENDENCIES) $(EXTRA_test_sdlgui_appearing_DEPENDENCIES) 
 	@rm -f test-sdlgui-appearing$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_appearing_LINK) $(test_sdlgui_appearing_OBJECTS) $(test_sdlgui_appearing_LDADD) $(LIBS)
 
-test-sdlgui-asteroids$(EXEEXT): $(test_sdlgui_asteroids_OBJECTS) $(test_sdlgui_asteroids_DEPENDENCIES) $(EXTRA_test_sdlgui_asteroids_DEPENDENCIES)
+test-sdlgui-asteroids$(EXEEXT): $(test_sdlgui_asteroids_OBJECTS) $(test_sdlgui_asteroids_DEPENDENCIES) $(EXTRA_test_sdlgui_asteroids_DEPENDENCIES) 
 	@rm -f test-sdlgui-asteroids$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_asteroids_LINK) $(test_sdlgui_asteroids_OBJECTS) $(test_sdlgui_asteroids_LDADD) $(LIBS)
 
-test-sdlgui-hud-primitives$(EXEEXT): $(test_sdlgui_hud_primitives_OBJECTS) $(test_sdlgui_hud_primitives_DEPENDENCIES) $(EXTRA_test_sdlgui_hud_primitives_DEPENDENCIES)
+test-sdlgui-hud-primitives$(EXEEXT): $(test_sdlgui_hud_primitives_OBJECTS) $(test_sdlgui_hud_primitives_DEPENDENCIES) $(EXTRA_test_sdlgui_hud_primitives_DEPENDENCIES) 
 	@rm -f test-sdlgui-hud-primitives$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_hud_primitives_LINK) $(test_sdlgui_hud_primitives_OBJECTS) $(test_sdlgui_hud_primitives_LDADD) $(LIBS)
 
-test-sdlgui-polygons$(EXEEXT): $(test_sdlgui_polygons_OBJECTS) $(test_sdlgui_polygons_DEPENDENCIES) $(EXTRA_test_sdlgui_polygons_DEPENDENCIES)
+test-sdlgui-polygons$(EXEEXT): $(test_sdlgui_polygons_OBJECTS) $(test_sdlgui_polygons_DEPENDENCIES) $(EXTRA_test_sdlgui_polygons_DEPENDENCIES) 
 	@rm -f test-sdlgui-polygons$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_polygons_LINK) $(test_sdlgui_polygons_OBJECTS) $(test_sdlgui_polygons_LDADD) $(LIBS)
 
-test-sdlgui-ships$(EXEEXT): $(test_sdlgui_ships_OBJECTS) $(test_sdlgui_ships_DEPENDENCIES) $(EXTRA_test_sdlgui_ships_DEPENDENCIES)
+test-sdlgui-ships$(EXEEXT): $(test_sdlgui_ships_OBJECTS) $(test_sdlgui_ships_DEPENDENCIES) $(EXTRA_test_sdlgui_ships_DEPENDENCIES) 
 	@rm -f test-sdlgui-ships$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_ships_LINK) $(test_sdlgui_ships_OBJECTS) $(test_sdlgui_ships_LDADD) $(LIBS)
 
-test-sdlgui-sparks$(EXEEXT): $(test_sdlgui_sparks_OBJECTS) $(test_sdlgui_sparks_DEPENDENCIES) $(EXTRA_test_sdlgui_sparks_DEPENDENCIES)
+test-sdlgui-sparks$(EXEEXT): $(test_sdlgui_sparks_OBJECTS) $(test_sdlgui_sparks_DEPENDENCIES) $(EXTRA_test_sdlgui_sparks_DEPENDENCIES) 
 	@rm -f test-sdlgui-sparks$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlgui_sparks_LINK) $(test_sdlgui_sparks_OBJECTS) $(test_sdlgui_sparks_LDADD) $(LIBS)
 
-test-sdlmeta-primitives$(EXEEXT): $(test_sdlmeta_primitives_OBJECTS) $(test_sdlmeta_primitives_DEPENDENCIES) $(EXTRA_test_sdlmeta_primitives_DEPENDENCIES)
+test-sdlmeta-primitives$(EXEEXT): $(test_sdlmeta_primitives_OBJECTS) $(test_sdlmeta_primitives_DEPENDENCIES) $(EXTRA_test_sdlmeta_primitives_DEPENDENCIES) 
 	@rm -f test-sdlmeta-primitives$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlmeta_primitives_LINK) $(test_sdlmeta_primitives_OBJECTS) $(test_sdlmeta_primitives_LDADD) $(LIBS)
 
-test-sdlpaint-stage$(EXEEXT): $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_stage_DEPENDENCIES) $(EXTRA_test_sdlpaint_stage_DEPENDENCIES)
+test-sdlpaint-stage$(EXEEXT): $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_stage_DEPENDENCIES) $(EXTRA_test_sdlpaint_stage_DEPENDENCIES) 
 	@rm -f test-sdlpaint-stage$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlpaint_stage_LINK) $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_stage_LDADD) $(LIBS)
 
-test-surface-rgba8$(EXEEXT): $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_DEPENDENCIES) $(EXTRA_test_surface_rgba8_DEPENDENCIES)
+test-surface-rgba8$(EXEEXT): $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_DEPENDENCIES) $(EXTRA_test_surface_rgba8_DEPENDENCIES) 
 	@rm -f test-surface-rgba8$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_LDADD) $(LIBS)
 
-test-text-atlas$(EXEEXT): $(test_text_atlas_OBJECTS) $(test_text_atlas_DEPENDENCIES) $(EXTRA_test_text_atlas_DEPENDENCIES)
+test-text-atlas$(EXEEXT): $(test_text_atlas_OBJECTS) $(test_text_atlas_DEPENDENCIES) $(EXTRA_test_text_atlas_DEPENDENCIES) 
 	@rm -f test-text-atlas$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_text_atlas_OBJECTS) $(test_text_atlas_LDADD) $(LIBS)
 
-test-text-cache-adapter$(EXEEXT): $(test_text_cache_adapter_OBJECTS) $(test_text_cache_adapter_DEPENDENCIES) $(EXTRA_test_text_cache_adapter_DEPENDENCIES)
+test-text-cache-adapter$(EXEEXT): $(test_text_cache_adapter_OBJECTS) $(test_text_cache_adapter_DEPENDENCIES) $(EXTRA_test_text_cache_adapter_DEPENDENCIES) 
 	@rm -f test-text-cache-adapter$(EXEEXT)
 	$(AM_V_CCLD)$(test_text_cache_adapter_LINK) $(test_text_cache_adapter_OBJECTS) $(test_text_cache_adapter_LDADD) $(LIBS)
 
-test-text-geometry$(EXEEXT): $(test_text_geometry_OBJECTS) $(test_text_geometry_DEPENDENCIES) $(EXTRA_test_text_geometry_DEPENDENCIES)
+test-text-geometry$(EXEEXT): $(test_text_geometry_OBJECTS) $(test_text_geometry_DEPENDENCIES) $(EXTRA_test_text_geometry_DEPENDENCIES) 
 	@rm -f test-text-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_text_geometry_OBJECTS) $(test_text_geometry_LDADD) $(LIBS)
 
-test-text-renderer$(EXEEXT): $(test_text_renderer_OBJECTS) $(test_text_renderer_DEPENDENCIES) $(EXTRA_test_text_renderer_DEPENDENCIES)
+test-text-renderer$(EXEEXT): $(test_text_renderer_OBJECTS) $(test_text_renderer_DEPENDENCIES) $(EXTRA_test_text_renderer_DEPENDENCIES) 
 	@rm -f test-text-renderer$(EXEEXT)
 	$(AM_V_CCLD)$(test_text_renderer_LINK) $(test_text_renderer_OBJECTS) $(test_text_renderer_LDADD) $(LIBS)
 
-test-text-ttf-atlas$(EXEEXT): $(test_text_ttf_atlas_OBJECTS) $(test_text_ttf_atlas_DEPENDENCIES) $(EXTRA_test_text_ttf_atlas_DEPENDENCIES)
+test-text-ttf-atlas$(EXEEXT): $(test_text_ttf_atlas_OBJECTS) $(test_text_ttf_atlas_DEPENDENCIES) $(EXTRA_test_text_ttf_atlas_DEPENDENCIES) 
 	@rm -f test-text-ttf-atlas$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_text_ttf_atlas_OBJECTS) $(test_text_ttf_atlas_LDADD) $(LIBS)
 

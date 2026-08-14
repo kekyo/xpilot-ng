@@ -106,7 +106,7 @@ ARFLAGS = cru
 AM_V_AR = $(am__v_AR_@AM_V@)
 am__v_AR_ = $(am__v_AR_@AM_DEFAULT_V@)
 am__v_AR_0 = @echo "  AR      " $@;
-am__v_AR_1 =
+am__v_AR_1 = 
 libxpclient_a_AR = $(AR) $(ARFLAGS)
 libxpclient_a_LIBADD =
 am__libxpclient_a_SOURCES_DIST = client.c client.h clientcommand.c \
@@ -133,11 +133,11 @@ am__v_P_1 = :
 AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN     " $@;
-am__v_GEN_1 =
+am__v_GEN_1 = 
 AM_V_at = $(am__v_at_@AM_V@)
 am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
-am__v_at_1 =
+am__v_at_1 = 
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
@@ -158,13 +158,13 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 AM_V_CC = $(am__v_CC_@AM_V@)
 am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
 am__v_CC_0 = @echo "  CC      " $@;
-am__v_CC_1 =
+am__v_CC_1 = 
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
-am__v_CCLD_1 =
+am__v_CCLD_1 = 
 SOURCES = $(libxpclient_a_SOURCES)
 DIST_SOURCES = $(am__libxpclient_a_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
@@ -205,7 +205,7 @@ am__define_uniq_tagged_files = \
   unique=`for i in $$list; do \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
-DIST_SUBDIRS = . items x11 sdl NT
+DIST_SUBDIRS = . items sdl NT
 am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/config/depcomp \
 	$(top_srcdir)/config/mkinstalldirs
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -244,7 +244,6 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
-CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CSCOPE = @CSCOPE@
 CTAGS = @CTAGS@
@@ -296,17 +295,11 @@ SOUND_LIBS = @SOUND_LIBS@
 STRIP = @STRIP@
 VERSION = @VERSION@
 W32_LIBS = @W32_LIBS@
-XMKMF = @XMKMF@
 XP_AUTHORS = @XP_AUTHORS@
 XP_COPYRIGHT = @XP_COPYRIGHT@
 XP_COPYRIGHTDATE = @XP_COPYRIGHTDATE@
 XP_DATADIR = @XP_DATADIR@
 XP_RELEASEDATE = @XP_RELEASEDATE@
-X_CFLAGS = @X_CFLAGS@
-X_EXTENSIONS_LIB = @X_EXTENSIONS_LIB@
-X_EXTRA_LIBS = @X_EXTRA_LIBS@
-X_LIBS = @X_LIBS@
-X_PRE_LIBS = @X_PRE_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -374,17 +367,15 @@ libxpclient_a_SOURCES = client.c client.h clientcommand.c \
 	paintobjects.c option.c option.h query.c recordfmt.h talk.h \
 	talkmacros.c textinterface.c usleep.c xpclient.h \
 	$(am__append_1)
-@COND_SDL_CLIENT_FALSE@MAYBE_SDL =
+@COND_SDL_CLIENT_FALSE@MAYBE_SDL = 
 
 # From section Conditional subdirectories with AM_CONDITIONAL
 # in GNU automake manual.
 @COND_SDL_CLIENT_TRUE@MAYBE_SDL = sdl
-@COND_X11_CLIENT_FALSE@MAYBE_X11 =
-@COND_X11_CLIENT_TRUE@MAYBE_X11 = x11
 
 # kps - . in SUBDIRS is needed to make sure libxpclient.a is compiled before
 # SDL client
-SUBDIRS = . items $(MAYBE_X11) $(MAYBE_SDL) NT
+SUBDIRS = . items $(MAYBE_SDL) NT
 all: all-recursive
 
 .SUFFIXES:
@@ -422,7 +413,7 @@ $(am__aclocal_m4_deps):
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
 
-libxpclient.a: $(libxpclient_a_OBJECTS) $(libxpclient_a_DEPENDENCIES) $(EXTRA_libxpclient_a_DEPENDENCIES)
+libxpclient.a: $(libxpclient_a_OBJECTS) $(libxpclient_a_DEPENDENCIES) $(EXTRA_libxpclient_a_DEPENDENCIES) 
 	$(AM_V_at)-rm -f libxpclient.a
 	$(AM_V_AR)$(libxpclient_a_AR) libxpclient.a $(libxpclient_a_OBJECTS) $(libxpclient_a_LIBADD)
 	$(AM_V_at)$(RANLIB) libxpclient.a

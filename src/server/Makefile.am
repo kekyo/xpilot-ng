@@ -24,4 +24,4 @@ xpilot_ng_server_SOURCES = \
 	walls.c walls.h wormhole.c wormhole.h \
 	xp2map.c xpmap.c xpserver.h
 
-xpilot_ng_server_LDADD =  $(top_builddir)/src/common/libxpcommon.a @X_EXTRA_LIBS@ @W32_LIBS@
+xpilot_ng_server_LDADD = $(top_builddir)/src/common/libxpcommon.a @W32_LIBS@
