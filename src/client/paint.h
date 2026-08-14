@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -151,7 +151,6 @@ void Paint_meters(void);
 void Paint_HUD(void);
 int  Get_message(int *pos, char *message, int req_length, int key);
 void Paint_messages(void);
-void Paint_recording(void);
 void Paint_HUD_values(void);
 void Paint_frame(void);
 void Paint_frame_start(void);

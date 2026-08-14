@@ -114,9 +114,9 @@ am__libxpclient_a_SOURCES_DIST = client.c client.h clientcommand.c \
 	connectparam.h datagram.c datagram.h default.c event.c gfx2d.c \
 	gfx2d.h guimap.h guiobjects.h mapdata.c messages.c meta.c \
 	meta.h netclient.c netclient.h paint.c paint.h paintmap.c \
-	paintobjects.c option.c option.h query.c recordfmt.h talk.h \
-	talkmacros.c textinterface.c usleep.c xpclient.h caudio.c \
-	caudio.h oalaudio.c
+	paintobjects.c option.c option.h query.c talk.h talkmacros.c \
+	textinterface.c usleep.c xpclient.h caudio.c caudio.h \
+	oalaudio.c
 @COND_SOUND_TRUE@am__objects_1 = caudio.$(OBJEXT) oalaudio.$(OBJEXT)
 am_libxpclient_a_OBJECTS = client.$(OBJEXT) clientcommand.$(OBJEXT) \
 	clientrank.$(OBJEXT) datagram.$(OBJEXT) default.$(OBJEXT) \
@@ -364,9 +364,8 @@ libxpclient_a_SOURCES = client.c client.h clientcommand.c \
 	connectparam.h datagram.c datagram.h default.c event.c gfx2d.c \
 	gfx2d.h guimap.h guiobjects.h mapdata.c messages.c meta.c \
 	meta.h netclient.c netclient.h paint.c paint.h paintmap.c \
-	paintobjects.c option.c option.h query.c recordfmt.h talk.h \
-	talkmacros.c textinterface.c usleep.c xpclient.h \
-	$(am__append_1)
+	paintobjects.c option.c option.h query.c talk.h talkmacros.c \
+	textinterface.c usleep.c xpclient.h $(am__append_1)
 @COND_SDL_CLIENT_FALSE@MAYBE_SDL = 
 
 # From section Conditional subdirectories with AM_CONDITIONAL

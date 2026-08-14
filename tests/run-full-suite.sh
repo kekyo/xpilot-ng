@@ -128,6 +128,30 @@ assert_configuration_programs()
     done
 }
 
+assert_runtime_help_surface()
+{
+    build_dir=$1
+
+    server_help=$("$build_dir/src/server/xpilot-ng-server" -help 2>&1 || true)
+    case "$server_help" in
+        *xpilot-ng-x11*)
+            echo "Server help still references the removed X11 client" >&2
+            return 1
+            ;;
+    esac
+
+    client_help=$("$build_dir/src/client/sdl/xpilot-ng-sdl" -help 2>&1 || true)
+    for removed_option in keyToggleRecord keyToggleRadarScore
+    do
+        case "$client_help" in
+            *"$removed_option"*)
+                echo "SDL client help still exposes $removed_option" >&2
+                return 1
+                ;;
+        esac
+    done
+}
+
 assert_distribution_surface()
 {
     build_dir=$1
@@ -152,7 +176,11 @@ assert_distribution_surface()
             src/common/NT/winNet.c \
             src/common/NT/winX \
             src/common/NT/wsockerrs.c \
-            src/server/NT/
+            src/server/NT/ \
+            src/client/sdl/res/ \
+            src/client/sdl/xpilot.rc \
+            src/client/sdl/xpilot_sdl.dsp \
+            src/client/sdl/xpilot_sdl.dsw
         do
             case "$distribution_listing" in
                 *"/$legacy_path"*)
@@ -199,6 +227,7 @@ run_configuration()
         make -j"$test_jobs"
         assert_removed_programs_absent "$build_dir"
         if test "$configuration_name" = default; then
+            assert_runtime_help_surface "$build_dir"
             assert_distribution_surface "$build_dir"
         fi
         if ! make check; then

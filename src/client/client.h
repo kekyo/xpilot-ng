@@ -663,9 +663,7 @@ void Pointer_control_newbie_message(void);
  */
 void Platform_specific_pointer_control_set_state(bool on);
 void Platform_specific_talk_set_state(bool on);
-void Record_toggle(void);
 void Toggle_fullscreen(void);
-void Toggle_radar_and_scorelist(void);
 
 /*
  * event.c

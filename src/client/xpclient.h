@@ -66,7 +66,6 @@
 #include "netclient.h"
 #include "option.h"
 #include "paint.h"
-#include "recordfmt.h"
 #include "talk.h"
 #ifdef SOUND
 # include "caudio.h"

@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -166,12 +166,6 @@ void Conf_print(void)
     warn("VERSION                   = %s", VERSION);
     warn("PACKAGE                   = %s", PACKAGE);
 
-#ifdef DBE
-    warn("DBE");
-#endif
-#ifdef MBX
-    warn("MBX");
-#endif
 #ifdef PLOCKSERVER
     warn("PLOCKSERVER");
 #endif

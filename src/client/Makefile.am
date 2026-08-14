@@ -16,7 +16,6 @@ libxpclient_a_SOURCES = \
 	paint.c paint.h paintmap.c paintobjects.c \
 	option.c option.h \
 	query.c \
-	recordfmt.h \
 	talk.h talkmacros.c textinterface.c \
 	usleep.c \
 	xpclient.h
