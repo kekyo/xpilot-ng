@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -1138,14 +1138,7 @@ int Net_input(void)
 		    oldest_frame = frame;
 	    }
 	}
-	if ((i == receive_window_size - 1 && i > 0)
-#if 0
-	    || drawPending
-	    || (ThreadedDraw &&
-		!WaitForSingleObject(dinfo.eventNotDrawing, 0)
-		== WAIT_OBJECT_0)
-#endif
-		) {
+	if (i == receive_window_size - 1 && i > 0) {
 	    /*
 	     * Drop oldest packet.
 	     */

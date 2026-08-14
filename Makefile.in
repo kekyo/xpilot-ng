@@ -362,7 +362,6 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = src lib doc contrib $(am__append_1)
 dist_pkgdata_DATA = mapconvert.py
-EXTRA_DIST = XPilot.dsw
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 

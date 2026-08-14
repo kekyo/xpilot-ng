@@ -280,12 +280,8 @@ AC_CONFIG_FILES([ \
 	src/common/Makefile \
 	src/common/version.h \
 	src/common/NT/Makefile \
-	src/common/NT/bindist/Makefile \
 	src/client/Makefile \
-	src/client/items/Makefile \
 	src/client/sdl/Makefile \
-	src/client/NT/Makefile \
-	src/client/NT/res/Makefile \
 	src/server/Makefile \
 	tests/Makefile \
 	])

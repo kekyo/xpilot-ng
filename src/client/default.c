@@ -3,12 +3,12 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
  *
- * Copyright (C) 2003-2004 Kristian Söderblom <kps@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Kristian SÃ¶derblom <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1280,27 +1280,6 @@ xp_option_t default_options[] = {
 	XP_OPTFLAG_KEEP,
 	"Search path for texture files.\n"
 	"This is a list of one or more directories separated by colons.\n"),
-
-    /* kps - these should not be needed in the SDL windows client. */
-#if 0
-    XP_BOOL_OPTION(
-	"threadedDraw",
-	false,
-	&ThreadedDraw,
-	NULL,
-	XP_OPTFLAG_CONFIG_DEFAULT,
-	"Tell Windows to do the heavy BitBlt in another thread\n"),
-
-    XP_INT_OPTION(
-	"radarDivisor",
-	1,
-	1,
-	100,
-	&RadarDivisor,
-	NULL,
-	XP_OPTFLAG_CONFIG_DEFAULT,
-	"Specifies how many frames between radar window updates.\n"),
-#endif
 
     XP_STRING_OPTION(
 	"clientRankFile",

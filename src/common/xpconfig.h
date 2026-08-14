@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -145,18 +145,6 @@
 #endif
 #define CONF_ZCAT_EXT			".gz"
 #define CONF_ZCAT_FORMAT 		"gzip -d -c < %s"
-
-/*
- * Windows doesn't play with stdin/out well at all... 
- * So for the client i route the "debug" printfs to the debug stream 
- * The server gets 'real' messages routed to the messages window 
- */
-#ifdef _WINDOWS
-#  ifdef _XPILOTNTSERVER_
-#    define xpprintf	xpprintfW
-/* # define xpprintf _Trace  */
-#  endif
-#endif
 
 /*
  * XPilot on Windows does lots of double to int conversions. So we have:

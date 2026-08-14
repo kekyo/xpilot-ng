@@ -6803,7 +6803,7 @@ then :
 fi
 
 
-ac_config_files="$ac_config_files Makefile README contrib/Makefile contrib/xpngcc/Makefile doc/Makefile doc/man/Makefile lib/Makefile lib/fonts/Makefile lib/maps/Makefile lib/textures/Makefile lib/sound/Makefile src/Makefile src/common/Makefile src/common/version.h src/common/NT/Makefile src/common/NT/bindist/Makefile src/client/Makefile src/client/items/Makefile src/client/sdl/Makefile src/client/NT/Makefile src/client/NT/res/Makefile src/server/Makefile tests/Makefile"
+ac_config_files="$ac_config_files Makefile README contrib/Makefile contrib/xpngcc/Makefile doc/Makefile doc/man/Makefile lib/Makefile lib/fonts/Makefile lib/maps/Makefile lib/textures/Makefile lib/sound/Makefile src/Makefile src/common/Makefile src/common/version.h src/common/NT/Makefile src/client/Makefile src/client/sdl/Makefile src/server/Makefile tests/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -7561,12 +7561,8 @@ do
     "src/common/Makefile") CONFIG_FILES="$CONFIG_FILES src/common/Makefile" ;;
     "src/common/version.h") CONFIG_FILES="$CONFIG_FILES src/common/version.h" ;;
     "src/common/NT/Makefile") CONFIG_FILES="$CONFIG_FILES src/common/NT/Makefile" ;;
-    "src/common/NT/bindist/Makefile") CONFIG_FILES="$CONFIG_FILES src/common/NT/bindist/Makefile" ;;
     "src/client/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/Makefile" ;;
-    "src/client/items/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/items/Makefile" ;;
     "src/client/sdl/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/sdl/Makefile" ;;
-    "src/client/NT/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/NT/Makefile" ;;
-    "src/client/NT/res/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/NT/res/Makefile" ;;
     "src/server/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/Makefile" ;;
     "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
 

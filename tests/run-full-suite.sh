@@ -128,6 +128,42 @@ assert_configuration_programs()
     done
 }
 
+assert_distribution_surface()
+{
+    build_dir=$1
+
+    (
+        cd "$build_dir"
+        make dist
+
+        set -- xpilot-ng-*.tar.gz
+        if test "$#" -ne 1 || test ! -f "$1"; then
+            echo "Expected one source distribution archive" >&2
+            return 1
+        fi
+
+        distribution_listing=$(tar -tzf "$1")
+        for legacy_path in \
+            XPilot.dsw \
+            src/client/NT/ \
+            src/client/items/ \
+            src/common/NT/XPilotFiles \
+            src/common/NT/bindist/ \
+            src/common/NT/winNet.c \
+            src/common/NT/winX \
+            src/common/NT/wsockerrs.c \
+            src/server/NT/
+        do
+            case "$distribution_listing" in
+                *"/$legacy_path"*)
+                    echo "Unexpected legacy distribution path: $legacy_path" >&2
+                    return 1
+                    ;;
+            esac
+        done
+    )
+}
+
 assert_configure_surface()
 {
     configure_help=$("$build_source_dir/configure" --help)
@@ -162,6 +198,9 @@ run_configuration()
         "$build_source_dir/configure" --prefix="$install_prefix" "$@"
         make -j"$test_jobs"
         assert_removed_programs_absent "$build_dir"
+        if test "$configuration_name" = default; then
+            assert_distribution_surface "$build_dir"
+        fi
         if ! make check; then
             for test_log in tests/*.log; do
                 if test -f "$test_log"; then
