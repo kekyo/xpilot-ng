@@ -92,15 +92,8 @@ install-arch:
 	dh_clean -k -s 
 	dh_installdirs -s
 
-	# client-x11
-	$(MAKE) -C src/client/x11 install-binPROGRAMS DESTDIR=$(CURDIR)/debian/$(package)-client-x11
-	
 	# client-sdl
 	$(MAKE) -C src/client/sdl install-binPROGRAMS DESTDIR=$(CURDIR)/debian/$(package)-client-sdl
-	
-	# utils
-	$(MAKE) -C src/replay install-binPROGRAMS DESTDIR=$(CURDIR)/debian/$(package)-utils
-	$(MAKE) -C src/mapedit install-binPROGRAMS DESTDIR=$(CURDIR)/debian/$(package)-utils
 
 	# server
 	$(MAKE) -C src/server install DESTDIR=$(CURDIR)/debian/$(package)-server
@@ -116,8 +109,8 @@ install-arch:
 binary-common:
 	dh_testdir
 	dh_testroot
-	dh_installchangelogs -N$(package)-client-x11 -N$(package)-client-sdl ChangeLog
-	dh_installdocs -N$(package)-client-x11 -N$(package)-client-sdl
+	dh_installchangelogs -N$(package)-client-sdl ChangeLog
+	dh_installdocs -N$(package)-client-sdl
 	dh_installexamples
 	dh_installmenu
 	dh_installman

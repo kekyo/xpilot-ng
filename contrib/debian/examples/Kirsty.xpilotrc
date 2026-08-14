@@ -113,7 +113,6 @@ xpilot.keyLoadLock1:		5
 xpilot.keyLoadLock2:		6
 xpilot.keyLoadLock3:		7
 xpilot.keyLoadLock4:		8
-xpilot.keyToggleRecord:		9
 xpilot.modifierBank1:		
 xpilot.modifierBank2:		FNC B3 Z1  
 xpilot.modifierBank3:		C V3 B3 Z1 X4
@@ -121,4 +120,3 @@ xpilot.modifierBank4:		C B3 Z1
 xpilot*shipShape: (SH: -8,1 -4,2 -5,9 -8,15 0,9 3,4 3,2 8,1 8,-1 3,-2 3,-4 0,-9 -8,-15 -5,-9 -4,-2 -8,-1)(EN: -8,0)(MG: 8,0)(LG: -5,13 -3,12 -1,10)(RG: -3,-12 -1,-10 -5,-13)(LL: -8,15)(RL: -8,-15)(MR: 3,-3 3,3 3,4 3,-4)(NM:Gull)
 xpilot.maxColors: 		8
 xpilot.FancyMsgs:		False
-xpilot.recordFile:		xpilot-record

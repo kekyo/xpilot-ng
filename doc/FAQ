@@ -468,23 +468,10 @@ rec.games.computer.xpilot explaining the ideas behind your map.
 
 17) How can I design my own maps easily?
 
-On Unix, use the XMapEdit (xp-mapedit) program, which was made by Aaron
-Averill and donated to the XPilot project.  It is now maintained by the
-XPilot project and is distributed with XPilot source in the
-./src/mapedit directory.
-
-On Windows, the nice editor MapXpress has been created by Jarrod Miller,
-and is included with the installation. This editor includes special
-features such as a random map generator, and the ability to shift and
-rotate maps. The latest version is always available from Jarrod's
-homepage:
-
-    <URL:http://www.ctitech.com/users/jlmiller/index.htm>
-
-The map format is in ASCII so you can also make or change maps
-with your standard text editor (vi, emacs).  And everybody did
-it that way before XMapEdit, but that seems hopelessly complex
-and tedious now.  Special thanks go to Aaron for making XMapEdit.
+The polygon map format is XML, so maps can be created or changed with a
+text editor.  The standalone Java editor in contrib/jxpmap can also edit
+polygon maps, but it is not built or installed with the client and server.
+The former block-map editor is no longer included.
 
 18) How can I design my own ship?
 
@@ -752,7 +739,7 @@ XPilot++ is an ambitious project led by XPilot developer Dick Balaska
 This will enable support for many new features more easily and unify
 Unix and Windows versions into a single codebase, doing away with the
 need for platform-specific versions of XPilot utilities such as XPWho
-and xp-mapedit.  XPilot++ can be found here:
+and map editors.  XPilot++ can be found here:
 
     <URL:http://www.buckosoft.com/xpilot/xpilot++/>
 

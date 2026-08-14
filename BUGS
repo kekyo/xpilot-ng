@@ -58,8 +58,7 @@ affected:
 
 -------------------------------------------------------------------
 Problem : Very thin walls are not displayed on radar. More of those
-          walls seem to be displayed in SDL client than in X11 client
-          but not all of them either 
+          walls are displayed in the SDL client, but not all of them.
 Found by: Throat
 Solution: 
 Fixed by:
@@ -82,25 +81,6 @@ if you have a geometry that cannot work in fullscreenmode
 Found by: Colonel Blood
 Solution:
 Fixed by:
-Files 
-affected:
-
--------------------------------------------------------------------
-Problem : if you have a msg key and toggleradarscore on the same key
-the client exits cleanly (default xpilotrc does not have this problem)
-Found by: Colonel Blood
-Solution:
-Fixed by:
-Files 
-affected:
-
--------------------------------------------------------------------
-Problem : shotsize 8 with texturedObjects works ok in the lg [old] client
-          while it doesnt work in ng X11 client (in ng shotsize comes out
-          too small)
-Found by: Throat
-Solution: New textures extend the limit of "maximum size" of a shot
-Fixed by: Throat
 Files 
 affected:
 
@@ -185,24 +165,6 @@ Files
 affected:
 
 -----------------------------------------------------------------
-Problem: The wall textures are only drawn partially on the left side of
-	 the view in the X client. This problem only appears on some systems.
-Found by:kps (Tarzan reported this bug earlier)
-Solution:
-Fixed by:
-Files affected:
-
------------------------------------------------------------------
-Problem : If you put logo.ppm in your current dirctory and start the X
-          client, this file will be used in the score list. More generally
-	  the client should take the textures first from texturedir.
-Found by: kps
-Solution:
-Fixed by:
-Files 
-affected:
-
------------------------------------------------------------------
 Problem :
 Found by:
 Solution:
@@ -237,25 +199,6 @@ Solution: Don't set pl->count to RECOVERY_DELAY in Pick_startpos().
 Fixed by: kps
 Files 
 affected: src/server/player.c
-
------------------------------------------------------------------
-Problem: X client crashes in Talk_delete_emphasized_text() in talk.c.
- 	 To reproduce the bug:
-	 1. press m to write a message
-	 2. write some garbage into the message buffer
-	 3. use the mouse to select some text there from the
-      	  	middle of what you wrote
-     	 4. press escape to close the message window
-     	 5. press m again to write another message (the old message
-	    will be gone)
-	 6. start writing the new message and the client crashes
-Found by: kps
-Solution: The problem was that the code tried to write over the seclected
-          part of the message, but that was no longer in the talk string.
-          To fix set selection.draw.state to SEL_NONE when starting to write
-          a new message.
-Fixed by: kps
-Files affected: talk.c
 
 -----------------------------------------------------------------
 Problem : Joining a game with textures turned off (walls or objects)
@@ -306,7 +249,7 @@ affected:src/server/shot.c
 
 -----------------------------------------------------------------
 Problem : Pasting of http://groups.google.com/groups?hl=en&lr=&ie=UTF-8&oe=UTF-8&threadm=376bdecc.1091741937%40enews.newsguy.com&rnum=10&prev=/groups%3Fq%3Dslarti%2Bgroup:rec.games.computer.xpilot%26hl%3Den%26lr%3D%26ie%3DUTF-8%26oe%3DUTF-8%26group%3Drec.games.computer.xpilot%26selm%3D376bdecc.1091741937%2540enews.newsguy.com%26rnum%3D10 into the talk window causes an assertion to fail in
-talk.c (X11 client code).
+talk.c.
 Found by: Col. Blood
 Solution: Enlarge a few buffers by 2 bytes.
 Fixed by: Uau

@@ -1,7 +1,7 @@
 /* 
  * XPilot NG, a multiplayer space war game.
  *
- * Copyright (C) 2003 Kristian Söderblom <kps@users.sourceforge.net>
+ * Copyright (C) 2003 Kristian SÃ¶derblom <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,9 +50,9 @@ typedef const char *(*xp_string_option_getfunc_t)(xp_option_t *opt);
 typedef int xp_option_flags_t;
 
 /* flag bits */
-/* option shows up in default menu in X client */
+/* option shows up in the default configuration menu */
 #define XP_OPTFLAG_CONFIG_DEFAULT		(1 << 1)
-/* option shows up in colors menu in X client */
+/* option shows up in the color configuration menu */
 #define XP_OPTFLAG_CONFIG_COLORS		(1 << 2)
 /* option is not saved in xpilotrc if it isn't there already */
 #define XP_OPTFLAG_KEEP				(1 << 3)

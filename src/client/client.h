@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -663,9 +663,7 @@ void Pointer_control_newbie_message(void);
  */
 void Platform_specific_pointer_control_set_state(bool on);
 void Platform_specific_talk_set_state(bool on);
-void Record_toggle(void);
 void Toggle_fullscreen(void);
-void Toggle_radar_and_scorelist(void);
 
 /*
  * event.c
@@ -803,20 +801,9 @@ void MarkPlayersForRedraw(void);
 int Check_client_fps(void);
 
 /*
- * about.c
+ * SDL client compatibility hooks.
  */
 extern int Handle_motd(long off, char *buf, int len, long filesize);
-extern void aboutCleanup(void);
-
-#ifdef _WINDOWS
-extern	void Motd_destroy(void);
-extern	void Keys_destroy(void);
-#endif
-
-extern int motd_viewer;		/* so Windows can clean him up */
-extern int keys_viewer;
-
-
 extern void Colors_init_style_colors(void);
 
 /*
@@ -828,10 +815,6 @@ extern void defaultCleanup(void);			/* memory cleanup */
 extern bool Set_scaleFactor(xp_option_t *opt, double val);
 extern bool Set_altScaleFactor(xp_option_t *opt, double val);
 
-#ifdef _WINDOWS
-extern char *Get_xpilotini_file(int level);
-#endif
-
 /*
  * event.c
  */
@@ -841,7 +824,6 @@ extern void Store_key_options(void);
  * join.c
  */
 extern int Join(Connect_param_t *conpar);
-extern void xpilotShutdown(void);
 
 /*
  * mapdata.c
@@ -908,17 +890,5 @@ extern int micro_delay(unsigned usec);
  * welcome.c
  */
 extern int Welcome_screen(Connect_param_t *conpar);
-
-/*
- * widget.c
- */
-extern void Widget_cleanup(void);
-
-/*
- * xinit.c
- */
-#ifdef _WINDOWS
-extern	void WinXCreateItemBitmaps();
-#endif
 
 #endif

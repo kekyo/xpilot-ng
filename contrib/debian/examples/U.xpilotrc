@@ -114,7 +114,6 @@ xpilot.keyTractorBeam:          comma
 xpilot.keyPressorBeam:          period
 xpilot.keyToggleMessages:       0
 xpilot.keyReprogram:            grave
-xpilot.keyToggleRecord:         KP_5
 xpilot.keySelectItem:           Insert
 xpilot.keyLoseItem:             Delete
 xpilot.modifierBank1:

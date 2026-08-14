@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -286,10 +286,6 @@ int Sockbuf_read(sockbuf_t *sbuf)
 		return -1;
 	    }
 #endif
-/*
-		Trace("errno=%d (%s) len = %d during sock_read\n", 
-			errno, _GetWSockErrText(errno), len);
-*/			
 	    if (++i > MAX_SOCKBUF_RETRIES) {
 		error("Can't recv on socket");
 		return -1;
@@ -742,4 +738,3 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 
     return (failure) ? -1 : count;
 }
-

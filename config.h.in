@@ -1,8 +1,5 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* support for X Doublebuffer Extension in client */
-#undef DBE
-
 /* enable development code */
 #undef DEVELOPMENT
 
@@ -247,36 +244,9 @@
 /* Define to 1 if you have the `vprintf' function. */
 #undef HAVE_VPRINTF
 
-/* Define to 1 if you have the <X11/keysym.h> header file. */
-#undef HAVE_X11_KEYSYM_H
-
-/* Define to 1 if you have the <X11/Xatom.h> header file. */
-#undef HAVE_X11_XATOM_H
-
-/* Define to 1 if you have the <X11/Xlib.h> header file. */
-#undef HAVE_X11_XLIB_H
-
-/* Define to 1 if you have the <X11/Xmd.h> header file. */
-#undef HAVE_X11_XMD_H
-
-/* Define to 1 if you have the <X11/Xos.h> header file. */
-#undef HAVE_X11_XOS_H
-
-/* Define to 1 if you have the <X11/Xutil.h> header file. */
-#undef HAVE_X11_XUTIL_H
-
-/* Define to 1 if you have the <X11/X.h> header file. */
-#undef HAVE_X11_X_H
-
-/* Define to 1 if you have the Xf86Misc library */
-#undef HAVE_XF86MISC
-
 /* Define to 1 if `lstat' dereferences a symlink specified with a trailing
    slash. */
 #undef LSTAT_FOLLOWS_SLASHED_SYMLINK
-
-/* support for X Multibuffer Extension in client */
-#undef MBX
 
 /* Name of package */
 #undef PACKAGE
@@ -302,14 +272,8 @@
 /* lock the xpilot-ng server into memory */
 #undef PLOCKSERVER
 
-/* enable replay program */
-#undef REPLAY
-
 /* Define as the return type of signal handlers (`int' or `void'). */
 #undef RETSIGTYPE
-
-/* enable sdl client */
-#undef SDL_CLIENT
 
 /* enable new server scheduling most useful on Linux 2.6 */
 #undef SELECT_SCHED
@@ -340,15 +304,6 @@
 
 /* Version number of package */
 #undef VERSION
-
-/* enable x11 client */
-#undef X11_CLIENT
-
-/* enable xp-mapedit program */
-#undef XP_MAPEDIT
-
-/* Define to 1 if the X Window System is missing or not being used. */
-#undef X_DISPLAY_MISSING
 
 /* compiling for windows target */
 #undef _WINDOWS

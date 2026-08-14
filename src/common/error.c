@@ -159,31 +159,7 @@ void dumpcore(const char *fmt, ...)
 #ifdef _WINDOWS
 static void Win_show_error(char *s)
 {
-    static int inerror = FALSE;
     Trace("Error: %s\n", s);
-    if (inerror) return;
-    inerror = TRUE;
-    {
-#ifdef   _XPILOTNTSERVER_
-	/* putting up a message box on the server is a bad thing.
-	   It kinda halts the server, which is a bad thing to do for
-	   the simple info messages (nick in use) that call this routine
-	*/
-	xpprintf("%s %s\n", showtime(), s);
-#else
-	/*
-	if (MessageBox(NULL, s, "Error", MB_OKCANCEL | MB_TASKMODAL)
-	    == IDCANCEL) {
-# ifdef   _XPMON_
-	    xpmemShutdown();
-# endif
-	    ExitProcess(1);
-	}
-	*/
-#endif
-    }
-    /* kps - moved out from ifdef block, seems to be a better idea. */
-    inerror = FALSE;
 }
 
 void xpinfo(const char *fmt, ...)

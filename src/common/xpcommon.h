@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -230,19 +230,8 @@
 /* Evil Windows hacks. Yuck. */
 #ifdef _WINDOWS
 # include "NT/winNet.h"
-  /* need this for printf wrappers. */
-# ifdef	_XPILOTNTSERVER_
-#  include "../server/NT/winServer.h"
-#  include "../server/NT/winSvrThread.h"
-extern char *showtime(void);
-/*# elif !defined(_XPMONNT_)
-#  include "NT/winX.h"
-#  include "../client/NT/winClient.h"*/
-# endif
-static void Win_show_error(char *errmsg);
 # include <io.h>
 # include <process.h>
-# include "NT/winNet.h"
   /* Windows needs specific hacks for sockets: */
 # undef close
 # define close(x__) closesocket(x__)

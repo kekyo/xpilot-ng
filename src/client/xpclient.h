@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -47,7 +47,6 @@
 # define W_OK 2
 # define R_OK 4
 # define mkdir(A,B) _mkdir(A)
-extern bool threadedDraw; /* default.c */
 #endif
 
 /*
@@ -67,11 +66,9 @@ extern bool threadedDraw; /* default.c */
 #include "netclient.h"
 #include "option.h"
 #include "paint.h"
-#include "recordfmt.h"
 #include "talk.h"
 #ifdef SOUND
 # include "caudio.h"
 #endif
 
 #endif /* XPCLIENT_H */
-

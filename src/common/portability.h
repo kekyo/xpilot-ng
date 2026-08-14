@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -38,17 +38,6 @@
 #pragma warning (disable : 4244)
 
 #endif /* _WINDOWS */
-
-/*
- * In Windows, just exiting won't tell the user the reason.
- * So, try to gracefully shutdown just the server thread
- */
-#ifdef _WINDOWS
-extern	int ServerKilled;
-#define	ServerExit() ServerKilled = TRUE; return;
-#else
-#define	ServerExit() exit(1);
-#endif
 
 /*
  * Macros to block out Windows only code (and never Windows code)

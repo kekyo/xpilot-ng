@@ -86,8 +86,6 @@ xpilot.keyPhasing:		p
 
 xpilot.maxVolume:		70
 
-xpilot.recordFile:		/home/jtjm2/xpilotvid
-xpilot.keyToggleRecord:		F12
 
 xpilot.pointerButton1:          keyThrust
 xpilot.pointerButton3:          keyFireShot

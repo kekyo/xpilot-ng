@@ -2,10 +2,10 @@ Makefile
 .deps/
 /config.h
 /config.status
+/autom4te.cache/
+/config.h.in~
+/configure~
 /src/client/sdl/xpilot-ng-sdl
-/src/client/x11/xpilot-ng-x11
-/src/mapedit/xpilot-ng-xp-mapedit
-/src/replay/xpilot-ng-replay
 /src/server/xpilot-ng-server
 /stamp-h1
 /build-sdl

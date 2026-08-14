@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -773,33 +773,7 @@ static struct hostent *sock_get_host_by_name(const char *name)
     return hp;
 
 #else
-    
-    /*
-     * If you aren't connected to the net, then gethostbyname()
-     * can take many minutes to time out.  WSACancelBlockingCall()
-     * doesn't affect it.
-     *
-    
-    static char     chp[MAXGETHOSTSTRUCT+1];
-    struct hostent* hp = (struct hostent*)&chp;
-    HANDLE h;
-    MSG msg;
-    int i;
-    
-    h = WSAAsyncGetHostByName(notifyWnd, WM_GETHOSTNAME, name, 
-        chp, MAXGETHOSTSTRUCT);
-    
-    for(i = 0; i < SOCK_GETHOST_TIMEOUT; i++) {
-        if (PeekMessage(&msg, NULL, WM_GETHOSTNAME,
-			WM_GETHOSTNAME, PM_REMOVE))
-            return (WSAGETASYNCERROR(msg.lParam)) ? NULL : hp;
-        Sleep(1000);
-    }
-    WSACancelAsyncRequest(h);
-    return NULL;
-	*/
-	return gethostbyname(name);
-
+    return gethostbyname(name);
 #endif
 }
 
@@ -836,4 +810,3 @@ static struct hostent *sock_get_host_by_addr(const char *addr,
 
 #endif
 }
-

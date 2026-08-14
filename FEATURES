@@ -8,8 +8,6 @@ General:
 
 	* ./configure builds instead of xmkmf -a - easier to build.
 
-	* .rpm .deb and .tar.gz packages available.
-	
 	* Full Backward compatibility with older xpilot clients, and
 	  servers. (support dropped for xpilot versions prior to 4.2.1).
 	
@@ -17,18 +15,16 @@ General:
 
 Client:
 
-	* An XPilot client written using SDL and OpenGL - works in 
-	  both windows/linux and unix with slick new textures, common
-	  code shared with the X11 client.
+	* An XPilot client written using SDL2 and OpenGL with textured
+	  graphics and a shared platform-independent game core.
 
-	* Client options are no longer reliant on X11, option code 
-	  completely rewritten so options port cleanly to windows.
+	* Client options are independent of the native window system.
 	
 	* The client has better capabilities for displaying graphics, 
 	  and the map format allows specifying different textures and 
 	  colors.
 
-	* Improved meta interface on the X11 client.
+	* Improved meta interface in the SDL client.
 
 	* Improved Colour handling and a full colour configuration menu
 	  in the client.
@@ -62,9 +58,7 @@ Server :
 
 	* Improved precision in thrusting and shooting..
 
-	* Server side recordings - more accurate, and you can review 
-	  the recording for any player, much smaller and compact than 
-	  the xp-replay recordings.
+	* Server side recordings can capture the game for any player.
 
         * Full integration of teamcup code, run your own xpilot cup.
 	

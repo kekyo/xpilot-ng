@@ -913,20 +913,10 @@ The default key is: 7.
 Load player lock from bank 4.
 The default key is: 8.
 .HP
-\fB\-keyToggleRecord\fR <value>
-.IP
-Toggle recording of session (see recordFile).
-The default key is: KP_5.
-.HP
 \fB\-keyToggleSound\fR <value>
 .IP
 Toggle sound. Changes value of option 'sound'.
 There is no default value for this option.
-.HP
-\fB\-keyToggleRadarScore\fR <value>
-.IP
-Toggles the radar and score windows on and off.
-The default key is: F11.
 .HP
 \fB\-keyToggleFullScreen\fR <value>
 .IP

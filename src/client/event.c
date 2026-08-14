@@ -3,12 +3,12 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
  *
- * Copyright (C) 2003-2004 Kristian Söderblom <kps@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Kristian SÃ¶derblom <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -264,10 +264,7 @@ static bool Key_press_talk(void)
 {
     int i;
 
-    /*
-     * this releases mouse in x11 client, so we clear the mouse buttons
-     * so they don't lock on
-     */
+    /* Clear pressed buttons before talk mode releases pointer control. */
     if (clData.pointerControl)
 	for (i = 0; i < MAX_POINTER_BUTTONS; i++)
 	    Pointer_button_released(i);
@@ -297,18 +294,6 @@ static bool Key_press_pointer_control(void)
 static bool Key_press_toggle_fullscreen(void)
 {
     Toggle_fullscreen();
-    return false;	/* server doesn't need to know */
-}
-
-static bool Key_press_toggle_radar_score(void)
-{
-    Toggle_radar_and_scorelist();
-    return false;	/* server doesn't need to know */
-}
-
-static bool Key_press_toggle_record(void)
-{
-    Record_toggle();
     return false;	/* server doesn't need to know */
 }
 
@@ -534,14 +519,8 @@ bool Key_press(keys_t key)
 
 	return Key_press_pointer_control();
 
-    case KEY_TOGGLE_RECORD:
-	return Key_press_toggle_record();
-
     case KEY_TOGGLE_SOUND:
 	return Key_press_toggle_sound();
-
-    case KEY_TOGGLE_RADAR_SCORE:
-	return Key_press_toggle_radar_score();
 
     case KEY_PRINT_MSGS_STDOUT:
 	return Key_press_msgs_stdout();
@@ -1253,12 +1232,6 @@ xp_option_t key_options[] = {
 	KEY_LOAD_LOCK_4,
 	"Load player lock from bank 4.\n"),
 
-    XP_KEY_OPTION(
-	"keyToggleRecord",
-	"KP_5",
-	KEY_TOGGLE_RECORD,
-	"Toggle recording of session (see recordFile).\n"),
-
 #ifdef SOUND
     XP_KEY_OPTION(
 	"keyToggleSound",
@@ -1266,12 +1239,6 @@ xp_option_t key_options[] = {
 	KEY_TOGGLE_SOUND,
 	"Toggle sound. Changes value of option 'sound'.\n"),
 #endif
-
-    XP_KEY_OPTION(
-	"keyToggleRadarScore",
-	"F11",
-	KEY_TOGGLE_RADAR_SCORE,
-	"Toggles the radar and score windows on and off.\n"),
 
     XP_KEY_OPTION(
 	"keyToggleFullScreen",

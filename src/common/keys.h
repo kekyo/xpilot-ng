@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -142,7 +142,6 @@ typedef enum {
     KEY_TOGGLE_OWNED_ITEMS,
     KEY_TOGGLE_MESSAGES,
     KEY_POINTER_CONTROL,
-    KEY_TOGGLE_RECORD,
     KEY_TOGGLE_SOUND, /* no ifdef SOUND here */
     KEY_PRINT_MSGS_STDOUT,
     KEY_TALK_CURSOR_LEFT,
@@ -150,7 +149,6 @@ typedef enum {
     KEY_TALK_CURSOR_UP,
     KEY_TALK_CURSOR_DOWN,
     KEY_SWAP_SCALEFACTOR,
-    KEY_TOGGLE_RADAR_SCORE,
     KEY_INCREASE_POWER,
     KEY_DECREASE_POWER,
     KEY_INCREASE_TURNSPEED,

@@ -121,18 +121,6 @@ void Platform_specific_talk_set_state(bool on)
 	Console_hide();
 }
 
-void Record_toggle(void)
-{
-    /* TODO: implement if you think it is worth it */
-    Add_message("Can't record with this client. [*Client reply*]");
-}
-
-void Toggle_radar_and_scorelist(void)
-{
-    /* TODO */
-    return;
-}
-
 int Process_event(SDL_Event *evt)
 {
     int button, wheel_y, x, y;
