@@ -230,6 +230,20 @@ assert_configure_surface()
     done
 }
 
+assert_source_platform_surface()
+{
+    legacy_x11_includes=$(grep -R -n -E \
+        --include='*.c' --include='*.h' --include='*.m' \
+        '#[[:space:]]*include[[:space:]]*[<"]X11/' \
+        "$build_source_dir/src" || true)
+
+    if test -n "$legacy_x11_includes"; then
+        echo "XPilot source still includes X11 directly:" >&2
+        echo "$legacy_x11_includes" >&2
+        return 1
+    fi
+}
+
 run_configuration()
 {
     configuration_name=$1
@@ -266,6 +280,7 @@ run_configuration()
 
 # Every test is run through make check; the runner never selects an individual
 # test binary.  Separate build and install trees also catch source-tree leaks.
+assert_source_platform_surface
 run_configuration default
 run_configuration server-only --disable-sdl-client
 assert_configure_surface

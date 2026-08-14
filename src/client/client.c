@@ -870,9 +870,7 @@ static void parse_styles(char **callptr)
     for (i = 0; i < num_edge_styles; i++) {
 	edge_styles[i].width = *ptr++; /* -1 means hidden */
 	edge_styles[i].rgb = get_32bit(&ptr);
-	/* kps - what the **** is this ? */
-	/* baron - it's line style from XSetLineAttributes */
-	/* 0 = LineSolid, 1 = LineOnOffDash, 2 = LineDoubleDash */
+	/* Protocol values: 0 = solid, 1 = dashed, 2 = double-dashed. */
 	edge_styles[i].style =
 	    (*ptr == 1) ? 1 :
 	    (*ptr == 2) ? 2 : 0;

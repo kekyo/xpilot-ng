@@ -1065,9 +1065,8 @@ static int Net_read(frame_buf_t *frame)
 /*
  * Read frames from the net until there are no more available.
  * If the server has floaded us with frame updates then we should
- * discard everything except the most recent ones.  The X server
- * may be too slow to keep up with the rate of the XPilot server
- * or there may have been a network hickup if the net is overloaded.
+ * discard everything except the most recent ones.  Rendering may be too
+ * slow to keep up with the XPilot server, or the network may be overloaded.
  */
 int Net_input(void)
 {
