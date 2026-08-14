@@ -214,6 +214,25 @@ tcp_gameplay_connected()
         "$runtime_dir/server.log" 2>/dev/null
 }
 
+recorded_session_finished()
+{
+    grep -q "Goodbye SDL2Smoke" "$runtime_dir/server.log" 2>/dev/null
+}
+
+recorded_session_replayed()
+{
+    if grep -q "Welcome .*SDL2Smoke" \
+        "$runtime_dir/playback.log" 2>/dev/null \
+        && grep -q "Goodbye SDL2Smoke" \
+            "$runtime_dir/playback.log" 2>/dev/null; then
+        return 0
+    fi
+    if ! kill -0 "$server_pid" 2>/dev/null; then
+        fail "playback server stopped before replaying the TCP session"
+    fi
+    return 1
+}
+
 game_frame_ready()
 {
     if ! kill -0 "$client_pid" 2>/dev/null; then
@@ -373,7 +392,9 @@ socket.bind(0, "127.0.0.1", () => {
   socket.close();
 });')
 
+recording="$runtime_dir/gameplay.rec"
 "$server" -map "$map" -port "$port" -noQuit +reportMeta \
+    -recordMode 1 -recordFile "$recording" \
     >"$runtime_dir/server.log" 2>&1 &
 server_pid=$!
 wait_until "local server readiness" 20 server_ready
@@ -431,9 +452,27 @@ fi
 if ! runtime_logs_have_no_gl_errors; then
     fail "OpenGL diagnostics reported a runtime error"
 fi
+wait_until "recorded client disconnect" 10 recorded_session_finished
 
 kill -TERM "$server_pid" 2>/dev/null || true
 wait_until "server shutdown" 10 process_stopped "$server_pid"
+wait "$server_pid" 2>/dev/null || true
+server_pid=
+test -s "$recording" || fail "server did not produce a gameplay recording"
+
+playback_port=$(node -e '
+const socket = require("dgram").createSocket("udp4");
+socket.bind(0, "127.0.0.1", () => {
+  process.stdout.write(String(socket.address().port));
+  socket.close();
+});')
+"$server" -map "$map" -port "$playback_port" -noQuit +reportMeta \
+    -recordMode 2 -recordFile "$recording" \
+    >"$runtime_dir/playback.log" 2>&1 &
+server_pid=$!
+wait_until "recorded TCP gameplay session" 20 recorded_session_replayed
+kill -TERM "$server_pid" 2>/dev/null || true
+wait_until "playback server shutdown" 10 process_stopped "$server_pid"
 wait "$server_pid" 2>/dev/null || true
 server_pid=
 

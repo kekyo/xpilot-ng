@@ -1403,7 +1403,7 @@ $(am__aclocal_m4_deps):
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
 
-test-framed-stream$(EXEEXT): $(test_framed_stream_OBJECTS) $(test_framed_stream_DEPENDENCIES) $(EXTRA_test_framed_stream_DEPENDENCIES)
+test-framed-stream$(EXEEXT): $(test_framed_stream_OBJECTS) $(test_framed_stream_DEPENDENCIES) $(EXTRA_test_framed_stream_DEPENDENCIES) 
 	@rm -f test-framed-stream$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_framed_stream_OBJECTS) $(test_framed_stream_LDADD) $(LIBS)
 

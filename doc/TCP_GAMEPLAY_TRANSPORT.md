@@ -94,6 +94,12 @@ bounded-output drops, server-side update selection, or a renderer that cannot
 consume updates quickly enough.  The existing UI name is retained to avoid an
 unrelated interface change.
 
+The receive window and duplicate/out-of-order branches likewise cease to
+observe normal network reordering.  The window remains useful for discarding
+older complete records when rendering falls behind, while the checks still
+guard malformed playback or application data.  Removing them would mix a
+larger frame-processing refactor into this transport change.
+
 ### Head-of-line blocking and stale state
 
 TCP delivers bytes strictly in order.  If one segment is lost, newer gameplay
@@ -134,6 +140,12 @@ remove retransmission delay, delayed acknowledgements, congestion-control
 effects, or head-of-line blocking.  The TCP handshake also adds a round trip
 after UDP contact negotiation before verification can begin.
 
+The client currently performs this gameplay `connect` synchronously, as the
+old initialization flow expected immediate UDP `connect` completion.  An
+unreachable TCP endpoint can therefore leave startup waiting for the operating
+system's connect timeout.  Moving connection establishment into the event loop
+would avoid that pause, but requires a new setup state and is deferred.
+
 Each logical record gains a two-byte framing header.  TCP acknowledgements and
 the retained XPilot acknowledgement stream add traffic, while TCP segmentation
 removes the old one-datagram/one-packet assumption.  Large logical records no
@@ -170,9 +182,11 @@ flood; deployment-level rate limiting may still be required.
 
 ### Record and playback
 
-The record wrapper is retained around the underlying stream reads and writes.
-It therefore sees the two-byte headers and any partial I/O boundaries, while
-the framed `Sockbuf` presents complete original payloads to game code.  The
+During connection verification, the record wrapper stores underlying stream
+reads, including two-byte headers and partial I/O boundaries, while the framed
+`Sockbuf` still presents complete payloads to game code.  During normal play,
+the existing optimized recording path instead stores each complete payload
+after deframing and injects that payload directly during playback.  The
 accepted socket is moved onto the listener descriptor so scheduler indices in
 new recordings remain stable.  Playback bypasses live `accept` and marks the
 recorded endpoint as an already-connected TCP stream.
@@ -191,6 +205,7 @@ are not part of the minimal TCP migration:
 - renaming or redesigning the packet loss meter;
 - introducing priority queues, frame replacement inside the kernel queue, or
   a separate control connection;
+- moving the blocking client TCP connect into the event loop;
 - enabling TCP keepalive or platform-specific low-latency TCP options;
 - adding TLS or changing the existing contact/identity model;
 - converting UDP discovery/contact protocols; and
