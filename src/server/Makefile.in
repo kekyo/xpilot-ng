@@ -107,13 +107,13 @@ am_xpilot_ng_server_OBJECTS = alliance.$(OBJEXT) asteroid.$(OBJEXT) \
 	collision.$(OBJEXT) command.$(OBJEXT) contact.$(OBJEXT) \
 	event.$(OBJEXT) fileparser.$(OBJEXT) frame.$(OBJEXT) \
 	gravity.$(OBJEXT) id.$(OBJEXT) item.$(OBJEXT) laser.$(OBJEXT) \
-	map.$(OBJEXT) metaserver.$(OBJEXT) modifiers.$(OBJEXT) \
-	netserver.$(OBJEXT) object.$(OBJEXT) objpos.$(OBJEXT) \
-	option.$(OBJEXT) parser.$(OBJEXT) player.$(OBJEXT) \
-	polygon.$(OBJEXT) race.$(OBJEXT) rank.$(OBJEXT) \
-	recwrap.$(OBJEXT) robot.$(OBJEXT) robotdef.$(OBJEXT) \
-	rules.$(OBJEXT) saudio.$(OBJEXT) sched.$(OBJEXT) \
-	score.$(OBJEXT) server.$(OBJEXT) ship.$(OBJEXT) shot.$(OBJEXT) \
+	map.$(OBJEXT) modifiers.$(OBJEXT) netserver.$(OBJEXT) \
+	object.$(OBJEXT) objpos.$(OBJEXT) option.$(OBJEXT) \
+	parser.$(OBJEXT) player.$(OBJEXT) polygon.$(OBJEXT) \
+	race.$(OBJEXT) rank.$(OBJEXT) recwrap.$(OBJEXT) \
+	robot.$(OBJEXT) robotdef.$(OBJEXT) rules.$(OBJEXT) \
+	saudio.$(OBJEXT) sched.$(OBJEXT) score.$(OBJEXT) \
+	server.$(OBJEXT) ship.$(OBJEXT) shot.$(OBJEXT) \
 	showtime.$(OBJEXT) srecord.$(OBJEXT) suibotdef.$(OBJEXT) \
 	tag.$(OBJEXT) target.$(OBJEXT) teamcup.$(OBJEXT) \
 	tuner.$(OBJEXT) treasure.$(OBJEXT) update.$(OBJEXT) \
@@ -144,22 +144,22 @@ am__depfiles_remade = ./$(DEPDIR)/alliance.Po ./$(DEPDIR)/asteroid.Po \
 	./$(DEPDIR)/event.Po ./$(DEPDIR)/fileparser.Po \
 	./$(DEPDIR)/frame.Po ./$(DEPDIR)/gravity.Po ./$(DEPDIR)/id.Po \
 	./$(DEPDIR)/item.Po ./$(DEPDIR)/laser.Po ./$(DEPDIR)/map.Po \
-	./$(DEPDIR)/metaserver.Po ./$(DEPDIR)/modifiers.Po \
-	./$(DEPDIR)/netserver.Po ./$(DEPDIR)/object.Po \
-	./$(DEPDIR)/objpos.Po ./$(DEPDIR)/option.Po \
-	./$(DEPDIR)/parser.Po ./$(DEPDIR)/player.Po \
-	./$(DEPDIR)/polygon.Po ./$(DEPDIR)/race.Po ./$(DEPDIR)/rank.Po \
-	./$(DEPDIR)/recwrap.Po ./$(DEPDIR)/robot.Po \
-	./$(DEPDIR)/robotdef.Po ./$(DEPDIR)/rules.Po \
-	./$(DEPDIR)/saudio.Po ./$(DEPDIR)/sched.Po \
-	./$(DEPDIR)/score.Po ./$(DEPDIR)/server.Po ./$(DEPDIR)/ship.Po \
-	./$(DEPDIR)/shot.Po ./$(DEPDIR)/showtime.Po \
-	./$(DEPDIR)/srecord.Po ./$(DEPDIR)/suibotdef.Po \
-	./$(DEPDIR)/tag.Po ./$(DEPDIR)/target.Po \
-	./$(DEPDIR)/teamcup.Po ./$(DEPDIR)/treasure.Po \
-	./$(DEPDIR)/tuner.Po ./$(DEPDIR)/update.Po \
-	./$(DEPDIR)/walls.Po ./$(DEPDIR)/wormhole.Po \
-	./$(DEPDIR)/xp2map.Po ./$(DEPDIR)/xpmap.Po
+	./$(DEPDIR)/modifiers.Po ./$(DEPDIR)/netserver.Po \
+	./$(DEPDIR)/object.Po ./$(DEPDIR)/objpos.Po \
+	./$(DEPDIR)/option.Po ./$(DEPDIR)/parser.Po \
+	./$(DEPDIR)/player.Po ./$(DEPDIR)/polygon.Po \
+	./$(DEPDIR)/race.Po ./$(DEPDIR)/rank.Po ./$(DEPDIR)/recwrap.Po \
+	./$(DEPDIR)/robot.Po ./$(DEPDIR)/robotdef.Po \
+	./$(DEPDIR)/rules.Po ./$(DEPDIR)/saudio.Po \
+	./$(DEPDIR)/sched.Po ./$(DEPDIR)/score.Po \
+	./$(DEPDIR)/server.Po ./$(DEPDIR)/ship.Po ./$(DEPDIR)/shot.Po \
+	./$(DEPDIR)/showtime.Po ./$(DEPDIR)/srecord.Po \
+	./$(DEPDIR)/suibotdef.Po ./$(DEPDIR)/tag.Po \
+	./$(DEPDIR)/target.Po ./$(DEPDIR)/teamcup.Po \
+	./$(DEPDIR)/treasure.Po ./$(DEPDIR)/tuner.Po \
+	./$(DEPDIR)/update.Po ./$(DEPDIR)/walls.Po \
+	./$(DEPDIR)/wormhole.Po ./$(DEPDIR)/xp2map.Po \
+	./$(DEPDIR)/xpmap.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -333,7 +333,7 @@ xpilot_ng_server_SOURCES = \
 	fileparser.c frame.c gravity.c \
 	id.c item.c \
 	laser.c \
-	map.c map.h metaserver.c modifiers.c modifiers.h \
+	map.c map.h modifiers.c modifiers.h \
 	netserver.c netserver.h \
 	object.c object.h objpos.c objpos.h option.c option.h \
 	parser.c player.c player.h polygon.c \
@@ -450,7 +450,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/item.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/laser.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/map.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/metaserver.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modifiers.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/netserver.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/object.Po@am__quote@ # am--include-marker
@@ -647,7 +646,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/item.Po
 	-rm -f ./$(DEPDIR)/laser.Po
 	-rm -f ./$(DEPDIR)/map.Po
-	-rm -f ./$(DEPDIR)/metaserver.Po
 	-rm -f ./$(DEPDIR)/modifiers.Po
 	-rm -f ./$(DEPDIR)/netserver.Po
 	-rm -f ./$(DEPDIR)/object.Po
@@ -742,7 +740,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/item.Po
 	-rm -f ./$(DEPDIR)/laser.Po
 	-rm -f ./$(DEPDIR)/map.Po
-	-rm -f ./$(DEPDIR)/metaserver.Po
 	-rm -f ./$(DEPDIR)/modifiers.Po
 	-rm -f ./$(DEPDIR)/netserver.Po
 	-rm -f ./$(DEPDIR)/object.Po

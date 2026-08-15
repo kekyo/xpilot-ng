@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     seedMT((unsigned)time(NULL) ^ Get_process_id());
 
     memset(&connectParam, 0, sizeof(Connect_param_t));
-    connectParam.contact_port = SERVER_PORT;
+    connectParam.game_port = SERVER_PORT;
     connectParam.team = TEAM_NOT_SET;
 
     Store_default_options();
@@ -87,25 +87,23 @@ int main(int argc, char *argv[])
 	    sizeof(connectParam.server_name));
     strlcpy(connectParam.server_addr, server_address,
 	    sizeof(connectParam.server_addr));
-    connectParam.login_port = connectParam.contact_port;
-
     if (xpArgs.status || xpArgs.shutdown_reason[0] != '\0' || xpArgs.text) {
 	int status;
 
 	if (xpArgs.status)
 	    status = Control_request(connectParam.server_addr,
-				     connectParam.contact_port,
+				     connectParam.game_port,
 				     connectParam.user_name,
 				     REPORT_STATUS_pack, "", stdout);
 	else if (xpArgs.shutdown_reason[0] != '\0')
 	    status = Control_request(connectParam.server_addr,
-				     connectParam.contact_port,
+				     connectParam.game_port,
 				     connectParam.user_name,
 				     SHUTDOWN_pack,
 				     xpArgs.shutdown_reason, stdout);
 	else
 	    status = Control_interactive(connectParam.server_addr,
-					 connectParam.contact_port,
+					 connectParam.game_port,
 					 connectParam.user_name);
 	sock_cleanup();
 	return status == 0 ? 0 : 1;
@@ -120,7 +118,7 @@ int main(int argc, char *argv[])
      * cleanup to the OS because afaik Client_cleanup will clean
      * stuff initialized in Client_setup. */
 
-    if (Net_init(connectParam.server_addr, connectParam.login_port)) {
+    if (Net_init(connectParam.server_addr, connectParam.game_port)) {
 	error("failed to initialize networking"); 
 	exit(1);
     }

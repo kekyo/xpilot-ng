@@ -146,7 +146,7 @@ int main(int argc, char **argv)
 	serverAddr = xp_strdup(addr);
 	strlcpy(Server.host, options.serverHost, sizeof(Server.host));
     } else
-	sock_get_local_hostname(Server.host, sizeof Server.host, 0);
+	sock_get_local_hostname(Server.host, sizeof Server.host);
 
     Get_login_name(Server.owner, sizeof Server.owner);
 

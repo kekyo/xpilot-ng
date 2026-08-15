@@ -83,7 +83,10 @@ assert_removed_install_entries_absent()
         bin/xpilot-ng-xp-mapedit \
         share/man/man6/xpilot-ng-x11.6 \
         share/man/man6/xpilot-ng-replay.6 \
-        share/man/man6/xpilot-ng-xp-mapedit.6
+        share/man/man6/xpilot-ng-xp-mapedit.6 \
+        share/xpilot-ng/textures/metabtndown.png \
+        share/xpilot-ng/textures/metabtnup.png \
+        share/xpilot-ng/textures/sdlmetabg.png
     do
         if test -e "$install_prefix/$removed_entry"; then
             echo "Unexpected legacy install entry: $removed_entry" >&2
@@ -158,11 +161,24 @@ assert_runtime_help_surface()
     esac
 
     client_help=$("$build_dir/src/client/sdl/xpilot-ng-sdl" -help 2>&1 || true)
-    for removed_option in keyToggleRecord keyToggleRadarScore
+    for removed_option in keyToggleRecord keyToggleRadarScore -join -list
     do
         case "$client_help" in
             *"$removed_option"*)
                 echo "SDL client help still exposes $removed_option" >&2
+                return 1
+                ;;
+        esac
+    done
+
+    server_help=$($build_dir/src/server/xpilot-ng-server -help 2>&1 || true)
+    for removed_option in \
+        contactPort reportToMetaServer metaUpdateMaxSize \
+        searchDomainForXPilot clientPortStart clientPortEnd
+    do
+        case "$server_help" in
+            *"$removed_option"*)
+                echo "Server help still exposes $removed_option" >&2
                 return 1
                 ;;
         esac
@@ -198,7 +214,26 @@ assert_distribution_surface()
             src/client/sdl/xpilot.rc \
             src/client/sdl/xpilot_sdl.dsp \
             src/client/sdl/xpilot_sdl.dsw \
-            contrib/xpngcc/
+            contrib/xpngcc/ \
+            src/client/datagram.c \
+            src/client/datagram.h \
+            src/client/meta.c \
+            src/client/meta.h \
+            src/client/meta_test_support.h \
+            src/client/query.c \
+            src/client/textinterface.c \
+            src/common/metaserver.h \
+            src/client/sdl/sdlmeta.c \
+            src/client/sdl/sdlmeta.h \
+            src/client/sdl/sdlmetaframe.c \
+            src/client/sdl/sdlmetaframe.h \
+            src/server/metaserver.c \
+            tests/test_meta_environment.c \
+            tests/test_sdl_meta_frame.c \
+            tests/test_sdlmeta_primitives.c \
+            lib/textures/metabtndown.png \
+            lib/textures/metabtnup.png \
+            lib/textures/sdlmetabg.png
         do
             case "$distribution_listing" in
                 *"/$legacy_path"*)

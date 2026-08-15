@@ -1,7 +1,7 @@
 #include "test_helpers.h"
 
 #include "sdlrenderer.h"
-#include "sdlmetaframe.h"
+#include "sdlgameframe.h"
 #include "sdluiimage.h"
 #include "glwidgets.h"
 
@@ -508,17 +508,11 @@ static void integration_swap(void *context)
 
 static int check_widget_failure_aborts_frame(const SdlUiImage *image)
 {
-    const SdlMetaFrameOps operations = {
-        integration_begin,
-        integration_draw,
-        integration_frame_result,
-        integration_end,
-        integration_swap
-    };
+    RendererStatus status;
     GLWidget first;
     GLWidget second;
     IntegrationFrame frame;
-    SdlMetaFrameState frame_state;
+    SdlGameFrameState frame_state;
     SdlUiDrawState draw_state;
 
     memset(&first, 0, sizeof(first));
@@ -539,9 +533,17 @@ static int check_widget_failure_aborts_frame(const SdlUiImage *image)
     integration_swap_calls = 0;
     flush_result = RENDERER_STATUS_BACKEND_ERROR;
     Sdl_ui_draw_state_init(&draw_state);
-    Sdl_meta_frame_state_init(&frame_state);
+    Sdl_game_frame_state_init(&frame_state);
 
-    TEST_CHECK(Sdl_meta_frame_tick(&frame_state, &operations, &frame)
+    TEST_CHECK(integration_begin(&frame) == RENDERER_STATUS_OK);
+    TEST_CHECK(Sdl_game_frame_activate(&frame_state) == RENDERER_STATUS_OK);
+    status = integration_draw(&frame);
+    if (status == RENDERER_STATUS_OK)
+        status = integration_frame_result(&frame);
+    if (status != RENDERER_STATUS_OK)
+        TEST_CHECK(Sdl_game_frame_abort(&frame_state, status) == status);
+    TEST_CHECK(Sdl_game_frame_finish(
+                   &frame_state, integration_end, integration_swap, &frame)
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(integration_first_draw_calls == 1);
     TEST_CHECK(integration_second_draw_calls == 0);
@@ -551,7 +553,7 @@ static int check_widget_failure_aborts_frame(const SdlUiImage *image)
     TEST_CHECK(Sdl_ui_draw_state_successful_draws(&draw_state) == 0);
     TEST_CHECK(renderer_track_calls == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
-    TEST_CHECK(Sdl_meta_frame_cleanup_allowed(&frame_state));
+    TEST_CHECK(!Sdl_game_frame_pending(&frame_state));
     TEST_CHECK(!fake_renderer.frame_active);
 
     flush_result = RENDERER_STATUS_OK;

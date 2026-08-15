@@ -54,9 +54,8 @@ typedef struct {
     bool option_ready;
 } pending_session_t;
 
-int NumQueuedPlayers = 0;
 int NumPseudoPlayers = 0;
-sock_t contactSocket = { .fd = SOCK_FD_INVALID };
+static sock_t sessionListener = { .fd = SOCK_FD_INVALID };
 
 static bool listener_installed;
 static pending_session_t pending_sessions[MAX_PENDING_SESSIONS];
@@ -116,7 +115,7 @@ static void Contact_accept(int fd, void *arg)
 
     for (;;) {
 	errno = 0;
-	if (sock_accept(&contactSocket, &accepted) == SOCK_IS_ERROR) {
+	if (sock_accept(&sessionListener, &accepted) == SOCK_IS_ERROR) {
 	    if (errno != EWOULDBLOCK && errno != EAGAIN && errno != EINTR)
 		error("Cannot accept TCP session (%d)", errno);
 	    return;
@@ -168,35 +167,35 @@ void Contact_cleanup(void)
 	    Pending_cleanup(&pending_sessions[i]);
     }
     if (listener_installed) {
-	remove_input(contactSocket.fd);
+	remove_input(sessionListener.fd);
 	listener_installed = false;
     }
-    if (contactSocket.fd != SOCK_FD_INVALID)
-	sock_close(&contactSocket);
+    if (sessionListener.fd != SOCK_FD_INVALID)
+	sock_close(&sessionListener);
 }
 
 int Contact_init(void)
 {
     int backlog = Net_server_connection_limit() + MAX_PENDING_SESSIONS;
 
-    sock_init(&contactSocket);
+    sock_init(&sessionListener);
     if (backlog <= 0)
 	backlog = MAX_PENDING_SESSIONS;
-    if (sock_open_tcp_listener(&contactSocket, serverAddr,
-			       options.contactPort, backlog) == SOCK_IS_ERROR) {
+    if (sock_open_tcp_listener(&sessionListener, serverAddr,
+			       options.gamePort, backlog) == SOCK_IS_ERROR) {
 	error("Could not create TCP session listener");
 	error("Perhaps %s is already running?", APPNAME);
 	return false;
     }
-    if (sock_set_non_blocking(&contactSocket, 1) == SOCK_IS_ERROR) {
+    if (sock_set_non_blocking(&sessionListener, 1) == SOCK_IS_ERROR) {
 	error("Cannot make TCP session listener non-blocking");
-	sock_close(&contactSocket);
+	sock_close(&sessionListener);
 	return false;
     }
-    install_input(Contact_accept, contactSocket.fd, NULL);
+    install_input(Contact_accept, sessionListener.fd, NULL);
     listener_installed = true;
     xpprintf("%s TCP session listener is ready on port %d.\n",
-	     showtime(), options.contactPort);
+	     showtime(), options.gamePort);
     return true;
 }
 
@@ -750,28 +749,6 @@ void Session_poll(void)
 	if (pending_sessions[i].active)
 	    Process_pending(&pending_sessions[i]);
     }
-}
-
-/*
- * Transitional in-game queue commands report that no waiting queue exists.
- * The command registrations are removed with the legacy lobby code.
- */
-void Queue_kick(const char *nick)
-{
-    UNUSED_PARAM(nick);
-}
-
-int Queue_advance_player(char *name, char *message, size_t size)
-{
-    UNUSED_PARAM(name);
-    strlcpy(message, "The waiting queue is not available.", size);
-    return 0;
-}
-
-int Queue_show_list(char *message, size_t size)
-{
-    strlcpy(message, "The waiting queue is not available.", size);
-    return 0;
 }
 
 struct addr_plus_mask {

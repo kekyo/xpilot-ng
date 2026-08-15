@@ -61,8 +61,8 @@
  * but should not get frame updates yet until it has acknowledged its last
  * reliable data.
  *
- * Gameplay communication uses TCP streams.  Each logical packet keeps the
- * former datagram payload and is prefixed with a two-byte payload length.
+ * Gameplay communication uses TCP streams.  Each logical gameplay update is
+ * prefixed with a two-byte payload length.
  *
  * The protocol's reliable-data packets and acknowledgements are retained for
  * compatibility with the existing state machine.  TCP already provides
@@ -225,14 +225,12 @@ static void Init_receive(void)
 
     drain_receive[PKT_QUIT]			= Receive_quit;
     drain_receive[PKT_ACK]			= Receive_ack;
-    drain_receive[PKT_VERIFY]			= Receive_discard;
     drain_receive[PKT_PLAY]			= Receive_discard;
     drain_receive[PKT_SHAPE]			= Receive_discard;
 
     login_receive[PKT_PLAY]			= Receive_play;
     login_receive[PKT_QUIT]			= Receive_quit;
     login_receive[PKT_ACK]			= Receive_ack;
-    login_receive[PKT_VERIFY]			= Receive_discard;
     login_receive[PKT_POWER]			= Receive_power;
     login_receive[PKT_POWER_S]			= Receive_power;
     login_receive[PKT_TURNSPEED]		= Receive_power;
@@ -247,7 +245,6 @@ static void Init_receive(void)
     login_receive[PKT_ASYNC_FPS]		= Receive_fps_request;
 
     playing_receive[PKT_ACK]			= Receive_ack;
-    playing_receive[PKT_VERIFY]			= Receive_discard;
     playing_receive[PKT_PLAY]			= Receive_play;
     playing_receive[PKT_QUIT]			= Receive_quit;
     playing_receive[PKT_KEYBOARD]		= Receive_keyboard;
@@ -284,7 +281,7 @@ int Setup_net_server(void)
      * The number of connections is limited by the number of bases
      * and the max number of possible file descriptors to use in
      * the select(2) call minus those for stdin, stdout, stderr,
-     * the contact socket, and the socket for the resolver library routines.
+     * the session listener, and the socket for the resolver library routines.
      */
     max_connections
 	= MIN((int)MAX_SELECT_FD - 5,
@@ -594,8 +591,6 @@ int Setup_connection(sock_t *accepted, char *user, char *nick, char *dpy,
 		 SOCKBUF_WRITE | SOCKBUF_READ | SOCKBUF_LOCK);
 
     connp->ind = free_conn_index;
-    connp->my_port = options.contactPort;
-    connp->his_port = peer_port;
     connp->user = xp_strdup(user);
     connp->nick = xp_strdup(nick);
     connp->dpy = xp_strdup(dpy);
@@ -606,7 +601,7 @@ int Setup_connection(sock_t *accepted, char *user, char *nick, char *dpy,
     connp->version = version;
     Feature_init(connp);
     connp->start = main_loops;
-    connp->magic = options.contactPort + sock.fd + team + main_loops;
+    connp->magic = sock.fd + team + main_loops;
     connp->id = NO_ID;
     connp->last_key_change = 0;
     connp->reliable_offset = 0;
@@ -648,7 +643,7 @@ int Setup_connection(sock_t *accepted, char *user, char *nick, char *dpy,
 
     install_input(Handle_input, sock.fd, connp);
     xpprintf("%s TCP gameplay connection established on port %d.\n",
-	     showtime(), options.contactPort);
+	     showtime(), options.gamePort);
     xpprintf("%s Welcome %s=%s@%s|%s (%s/%d) (version %04x)\n",
 	     showtime(), nick, user, host, dpy, addr, peer_port, version);
 

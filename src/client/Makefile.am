@@ -7,16 +7,15 @@ libxpclient_a_SOURCES = \
 	client.c client.h \
 	clientcommand.c clientcommand.h clientrank.c clientrank.h \
 	configure.h connectparam.h control.c \
-	datagram.c datagram.h default.c \
+	default.c \
 	event.c \
 	gfx2d.c gfx2d.h \
 	guimap.h guiobjects.h \
-	mapdata.c messages.c meta.c meta.h \
+	mapdata.c messages.c \
 	netclient.c netclient.h \
 	paint.c paint.h paintmap.c paintobjects.c \
 	option.c option.h \
-	query.c \
-	talk.h talkmacros.c textinterface.c \
+	talk.h talkmacros.c \
 	usleep.c \
 	xpclient.h
 

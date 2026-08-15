@@ -183,26 +183,10 @@ static int sock_close_tcp(sock_t *sock)
     return status;
 }
 
-static int sock_close_udp(sock_t *sock)
-{
-    int			status = SOCK_IS_OK;
-
-    if (close(sock->fd) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_CLOSE, __LINE__);
-	status = SOCK_IS_ERROR;
-    }
-    sock_flags_remove(sock, SOCK_FLAG_UDP);
-    sock->fd = SOCK_FD_INVALID;
-
-    return status;
-}
-
 int sock_close(sock_t *sock)
 {
     sock_free_hostname(sock);
     sock_free_lastaddr(sock);
-    if (sock_flags_test_any(sock, SOCK_FLAG_UDP))
-	return sock_close_udp(sock);
     if (sock_flags_test_any(sock, SOCK_FLAG_TCP))
 	return sock_close_tcp(sock);
     return sock_set_error(sock, EINVAL, SOCK_CALL_ANY, __LINE__);
@@ -380,59 +364,6 @@ int sock_set_non_blocking(sock_t *sock, int flag)
     return SOCK_IS_ERROR;
 }
 
-int sock_open_tcp_connected_non_blocking(sock_t *sock, char *host, int port)
-{
-    struct sockaddr_in	dest;
-    struct hostent	*hp;
-
-    if (sock_open_tcp(sock))
-	return SOCK_IS_ERROR;
-
-    /*
-     * On error a message will have been printed
-     * and we want to continue regardless.
-     */
-    sock_set_non_blocking(sock, 1);
-
-    memset(&dest, 0, sizeof(dest));
-    dest.sin_family      = AF_INET;
-    dest.sin_port        = htons((unsigned short)port);
-    dest.sin_addr.s_addr = inet_addr(host);
-    if ((dest.sin_addr.s_addr & 0xFFFFFFFF) == 0xFFFFFFFF) {
-	/*
-	 * Cannot use h_errno because of portability problems.
-	 * Let's hope errno is meaningful too.
-	 */
-	errno = 0;
-	if ((hp = sock_get_host_by_name(host)) == NULL) {
-	    sock_set_error(sock, errno, SOCK_CALL_GETHOSTBYNAME, __LINE__);
-	    sock_close(sock);
-	    return SOCK_IS_ERROR;
-	}
-
-	dest.sin_addr.s_addr
-	    = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
-    }
-
-    if (connect(sock->fd, (struct sockaddr *)&dest,
-		sizeof(struct sockaddr_in)) < 0) {
-
-#ifndef _WINDOWS
-  	if (errno != EINPROGRESS) {
-#else
- 	if (WSAGetLastError() != 10035) {
-#endif
-
-		sock_set_error(sock, errno, SOCK_CALL_CONNECT, __LINE__);
-		sock_close(sock);
-		return SOCK_IS_ERROR;
-		}
-	}
-    sock_flags_add(sock, SOCK_FLAG_CONNECT);
-
-    return SOCK_IS_OK;
-}
-
 int sock_connect_with_timeout(sock_t *sock, char *host, int port,
 			      int timeout_seconds)
 {
@@ -494,31 +425,6 @@ int sock_connect_with_timeout(sock_t *sock, char *host, int port,
     }
 
     sock_flags_add(sock, SOCK_FLAG_CONNECT);
-    return SOCK_IS_OK;
-}
-
-int sock_open_udp(sock_t *sock, char *dotaddr, int port)
-{
-    struct sockaddr_in	addr;
-
-    if (sock_init(sock))
-	return SOCK_IS_ERROR;
-
-    if ((sock->fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-	return sock_set_error(sock, errno, SOCK_CALL_SOCKET, __LINE__);
-
-    sock_flags_add(sock, SOCK_FLAG_UDP);
-
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family	 = AF_INET;
-    addr.sin_port	 = htons((unsigned short)port);
-    addr.sin_addr.s_addr = (dotaddr) ? inet_addr(dotaddr) : INADDR_ANY;
-    if (bind(sock->fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_BIND, __LINE__);
-	sock_close(sock);
-	return SOCK_IS_ERROR;
-    }
-
     return SOCK_IS_OK;
 }
 
@@ -584,83 +490,11 @@ char * sock_get_last_addr(sock_t *sock)
     return error_addr;
 }
 
-char * sock_get_last_name(sock_t *sock)
-{
-    static char		error_addr[] = "255.255.255.255";
-    char		*str;
-    struct hostent	*hp;
-    struct sockaddr_in	*lastaddr;
-
-    if (sock->lastaddr) {
-	lastaddr = (struct sockaddr_in *)(sock->lastaddr);
-	hp = sock_get_host_by_addr((char *)&(lastaddr->sin_addr),
-				   sizeof(lastaddr->sin_addr), AF_INET);
-	if (hp == NULL)
-	    str = inet_ntoa(lastaddr->sin_addr);
-	else
-	    str = hp->h_name;
-
-	if (sock_alloc_hostname(sock))
-	    return str;
-
-	strlcpy(sock->hostname, str, SOCK_HOSTNAME_LENGTH);
-	return sock->hostname;
-    }
-
-    sock_set_error(sock, EINVAL, SOCK_CALL_ANY, __LINE__);
-
-    return error_addr;
-}
-
 int sock_read(sock_t *sock, char *buf, int len)
 {
     int			count;
 
     count = recv(sock->fd, buf, len, 0);
-    if (count < 0)
-	sock_set_error(sock, errno, SOCK_CALL_IO, __LINE__);
-
-    return count;
-}
-
-int sock_receive_any(sock_t *sock, char *buf, int len)
-{
-    int			count;
-    socklen_t		addrlen;
-
-    if (sock_alloc_lastaddr(sock) == SOCK_IS_ERROR)
-	return SOCK_IS_ERROR;
-    addrlen = sizeof(struct sockaddr_in);
-    count = recvfrom(sock->fd, buf, len, 0,
-		     (struct sockaddr *)(sock->lastaddr), &addrlen);
-    if (count < 0)
-	sock_set_error(sock, errno, SOCK_CALL_IO, __LINE__);
-
-    return count;
-}
-
-int sock_send_dest(sock_t *sock, char *host, int port, char *buf, int len)
-{
-    struct sockaddr_in		dest;
-    struct hostent		*hp;
-    int				count;
-
-    memset(&dest, 0, sizeof(dest));
-    dest.sin_family = AF_INET;
-    dest.sin_port = htons((unsigned short) port);
-    dest.sin_addr.s_addr = inet_addr(host);
-    if ((dest.sin_addr.s_addr & 0xFFFFFFFF) == 0xFFFFFFFF) {
-	errno = 0;
-	if ((hp = sock_get_host_by_name(host)) == NULL)
-	    return sock_set_error(sock, errno, SOCK_CALL_GETHOSTBYNAME,
-				  __LINE__);
-
-	dest.sin_addr.s_addr
-	    = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
-    }
-
-    count = sendto(sock->fd, buf, len, 0,
-		   (struct sockaddr *) &dest, sizeof(dest));
     if (count < 0)
 	sock_set_error(sock, errno, SOCK_CALL_IO, __LINE__);
 
@@ -695,17 +529,9 @@ unsigned long sock_get_inet_by_addr(char *dotaddr)
     return inet_addr(dotaddr);
 }
 
-void sock_get_local_hostname(char *name, unsigned size,
-			     int search_domain_for_xpilot)
+void sock_get_local_hostname(char *name, unsigned size)
 {
     struct hostent	*he = NULL;
-    struct hostent 	*xpilot_he = NULL;
-#ifndef _WINDOWS
-    int			xpilot_len;
-    char		*dot;
-    char		xpilot_hostname[SOCK_HOSTNAME_LENGTH];
-#endif
-    static const char	xpilot[] = "xpilot";
 
     gethostname(name, size);
     if ((he = sock_get_host_by_name(name)) == NULL)
@@ -749,39 +575,6 @@ void sock_get_local_hostname(char *name, unsigned size,
 	    return;
 	}
     }
-
-    if (search_domain_for_xpilot != 1)
-	return;
-
-#ifndef _WINDOWS	/* the lookup of xpilot can take FOREVER! zzzz...  */
-
-    /* if name starts with "xpilot" then we're done. */
-    xpilot_len = strlen(xpilot);
-    if (!strncmp(name, xpilot, xpilot_len))
-	return;
-
-    /* Make a wild guess that a "xpilot" hostname or alias is in this domain */
-    dot = name;
-    while ((dot = strchr(dot, '.')) != NULL) {
-	if (xpilot_len + strlen(dot) < sizeof(xpilot_hostname)) {
-	    strlcpy(xpilot_hostname, xpilot, SOCK_HOSTNAME_LENGTH);
-	    strlcat(xpilot_hostname, dot, SOCK_HOSTNAME_LENGTH);
-	    /*
-	     * If there is a CNAME the h_name must be identical to the
-	     * FQDN we guessed above.  It is hard to know our IP to know
-	     * that an A record points to us.
-	     */
-	    if ((xpilot_he = sock_get_host_by_name(xpilot_hostname)) != NULL &&
-		!strcmp(name, xpilot_he->h_name))
-		break;
-	    xpilot_he = NULL;
-	}
-	++dot;
-    }
-    if (xpilot_he != NULL)
-	strlcpy(name, xpilot_hostname, size);
-
-#endif
 }
 
 int sock_get_port(sock_t *sock)
@@ -798,30 +591,6 @@ int sock_get_port(sock_t *sock)
     port = ntohs(addr.sin_port);
 
     return port;
-}
-
-int sock_get_error(sock_t *sock)
-{
-    int			err;
-    socklen_t		size = sizeof(err);
-
-    if (getsockopt(sock->fd, SOL_SOCKET, SO_ERROR,
-		   (void *)&err, &size) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_GETSOCKOPT, __LINE__);
-	return SOCK_IS_ERROR;
-    }
-    errno = err;
-    return SOCK_IS_OK;
-}
-
-int sock_set_broadcast(sock_t *sock, int flag)
-{
-    if (setsockopt(sock->fd, SOL_SOCKET, SO_BROADCAST,
-		   (void *)&flag, sizeof(flag)) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_SETSOCKOPT, __LINE__);
-	return SOCK_IS_ERROR;
-    }
-    return SOCK_IS_OK;
 }
 
 int sock_set_receive_buffer_size(sock_t *sock, int size)

@@ -8,7 +8,7 @@ libxpcommon_a_SOURCES = \
 	item.h \
 	keys.h \
 	list.c list.h \
-	math.c metaserver.h \
+	math.c \
 	net.c net.h session.c session.h \
 	pack.h packet.h portability.c portability.h \
 	randommt.c rules.h \

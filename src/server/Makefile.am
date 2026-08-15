@@ -10,7 +10,7 @@ xpilot_ng_server_SOURCES = \
 	fileparser.c frame.c gravity.c \
 	id.c item.c \
 	laser.c \
-	map.c map.h metaserver.c modifiers.c modifiers.h \
+	map.c map.h modifiers.c modifiers.h \
 	netserver.c netserver.h \
 	object.c object.h objpos.c objpos.h option.c option.h \
 	parser.c player.c player.h polygon.c \

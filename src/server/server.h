@@ -66,13 +66,11 @@ extern int		NumPlayers;
 extern int		NumSpectators;
 extern int		NumOperators;
 extern int		NumPseudoPlayers;
-extern int		NumQueuedPlayers;
 extern int		ObjCount;
 extern int		NumAlliances;
 extern int		NumRobots;
 extern int		login_in_progress;
 extern char		ShutdownReason[];
-extern sock_t		contactSocket;
 extern time_t		serverStartTime;
 extern server_t		Server;
 extern char		*serverAddr;
@@ -387,17 +385,9 @@ void Main_loop(void);
  */
 void Contact_cleanup(void);
 int Contact_init(void);
-void Queue_kick(const char *nick);
 /** Process bounded TCP sessions waiting for admission or control replies. */
 void Session_poll(void);
-int Queue_advance_player(char *name, char *msg, size_t size);
-int Queue_show_list(char *msg, size_t size);
 void Set_deny_hosts(void);
-
-/*
- * Prototypes for metaserver.c
- */
-void Meta_update_max_size_tuner(void);
 
 /*
  * Prototypes for frame.c

@@ -108,7 +108,7 @@ static bool Set_hostName(xp_option_t *opt, const char *value)
 	strlcpy(connectParam.host_name, cp, sizeof(connectParam.host_name));
     else
         sock_get_local_hostname(connectParam.host_name,
-				sizeof(connectParam.host_name), 0);
+				sizeof(connectParam.host_name));
 
     if (strlen(value) > 0)
 	strlcpy(connectParam.host_name, value, sizeof(connectParam.host_name));
@@ -554,12 +554,6 @@ xp_option_t default_options[] = {
 	"Show the source code version.\n"),
 
     XP_NOARG_OPTION(
-	"join",
-	&xpArgs.auto_connect,
-	XP_OPTFLAG_NEVER_SAVE,
-	"Join the game immediately, no questions asked.\n"),
-
-    XP_NOARG_OPTION(
 	"text",
 	&xpArgs.text,
 	XP_OPTFLAG_NEVER_SAVE,
@@ -570,12 +564,6 @@ xp_option_t default_options[] = {
 	&xpArgs.status,
 	XP_OPTFLAG_NEVER_SAVE,
 	"Print server status using one TCP control connection.\n"),
-
-    XP_NOARG_OPTION(
-	"list",
-	&xpArgs.list_servers,
-	XP_OPTFLAG_NEVER_SAVE,
-	"List all servers running on the local network.\n"),
 
     XP_STRING_OPTION(
 	"shutdown",
@@ -626,13 +614,10 @@ xp_option_t default_options[] = {
 	SERVER_PORT,
 	0,
 	65535,
-	&connectParam.contact_port,
+	&connectParam.game_port,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Set the port number of the server.\n"
-	"Almost all servers use the default port, which is the recommended\n"
-	"policy.  You can find out about which port is used by a server by\n"
-	"querying the XPilot Meta server.\n"),
+	"Set the fixed TCP gameplay and control port of the server.\n"),
 
     XP_INT_OPTION(
 	"clientPortStart",
@@ -642,7 +627,7 @@ xp_option_t default_options[] = {
 	&clientPortStart,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Use TCP and UDP ports clientPortStart - clientPortEnd "
+	"Use TCP source ports clientPortStart - clientPortEnd "
 	"(for firewalls).\n"
 	/* TODO: describe what value 0 means */),
 
@@ -654,7 +639,7 @@ xp_option_t default_options[] = {
 	&clientPortEnd,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Use TCP and UDP ports clientPortStart - clientPortEnd "
+	"Use TCP source ports clientPortStart - clientPortEnd "
 	"(for firewalls).\n"),
 
     XP_DOUBLE_OPTION(

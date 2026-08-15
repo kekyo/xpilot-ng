@@ -34,7 +34,6 @@
 
 enum sock_flags_e {
     SOCK_FLAG_INIT	= 1,
-    SOCK_FLAG_UDP	= 2,
     SOCK_FLAG_TCP	= 4,
     SOCK_FLAG_CONNECT	= 8
 };
@@ -114,7 +113,6 @@ int sock_open_tcp_listener(sock_t *sock, char *dotaddr, int port, int backlog);
  * @return SOCK_IS_OK on success or SOCK_IS_ERROR on failure.
  */
 int sock_accept(sock_t *listener, sock_t *accepted);
-int sock_open_tcp_connected_non_blocking(sock_t *sock, char *host, int port);
 /**
  * Connect an open TCP socket without waiting longer than a fixed deadline.
  *
@@ -128,22 +126,21 @@ int sock_open_tcp_connected_non_blocking(sock_t *sock, char *host, int port);
  */
 int sock_connect_with_timeout(sock_t *sock, char *host, int port,
 			      int timeout_seconds);
-int sock_open_udp(sock_t *sock, char *dotaddr, int port);
 int sock_connect(sock_t *sock, char *host, int port);
 int sock_get_last_port(sock_t *sock);
 char * sock_get_last_addr(sock_t *sock);
-char * sock_get_last_name(sock_t *sock);
 int sock_read(sock_t *sock, char *buf, int len);
-int sock_receive_any(sock_t *sock, char *buf, int len);
-int sock_send_dest(sock_t *sock, char *host, int port, char *buf, int len);
 int sock_write(sock_t *sock, char *buf, int len);
 char *sock_get_addr_by_name(const char *name);
 unsigned long sock_get_inet_by_addr(char *dotaddr);
-void sock_get_local_hostname(char *name, unsigned size,
-			     int search_domain_for_xpilot);
+/**
+ * Resolve the local host name, preferring a fully qualified name.
+ *
+ * @param name Destination buffer.
+ * @param size Size of @p name in bytes.
+ */
+void sock_get_local_hostname(char *name, unsigned size);
 int sock_get_port(sock_t *sock);
-int sock_get_error(sock_t *sock);
-int sock_set_broadcast(sock_t *sock, int flag);
 int sock_set_receive_buffer_size(sock_t *sock, int size);
 int sock_set_send_buffer_size(sock_t *sock, int size);
 /**

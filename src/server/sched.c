@@ -716,8 +716,7 @@ void sched(void)
     struct timeval	tv, *tvp = &tv;
 
     if (NumPlayers > NumRobots + NumPseudoPlayers
-	|| login_in_progress != 0
-	|| NumQueuedPlayers > 0) {
+	|| login_in_progress != 0) {
 
 	/* need fast I/O checks now! (2 or 3 times per frames) */
 	tv.tv_sec = 0;

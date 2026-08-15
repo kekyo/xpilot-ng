@@ -6,7 +6,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	@SDL2_CFLAGS@ @SDL2_IMAGE_CFLAGS@ @SDL2_TTF_CFLAGS@ \
 	@GL_CFLAGS@
 
-check_PROGRAMS = test-framed-stream test-session-protocol test-meta-environment \
+check_PROGRAMS = test-framed-stream test-session-protocol \
 	test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-gl-core-resources \
@@ -14,28 +14,28 @@ check_PROGRAMS = test-framed-stream test-session-protocol test-meta-environment 
 	test-renderer-gl-core test-paint-transform test-image-geometry \
 	test-polygon-geometry \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
-	test-sdl-meta-frame test-sdl-game-frame test-sdl-renderer-scissor \
+	test-sdl-game-frame test-sdl-renderer-scissor \
 	test-sdl-init-core-profile test-sdl-renderer-core-context \
 	test-sdlpaint-stage test-paintmap-vdecor \
 	test-glwidgets-scissor test-glwidgets-primitives \
-	test-sdlmeta-primitives test-sdlgui-appearing \
+	test-sdlgui-appearing \
 	test-sdlgui-hud-primitives test-sdlgui-asteroids \
 	test-sdlgui-polygons test-sdlgui-sparks test-sdlgui-ships \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
-TESTS = test-framed-stream test-session-protocol test-meta-environment \
+TESTS = test-framed-stream test-session-protocol \
 	test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
 	test-renderer-geometry test-paint-transform run-gl-core-resources.sh \
 	test-image-geometry test-polygon-geometry test-gfx2d-picture \
-	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
+	test-images test-radar-renderer test-sdl-ui-image \
 	test-sdl-game-frame \
 	test-sdl-init-core-profile test-sdlpaint-stage \
 	run-sdl-core-boundary.sh \
 	test-paintmap-vdecor \
 	test-sdl-renderer-scissor test-glwidgets-scissor \
-	test-glwidgets-primitives test-sdlmeta-primitives \
+	test-glwidgets-primitives \
 	test-sdlgui-appearing test-sdlgui-hud-primitives \
 	test-sdlgui-asteroids test-sdlgui-polygons test-sdlgui-sparks \
 	test-sdlgui-ships \
@@ -50,15 +50,6 @@ test_framed_stream_LDADD = $(top_builddir)/src/common/libxpcommon.a
 
 test_session_protocol_SOURCES = test_session_protocol.c
 test_session_protocol_LDADD = $(top_builddir)/src/common/libxpcommon.a
-
-test_meta_environment_SOURCES = test_meta_environment.c \
-	$(top_srcdir)/src/client/meta.c \
-	$(top_srcdir)/src/client/meta_test_support.h \
-	$(top_srcdir)/src/common/strlcpy.c
-test_meta_environment_CPPFLAGS = $(AM_CPPFLAGS) -DXPILOT_META_TEST_HOOKS
-test_meta_environment_CFLAGS = $(AM_CFLAGS) \
-	-ffunction-sections -fdata-sections
-test_meta_environment_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 
 test_sdl_keys_SOURCES = test_sdl_keys.c \
 	$(top_srcdir)/src/client/sdl/sdlkeys.c
@@ -158,7 +149,7 @@ test_radar_renderer_LDADD = @SDL2_LIBS@
 
 test_sdl_ui_image_SOURCES = test_sdl_ui_image.c \
 	$(top_srcdir)/src/client/sdl/sdluiimage.c \
-	$(top_srcdir)/src/client/sdl/sdlmetaframe.c \
+	$(top_srcdir)/src/client/sdl/sdlgameframe.c \
 	$(top_srcdir)/src/client/sdl/glwidgets.c \
 	$(top_srcdir)/src/client/sdl/surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/sdlcompat.c
@@ -166,9 +157,6 @@ test_sdl_ui_image_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_sdl_ui_image_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdl_ui_image_LDADD = @SDL2_LIBS@
-
-test_sdl_meta_frame_SOURCES = test_sdl_meta_frame.c \
-	$(top_srcdir)/src/client/sdl/sdlmetaframe.c
 
 test_sdl_game_frame_SOURCES = test_sdl_game_frame.c \
 	$(top_srcdir)/src/client/sdl/sdlgameframe.c
@@ -231,15 +219,6 @@ test_glwidgets_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_glwidgets_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_glwidgets_primitives_LDADD = @SDL2_LIBS@
-
-test_sdlmeta_primitives_SOURCES = test_sdlmeta_primitives.c \
-	$(top_srcdir)/src/client/sdl/sdlmeta.c
-test_sdlmeta_primitives_CPPFLAGS = $(AM_CPPFLAGS) \
-	-DXPILOT_SDLMETA_TEST_HOOKS
-test_sdlmeta_primitives_CFLAGS = $(AM_CFLAGS) \
-	-ffunction-sections -fdata-sections
-test_sdlmeta_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_sdlmeta_primitives_LDADD = @SDL2_LIBS@
 
 test_sdlgui_appearing_SOURCES = test_sdlgui_appearing.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \

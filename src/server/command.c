@@ -176,7 +176,6 @@ void Set_swapper_state(player_t *pl)
 
 
 static int Cmd_addr(char *arg, player_t *pl, bool oper, char *msg, size_t size);
-static int Cmd_advance(char *arg, player_t *pl, bool oper, char *msg, size_t size);
 static int Cmd_ally(char *arg, player_t *pl, bool oper, char *msg, size_t size);
 static int Cmd_get(char *arg, player_t *pl, bool oper, char *msg, size_t size);
 static int Cmd_help(char *arg, player_t *pl, bool oper, char *msg, size_t size);
@@ -188,7 +187,6 @@ static int Cmd_op(char *arg, player_t *pl, bool oper, char *msg, size_t size);
 static int Cmd_password(char *arg, player_t *pl, bool oper, char *msg, size_t size);
 static int Cmd_pause(char *arg, player_t *pl, bool oper, char *msg, size_t size);
 static int Cmd_plinfo(char *arg, player_t *pl, bool oper, char *msg, size_t size);
-static int Cmd_queue(char *arg, player_t *pl, bool oper, char *msg, size_t size);
 static int Cmd_reset(char *arg, player_t *pl, bool oper, char *msg, size_t size);
 static int Cmd_set(char *arg, player_t *pl, bool oper, char *msg, size_t size);
 static int Cmd_shutdown(char *arg, player_t *pl, bool oper, char *msg, size_t size);
@@ -217,14 +215,6 @@ static Command_info commands[] = {
 	"(operator)",
 	true,
 	Cmd_addr
-    },
-    {
-	"advance",
-	"ad",
-	"/advance <name of player in the queue>. "
-	"Move the player to the front of the queue.  (operator)",
-	true,
-	Cmd_advance
     },
     {
 	"ally",
@@ -309,13 +299,6 @@ static Command_info commands[] = {
 	"/plinfo <player name or ID number>.  Show misc. player info.",
 	false,
 	Cmd_plinfo
-    },
-    {
-	"queue",
-	"q",
-	"/queue.  Show the names of players waiting to enter.",
-	false,
-	Cmd_queue
     },
     {
 	"reset",
@@ -477,42 +460,6 @@ static int Cmd_addr(char *arg, player_t *pl, bool oper, char *msg, size_t size)
 	strlcpy(msg, errorstr, size);
 	return CMD_RESULT_ERROR;
     }
-
-    return CMD_RESULT_SUCCESS;
-}
-
-
-/*
- * The queue system from the original server is not replicated
- * during playback. Therefore interactions with it in the
- * recording can cause problems (at least different message
- * lengths in acks from client). It would be possible to work
- * around this, but not implemented now. Currently queue and advance
- * commands are disabled during recording.
- */
-static int Cmd_advance(char *arg, player_t *pl, bool oper,
-		       char *msg, size_t size)
-{
-    int result;
-
-    UNUSED_PARAM(pl);
-
-    if (!oper)
-	return CMD_RESULT_NOT_OPERATOR;
-
-    if (record || playback) {
-	strlcpy(msg, "Command currently disabled during recording for "
-	       "technical reasons.", size);
-	return CMD_RESULT_ERROR;
-    }
-
-    if (!arg || !*arg)
-	return CMD_RESULT_NO_NAME;
-
-    result = Queue_advance_player(arg, msg, size);
-
-    if (result < 0)
-	return CMD_RESULT_ERROR;
 
     return CMD_RESULT_SUCCESS;
 }
@@ -991,27 +938,6 @@ static int Cmd_plinfo(char *arg, player_t *pl, bool oper, char *msg, size_t size
 
     return CMD_RESULT_SUCCESS;
 }
-
-static int Cmd_queue(char *arg, player_t *pl, bool oper, char *msg, size_t size)
-{
-    int result;
-
-    UNUSED_PARAM(arg); UNUSED_PARAM(pl); UNUSED_PARAM(oper);
-
-    if (record || playback) {
-	strlcpy(msg, "Command currently disabled during recording for "
-		"technical reasons.", size);
-	return CMD_RESULT_ERROR;
-    }
-
-    result = Queue_show_list(msg, size);
-
-    if (result < 0)
-	return CMD_RESULT_ERROR;
-
-    return CMD_RESULT_SUCCESS;
-}
-
 
 static int Cmd_reset(char *arg, player_t *pl, bool oper, char *msg, size_t size)
 {

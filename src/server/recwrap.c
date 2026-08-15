@@ -78,33 +78,13 @@ int sock_writeRec(sock_t *sock, char *wbuf, int size)
 	 *(playback_ints++) = i;
 	 */
     }
-    if (record && BIT(sock->flags, SOCK_FLAG_UDP) != 0 && i < size)
-	error("Warning: datagram write failed, recording doesn't handle this");
-    return i;
-}
-
-
-int sock_get_errorRec(sock_t *sock)
-{
-    int i;
-
-    if (playback) {
-	errno = *(playback_errnos++);
-	return *(playback_ints++);
-    }
-    i = sock_get_error(sock);
-    if (record) {
-	*(playback_errnos++) = errno;
-	*(playback_ints++) = i;
-    }
     return i;
 }
 
 
 int Sockbuf_flushRec(sockbuf_t *sbuf)
 {
-    int			len,
-	i;
+    int			len;
 
     if (BIT(sbuf->state, SOCKBUF_WRITE) == 0) {
 	warn("No flush on non-writable socket buffer");
@@ -128,57 +108,19 @@ int Sockbuf_flushRec(sockbuf_t *sbuf)
 	return 0;
     }
 
-    if (BIT(sbuf->state, SOCKBUF_DGRAM) != 0) {
-	errno = 0;
-	i = 0;
-	while ((len = sock_writeRec(&sbuf->sock, sbuf->buf, sbuf->len)) <= 0) {
-	    if (len == 0
-		|| errno == EWOULDBLOCK
-		|| errno == EAGAIN) {
-		Sockbuf_clear(sbuf);
-		return 0;
-	    }
-	    if (errno == EINTR) {
-		errno = 0;
-		continue;
-	    }
-	    if (++i > MAX_SOCKBUF_RETRIES) {
-		error("Can't send on socket (%d,%d)", sbuf->sock, sbuf->len);
-		Sockbuf_clear(sbuf);
-		return -1;
-	    }
-	    { static int send_err;
-	    if ((send_err++ & 0x3F) == 0) {
-		error("send (%d)", i);
-	    }
-	    }
-	    if (sock_get_errorRec(&sbuf->sock) == -1) {
-		error("sock_get_error send");
-		return -1;
-	    }
+    errno = 0;
+    while ((len = sock_writeRec(&sbuf->sock, sbuf->buf, sbuf->len)) <= 0) {
+	if (errno == EINTR) {
 	    errno = 0;
+	    continue;
 	}
-	if (len != sbuf->len) {
-	    errno = 0;
-	    error("Can't write complete datagram (%d,%d)", len, sbuf->len);
+	if (errno != EWOULDBLOCK && errno != EAGAIN) {
+	    error("Can't write on socket");
+	    return -1;
 	}
-	Sockbuf_clear(sbuf);
-    } else {
-	errno = 0;
-	while ((len = sock_writeRec(&sbuf->sock, sbuf->buf, sbuf->len)) <= 0) {
-	    if (errno == EINTR) {
-		errno = 0;
-		continue;
-	    }
-	    if (errno != EWOULDBLOCK
-		&& errno != EAGAIN) {
-		error("Can't write on socket");
-		return -1;
-	    }
-	    return 0;
-	}
-	Sockbuf_advance(sbuf, len);
+	return 0;
     }
+    Sockbuf_advance(sbuf, len);
     return len;
 }
 
@@ -186,7 +128,6 @@ int Sockbuf_flushRec(sockbuf_t *sbuf)
 int Sockbuf_readRec(sockbuf_t *sbuf)
 {
     int			max,
-	i,
 	len;
 
     if (BIT(sbuf->state, SOCKBUF_READ) == 0) {
@@ -209,59 +150,21 @@ int Sockbuf_readRec(sockbuf_t *sbuf)
 	}
 	return -1;
     }
-    if (BIT(sbuf->state, SOCKBUF_DGRAM) != 0) {
-	errno = 0;
-	i = 0;
-	while ((len = sock_readRec(&sbuf->sock, sbuf->buf + sbuf->len, max)) <= 0) {
-	    if (len == 0) {
-		return 0;
-	    }
-#ifdef _WINDOWS
-	    errno = WSAGetLastError();
-#endif
-	    if (errno == EINTR) {
-		errno = 0;
-		continue;
-	    }
-	    if (errno == EWOULDBLOCK
-		|| errno == EAGAIN) {
-		return 0;
-	    }
-	    if (++i > MAX_SOCKBUF_RETRIES) {
-		error("Can't recv on socket");
-		return -1;
-	    }
-	    { static int recv_err;
-	    if ((recv_err++ & 0x3F) == 0) {
-		error("recv (%d)", i);
-	    }
-	    }
-	    if (sock_get_errorRec(&sbuf->sock) == -1) {
-		error("sock_get_error recv");
-		return -1;
-	    }
-	    errno = 0;
-	}
-	sbuf->len += len;
-    } else {
-	errno = 0;
-	while ((len = sock_readRec(&sbuf->sock, sbuf->buf + sbuf->len, max)) <= 0) {
-	    if (len == 0) {
-		return 0;
-	    }
-	    if (errno == EINTR) {
-		errno = 0;
-		continue;
-	    }
-	    if (errno != EWOULDBLOCK
-		&& errno != EAGAIN) {
-		error("Can't read on socket");
-		return -1;
-	    }
+    errno = 0;
+    while ((len = sock_readRec(&sbuf->sock, sbuf->buf + sbuf->len, max)) <= 0) {
+	if (len == 0)
 	    return 0;
+	if (errno == EINTR) {
+	    errno = 0;
+	    continue;
 	}
-	sbuf->len += len;
+	if (errno != EWOULDBLOCK && errno != EAGAIN) {
+	    error("Can't read on socket");
+	    return -1;
+	}
+	return 0;
     }
+    sbuf->len += len;
 
     return sbuf->len;
 }
@@ -275,7 +178,7 @@ int Sockbuf_writeRec(sockbuf_t *sbuf, char *buf, int len)
     }
     if (sbuf->size - sbuf->len < len) {
 	if (BIT(sbuf->state,
-		SOCKBUF_LOCK | SOCKBUF_DGRAM | SOCKBUF_FRAMED) != 0) {
+		SOCKBUF_LOCK | SOCKBUF_FRAMED) != 0) {
 	    warn("No write to locked socket buffer (%d,%d,%d,%d)",
 		  sbuf->state, sbuf->size, sbuf->len, len);
 	    return -1;

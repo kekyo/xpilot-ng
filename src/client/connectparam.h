@@ -33,9 +33,7 @@
 #endif
 
 typedef struct Connect_param {
-    int			contact_port,
-			server_port,
-			login_port;
+    int			game_port;
     char		nick_name[MAX_NAME_LEN],
 			user_name[MAX_NAME_LEN],
 			host_name[SOCK_HOSTNAME_LENGTH],
@@ -47,4 +45,3 @@ typedef struct Connect_param {
 } Connect_param_t;
 
 #endif
-

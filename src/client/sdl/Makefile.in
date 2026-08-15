@@ -134,13 +134,13 @@ am__xpilot_ng_sdl_SOURCES_DIST = asteroid_data.h DT_drawtext.c \
 	renderer_gl.h renderer_gl_core.c renderer_gl_core.h \
 	sdlclipboard.c sdlclipboard.h sdlcompat.c sdlcompat.h \
 	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h \
-	sdlgameframe.c sdlgameframe.h sdlmetaframe.c sdlmetaframe.h \
-	sdlrenderer.c sdlrenderer.h sdluiimage.c sdluiimage.h \
-	sdlpaint.c surface_rgba8.c surface_rgba8.h sdlpaint.h \
-	sdlwindow.c sdlwindow.h text.c text.h text_atlas.c \
-	text_atlas.h text_geometry.c text_geometry.h text_renderer.c \
-	text_renderer.h text_ttf_atlas.c text_ttf_atlas.h todo.c \
-	sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h win32hacks.c
+	sdlgameframe.c sdlgameframe.h sdlrenderer.c sdlrenderer.h \
+	sdluiimage.c sdluiimage.h sdlpaint.c surface_rgba8.c \
+	surface_rgba8.h sdlpaint.h sdlwindow.c sdlwindow.h text.c \
+	text.h text_atlas.c text_atlas.h text_geometry.c \
+	text_geometry.h text_renderer.c text_renderer.h \
+	text_ttf_atlas.c text_ttf_atlas.h todo.c sdlinit.h \
+	xpclient_sdl.h win32hacks.c
 @COND_WINDOWS_TRUE@am__objects_1 = win32hacks.$(OBJEXT)
 am_xpilot_ng_sdl_OBJECTS = DT_drawtext.$(OBJEXT) SDL_console.$(OBJEXT) \
 	SDL_gfxPrimitives.$(OBJEXT) console.$(OBJEXT) \
@@ -151,12 +151,12 @@ am_xpilot_ng_sdl_OBJECTS = DT_drawtext.$(OBJEXT) SDL_console.$(OBJEXT) \
 	renderer.$(OBJEXT) renderer_gl_core.$(OBJEXT) \
 	sdlclipboard.$(OBJEXT) sdlcompat.$(OBJEXT) sdlevent.$(OBJEXT) \
 	sdlgui.$(OBJEXT) sdlinit.$(OBJEXT) sdlkeys.$(OBJEXT) \
-	sdlgameframe.$(OBJEXT) sdlmetaframe.$(OBJEXT) \
-	sdlrenderer.$(OBJEXT) sdluiimage.$(OBJEXT) sdlpaint.$(OBJEXT) \
+	sdlgameframe.$(OBJEXT) sdlrenderer.$(OBJEXT) \
+	sdluiimage.$(OBJEXT) sdlpaint.$(OBJEXT) \
 	surface_rgba8.$(OBJEXT) sdlwindow.$(OBJEXT) text.$(OBJEXT) \
 	text_atlas.$(OBJEXT) text_geometry.$(OBJEXT) \
 	text_renderer.$(OBJEXT) text_ttf_atlas.$(OBJEXT) \
-	todo.$(OBJEXT) sdlmeta.$(OBJEXT) $(am__objects_1)
+	todo.$(OBJEXT) $(am__objects_1)
 xpilot_ng_sdl_OBJECTS = $(am_xpilot_ng_sdl_OBJECTS)
 xpilot_ng_sdl_DEPENDENCIES = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a libxp_libtess2.a
@@ -186,8 +186,7 @@ am__depfiles_remade = ./$(DEPDIR)/DT_drawtext.Po \
 	./$(DEPDIR)/sdlclipboard.Po ./$(DEPDIR)/sdlcompat.Po \
 	./$(DEPDIR)/sdlevent.Po ./$(DEPDIR)/sdlgameframe.Po \
 	./$(DEPDIR)/sdlgui.Po ./$(DEPDIR)/sdlinit.Po \
-	./$(DEPDIR)/sdlkeys.Po ./$(DEPDIR)/sdlmeta.Po \
-	./$(DEPDIR)/sdlmetaframe.Po ./$(DEPDIR)/sdlpaint.Po \
+	./$(DEPDIR)/sdlkeys.Po ./$(DEPDIR)/sdlpaint.Po \
 	./$(DEPDIR)/sdlrenderer.Po ./$(DEPDIR)/sdluiimage.Po \
 	./$(DEPDIR)/sdlwindow.Po ./$(DEPDIR)/surface_rgba8.Po \
 	./$(DEPDIR)/text.Po ./$(DEPDIR)/text_atlas.Po \
@@ -400,13 +399,13 @@ xpilot_ng_sdl_SOURCES = asteroid_data.h DT_drawtext.c DT_drawtext.h \
 	renderer_gl.h renderer_gl_core.c renderer_gl_core.h \
 	sdlclipboard.c sdlclipboard.h sdlcompat.c sdlcompat.h \
 	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h \
-	sdlgameframe.c sdlgameframe.h sdlmetaframe.c sdlmetaframe.h \
-	sdlrenderer.c sdlrenderer.h sdluiimage.c sdluiimage.h \
-	sdlpaint.c surface_rgba8.c surface_rgba8.h sdlpaint.h \
-	sdlwindow.c sdlwindow.h text.c text.h text_atlas.c \
-	text_atlas.h text_geometry.c text_geometry.h text_renderer.c \
-	text_renderer.h text_ttf_atlas.c text_ttf_atlas.h todo.c \
-	sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h $(am__append_1)
+	sdlgameframe.c sdlgameframe.h sdlrenderer.c sdlrenderer.h \
+	sdluiimage.c sdluiimage.h sdlpaint.c surface_rgba8.c \
+	surface_rgba8.h sdlpaint.h sdlwindow.c sdlwindow.h text.c \
+	text.h text_atlas.c text_atlas.h text_geometry.c \
+	text_geometry.h text_renderer.c text_renderer.h \
+	text_ttf_atlas.c text_ttf_atlas.h todo.c sdlinit.h \
+	xpclient_sdl.h $(am__append_1)
 xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	libxp_libtess2.a \
@@ -561,8 +560,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlgui.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlinit.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlkeys.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlmeta.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlmetaframe.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlpaint.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlrenderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdluiimage.Po@am__quote@ # am--include-marker
@@ -756,8 +753,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sdlgui.Po
 	-rm -f ./$(DEPDIR)/sdlinit.Po
 	-rm -f ./$(DEPDIR)/sdlkeys.Po
-	-rm -f ./$(DEPDIR)/sdlmeta.Po
-	-rm -f ./$(DEPDIR)/sdlmetaframe.Po
 	-rm -f ./$(DEPDIR)/sdlpaint.Po
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/sdluiimage.Po
@@ -844,8 +839,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sdlgui.Po
 	-rm -f ./$(DEPDIR)/sdlinit.Po
 	-rm -f ./$(DEPDIR)/sdlkeys.Po
-	-rm -f ./$(DEPDIR)/sdlmeta.Po
-	-rm -f ./$(DEPDIR)/sdlmetaframe.Po
 	-rm -f ./$(DEPDIR)/sdlpaint.Po
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/sdluiimage.Po

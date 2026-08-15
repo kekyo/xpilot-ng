@@ -55,7 +55,7 @@ typedef struct {
     unsigned short legacy_version;
     /** User claiming to issue the command. */
     char user[MAX_CHARS];
-    /** Existing contact command identifier. */
+    /** Control command identifier from pack.h. */
     unsigned char command;
     /** Command-specific UTF-8 argument. */
     char argument[MSG_LEN];

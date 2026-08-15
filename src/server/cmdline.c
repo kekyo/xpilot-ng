@@ -595,13 +595,13 @@ static option_desc opts[] = {
 	OPT_MAP
     },
     {
-	"contactPort",
+	"gamePort",
 	"port",
 	"15345",
-	&options.contactPort,
+	&options.gamePort,
 	valInt,
 	tuner_none,
-	"The server contact port number.\n",
+	"The fixed TCP gameplay and control port number.\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
@@ -943,36 +943,6 @@ static option_desc opts[] = {
 	"The probability for each item a player owns to get destroyed\n"
 	"when the player bounces against a wall.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
-    },
-    {
-	"reportToMetaServer",
-	"reportMeta",
-	"true",
-	&options.reportToMetaServer,
-	valBool,
-	tuner_none,
-	"Keep the meta server informed about our game?\n",
-	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
-    },
-    {
-	"metaUpdateMaxSize",
-	"metaUpdateMaxSize",
-	"4096",
-	&options.metaUpdateMaxSize,
-	valInt,
-	Meta_update_max_size_tuner,
-	"Maximum size of meta update messages.\n",
-	OPT_ORIGIN_ANY | OPT_VISIBLE
-    },
-    {
-	"searchDomainForXPilot",
-	"searchDomainForXPilot",
-	"false",
-	&options.searchDomainForXPilot,
-	valBool,
-	tuner_none,
-	"Search the local domain for the existence of xpilot.domain?\n",
-	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
 	"denyHosts",
@@ -3535,28 +3505,6 @@ static option_desc opts[] = {
 	"users will be able to see the password.  Therefore, using\n"
 	"the password file instead is recommended.",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_PASSWORD
-    },
-    {
-	"clientPortStart",
-	"clientPortStart",
-	"0",
-	&options.clientPortStart,
-	valInt,
-	tuner_dummy,
-	"Use TCP ports clientPortStart - clientPortEnd for gameplay "
-	"connections (for firewalls)\n",
-	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
-    },
-    {
-	"clientPortEnd",
-	"clientPortEnd",
-	"0",
-	&options.clientPortEnd,
-	valInt,
-	tuner_dummy,
-	"Use TCP ports clientPortStart - clientPortEnd for gameplay "
-	"connections (for firewalls)\n",
-	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
 	"maxPauseTime",

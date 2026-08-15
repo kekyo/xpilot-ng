@@ -87,8 +87,6 @@ typedef struct {
     bool version;
     bool text;
     bool status;
-    bool list_servers; /* list */
-    bool auto_connect; /* join */
     char shutdown_reason[MAX_CHARS]; /* shutdown reason */
 } xp_args_t;
 
@@ -570,8 +568,8 @@ extern int	cumulativeMouseMovement;
 
 extern char	modBankStr[][MAX_CHARS];/* modifier banks strings */
 
-extern int	clientPortStart;	/* First network port for clients */
-extern int	clientPortEnd;		/* Last one (these are for firewalls) */
+extern int	clientPortStart;	/* First TCP source port for clients */
+extern int	clientPortEnd;		/* Last TCP source port for clients */
 extern int	baseWarningType;	/* Which type of base warning you prefer */
 extern int	maxCharsInNames;
 extern byte	lose_item;		/* flag and index to drop item */
@@ -822,11 +820,6 @@ extern bool Set_altScaleFactor(xp_option_t *opt, double val);
 extern void Store_key_options(void);
 
 /*
- * join.c
- */
-extern int Join(Connect_param_t *conpar);
-
-/*
  * mapdata.c
  */
 /**
@@ -843,12 +836,6 @@ extern int Mapdata_setup(const char *);
 
 
 /*
- * metaclient.c
- */
-extern int metaclient(int, char **);
-
-
-/*
  * paintdata.c
  */
 extern void paintdataCleanup(void);		/* memory cleanup */
@@ -859,13 +846,6 @@ extern void paintdataCleanup(void);		/* memory cleanup */
  */
 extern int Init_wreckage(void);
 extern int Init_asteroids(void);
-
-
-/*
- * query.c
- */
-extern int Query_all(sock_t *sockfd, int port, char *msg, size_t msglen);
-
 
 
 /**
@@ -894,26 +874,9 @@ extern int Control_request(const char *server, int port, const char *user,
 extern int Control_interactive(const char *server, int port,
 			       const char *user);
 
-/* Legacy lobby interface, removed with the metaserver client. */
-extern int Connect_to_server(int auto_connect, int list_servers,
-			     int auto_shutdown, char *shutdown_reason,
-			     Connect_param_t *conpar);
-extern int Contact_servers(int count, char **servers,
-			   int auto_connect, int list_servers,
-			   int auto_shutdown, char *shutdown_message,
-			   int find_max, int *num_found,
-			   char **server_addresses, char **server_names,
-			   unsigned *server_versions,
-			   Connect_param_t *conpar);
-
 /*
  * usleep.c
  */
 extern int micro_delay(unsigned usec);
-
-/*
- * welcome.c
- */
-extern int Welcome_screen(Connect_param_t *conpar);
 
 #endif

@@ -263,7 +263,6 @@ typedef int socklen_t;
 #include "error.h"
 #include "item.h"
 #include "list.h"
-#include "metaserver.h"
 #include "net.h"
 #include "pack.h"
 #include "packet.h"

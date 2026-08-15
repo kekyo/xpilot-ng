@@ -67,7 +67,7 @@ extern struct options {
     int		mapHeight;
     char	*mapName;
     char	*mapAuthor;
-    int 	contactPort;
+    int 	gamePort;
     char	*serverHost;
     char	*greeting;
     bool	allowPlayerCrashes;
@@ -192,9 +192,6 @@ extern struct options {
     bool	targetKillTeam;
     bool	targetSync;
     double	targetDeadTicks;
-    bool	reportToMetaServer;
-    int		metaUpdateMaxSize;
-    bool	searchDomainForXPilot;
     char	*denyHosts;
 
     bool	playersOnRadar;
@@ -289,9 +286,6 @@ extern struct options {
 
     char	*defaultShipShape;
     char	*tankShipShape;
-
-    int		clientPortStart;
-    int		clientPortEnd;
 
     int		maxPauseTime;
     int		maxIdleTime;

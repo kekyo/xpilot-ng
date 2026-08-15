@@ -30,8 +30,6 @@ xpilottextures_DATA = \
 	holder2.ppm \
 	huditems.ppm \
 	logo.ppm \
-	metabtndown.png \
-	metabtnup.png \
 	metalite.ppm \
 	meter.ppm \
 	mine_other.ppm \
@@ -46,7 +44,6 @@ xpilottextures_DATA = \
 	radar3.ppm \
 	refuel.ppm \
 	rock4.ppm \
-	sdlmetabg.png \
 	shield.ppm \
 	ship.ppm \
 	ship_enemy.ppm \

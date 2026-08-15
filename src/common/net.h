@@ -52,7 +52,6 @@
 #define SOCKBUF_WRITE		0x02	/* if writeable */
 #define SOCKBUF_LOCK		0x04	/* if locked against kernel i/o */
 #define SOCKBUF_ERROR		0x08	/* if i/o error occurred */
-#define SOCKBUF_DGRAM		0x10	/* if datagram socket */
 /** Preserve logical packet boundaries on a stream with a 16-bit length. */
 #define SOCKBUF_FRAMED		0x20
 /** Preserve a staged framed record while a previous record is blocked. */
@@ -63,11 +62,6 @@
  * of a frame update.
  */
 #define SOCKBUF_WRITE_SPARE	8
-
-/*
- * Maximum number of socket i/o retries if datagram socket.
- */
-#define MAX_SOCKBUF_RETRIES	2
 
 /*
  * A buffer to reduce the number of system calls made and to reduce

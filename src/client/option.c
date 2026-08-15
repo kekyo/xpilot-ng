@@ -1058,7 +1058,7 @@ void Parse_options(int *argcp, char **argvp)
 
     /*
      * Here we step trough argc - 1 arguments, leaving
-     * only the arguments that might be server names.
+     * only positional server-host arguments.
      */
     arg_ind = 1;
     num_remaining_args = *argcp - 1;
@@ -1103,7 +1103,7 @@ void Parse_options(int *argcp, char **argvp)
 		}
 	    }
 	} else {
-	    /* assume this is a server name. */
+	    /* Assume this is a server host. */
 	    arg_ind++;
 	    num_remaining_args--;
 	    num_servers++;
@@ -1111,7 +1111,7 @@ void Parse_options(int *argcp, char **argvp)
     }
 
     /*
-     * The remaining args are assumed to be names of servers to try to contact.
+     * Retain positional server hosts; main validates that at most one exists.
      * + 1 is for the program name.
      */
     for (i = num_servers + 1; i < *argcp; i++)

@@ -35,7 +35,6 @@
 
 /* packet types: 0 - 9 */
 #define PKT_UNDEFINED		0
-#define PKT_VERIFY		1
 #define PKT_REPLY		2
 #define PKT_PLAY		3
 #define PKT_QUIT		4

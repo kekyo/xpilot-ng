@@ -151,8 +151,8 @@ int	maxMouseTurnsPS = 0;
 int	mouseMovementInterval = 0;
 int	cumulativeMouseMovement = 0;
 
-int	clientPortStart = 0;	/* First network port for clients */
-int	clientPortEnd = 0;	/* Last one (these are for firewalls) */
+int	clientPortStart = 0;	/* First TCP source port for clients */
+int	clientPortEnd = 0;	/* Last TCP source port for clients */
 
 byte	lose_item;		/* index for dropping owned item */
 int	lose_item_active;	/* one of the lose keys is pressed */

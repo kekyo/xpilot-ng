@@ -32,11 +32,6 @@ int last_packet_of_frame;
 
 int Sockbuf_init(sockbuf_t *sbuf, sock_t *sock, size_t size, int state)
 {
-    if (BIT(state, SOCKBUF_DGRAM | SOCKBUF_FRAMED)
-	== (SOCKBUF_DGRAM | SOCKBUF_FRAMED)) {
-	errno = EINVAL;
-	return -1;
-    }
     if (BIT(state, SOCKBUF_FRAMED) != 0
 	&& (size == 0 || size > SOCKBUF_FRAME_MAX_SIZE)) {
 	errno = EMSGSIZE;
@@ -204,8 +199,8 @@ int Sockbuf_flush_framed(sockbuf_t *sbuf, sockbuf_io_fn writer)
 
     if (status == 0) {
 	if (BIT(sbuf->state, SOCKBUF_ORDERED) == 0) {
-	    /* Match datagram backpressure: discard this transient update rather
-	     * than merging it into another logical record or growing a queue. */
+	    /* Preserve lossy update semantics under backpressure: discard this
+	     * record rather than merging it or growing an unbounded queue. */
 	    Sockbuf_clear(sbuf);
 	}
 	errno = EAGAIN;
@@ -227,8 +222,7 @@ int Sockbuf_flush_framed(sockbuf_t *sbuf, sockbuf_io_fn writer)
 
 int Sockbuf_flush(sockbuf_t *sbuf)
 {
-    int			len,
-			i;
+    int len;
 
     if (BIT(sbuf->state, SOCKBUF_WRITE) == 0) {
 	warn("No flush on non-writable socket buffer");
@@ -252,84 +246,19 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 	return 0;
     }
 
-#if 0
-    /* maintain a few statistics */
-    {
-	static int		max = 1024, avg, count;
-
-	avg += sbuf->len;
-	count++;
-	if (sbuf->len > max) {
-	    max = sbuf->len;
-	    printf("Max packet = %d, avg = %d\n", max, avg / count);
-	}
-	else if (max > 1024 && (count & 0x03) == 0) {
-	    max--;
-	}
-    }
-#endif
-
-    if (BIT(sbuf->state, SOCKBUF_DGRAM) != 0) {
-	errno = 0;
-	i = 0;
-#if 0
-	if (randomMT() % 12 == 0)	/* artificial packet loss */
-	    len = sbuf->len;
-	else
-#endif
-	while ((len = sock_write(&sbuf->sock, sbuf->buf, sbuf->len)) <= 0) {
-	    if (len == 0
-		|| errno == EWOULDBLOCK
-		|| errno == EAGAIN) {
-		Sockbuf_clear(sbuf);
-		return 0;
-	    }
-	    if (errno == EINTR) {
-		errno = 0;
-		continue;
-	    }
-#if 0
-	    if (errno == ECONNREFUSED) {
-		error("Send refused");
-		Sockbuf_clear(sbuf);
-		return -1;
-	    }
-#endif
-	    if (++i > MAX_SOCKBUF_RETRIES) {
-		error("Can't send on socket (%d,%d)", sbuf->sock, sbuf->len);
-		Sockbuf_clear(sbuf);
-		return -1;
-	    }
-	    {
-		static int send_err;
-		if ((send_err++ & 0x3F) == 0)
-		    error("send (%d)", i);
-	    }
-	    if (sock_get_error(&sbuf->sock) == -1) {
-		error("sock_get_error send");
-		return -1;
-	    }
+    errno = 0;
+    while ((len = sock_write(&sbuf->sock, sbuf->buf, sbuf->len)) <= 0) {
+	if (errno == EINTR) {
 	    errno = 0;
+	    continue;
 	}
-	if (len != sbuf->len)
-	    warn("Can't write complete datagram (%d,%d)", len, sbuf->len);
-
-	Sockbuf_clear(sbuf);
-    } else {
-	errno = 0;
-	while ((len = sock_write(&sbuf->sock, sbuf->buf, sbuf->len)) <= 0) {
-	    if (errno == EINTR) {
-		errno = 0;
-		continue;
-	    }
-	    if (errno != EWOULDBLOCK && errno != EAGAIN) {
-		error("Can't write on socket");
-		return -1;
-	    }
-	    return 0;
+	if (errno != EWOULDBLOCK && errno != EAGAIN) {
+	    error("Can't write on socket");
+	    return -1;
 	}
-	Sockbuf_advance(sbuf, len);
+	return 0;
     }
+    Sockbuf_advance(sbuf, len);
     return len;
 }
 
@@ -341,7 +270,7 @@ int Sockbuf_write(sockbuf_t *sbuf, char *buf, int len)
     }
     if (sbuf->size - sbuf->len < len) {
 	if (BIT(sbuf->state,
-		SOCKBUF_LOCK | SOCKBUF_DGRAM | SOCKBUF_FRAMED) != 0) {
+		SOCKBUF_LOCK | SOCKBUF_FRAMED) != 0) {
 	    warn("No write to locked socket buffer (%d,%d,%d,%d)",
 		sbuf->state, sbuf->size, sbuf->len, len);
 	    return -1;
@@ -433,7 +362,6 @@ int Sockbuf_read_framed(sockbuf_t *sbuf, sockbuf_io_fn reader)
 int Sockbuf_read(sockbuf_t *sbuf)
 {
     int			max,
-			i,
 			len;
 
     if (BIT(sbuf->state, SOCKBUF_READ) == 0) {
@@ -456,70 +384,22 @@ int Sockbuf_read(sockbuf_t *sbuf)
 		  sbuf->size, sbuf->len);
 	return -1;
     }
-    if (BIT(sbuf->state, SOCKBUF_DGRAM) != 0) {
-	errno = 0;
-	i = 0;
-#if 0
-	if (randomMT() % 12 == 0)		/* artificial packet loss */
-	    len = sbuf->len;
-	else
-#endif
-	while ((len = sock_read(&sbuf->sock, sbuf->buf + sbuf->len, max))
-	       <= 0) {
-	    if (len == 0)
-		return 0;
-#ifdef _WINDOWS
-	    errno = WSAGetLastError();
-#endif
-	    if (errno == EINTR) {
-		errno = 0;
-		continue;
-	    }
-	    if (errno == EWOULDBLOCK || errno == EAGAIN) {
-		return 0;
-	    }
-#if 0
-	    if (errno == ECONNREFUSED) {
-		error("Receive refused");
-		return -1;
-	    }
-#endif
-	    if (++i > MAX_SOCKBUF_RETRIES) {
-		error("Can't recv on socket");
-		return -1;
-	    }
-	    {
-		static int recv_err;
-		
-		if ((recv_err++ & 0x3F) == 0)
-		    error("recv (%d)", i);
-	    }
-	    if (sock_get_error(&sbuf->sock) == -1) {
-		error("GetSocketError recv");
-		return -1;
-	    }
-	    errno = 0;
-	}
-	sbuf->len += len;
-    } else {
-	errno = 0;
-	while ((len = sock_read(&sbuf->sock, sbuf->buf + sbuf->len, max))
-	       <= 0) {
-	    if (len == 0)
-		return 0;
-
-	    if (errno == EINTR) {
-		errno = 0;
-		continue;
-	    }
-	    if (errno != EWOULDBLOCK && errno != EAGAIN) {
-		error("Can't read on socket");
-		return -1;
-	    }
+    errno = 0;
+    while ((len = sock_read(&sbuf->sock, sbuf->buf + sbuf->len, max)) <= 0) {
+	if (len == 0)
 	    return 0;
+
+	if (errno == EINTR) {
+	    errno = 0;
+	    continue;
 	}
-	sbuf->len += len;
+	if (errno != EWOULDBLOCK && errno != EAGAIN) {
+	    error("Can't read on socket");
+	    return -1;
+	}
+	return 0;
     }
+    sbuf->len += len;
 
     return sbuf->len;
 }
@@ -571,11 +451,8 @@ int Packet_printf(sockbuf_t *sbuf, const char *fmt, ...)
 
     va_start(ap, fmt);
 
-    /*
-     * Stream socket buffers should flush the buffer if running
-     * out of write space.  This is currently not needed cause
-     * only datagram sockets are used or the buffer is locked.
-     */
+    /* Framed records and locked setup buffers cannot flush midway through
+     * one logical packet.  Oversized packets are handled below. */
 
     /*
      * Mark the end of the available buffer space,
@@ -701,7 +578,7 @@ int Packet_printf(sockbuf_t *sbuf, const char *fmt, ...)
 		printf("Write socket buffer not big enough (%d,%d,\"%s\")\n",
 		       sbuf->size, sbuf->len, fmt);
 #endif
-	    if (BIT(sbuf->state, SOCKBUF_DGRAM | SOCKBUF_FRAMED) != 0) {
+	    if (BIT(sbuf->state, SOCKBUF_FRAMED) != 0) {
 		count = 0;
 		failure = 0;
 	    }
@@ -745,7 +622,7 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 	    case 'c':
 		if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 1]) {
 		    if (BIT(sbuf->state,
-			    SOCKBUF_DGRAM | SOCKBUF_FRAMED | SOCKBUF_LOCK)
+			    SOCKBUF_FRAMED | SOCKBUF_LOCK)
 			!= 0) {
 			failure = 3;
 			break;
@@ -765,7 +642,7 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 	    case 'd':
 		if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 4]) {
 		    if (BIT(sbuf->state,
-			    SOCKBUF_DGRAM | SOCKBUF_FRAMED | SOCKBUF_LOCK)
+			    SOCKBUF_FRAMED | SOCKBUF_LOCK)
 			!= 0) {
 			failure = 3;
 			break;
@@ -788,7 +665,7 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 	    case 'u':
 		if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 4]) {
 		    if (BIT(sbuf->state,
-			    SOCKBUF_DGRAM | SOCKBUF_FRAMED | SOCKBUF_LOCK)
+			    SOCKBUF_FRAMED | SOCKBUF_LOCK)
 			!= 0) {
 			failure = 3;
 			break;
@@ -811,7 +688,7 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 	    case 'h':
 		if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 2]) {
 		    if (BIT(sbuf->state,
-			    SOCKBUF_DGRAM | SOCKBUF_FRAMED | SOCKBUF_LOCK)
+			    SOCKBUF_FRAMED | SOCKBUF_LOCK)
 			!= 0) {
 			failure = 3;
 			break;
@@ -844,7 +721,7 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 	    case 'l':
 		if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 4]) {
 		    if (BIT(sbuf->state,
-			    SOCKBUF_DGRAM | SOCKBUF_FRAMED | SOCKBUF_LOCK)
+			    SOCKBUF_FRAMED | SOCKBUF_LOCK)
 			!= 0) {
 			failure = 3;
 			break;
@@ -886,7 +763,7 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 		for (;;) {
 		    if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 1]) {
 			if (BIT(sbuf->state,
-				SOCKBUF_DGRAM | SOCKBUF_FRAMED | SOCKBUF_LOCK)
+				SOCKBUF_FRAMED | SOCKBUF_LOCK)
 			    != 0) {
 			    failure = 3;
 			    break;

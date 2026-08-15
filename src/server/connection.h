@@ -43,7 +43,6 @@
  * Different states a connection can be in.
  */
 #define CONN_FREE	0x00	/* free for use */
-#define CONN_LISTENING	0x01	/* before connect() */
 #define CONN_SETUP	0x02	/* after verification */
 #define CONN_LOGIN	0x04	/* after setup info transferred */
 #define CONN_PLAYING	0x08	/* when actively playing */
@@ -59,7 +58,6 @@
  * The timeout specifies the number of seconds each connection
  * state may last.
  */
-#define LISTEN_TIMEOUT		4
 #define SETUP_TIMEOUT		15
 #define LOGIN_TIMEOUT		40
 #define READY_TIMEOUT		40
@@ -101,8 +99,6 @@ typedef struct {
     int			rtt_timeouts;		/* how many timeouts */
     int			acks;			/* good acknowledgements */
     int			setup;			/* amount of setup done */
-    int			my_port;		/* server port for this player */
-    int			his_port;		/* client port for this player */
     int			id;			/* index into GetInd[] or NO_ID */
     int			team;			/* team of player */
     unsigned		version;		/* XPilot version of client */
