@@ -44,9 +44,7 @@ EndSoftWalls
 define: PrivateSettings \override: \multiline: EndPrivateSettings
 idleRun:                no
 noQuit:                 no
-reportToMetaServer:     no
-searchDomainForXPilot:  no
-contactPort:            15000
+gamePort:               15000
 serverHost:             localhost
 EndPrivateSettings
 
@@ -54,7 +52,6 @@ EndPrivateSettings
 define: PublicSettings \override: \multiline: EndPublicSettings
 idleRun:                yes
 noQuit:                 yes
-reportToMetaServer:     yes
 EndPublicSettings
 
 # Settings for everything bouncing.  To activate do "-expand BounceAll".
@@ -84,4 +81,3 @@ EndBounceAll
 # For Internet games we allow remote clients to bounce softly by
 # expanding the SoftWalls define.
 expand: SoftWalls
-

@@ -114,8 +114,9 @@ rawMode					false	The robots keep playing even
 						if all human players quit.
 noQuit					false	The server keeps running even
 						if all players have left.
-contactPort
-port					15345	Contact port number
+gamePort
+port					15345	Fixed TCP gameplay and control
+						port number
 motd					none	File name for server-motd
 allowPlayerCrashes			yes	Can players overrun other
 						players?
@@ -173,9 +174,6 @@ wallBounceDrain				1.0	Multiplication factor for
 						player wall bounce fuel cost.
 wallBounceDestroyItemProb		0.0	Player wall bounce item damage
 						probability.
-reportToMetaServer
-reportMeta				yes	Keep the meta server informed
-						about our game?
 limitedVisibility			no	Should the players have a
 						limited visibility?
 limitedLives				no	Should players have limited

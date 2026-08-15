@@ -10,9 +10,7 @@ if [ "$USER" = "xpilotng" ]; then
   source /etc/default/xpilot-ng-server
   test -f "$DEFAULTMAP" || exit 0
 
-  OPTIONS=""
-  echo $REPORTMETA |grep -iq no && OPTIONS="+reportMeta"
-  OPT="-noquit $OPTIONS $OTHEROPTIONS -map $DEFAULTMAP"
+  OPT="-noquit $OTHEROPTIONS -map $DEFAULTMAP"
   LOGGER="logger -p daemon.notice -t xpilot-ng-server"
 
   rm -f $LOGFIFO ; mkfifo $LOGFIFO

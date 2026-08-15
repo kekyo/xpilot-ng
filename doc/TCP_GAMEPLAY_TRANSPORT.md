@@ -1,26 +1,27 @@
-# TCP gameplay transport
+# Direct TCP session transport
 
-## Scope
+## Scope and topology
 
-Only the transport for an active gameplay session changes from UDP to TCP.
-The existing XPilot packet payloads (`PKT_*`), setup states, frame processing,
-and application-level reliable-data messages remain unchanged.
+XPilot NG now uses a direct, connection-oriented topology. The server opens
+one TCP listener on `gamePort` (`-port`, default 15345), and that listener
+accepts both gameplay sessions and short-lived control sessions. The client
+accepts at most one positional server host and uses `127.0.0.1` when no host is
+specified.
 
-The surrounding network paths remain as they were:
+The application no longer contains a lobby/server-selection interface, LAN
+broadcast discovery, metaserver queries or reporting, UDP ping, a waiting
+queue, UDP contact negotiation, per-player listeners, or application UDP
+sockets. A gameplay connection is admitted and then used for setup, login,
+and play without changing streams or ports.
 
-- server contact, queueing, and entry negotiation continue to use UDP;
-- LAN discovery and broadcast queries continue to use UDP;
-- metaserver listing and ping paths keep their existing transports; and
-- each gameplay connection uses its own TCP listener and accepted stream.
+This is deliberately a TCP migration, not a browser transport implementation.
+WebSocket, TLS, HTTP upgrade handling, browser origin policy, asset delivery,
+and a WebAssembly/WebGL runtime remain outside this change.
 
-This split is intentional.  Converting discovery or metaserver protocols is
-not required to replace the gameplay transport and would expand the change
-beyond the minimum needed for this migration.
+## Record framing
 
-## Wire format
-
-TCP does not preserve write boundaries.  Every former gameplay datagram is
-therefore sent as one framed record:
+TCP is a byte stream and does not preserve write boundaries. Every XPilot
+packet payload is therefore carried as one framed record:
 
 ```text
 0               15 16
@@ -30,198 +31,186 @@ therefore sent as one framed record:
    2 bytes, network byte order
 ```
 
-The length is unsigned, excludes the two-byte header, and must be between one
-and the receiving `sockbuf_t` capacity.  No field inside the existing payload
-is changed.  A receiver retains an incomplete header or payload across reads,
-returns at most one logical record at a time, and leaves later coalesced
-records for subsequent reads.  Zero-length and oversized records terminate
-the connection as protocol errors.
+The unsigned length excludes the two-byte header and must be nonzero and no
+larger than the receiving `sockbuf_t` capacity. Existing packet fields inside
+the payload are unchanged. A receiver keeps a split header or payload across
+reads, returns one complete logical record at a time, and retains coalesced
+later records for subsequent calls. Zero-length or oversized records, EOF in
+the middle of a record, and fatal I/O errors terminate the connection.
 
-Writes are also record-aware.  A partially written record is retained until
-it can be completed.  To preserve the previous real-time behavior and keep
-memory bounded, only one wire-format record may be pending outside the
-logical write buffer.  If that record is still blocked when a newer transient
-update is flushed, the newer update is discarded instead of being appended
-to an unbounded queue or merged into the older record.  The operating system
-TCP send buffer remains an additional bounded queue.
+Writes are record-aware as well. A partially written record is retained until
+all its bytes have been submitted; discarding only its remainder would
+desynchronize every later record. User-space buffering is bounded to the
+logical write buffer plus one pending wire record. If a transient update has
+not yet entered TCP and the pending record is still blocked, that new update
+can be discarded instead of growing an unbounded queue. Bytes already
+accepted by the kernel cannot be recalled.
 
-`TCP_NODELAY` is enabled on both endpoints so small gameplay records are not
-held by Nagle's algorithm.  EOF, reset, a zero-byte write, malformed framing,
-and fatal read/write failures are treated as connection errors.  `SIGPIPE` is
-ignored by the existing client and server signal setup, so a failed stream is
-handled through the normal network error path.
+`TCP_NODELAY` is enabled on gameplay endpoints so small records are not held
+by Nagle's algorithm. The client and server use their normal error paths for
+EOF, reset, malformed framing, and fatal reads or writes.
 
-## Connection lifecycle
+## Session opening and admission
 
-The UDP contact exchange returns a per-player gameplay port as before.  The
-server now listens for TCP on that port, and the client binds its configured
-local port (if any) before connecting.  After `accept`, the server keeps the
-listener's descriptor number with `dup2`.  The scheduler and record/playback
-code index handlers by descriptor offset, so preserving this number avoids a
-larger change to those subsystems.
+The first framed record identifies the purpose of a new connection:
 
-The accepted source address must match the address seen by the UDP contact
-socket, and the existing `PKT_VERIFY` user/nickname check still runs on the
-first framed record.  This does not add authentication, confidentiality, or
-integrity protection; it only retains the existing association checks.
+- `SESSION_GAME` carries the gameplay identity and the supported polygon and
+  legacy protocol versions;
+- `SESSION_CONTROL` carries one control command, its argument, and the claimed
+  user name.
 
-The protocol versions are `4F16` for polygon maps and `4502` for old-format
-maps.  The server and client accept only these TCP-capable versions in their
-respective protocol families.  This prevents a legacy UDP peer from passing
-contact negotiation and failing later on the gameplay port.  Old UDP session
-recordings are likewise not compatible with the framed stream format.
+The current TCP-capable protocol versions are `4F17` for polygon maps and
+`4503` for legacy maps. A gameplay request receives an admission reply and,
+on success, the same accepted stream is promoted directly into
+`Setup_connection`. There is no `PKT_VERIFY`, second connection, returned
+player port, or descriptor replacement with `dup2`.
 
-## Consequences of using TCP
+The server limits pending accepted sessions to four globally and two per
+source IP. An initial record that is not completed in four seconds is closed.
+The kernel listen backlog is the gameplay connection limit plus those four
+admission slots. Both gameplay opening and client control operations use a
+five-second connection/session deadline. These bounds prevent ordinary slow
+or abandoned opens from consuming all application admission slots; they are
+not a complete SYN-flood or connection-flood defense.
 
-### Loss, ordering, and the existing reliability layer
+Control sessions execute one command and close after their reply frames have
+been sent. Status and visible-option queries are public. Commands that mutate
+state are accepted only from the IPv4 loopback range when the claimed user
+name exactly matches the operating-system login name recorded as the server
+owner. This preserves a useful local administrative boundary, but the user
+field is not cryptographically authenticated and the protocol provides no
+confidentiality or integrity. It must not be treated as a remote
+administration security mechanism.
 
-TCP eliminates application-visible network loss, duplication, and reordering
-for bytes that remain on a live connection.  Code whose sole purpose was to
-repair UDP delivery is consequently redundant.  In particular, XPilot's
-`PKT_RELIABLE` stream, acknowledgements, retransmission timers, sequence
-checks, and RTT estimator no longer provide transport reliability.
+## Consequences of TCP
 
-They are deliberately retained in this migration because removing them would
-change packet construction and several setup/gameplay state transitions.
-They still deduplicate their own data, but now add acknowledgement traffic and
-can retransmit data already queued by TCP.  During congestion this extra data
-can worsen delay.  Removing the layer is a reasonable later refactoring, but
-it should be measured and tested separately from the transport conversion.
+### Loss, ordering, and retained reliability logic
 
-The packet loss meter also changes meaning.  It can no longer measure UDP
-network loss or reordering.  It may still report logical frame gaps caused by
-bounded-output drops, server-side update selection, or a renderer that cannot
-consume updates quickly enough.  The existing UI name is retained to avoid an
-unrelated interface change.
+TCP removes application-visible network loss, duplication, and reordering for
+bytes delivered on a live connection. XPilot's application-level reliable
+stream, acknowledgements, retransmission timers, sequence handling, and RTT
+estimator therefore no longer provide transport reliability. Normal network
+reordering branches and logic built solely around missing UDP datagrams are
+mostly dormant as well.
 
-The receive window and duplicate/out-of-order branches likewise cease to
-observe normal network reordering.  The window remains useful for discarding
-older complete records when rendering falls behind, while the checks still
-guard malformed playback or application data.  Removing them would mix a
-larger frame-processing refactor into this transport change.
+Those mechanisms are retained to keep the existing packet payloads and game
+state transitions stable during this migration. They can still protect their
+own logical sequencing, but they now add acknowledgement traffic and may
+retransmit data that TCP has already queued. Under congestion this redundancy
+can consume bandwidth and increase latency. Removing it is a separate
+protocol refactor that should be measured and tested independently.
+
+The existing packet-loss display can no longer represent UDP network loss.
+Any reported gaps now arise from such causes as application-side bounded
+output drops, server update selection, playback input, or a client that falls
+behind. Renaming or redesigning that display is intentionally deferred.
 
 ### Head-of-line blocking and stale state
 
-TCP delivers bytes strictly in order.  If one segment is lost, newer gameplay
-records already accepted by the kernel cannot be delivered until the missing
-bytes are retransmitted.  UDP allowed a newer frame to arrive even when an
-older frame was lost, which is often preferable for real-time state.
+TCP delivers bytes strictly in order. Loss of one TCP segment prevents newer
+game records on that connection from reaching the application until the
+missing bytes are retransmitted. UDP could discard an old frame while still
+delivering a newer state update, which is often preferable for a real-time
+game.
 
-The bounded application queue limits memory and allows an update that has not
-entered TCP to be discarded.  It cannot cancel an older record already
-accepted into the kernel or network.  Head-of-line latency is therefore the
-principal behavioral regression of this transport choice and cannot be fully
-removed without using a transport that supports independent or unreliable
-messages.
+The bounded application queue can discard a transient record only before it
+enters the stream. It cannot cancel an older record already accepted into the
+kernel or network. Consequently, head-of-line delay and delivery of stale
+state are the main behavioral regressions of this transport and cannot be
+fully repaired while using one ordered byte stream.
 
-### Congestion and backpressure
+Congestion is isolated per gameplay connection, so one slow client does not
+directly block another client's stream. It can still consume server memory,
+CPU, and scheduler activity within the configured bounds.
 
-A UDP send either emitted or dropped one datagram.  A nonblocking TCP send may
-accept only part of a record, so the remainder must be kept; dropping it would
-desynchronize every later frame.  TCP congestion control can also reduce the
-send rate for much longer than one game tick.
+### Backpressure, latency, and traffic
 
-The implementation bounds user-space output to the current logical buffer and
-one pending framed record.  When the pending record cannot advance, the next
-transient update is dropped.  Reliable application messages will be retried by
-the retained protocol machinery.  Kernel buffering is configured near the
-existing XPilot send-buffer sizes, although operating systems may internally
-adjust the requested size.  Memory is bounded, but latency can still grow by
-the amount already accepted into the kernel.
+A UDP send either emitted or dropped a whole datagram. A nonblocking TCP write
+may accept only part of a record, and congestion control may keep the
+remainder pending across many game ticks. Correct partial-read, partial-write,
+and framing state is therefore mandatory.
 
-Congestion is isolated per player's TCP connection, so one slow client does
-not directly block delivery to other clients.  It can still consume server
-CPU through repeated wakeups, retransmissions, and connection-state handling.
+`TCP_NODELAY` avoids deliberate Nagle coalescing, but it does not eliminate
+retransmission delay, delayed acknowledgements, congestion-control effects,
+or head-of-line blocking. Establishing the direct TCP connection also costs a
+TCP handshake before the session-open record can be processed.
 
-### Latency and traffic
+Each XPilot payload gains a two-byte framing header. TCP acknowledgement and
+congestion-control traffic replaces UDP's datagram behavior, while the
+retained XPilot reliable layer adds its own acknowledgements. IP fragmentation
+of individual application datagrams is no longer an application concern;
+segmentation and path-MTU behavior belong to the TCP/IP stack.
 
-`TCP_NODELAY` avoids deliberate coalescing of small writes, but it cannot
-remove retransmission delay, delayed acknowledgements, congestion-control
-effects, or head-of-line blocking.  The TCP handshake also adds a round trip
-after UDP contact negotiation before verification can begin.
+### Disconnects and idle peers
 
-The client currently performs this gameplay `connect` synchronously, as the
-old initialization flow expected immediate UDP `connect` completion.  An
-unreachable TCP endpoint can therefore leave startup waiting for the operating
-system's connect timeout.  Moving connection establishment into the event loop
-would avoid that pause, but requires a new setup state and is deferred.
+An orderly close is visible as EOF and a reset is a stream error, giving a
+clearer failure signal than repeated UDP silence. A physically dead but idle
+connection may still remain undetected for a substantial time because this
+implementation does not enable TCP keepalive. Existing gameplay activity and
+timeouts remain responsible for liveness detection.
 
-Each logical record gains a two-byte framing header.  TCP acknowledgements and
-the retained XPilot acknowledgement stream add traffic, while TCP segmentation
-removes the old one-datagram/one-packet assumption.  Large logical records no
-longer risk UDP datagram truncation in this code, but IP/TCP segmentation and
-path-MTU behavior are controlled by the network stack.
+### Ports, NAT, and exposure
 
-### Disconnect and liveness behavior
+The server uses one fixed TCP port for every gameplay and control connection.
+There are no server-side `clientPortStart`/`clientPortEnd` settings and no
+dynamic per-player ports. Firewall and NAT configuration therefore needs one
+TCP allow/forward rule, normally for port 15345. The client's retained
+`clientPortStart`/`clientPortEnd` settings optionally constrain only its TCP
+source port.
 
-An orderly close is now observable as EOF, and a reset is a stream error.
-This is clearer than waiting for repeated UDP silence.  Conversely, a
-physically dead but otherwise idle connection may not fail immediately;
-TCP keepalive is not enabled here.  Existing application activity and timeout
-state remain responsible for detecting such peers.  A partially received
-record is never delivered, including when EOF occurs halfway through it.
+Sharing one listener simplifies deployment and is closer to the topology
+needed for WebSocket, but it also puts gameplay and control admission behind
+the same kernel queue. The bounded pre-promotion/control-session pool and
+per-IP limit reduce interference after `accept`; deployment-level filtering
+or rate limiting is still required against deliberate connection floods.
 
-### Ports, NAT, and firewalls
+## Recording and playback
 
-The server's `clientPortStart` through `clientPortEnd` range now contains TCP
-gameplay listeners.  Firewalls and NAT forwarding rules for that range must
-permit TCP rather than UDP.  The default contact port remains UDP, so server
-operators must permit both the UDP contact port and the configured TCP
-gameplay range.
+The listener and pre-admission sessions are outside the recorded scheduler.
+After gameplay admission, the actual promoted TCP descriptor is recorded as
+the gameplay endpoint. Playback reconstructs accepted TCP session state so
+the existing scheduler can replay gameplay I/O without a live listener
+accepting that client.
 
-On the client, the same optional range is used by both the unchanged UDP
-contact path and the TCP gameplay socket.  Client-side filtering rules that
-restrict source ports must therefore allow both protocols.  TCP NAT state is
-connection-oriented and generally persists differently from UDP mappings.
+Recordings produced by the old UDP topology do not contain the same framed
+session lifecycle and are not supported by this version. Backward
+compatibility was not retained because it would require a separate recording
+format discriminator and a second network model.
 
-Creating one short-lived listener for every pending login also introduces a
-TCP SYN queue and related resource exposure.  The backlog is limited to one,
-the normal listening timeout still applies, and unexpected source addresses
-are closed.  This is not a defense against a deliberate SYN or connection
-flood; deployment-level rate limiting may still be required.
+## Future WebSocket boundary
 
-### Record and playback
+Removing discovery, contact datagrams, and per-player port negotiation makes
+each client session a single connection with an explicit first message. That
+is the structural preparation intended by this migration. A later WebSocket
+step still needs explicit decisions and implementation for:
 
-During connection verification, the record wrapper stores underlying stream
-reads, including two-byte headers and partial I/O boundaries, while the framed
-`Sockbuf` still presents complete payloads to game code.  During normal play,
-the existing optimized recording path instead stores each complete payload
-after deframing and injects that payload directly during playback.  The
-accepted socket is moved onto the listener descriptor so scheduler indices in
-new recordings remain stable.  Playback bypasses live `accept` and marks the
-recorded endpoint as an already-connected TCP stream.
+- HTTP upgrade and whether the existing two-byte record framing remains
+  inside binary WebSocket messages;
+- secure `wss` deployment, certificate termination, browser origin checks,
+  and an authentication model for administration;
+- browser-compatible asset loading instead of the current filesystem and
+  optional HTTP data paths;
+- WebAssembly integration, WebGL rendering, browser input/audio, and lifecycle
+  handling; and
+- a separately designed web lobby or server directory, if one is wanted.
 
-Recordings produced by the UDP implementation do not contain TCP length
-headers and are not expected to play with this version.  Preserving that
-backward compatibility would require a separate recording-format discriminator
-and is outside this transport-only change.
-
-## Intentionally deferred work
-
-The following changes may reduce overhead or improve real-time behavior, but
-are not part of the minimal TCP migration:
-
-- removing `PKT_RELIABLE`, its ACKs, retransmission timers, and RTT estimator;
-- renaming or redesigning the packet loss meter;
-- introducing priority queues, frame replacement inside the kernel queue, or
-  a separate control connection;
-- moving the blocking client TCP connect into the event loop;
-- enabling TCP keepalive or platform-specific low-latency TCP options;
-- adding TLS or changing the existing contact/identity model;
-- converting UDP discovery/contact protocols; and
-- redesigning record files for UDP/TCP cross-version playback.
+None of those concerns is implemented or partially emulated here.
 
 ## Verification criteria
 
-The migration is complete when:
+The TCP migration is complete when all of the following hold:
 
-1. gameplay endpoints report `SO_TYPE == SOCK_STREAM` and use
-   `TCP_NODELAY`;
-2. existing `PKT_*` payloads cross a two-byte framed stream unchanged;
-3. split headers, split payloads, coalesced records, and partial writes retain
-   record boundaries;
-4. backpressure remains bounded and does not merge logical records;
-5. malformed lengths, EOF, and fatal I/O errors close the session path;
-6. the UDP contact flow still leads to a verified TCP gameplay connection;
-7. both normal and server-only builds pass the complete test suite; and
-8. auxiliary UDP paths remain outside the gameplay conversion.
+1. the application creates no UDP socket and exposes no UDP discovery,
+   contact, ping, or metaserver path;
+2. one `gamePort` TCP listener admits both gameplay and control sessions;
+3. gameplay admission, setup, login, and play remain on the same stream;
+4. existing `PKT_*` payloads cross two-byte framed records unchanged;
+5. split/coalesced reads, partial writes, malformed lengths, EOF, and bounded
+   backpressure have functional test coverage;
+6. pending admission limits and timeouts are enforced;
+7. public control queries and loopback-owner mutation checks are covered by
+   end-to-end tests;
+8. normal gameplay, graphics initialization, recording, and playback pass end
+   to end; and
+9. both the normal SDL build and server-only build, install, and distribution
+   checks pass through `./tests/run-full-suite.sh`.

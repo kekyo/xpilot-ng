@@ -20,21 +20,6 @@ grep -q DEFAULTMAP $DEFAULTFILE || cat >>$DEFAULTFILE <<EOF
 DEFAULTMAP="/usr/share/games/xpilot-ng/maps/polybloods.xp2"
 EOF
 
-grep -q REPORTMETA $DEFAULTFILE || cat >>$DEFAULTFILE <<EOF
-
-# Set REPORTMETA to "YES" and the XPilot NG server will automatically
-# declare itself to the metasever when it boots so other players outside 
-# of your local network can find and connect to it.
-# ----------
-# IMPORTANT: If you are behind a firewall, to allow outside users to 
-#            connect to your server, you will need to:
-# ----------
-# 1. set the -clientPortStart and -clientPortEnd options below
-# 2. configure your firewall to forward the specified UDP ports as well 
-#    as the contact port (15345/udp) to the XPilot server host
-REPORTMETA="NO"
-EOF
-
 grep -q OTHEROPTIONS $DEFAULTFILE || cat >>$DEFAULTFILE <<EOF
 
 # Set OTHEROPTIONS to any additional options desired when the XPilot NG
@@ -48,14 +33,10 @@ grep -q OTHEROPTIONS $DEFAULTFILE || cat >>$DEFAULTFILE <<EOF
 #	that -timerResolution is not effective, and ends up further
 #	slowing down the framerate.
 #
-# -clientPortStart 40000 -clientPortEnd 40009
-#	If the server is run behind an IP masquerading firewall which is
-#	set up to port-forward a range of UDP ports to the server machine,
-#	this pair of switches establishes that range of ports which is
-#	used between each client and the server after a connection is
-#	negotiated (as distinct from the XPilot NG server port, which
-#	defaults to 15345/udp and is only used to initially establish 
-#	the connection).
+# -port 15345
+#	Gameplay and server-control connections share this fixed TCP port.
+#	To accept Internet clients behind a firewall or NAT gateway, allow
+#	or forward this one TCP port to the server machine.
 #
 OTHEROPTIONS="-timerResolution 100"
 EOF

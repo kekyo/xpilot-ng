@@ -20,6 +20,19 @@ This cleanup prepares the client architecture for later portability work. It
 does not provide a WebAssembly or browser build yet.
 
 
+NETWORK MODEL
+
+The client connects directly to one server over TCP. Gameplay and short-lived
+status or administration requests share the server's fixed `gamePort`, which
+defaults to 15345 and is selected with `-port` on both programs. No lobby,
+LAN-discovery, or metaserver client is included. If no server argument is
+given, xpilot-ng-sdl connects to 127.0.0.1.
+
+This direct TCP topology is an intermediate step toward a future browser
+client. It does not add WebSocket, TLS, HTTP asset delivery, or browser-side
+runtime support.
+
+
 BUILDING
 
 Installation instructions and dependencies are documented in INSTALL. The

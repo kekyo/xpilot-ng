@@ -21,5 +21,10 @@ no arguments.  If an unprivileged users calls
 then all arguments given on the command line are passed on to
 .B "xpilot-ng-server"
 .
+.PP
+The server accepts gameplay and control connections on one fixed TCP port,
+15345 by default.  Use the server's
+.B "-port"
+option in the configuration file to select another port.
 .SH AUTHOR
 Matt Kern <matt.kern@pobox.com>
