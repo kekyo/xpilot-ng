@@ -563,8 +563,13 @@ xp_option_t default_options[] = {
 	"text",
 	&xpArgs.text,
 	XP_OPTFLAG_NEVER_SAVE,
-	"Use the simple text interface to contact a server\n"
-	"instead of the graphical user interface.\n"),
+	"Use the interactive TCP server-control interface.\n"),
+
+    XP_NOARG_OPTION(
+	"status",
+	&xpArgs.status,
+	XP_OPTFLAG_NEVER_SAVE,
+	"Print server status using one TCP control connection.\n"),
 
     XP_NOARG_OPTION(
 	"list",

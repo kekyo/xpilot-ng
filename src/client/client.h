@@ -86,6 +86,7 @@ typedef struct {
     bool help;
     bool version;
     bool text;
+    bool status;
     bool list_servers; /* list */
     bool auto_connect; /* join */
     char shutdown_reason[MAX_CHARS]; /* shutdown reason */
@@ -867,9 +868,33 @@ extern int Query_all(sock_t *sockfd, int port, char *msg, size_t msglen);
 
 
 
-/*
- * textinterface.c
+/**
+ * Send one short-lived TCP control request and print all response frames.
+ *
+ * @param server Numeric address or hostname of the server.
+ * @param port Fixed gameplay and control TCP port.
+ * @param user Claimed operating-system user identity.
+ * @param command Control packet identifier from pack.h.
+ * @param argument Command-specific argument, which may be an empty string.
+ * @param output Destination for response payloads.
+ * @return Zero when the server reports success, otherwise -1.
  */
+extern int Control_request(const char *server, int port, const char *user,
+			   unsigned char command, const char *argument,
+			   FILE *output);
+
+/**
+ * Run the interactive TCP server-control prompt.
+ *
+ * @param server Numeric address or hostname of the server.
+ * @param port Fixed gameplay and control TCP port.
+ * @param user Claimed operating-system user identity.
+ * @return Zero after a normal quit or end-of-file.
+ */
+extern int Control_interactive(const char *server, int port,
+			       const char *user);
+
+/* Legacy lobby interface, removed with the metaserver client. */
 extern int Connect_to_server(int auto_connect, int list_servers,
 			     int auto_shutdown, char *shutdown_reason,
 			     Connect_param_t *conpar);

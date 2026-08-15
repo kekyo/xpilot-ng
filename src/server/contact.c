@@ -603,7 +603,7 @@ static int Execute_control(pending_session_t *pending)
 	break;
 
     case SHUTDOWN_pack:
-	Server_shutdown(control->user, 0,
+	Server_shutdown(control->user, 1,
 			control->argument[0] != '\0'
 			? control->argument : "shutdown requested");
 	break;
@@ -686,7 +686,8 @@ static void Process_pending(pending_session_t *pending)
 {
     int status;
 
-    if (time(NULL) >= pending->opened_at + SESSION_ADMISSION_TIMEOUT) {
+    if (pending->state == PENDING_READING
+	&& time(NULL) >= pending->opened_at + SESSION_ADMISSION_TIMEOUT) {
 	Pending_cleanup(pending);
 	return;
     }

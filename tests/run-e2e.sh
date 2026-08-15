@@ -272,6 +272,39 @@ recording="$runtime_dir/gameplay.rec"
 server_pid=$!
 wait_until "local server readiness" 20 server_ready
 
+if ! "$client" -port "$port" -status \
+    >"$runtime_dir/status.log" 2>&1; then
+    fail "TCP status request failed"
+fi
+grep -q '^SERVER VERSION\.\.: ' "$runtime_dir/status.log" \
+    || fail "TCP status response did not include the server version"
+grep -q '^STATUS\.\.\.\.\.\.\.\.\.\.: ' "$runtime_dir/status.log" \
+    || fail "TCP status response did not include the game status"
+
+set +e
+"$client" -port "$port" -user TCPGuest \
+    -shutdown "unauthorized E2E shutdown" \
+    >"$runtime_dir/unauthorized-control.log" 2>&1
+unauthorized_status=$?
+set -e
+if test "$unauthorized_status" -eq 0; then
+    fail "non-owner TCP shutdown request was accepted"
+fi
+grep -q '^permission denied$' "$runtime_dir/unauthorized-control.log" \
+    || fail "non-owner TCP shutdown did not report permission denial"
+kill -0 "$server_pid" 2>/dev/null \
+    || fail "non-owner TCP shutdown stopped the server"
+
+printf 'lock on\nstatus\nlock off\noptions\nquit\n' \
+    | "$client" -port "$port" -text \
+        >"$runtime_dir/text-control.log" 2>&1 \
+    || fail "interactive TCP control session failed"
+grep -q 'STATUS\.\.\.\.\.\.\.\.\.\.: locked' \
+    "$runtime_dir/text-control.log" \
+    || fail "interactive TCP lock command did not affect status"
+grep -q '^framesPerSecond:50$' "$runtime_dir/text-control.log" \
+    || fail "interactive TCP option listing was incomplete"
+
 "$client" -geometry 800x600 -port "$port" -name SDL2Smoke \
     >"$runtime_dir/client.log" 2>&1 &
 client_pid=$!
@@ -327,7 +360,12 @@ if ! runtime_logs_have_no_gl_errors; then
 fi
 wait_until "recorded client disconnect" 10 recorded_session_finished
 
-kill -TERM "$server_pid" 2>/dev/null || true
+if ! "$client" -port "$port" -shutdown "E2E control shutdown" \
+    >"$runtime_dir/shutdown.log" 2>&1; then
+    fail "owner TCP shutdown request failed"
+fi
+grep -q '^accepted$' "$runtime_dir/shutdown.log" \
+    || fail "owner TCP shutdown did not report success"
 wait_until "server shutdown" 10 process_stopped "$server_pid"
 wait "$server_pid" 2>/dev/null || true
 server_pid=

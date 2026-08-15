@@ -111,20 +111,21 @@ libxpclient_a_AR = $(AR) $(ARFLAGS)
 libxpclient_a_LIBADD =
 am__libxpclient_a_SOURCES_DIST = client.c client.h clientcommand.c \
 	clientcommand.h clientrank.c clientrank.h configure.h \
-	connectparam.h datagram.c datagram.h default.c event.c gfx2d.c \
-	gfx2d.h guimap.h guiobjects.h mapdata.c messages.c meta.c \
-	meta.h netclient.c netclient.h paint.c paint.h paintmap.c \
-	paintobjects.c option.c option.h query.c talk.h talkmacros.c \
-	textinterface.c usleep.c xpclient.h caudio.c caudio.h \
-	oalaudio.c
+	connectparam.h control.c datagram.c datagram.h default.c \
+	event.c gfx2d.c gfx2d.h guimap.h guiobjects.h mapdata.c \
+	messages.c meta.c meta.h netclient.c netclient.h paint.c \
+	paint.h paintmap.c paintobjects.c option.c option.h query.c \
+	talk.h talkmacros.c textinterface.c usleep.c xpclient.h \
+	caudio.c caudio.h oalaudio.c
 @COND_SOUND_TRUE@am__objects_1 = caudio.$(OBJEXT) oalaudio.$(OBJEXT)
 am_libxpclient_a_OBJECTS = client.$(OBJEXT) clientcommand.$(OBJEXT) \
-	clientrank.$(OBJEXT) datagram.$(OBJEXT) default.$(OBJEXT) \
-	event.$(OBJEXT) gfx2d.$(OBJEXT) mapdata.$(OBJEXT) \
-	messages.$(OBJEXT) meta.$(OBJEXT) netclient.$(OBJEXT) \
-	paint.$(OBJEXT) paintmap.$(OBJEXT) paintobjects.$(OBJEXT) \
-	option.$(OBJEXT) query.$(OBJEXT) talkmacros.$(OBJEXT) \
-	textinterface.$(OBJEXT) usleep.$(OBJEXT) $(am__objects_1)
+	clientrank.$(OBJEXT) control.$(OBJEXT) datagram.$(OBJEXT) \
+	default.$(OBJEXT) event.$(OBJEXT) gfx2d.$(OBJEXT) \
+	mapdata.$(OBJEXT) messages.$(OBJEXT) meta.$(OBJEXT) \
+	netclient.$(OBJEXT) paint.$(OBJEXT) paintmap.$(OBJEXT) \
+	paintobjects.$(OBJEXT) option.$(OBJEXT) query.$(OBJEXT) \
+	talkmacros.$(OBJEXT) textinterface.$(OBJEXT) usleep.$(OBJEXT) \
+	$(am__objects_1)
 libxpclient_a_OBJECTS = $(am_libxpclient_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -143,15 +144,15 @@ depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/caudio.Po ./$(DEPDIR)/client.Po \
 	./$(DEPDIR)/clientcommand.Po ./$(DEPDIR)/clientrank.Po \
-	./$(DEPDIR)/datagram.Po ./$(DEPDIR)/default.Po \
-	./$(DEPDIR)/event.Po ./$(DEPDIR)/gfx2d.Po \
-	./$(DEPDIR)/mapdata.Po ./$(DEPDIR)/messages.Po \
-	./$(DEPDIR)/meta.Po ./$(DEPDIR)/netclient.Po \
-	./$(DEPDIR)/oalaudio.Po ./$(DEPDIR)/option.Po \
-	./$(DEPDIR)/paint.Po ./$(DEPDIR)/paintmap.Po \
-	./$(DEPDIR)/paintobjects.Po ./$(DEPDIR)/query.Po \
-	./$(DEPDIR)/talkmacros.Po ./$(DEPDIR)/textinterface.Po \
-	./$(DEPDIR)/usleep.Po
+	./$(DEPDIR)/control.Po ./$(DEPDIR)/datagram.Po \
+	./$(DEPDIR)/default.Po ./$(DEPDIR)/event.Po \
+	./$(DEPDIR)/gfx2d.Po ./$(DEPDIR)/mapdata.Po \
+	./$(DEPDIR)/messages.Po ./$(DEPDIR)/meta.Po \
+	./$(DEPDIR)/netclient.Po ./$(DEPDIR)/oalaudio.Po \
+	./$(DEPDIR)/option.Po ./$(DEPDIR)/paint.Po \
+	./$(DEPDIR)/paintmap.Po ./$(DEPDIR)/paintobjects.Po \
+	./$(DEPDIR)/query.Po ./$(DEPDIR)/talkmacros.Po \
+	./$(DEPDIR)/textinterface.Po ./$(DEPDIR)/usleep.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -361,11 +362,12 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 noinst_LIBRARIES = libxpclient.a
 libxpclient_a_SOURCES = client.c client.h clientcommand.c \
 	clientcommand.h clientrank.c clientrank.h configure.h \
-	connectparam.h datagram.c datagram.h default.c event.c gfx2d.c \
-	gfx2d.h guimap.h guiobjects.h mapdata.c messages.c meta.c \
-	meta.h netclient.c netclient.h paint.c paint.h paintmap.c \
-	paintobjects.c option.c option.h query.c talk.h talkmacros.c \
-	textinterface.c usleep.c xpclient.h $(am__append_1)
+	connectparam.h control.c datagram.c datagram.h default.c \
+	event.c gfx2d.c gfx2d.h guimap.h guiobjects.h mapdata.c \
+	messages.c meta.c meta.h netclient.c netclient.h paint.c \
+	paint.h paintmap.c paintobjects.c option.c option.h query.c \
+	talk.h talkmacros.c textinterface.c usleep.c xpclient.h \
+	$(am__append_1)
 @COND_SDL_CLIENT_FALSE@MAYBE_SDL = 
 
 # From section Conditional subdirectories with AM_CONDITIONAL
@@ -427,6 +429,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/client.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/clientcommand.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/clientrank.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/control.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/datagram.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/default.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/event.Po@am__quote@ # am--include-marker
@@ -665,6 +668,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/client.Po
 	-rm -f ./$(DEPDIR)/clientcommand.Po
 	-rm -f ./$(DEPDIR)/clientrank.Po
+	-rm -f ./$(DEPDIR)/control.Po
 	-rm -f ./$(DEPDIR)/datagram.Po
 	-rm -f ./$(DEPDIR)/default.Po
 	-rm -f ./$(DEPDIR)/event.Po
@@ -731,6 +735,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/client.Po
 	-rm -f ./$(DEPDIR)/clientcommand.Po
 	-rm -f ./$(DEPDIR)/clientrank.Po
+	-rm -f ./$(DEPDIR)/control.Po
 	-rm -f ./$(DEPDIR)/datagram.Po
 	-rm -f ./$(DEPDIR)/default.Po
 	-rm -f ./$(DEPDIR)/event.Po

@@ -89,6 +89,28 @@ int main(int argc, char *argv[])
 	    sizeof(connectParam.server_addr));
     connectParam.login_port = connectParam.contact_port;
 
+    if (xpArgs.status || xpArgs.shutdown_reason[0] != '\0' || xpArgs.text) {
+	int status;
+
+	if (xpArgs.status)
+	    status = Control_request(connectParam.server_addr,
+				     connectParam.contact_port,
+				     connectParam.user_name,
+				     REPORT_STATUS_pack, "", stdout);
+	else if (xpArgs.shutdown_reason[0] != '\0')
+	    status = Control_request(connectParam.server_addr,
+				     connectParam.contact_port,
+				     connectParam.user_name,
+				     SHUTDOWN_pack,
+				     xpArgs.shutdown_reason, stdout);
+	else
+	    status = Control_interactive(connectParam.server_addr,
+					 connectParam.contact_port,
+					 connectParam.user_name);
+	sock_cleanup();
+	return status == 0 ? 0 : 1;
+    }
+
     if (Init_window()) {
 	error("Could not initialize SDL, check your settings.");
 	exit(1);
