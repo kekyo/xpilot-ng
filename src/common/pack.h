@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -101,6 +101,7 @@
  * 4.4.0.1: fast radar packet
  * 4.5.0.0: new team score packet; score packet made larger to send decimals
  * 4.5.0.1: temporary wormholes
+ * 4.5.0.2: framed TCP gameplay transport
 
  * Polygon branch
  * 4.F.0.9: 4.3.0.0 + xp2 map format
@@ -110,10 +111,11 @@
  * 4.F.1.3: cumulative turning
  * 4.F.1.4: balls use polygon styles
  * 4.F.1.5: Possibility to change polygon styles.
+ * 4.F.1.6: framed TCP gameplay transport
  */
 #define MAGIC_WORD		0xF4ED
-#define POLYGON_VERSION		0x4F15
-#define OLD_VERSION		0x4501
+#define POLYGON_VERSION		0x4F16
+#define OLD_VERSION		0x4502
 #ifdef SERVER
 #define	MAGIC (is_polygon_map \
                ? VERSION2MAGIC(POLYGON_VERSION) \
@@ -130,25 +132,25 @@
  * Which client versions can join this server.
  */
 #ifdef SERVER
-#define MIN_CLIENT_VERSION	0x4203
+#define MIN_CLIENT_VERSION	MY_VERSION
 #define MAX_CLIENT_VERSION	MY_VERSION
 #endif
 
 /*
  * Which server versions can this client join.
  */
-#define MIN_SERVER_VERSION	0x4F09
-#define MAX_SERVER_VERSION	MY_VERSION
+#define MIN_SERVER_VERSION	POLYGON_VERSION
+#define MAX_SERVER_VERSION	POLYGON_VERSION
 
 /*
  * We want to keep support for servers using the old map format in the client,
  * but make incompatible changes while developing the new format. Therefore
  * there is a separate "old" range of allowed servers.
  */
-#define MIN_OLD_SERVER_VERSION  0x4203
-#define MAX_OLD_SERVER_VERSION  0x4501
+#define MIN_OLD_SERVER_VERSION  OLD_VERSION
+#define MAX_OLD_SERVER_VERSION  OLD_VERSION
 /* Which old-style (non-polygon) protocol version we support. */
-#define COMPATIBILITY_MAGIC 0x4501F4ED
+#define COMPATIBILITY_MAGIC VERSION2MAGIC(OLD_VERSION)
 
 #define	MAX_STR_LEN		4096
 #define	MAX_DISP_LEN		80

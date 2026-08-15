@@ -27,10 +27,37 @@
 
 int last_packet_of_frame;
 
+#define SOCKBUF_FRAME_HEADER_SIZE 2
+#define SOCKBUF_FRAME_MAX_SIZE 65535
+
 int Sockbuf_init(sockbuf_t *sbuf, sock_t *sock, size_t size, int state)
 {
+    if (BIT(state, SOCKBUF_DGRAM | SOCKBUF_FRAMED)
+	== (SOCKBUF_DGRAM | SOCKBUF_FRAMED)) {
+	errno = EINVAL;
+	return -1;
+    }
+    if (BIT(state, SOCKBUF_FRAMED) != 0
+	&& (size == 0 || size > SOCKBUF_FRAME_MAX_SIZE)) {
+	errno = EMSGSIZE;
+	return -1;
+    }
+
+    sbuf->buf = NULL;
+    sbuf->ptr = NULL;
+    sbuf->frame_output = NULL;
     if ((sbuf->buf = sbuf->ptr = XMALLOC(char, size)) == NULL)
 	return -1;
+
+    if (BIT(state, SOCKBUF_FRAMED | SOCKBUF_WRITE)
+	== (SOCKBUF_FRAMED | SOCKBUF_WRITE)) {
+	sbuf->frame_output = XMALLOC(char, size + SOCKBUF_FRAME_HEADER_SIZE);
+	if (sbuf->frame_output == NULL) {
+	    XFREE(sbuf->buf);
+	    sbuf->buf = sbuf->ptr = NULL;
+	    return -1;
+	}
+    }
 
     if (sock != NULL)
 	sbuf->sock = *sock;
@@ -42,16 +69,29 @@ int Sockbuf_init(sockbuf_t *sbuf, sock_t *sock, size_t size, int state)
     sbuf->size = size;
     sbuf->ptr = sbuf->buf;
     sbuf->state = state;
+    sbuf->frame_header[0] = sbuf->frame_header[1] = 0;
+    sbuf->frame_header_len = 0;
+    sbuf->frame_length = -1;
+    sbuf->frame_received = 0;
+    sbuf->frame_output_len = 0;
+    sbuf->frame_output_offset = 0;
     return 0;
 }
 
 int Sockbuf_cleanup(sockbuf_t *sbuf)
 {
     XFREE(sbuf->buf);
+    XFREE(sbuf->frame_output);
 
     sbuf->buf = sbuf->ptr = NULL;
+    sbuf->frame_output = NULL;
     sbuf->size = sbuf->len = 0;
     sbuf->state = 0;
+    sbuf->frame_header_len = 0;
+    sbuf->frame_length = -1;
+    sbuf->frame_received = 0;
+    sbuf->frame_output_len = 0;
+    sbuf->frame_output_offset = 0;
     return 0;
 }
 
@@ -104,6 +144,85 @@ int Sockbuf_advance(sockbuf_t *sbuf, int len)
     return 0;
 }
 
+static int Sockbuf_set_frame_error(sockbuf_t *sbuf, int error_number)
+{
+    sbuf->state |= SOCKBUF_ERROR;
+    errno = error_number;
+    return -1;
+}
+
+static int Sockbuf_drain_frame_output(sockbuf_t *sbuf, sockbuf_io_fn writer)
+{
+    int len;
+
+    while (sbuf->frame_output_offset < sbuf->frame_output_len) {
+	errno = 0;
+	len = writer(&sbuf->sock,
+		     sbuf->frame_output + sbuf->frame_output_offset,
+		     sbuf->frame_output_len - sbuf->frame_output_offset);
+	if (len > 0) {
+	    sbuf->frame_output_offset += len;
+	    continue;
+	}
+	if (len < 0 && errno == EINTR)
+	    continue;
+	if (len < 0 && (errno == EWOULDBLOCK || errno == EAGAIN))
+	    return 0;
+	return Sockbuf_set_frame_error(
+	    sbuf, len == 0 ? EPIPE : (errno != 0 ? errno : EIO));
+    }
+
+    sbuf->frame_output_len = 0;
+    sbuf->frame_output_offset = 0;
+    return 1;
+}
+
+int Sockbuf_flush_framed(sockbuf_t *sbuf, sockbuf_io_fn writer)
+{
+    int payload_len;
+    int status;
+
+    if (BIT(sbuf->state, SOCKBUF_FRAMED | SOCKBUF_WRITE)
+	!= (SOCKBUF_FRAMED | SOCKBUF_WRITE)
+	|| sbuf->frame_output == NULL || writer == NULL)
+	return Sockbuf_set_frame_error(sbuf, EINVAL);
+
+    if (sbuf->len < 0) {
+	warn("Write socket buffer length negative");
+	Sockbuf_clear(sbuf);
+    }
+
+    status = Sockbuf_drain_frame_output(sbuf, writer);
+    if (status < 0)
+	return -1;
+    if (sbuf->len == 0)
+	return 0;
+
+    payload_len = sbuf->len;
+    if (payload_len > sbuf->size || payload_len > SOCKBUF_FRAME_MAX_SIZE)
+	return Sockbuf_set_frame_error(sbuf, EMSGSIZE);
+
+    if (status == 0) {
+	/* Match datagram backpressure: discard this transient update rather
+	 * than merging it into another logical record or growing a queue. */
+	Sockbuf_clear(sbuf);
+	errno = EAGAIN;
+	return 0;
+    }
+
+    sbuf->frame_output[0] = (char)(payload_len >> 8);
+    sbuf->frame_output[1] = (char)payload_len;
+    memcpy(sbuf->frame_output + SOCKBUF_FRAME_HEADER_SIZE,
+	   sbuf->buf, (size_t)payload_len);
+    sbuf->frame_output_len = payload_len + SOCKBUF_FRAME_HEADER_SIZE;
+    sbuf->frame_output_offset = 0;
+    Sockbuf_clear(sbuf);
+
+    if (Sockbuf_drain_frame_output(sbuf, writer) < 0)
+	return -1;
+    return payload_len;
+}
+
 int Sockbuf_flush(sockbuf_t *sbuf)
 {
     int			len,
@@ -120,6 +239,8 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 	warn("No flush on locked socket buffer (0x%02x)", sbuf->state);
 	return -1;
     }
+    if (BIT(sbuf->state, SOCKBUF_FRAMED) != 0)
+	return Sockbuf_flush_framed(sbuf, sock_write);
     if (sbuf->len <= 0) {
 	if (sbuf->len < 0) {
 	    warn("Write socket buffer length negative");
@@ -217,7 +338,8 @@ int Sockbuf_write(sockbuf_t *sbuf, char *buf, int len)
 	return -1;
     }
     if (sbuf->size - sbuf->len < len) {
-	if (BIT(sbuf->state, SOCKBUF_LOCK | SOCKBUF_DGRAM) != 0) {
+	if (BIT(sbuf->state,
+		SOCKBUF_LOCK | SOCKBUF_DGRAM | SOCKBUF_FRAMED) != 0) {
 	    warn("No write to locked socket buffer (%d,%d,%d,%d)",
 		sbuf->state, sbuf->size, sbuf->len, len);
 	    return -1;
@@ -234,6 +356,78 @@ int Sockbuf_write(sockbuf_t *sbuf, char *buf, int len)
     return len;
 }
 
+static int Sockbuf_read_frame_part(sockbuf_t *sbuf, sockbuf_io_fn reader,
+				   char *destination, int remaining)
+{
+    int len;
+
+    for (;;) {
+	errno = 0;
+	len = reader(&sbuf->sock, destination, remaining);
+	if (len > 0) {
+	    if (len > remaining)
+		return Sockbuf_set_frame_error(sbuf, EPROTO);
+	    return len;
+	}
+	if (len == 0)
+	    return Sockbuf_set_frame_error(sbuf, ECONNRESET);
+	if (errno == EINTR)
+	    continue;
+	if (errno == EWOULDBLOCK || errno == EAGAIN)
+	    return 0;
+	return Sockbuf_set_frame_error(sbuf, errno != 0 ? errno : EIO);
+    }
+}
+
+int Sockbuf_read_framed(sockbuf_t *sbuf, sockbuf_io_fn reader)
+{
+    int len;
+
+    if (BIT(sbuf->state, SOCKBUF_FRAMED | SOCKBUF_READ)
+	!= (SOCKBUF_FRAMED | SOCKBUF_READ) || reader == NULL)
+	return Sockbuf_set_frame_error(sbuf, EINVAL);
+    if (BIT(sbuf->state, SOCKBUF_ERROR) != 0)
+	return -1;
+
+    if (sbuf->ptr > sbuf->buf)
+	Sockbuf_advance(sbuf, sbuf->ptr - sbuf->buf);
+    if (sbuf->len > 0)
+	return sbuf->len;
+
+    while (sbuf->frame_header_len < SOCKBUF_FRAME_HEADER_SIZE) {
+	len = Sockbuf_read_frame_part(
+	    sbuf, reader,
+	    (char *)sbuf->frame_header + sbuf->frame_header_len,
+	    SOCKBUF_FRAME_HEADER_SIZE - sbuf->frame_header_len);
+	if (len <= 0)
+	    return len;
+	sbuf->frame_header_len += len;
+    }
+
+    if (sbuf->frame_length < 0) {
+	sbuf->frame_length = ((int)sbuf->frame_header[0] << 8)
+	    | (int)sbuf->frame_header[1];
+	if (sbuf->frame_length <= 0 || sbuf->frame_length > sbuf->size)
+	    return Sockbuf_set_frame_error(sbuf, EMSGSIZE);
+    }
+
+    while (sbuf->frame_received < sbuf->frame_length) {
+	len = Sockbuf_read_frame_part(
+	    sbuf, reader, sbuf->buf + sbuf->frame_received,
+	    sbuf->frame_length - sbuf->frame_received);
+	if (len <= 0)
+	    return len;
+	sbuf->frame_received += len;
+    }
+
+    sbuf->len = sbuf->frame_length;
+    sbuf->ptr = sbuf->buf;
+    sbuf->frame_header_len = 0;
+    sbuf->frame_length = -1;
+    sbuf->frame_received = 0;
+    return sbuf->len;
+}
+
 int Sockbuf_read(sockbuf_t *sbuf)
 {
     int			max,
@@ -246,6 +440,8 @@ int Sockbuf_read(sockbuf_t *sbuf)
     }
     if (BIT(sbuf->state, SOCKBUF_LOCK) != 0)
 	return 0;
+    if (BIT(sbuf->state, SOCKBUF_FRAMED) != 0)
+	return Sockbuf_read_framed(sbuf, sock_read);
 
     if (sbuf->ptr > sbuf->buf)
 	Sockbuf_advance(sbuf, sbuf->ptr - sbuf->buf);
@@ -503,7 +699,7 @@ int Packet_printf(sockbuf_t *sbuf, const char *fmt, ...)
 		printf("Write socket buffer not big enough (%d,%d,\"%s\")\n",
 		       sbuf->size, sbuf->len, fmt);
 #endif
-	    if (BIT(sbuf->state, SOCKBUF_DGRAM) != 0) {
+	    if (BIT(sbuf->state, SOCKBUF_DGRAM | SOCKBUF_FRAMED) != 0) {
 		count = 0;
 		failure = 0;
 	    }
@@ -546,7 +742,9 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 	    switch (fmt[++i]) {
 	    case 'c':
 		if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 1]) {
-		    if (BIT(sbuf->state, SOCKBUF_DGRAM | SOCKBUF_LOCK) != 0) {
+		    if (BIT(sbuf->state,
+			    SOCKBUF_DGRAM | SOCKBUF_FRAMED | SOCKBUF_LOCK)
+			!= 0) {
 			failure = 3;
 			break;
 		    }
@@ -564,7 +762,9 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 		break;
 	    case 'd':
 		if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 4]) {
-		    if (BIT(sbuf->state, SOCKBUF_DGRAM | SOCKBUF_LOCK) != 0) {
+		    if (BIT(sbuf->state,
+			    SOCKBUF_DGRAM | SOCKBUF_FRAMED | SOCKBUF_LOCK)
+			!= 0) {
 			failure = 3;
 			break;
 		    }
@@ -585,7 +785,9 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 		break;
 	    case 'u':
 		if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 4]) {
-		    if (BIT(sbuf->state, SOCKBUF_DGRAM | SOCKBUF_LOCK) != 0) {
+		    if (BIT(sbuf->state,
+			    SOCKBUF_DGRAM | SOCKBUF_FRAMED | SOCKBUF_LOCK)
+			!= 0) {
 			failure = 3;
 			break;
 		    }
@@ -606,7 +808,9 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 		break;
 	    case 'h':
 		if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 2]) {
-		    if (BIT(sbuf->state, SOCKBUF_DGRAM | SOCKBUF_LOCK) != 0) {
+		    if (BIT(sbuf->state,
+			    SOCKBUF_DGRAM | SOCKBUF_FRAMED | SOCKBUF_LOCK)
+			!= 0) {
 			failure = 3;
 			break;
 		    }
@@ -637,7 +841,9 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 		break;
 	    case 'l':
 		if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 4]) {
-		    if (BIT(sbuf->state, SOCKBUF_DGRAM | SOCKBUF_LOCK) != 0) {
+		    if (BIT(sbuf->state,
+			    SOCKBUF_DGRAM | SOCKBUF_FRAMED | SOCKBUF_LOCK)
+			!= 0) {
 			failure = 3;
 			break;
 		    }
@@ -677,7 +883,8 @@ int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 		k = 0;
 		for (;;) {
 		    if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 1]) {
-			if (BIT(sbuf->state, SOCKBUF_DGRAM | SOCKBUF_LOCK)
+			if (BIT(sbuf->state,
+				SOCKBUF_DGRAM | SOCKBUF_FRAMED | SOCKBUF_LOCK)
 			    != 0) {
 			    failure = 3;
 			    break;
