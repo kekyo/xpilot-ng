@@ -439,7 +439,7 @@ static void Create_client_socket(sock_t *sock, int *port)
     if (!options.clientPortStart || !options.clientPortEnd ||
 	(options.clientPortStart > options.clientPortEnd)) {
 
-	if (sock_open_tcp_listener(sock, serverAddr, 0) == SOCK_IS_ERROR) {
+	if (sock_open_tcp_listener(sock, serverAddr, 0, 1) == SOCK_IS_ERROR) {
 	    error("Cannot create TCP listener (%d)", sock->error.error);
 	    sock->fd = -1;
 	    return;
@@ -447,7 +447,7 @@ static void Create_client_socket(sock_t *sock, int *port)
     }
     else {
         for (i = options.clientPortStart; i <= options.clientPortEnd; i++) {
-	    if (sock_open_tcp_listener(sock, serverAddr, i) != SOCK_IS_ERROR)
+	    if (sock_open_tcp_listener(sock, serverAddr, i, 1) != SOCK_IS_ERROR)
 		goto found;
 	}
 	error("Could not find a usable port in given port range");

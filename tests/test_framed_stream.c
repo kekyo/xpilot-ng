@@ -190,6 +190,44 @@ static int test_partial_write_keeps_one_record(void)
     return 0;
 }
 
+static int test_partial_write_preserves_ordered_record(void)
+{
+    static char first[] = "first";
+    static char second[] = "second";
+    static const char expected[] = {
+        0, 5, 'f', 'i', 'r', 's', 't',
+        0, 6, 's', 'e', 'c', 'o', 'n', 'd'
+    };
+    sock_t send_socket;
+    sockbuf_t writer;
+
+    memset(&controlled_writer, 0, sizeof(controlled_writer));
+    TEST_CHECK(sock_init(&send_socket) == 0);
+    TEST_CHECK(Sockbuf_init(&writer, &send_socket, 64,
+                           SOCKBUF_WRITE | SOCKBUF_FRAMED
+                           | SOCKBUF_ORDERED) == 0);
+
+    controlled_writer.budget = 3;
+    TEST_CHECK(Sockbuf_write(&writer, first, 5) == 5);
+    TEST_CHECK(Sockbuf_flush_framed(&writer, write_with_budget) == 5);
+    TEST_CHECK(writer.frame_output_offset == 3);
+
+    TEST_CHECK(Sockbuf_write(&writer, second, 6) == 6);
+    TEST_CHECK(Sockbuf_flush_framed(&writer, write_with_budget) == 0);
+    TEST_CHECK(errno == EAGAIN);
+    TEST_CHECK(writer.len == 6);
+
+    controlled_writer.budget = 64;
+    TEST_CHECK(Sockbuf_flush_framed(&writer, write_with_budget) == 6);
+    TEST_CHECK(writer.len == 0);
+    TEST_CHECK(controlled_writer.length == (int)sizeof(expected));
+    TEST_CHECK(memcmp(controlled_writer.bytes, expected,
+                      sizeof(expected)) == 0);
+
+    Sockbuf_cleanup(&writer);
+    return 0;
+}
+
 static int test_fatal_write_without_errno_is_error(void)
 {
     static char payload[] = "payload";
@@ -262,7 +300,7 @@ static int test_tcp_socket_connection(void)
     sock_t client;
     sock_t accepted;
 
-    TEST_CHECK(sock_open_tcp_listener(&listener, "127.0.0.1", 0) == 0);
+    TEST_CHECK(sock_open_tcp_listener(&listener, "127.0.0.1", 0, 8) == 0);
     port = sock_get_port(&listener);
     TEST_CHECK(port > 0);
     TEST_CHECK(sock_open_tcp_bound(&client, "127.0.0.1", 0) == 0);
@@ -294,6 +332,7 @@ int main(void)
     TEST_CHECK(test_coalesced_records() == 0);
     TEST_CHECK(test_framed_write() == 0);
     TEST_CHECK(test_partial_write_keeps_one_record() == 0);
+    TEST_CHECK(test_partial_write_preserves_ordered_record() == 0);
     TEST_CHECK(test_fatal_write_without_errno_is_error() == 0);
     TEST_CHECK(test_invalid_frame_length_is_error() == 0);
     TEST_CHECK(test_eof_is_error() == 0);

@@ -9,7 +9,7 @@ libxpcommon_a_SOURCES = \
 	keys.h \
 	list.c list.h \
 	math.c metaserver.h \
-	net.c net.h \
+	net.c net.h session.c session.h \
 	pack.h packet.h portability.c portability.h \
 	randommt.c rules.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \

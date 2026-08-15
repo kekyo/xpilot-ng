@@ -269,6 +269,7 @@ typedef int socklen_t;
 #include "packet.h"
 #include "portability.h"
 #include "rules.h"
+#include "session.h"
 #include "setup.h"
 #include "shipshape.h"
 #include "socklib.h"

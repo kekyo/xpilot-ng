@@ -55,6 +55,8 @@
 #define SOCKBUF_DGRAM		0x10	/* if datagram socket */
 /** Preserve logical packet boundaries on a stream with a 16-bit length. */
 #define SOCKBUF_FRAMED		0x20
+/** Preserve a staged framed record while a previous record is blocked. */
+#define SOCKBUF_ORDERED		0x40
 
 /*
  * Hack: leave some spare room for the last terminating packet

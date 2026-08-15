@@ -245,9 +245,14 @@ int sock_open_tcp_bound(sock_t *sock, char *dotaddr, int port)
     return SOCK_IS_OK;
 }
 
-int sock_open_tcp_listener(sock_t *sock, char *dotaddr, int port)
+int sock_open_tcp_listener(sock_t *sock, char *dotaddr, int port, int backlog)
 {
     int flag = 1;
+
+    if (backlog <= 0) {
+	errno = EINVAL;
+	return SOCK_IS_ERROR;
+    }
 
     if (sock_open_tcp(sock) == SOCK_IS_ERROR)
 	return SOCK_IS_ERROR;
@@ -261,7 +266,7 @@ int sock_open_tcp_listener(sock_t *sock, char *dotaddr, int port)
 	sock_close(sock);
 	return SOCK_IS_ERROR;
     }
-    if (listen(sock->fd, 1) < 0) {
+    if (listen(sock->fd, backlog) < 0) {
 	sock_set_error(sock, errno, SOCK_CALL_LISTEN, __LINE__);
 	sock_close(sock);
 	return SOCK_IS_ERROR;

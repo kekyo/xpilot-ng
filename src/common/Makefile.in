@@ -110,9 +110,10 @@ libxpcommon_a_AR = $(AR) $(ARFLAGS)
 libxpcommon_a_LIBADD =
 am_libxpcommon_a_OBJECTS = arraylist.$(OBJEXT) checknames.$(OBJEXT) \
 	config.$(OBJEXT) error.$(OBJEXT) list.$(OBJEXT) math.$(OBJEXT) \
-	net.$(OBJEXT) portability.$(OBJEXT) randommt.$(OBJEXT) \
-	shipshape.$(OBJEXT) socklib.$(OBJEXT) strcasecmp.$(OBJEXT) \
-	strdup.$(OBJEXT) strlcpy.$(OBJEXT) xpmemory.$(OBJEXT)
+	net.$(OBJEXT) session.$(OBJEXT) portability.$(OBJEXT) \
+	randommt.$(OBJEXT) shipshape.$(OBJEXT) socklib.$(OBJEXT) \
+	strcasecmp.$(OBJEXT) strdup.$(OBJEXT) strlcpy.$(OBJEXT) \
+	xpmemory.$(OBJEXT)
 libxpcommon_a_OBJECTS = $(am_libxpcommon_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -133,10 +134,10 @@ am__depfiles_remade = ./$(DEPDIR)/arraylist.Po \
 	./$(DEPDIR)/checknames.Po ./$(DEPDIR)/config.Po \
 	./$(DEPDIR)/error.Po ./$(DEPDIR)/list.Po ./$(DEPDIR)/math.Po \
 	./$(DEPDIR)/net.Po ./$(DEPDIR)/portability.Po \
-	./$(DEPDIR)/randommt.Po ./$(DEPDIR)/shipshape.Po \
-	./$(DEPDIR)/socklib.Po ./$(DEPDIR)/strcasecmp.Po \
-	./$(DEPDIR)/strdup.Po ./$(DEPDIR)/strlcpy.Po \
-	./$(DEPDIR)/xpmemory.Po
+	./$(DEPDIR)/randommt.Po ./$(DEPDIR)/session.Po \
+	./$(DEPDIR)/shipshape.Po ./$(DEPDIR)/socklib.Po \
+	./$(DEPDIR)/strcasecmp.Po ./$(DEPDIR)/strdup.Po \
+	./$(DEPDIR)/strlcpy.Po ./$(DEPDIR)/xpmemory.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -352,7 +353,7 @@ libxpcommon_a_SOURCES = \
 	keys.h \
 	list.c list.h \
 	math.c metaserver.h \
-	net.c net.h \
+	net.c net.h session.c session.h \
 	pack.h packet.h portability.c portability.h \
 	randommt.c rules.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \
@@ -422,6 +423,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/net.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/portability.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/randommt.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/shipshape.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socklib.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/strcasecmp.Po@am__quote@ # am--include-marker
@@ -654,6 +656,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/net.Po
 	-rm -f ./$(DEPDIR)/portability.Po
 	-rm -f ./$(DEPDIR)/randommt.Po
+	-rm -f ./$(DEPDIR)/session.Po
 	-rm -f ./$(DEPDIR)/shipshape.Po
 	-rm -f ./$(DEPDIR)/socklib.Po
 	-rm -f ./$(DEPDIR)/strcasecmp.Po
@@ -714,6 +717,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/net.Po
 	-rm -f ./$(DEPDIR)/portability.Po
 	-rm -f ./$(DEPDIR)/randommt.Po
+	-rm -f ./$(DEPDIR)/session.Po
 	-rm -f ./$(DEPDIR)/shipshape.Po
 	-rm -f ./$(DEPDIR)/socklib.Po
 	-rm -f ./$(DEPDIR)/strcasecmp.Po

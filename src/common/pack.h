@@ -102,6 +102,7 @@
  * 4.5.0.0: new team score packet; score packet made larger to send decimals
  * 4.5.0.1: temporary wormholes
  * 4.5.0.2: framed TCP gameplay transport
+ * 4.5.0.3: direct TCP session admission
 
  * Polygon branch
  * 4.F.0.9: 4.3.0.0 + xp2 map format
@@ -112,10 +113,11 @@
  * 4.F.1.4: balls use polygon styles
  * 4.F.1.5: Possibility to change polygon styles.
  * 4.F.1.6: framed TCP gameplay transport
+ * 4.F.1.7: direct TCP session admission
  */
 #define MAGIC_WORD		0xF4ED
-#define POLYGON_VERSION		0x4F16
-#define OLD_VERSION		0x4502
+#define POLYGON_VERSION		0x4F17
+#define OLD_VERSION		0x4503
 #ifdef SERVER
 #define	MAGIC (is_polygon_map \
                ? VERSION2MAGIC(POLYGON_VERSION) \

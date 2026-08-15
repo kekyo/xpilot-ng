@@ -102,9 +102,10 @@ int sock_open_tcp_bound(sock_t *sock, char *dotaddr, int port);
  * @param sock Socket object to initialize.
  * @param dotaddr Local dotted-decimal address, or NULL for all interfaces.
  * @param port Local port, or zero to select an ephemeral port.
+ * @param backlog Maximum number of pending connections accepted by the OS.
  * @return SOCK_IS_OK on success or SOCK_IS_ERROR on failure.
  */
-int sock_open_tcp_listener(sock_t *sock, char *dotaddr, int port);
+int sock_open_tcp_listener(sock_t *sock, char *dotaddr, int port, int backlog);
 /**
  * Accept one TCP stream connection.
  *
