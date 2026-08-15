@@ -171,6 +171,19 @@ assert_runtime_help_surface()
         esac
     done
 
+    case "$client_help" in
+        *"welcome screen where you can select a server"*)
+            echo "SDL client help still describes the removed server selector" >&2
+            return 1
+            ;;
+        *"connects directly to 127.0.0.1"*)
+            ;;
+        *)
+            echo "SDL client help does not describe its default direct connection" >&2
+            return 1
+            ;;
+    esac
+
     server_help=$($build_dir/src/server/xpilot-ng-server -help 2>&1 || true)
     for removed_option in \
         contactPort reportToMetaServer metaUpdateMaxSize \

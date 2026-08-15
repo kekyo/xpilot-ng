@@ -139,8 +139,8 @@ void Usage(void)
 	   "in your home directory.\n"
 	   "Each key option may have multiple keys bound to it and\n"
 	   "one key may be used by multiple key options.\n"
-	   "If no server is specified on the command line, xpilot will\n"
-	   "display a welcome screen where you can select a server.\n");
+	   "If no server is specified on the command line, xpilot-ng-sdl\n"
+	   "connects directly to 127.0.0.1.\n");
 
     exit(1);
 }
