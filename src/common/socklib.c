@@ -433,6 +433,70 @@ int sock_open_tcp_connected_non_blocking(sock_t *sock, char *host, int port)
     return SOCK_IS_OK;
 }
 
+int sock_connect_with_timeout(sock_t *sock, char *host, int port,
+			      int timeout_seconds)
+{
+    struct sockaddr_in destination;
+    struct hostent *host_entry;
+    struct timeval timeout;
+    fd_set write_fds;
+    int socket_error = 0;
+    socklen_t error_size = sizeof(socket_error);
+    int status;
+
+    if (sock == NULL || sock->fd == SOCK_FD_INVALID || host == NULL
+	|| timeout_seconds <= 0) {
+	errno = EINVAL;
+	return SOCK_IS_ERROR;
+    }
+    if (sock_set_non_blocking(sock, 1) == SOCK_IS_ERROR)
+	return SOCK_IS_ERROR;
+
+    memset(&destination, 0, sizeof(destination));
+    destination.sin_family = AF_INET;
+    destination.sin_port = htons((unsigned short)port);
+    destination.sin_addr.s_addr = inet_addr(host);
+    if ((destination.sin_addr.s_addr & 0xFFFFFFFF) == 0xFFFFFFFF) {
+	errno = 0;
+	host_entry = sock_get_host_by_name(host);
+	if (host_entry == NULL)
+	    return sock_set_error(sock, errno, SOCK_CALL_GETHOSTBYNAME,
+				  __LINE__);
+	destination.sin_addr.s_addr =
+	    ((struct in_addr *)host_entry->h_addr_list[0])->s_addr;
+    }
+
+    status = connect(sock->fd, (struct sockaddr *)&destination,
+		     sizeof(destination));
+    if (status < 0 && errno != EINPROGRESS && errno != EWOULDBLOCK)
+	return sock_set_error(sock, errno, SOCK_CALL_CONNECT, __LINE__);
+
+    if (status < 0) {
+	FD_ZERO(&write_fds);
+	FD_SET(sock->fd, &write_fds);
+	timeout.tv_sec = timeout_seconds;
+	timeout.tv_usec = 0;
+	status = select(sock->fd + 1, NULL, &write_fds, NULL, &timeout);
+	if (status == 0) {
+	    errno = ETIMEDOUT;
+	    return sock_set_error(sock, errno, SOCK_CALL_CONNECT, __LINE__);
+	}
+	if (status < 0)
+	    return sock_set_error(sock, errno, SOCK_CALL_SELECT, __LINE__);
+	if (getsockopt(sock->fd, SOL_SOCKET, SO_ERROR,
+		       (void *)&socket_error, &error_size) < 0)
+	    return sock_set_error(sock, errno, SOCK_CALL_GETSOCKOPT,
+				  __LINE__);
+	if (socket_error != 0) {
+	    errno = socket_error;
+	    return sock_set_error(sock, errno, SOCK_CALL_CONNECT, __LINE__);
+	}
+    }
+
+    sock_flags_add(sock, SOCK_FLAG_CONNECT);
+    return SOCK_IS_OK;
+}
+
 int sock_open_udp(sock_t *sock, char *dotaddr, int port)
 {
     struct sockaddr_in	addr;

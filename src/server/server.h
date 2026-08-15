@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -387,9 +387,9 @@ void Main_loop(void);
  */
 void Contact_cleanup(void);
 int Contact_init(void);
-void Contact(int fd, void *arg);
 void Queue_kick(const char *nick);
-void Queue_loop(void);
+/** Process bounded TCP sessions waiting for admission or control replies. */
+void Session_poll(void);
 int Queue_advance_player(char *name, char *msg, size_t size);
 int Queue_show_list(char *msg, size_t size);
 void Set_deny_hosts(void);
@@ -397,11 +397,6 @@ void Set_deny_hosts(void);
 /*
  * Prototypes for metaserver.c
  */
-void Meta_send(char *mesg, size_t len);
-int Meta_from(char *addr, int port);
-void Meta_gone(void);
-void Meta_init(void);
-void Meta_update(bool change);
 void Meta_update_max_size_tuner(void);
 
 /*

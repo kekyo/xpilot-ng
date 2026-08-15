@@ -32,13 +32,8 @@
  * players logging in.  Therefore a new connection
  * passes through several states before it is actively
  * playing.
- * First we make a new connection structure available
- * with a new socket to listen on.  This socket port
- * number is told to the client via the pack mechanism.
- * In this state the client has to send a packet to this
- * newly created socket with its name and playing parameters.
- * If this succeeds the connection advances to its second state.
- * In this second state the essential server configuration
+ * The shared session listener admits a client and promotes the accepted
+ * stream into a connection structure.  The essential server configuration
  * like the map and so on is transmitted to the client.
  * If the client has acknowledged all this data then it
  * advances to the third state, which is the
@@ -68,7 +63,6 @@
  *
  * Gameplay communication uses TCP streams.  Each logical packet keeps the
  * former datagram payload and is prefixed with a two-byte payload length.
- * The UDP contact, discovery, and metaserver paths remain separate.
  *
  * The protocol's reliable-data packets and acknowledgements are retained for
  * compatibility with the existing state machine.  TCP already provides
@@ -80,7 +74,6 @@
 #include "xpserver.h"
 
 static int Init_setup(void);
-static int Handle_listening(connection_t *connp);
 static int Handle_setup(connection_t *connp);
 static int Handle_login(connection_t *connp, char *errmsg, size_t errsize);
 static void Handle_input(int fd, void *arg);
@@ -304,6 +297,11 @@ int Setup_net_server(void)
     return 0;
 }
 
+int Net_server_connection_limit(void)
+{
+    return max_connections;
+}
+
 static void Conn_set_state(connection_t *connp, int state, int drain_state)
 {
     static int num_conn_busy;
@@ -330,8 +328,6 @@ static void Conn_set_state(connection_t *connp, int state, int drain_state)
 	connp->timeout = LOGIN_TIMEOUT;
     else if (connp->state == CONN_SETUP)
 	connp->timeout = SETUP_TIMEOUT;
-    else if (connp->state == CONN_LISTENING)
-	connp->timeout = LISTEN_TIMEOUT;
     else if (connp->state == CONN_FREE) {
 	num_conn_busy--;
 	connp->timeout = IDLE_TIMEOUT;
@@ -403,79 +399,6 @@ void Destroy_connection(connection_t *connp, const char *reason)
 
     memset(connp, 0, sizeof(*connp));
 }
-
-int Check_connection(char *user, char *nick, char *dpy, char *addr)
-{
-    int i;
-    connection_t *connp;
-
-    for (i = 0; i < max_connections; i++) {
-	connp = &Conn[i];
-	if (connp->state == CONN_LISTENING) {
-	    if (strcasecmp(connp->nick, nick) == 0) {
-		if (!strcmp(user, connp->user)
-		    && !strcmp(dpy, connp->dpy)
-		    && !strcmp(addr, connp->addr))
-		    return connp->my_port;
-		return -1;
-	    }
-	}
-    }
-    return -1;
-}
-
-static void Create_client_socket(sock_t *sock, int *port)
-{
-    int i;
-
-    if (options.clientPortStart
-	&& (!options.clientPortEnd || options.clientPortEnd > 65535))
-	options.clientPortEnd = 65535;
-
-    if (options.clientPortEnd
-	&& (!options.clientPortStart || options.clientPortStart < 1024))
-	options.clientPortStart = 1024;
-
-    if (!options.clientPortStart || !options.clientPortEnd ||
-	(options.clientPortStart > options.clientPortEnd)) {
-
-	if (sock_open_tcp_listener(sock, serverAddr, 0, 1) == SOCK_IS_ERROR) {
-	    error("Cannot create TCP listener (%d)", sock->error.error);
-	    sock->fd = -1;
-	    return;
-        }
-    }
-    else {
-        for (i = options.clientPortStart; i <= options.clientPortEnd; i++) {
-	    if (sock_open_tcp_listener(sock, serverAddr, i, 1) != SOCK_IS_ERROR)
-		goto found;
-	}
-	error("Could not find a usable port in given port range");
-	sock->fd = -1;
-	return;
-    }
- found:
-    if ((*port = sock_get_port(sock)) == -1) {
-	error("Cannot get port from socket");
-	goto error;
-    }
-    if (sock_set_non_blocking(sock, 1) == -1) {
-	error("Cannot make client socket non-blocking");
-	goto error;
-    }
-    if (sock_set_receive_buffer_size(sock, SERVER_RECV_SIZE + 256) == -1)
-	error("Cannot set receive buffer size to %d", SERVER_RECV_SIZE + 256);
-
-    if (sock_set_send_buffer_size(sock, SERVER_SEND_SIZE + 256) == -1)
-	error("Cannot set send buffer size to %d", SERVER_SEND_SIZE + 256);
-
-    return;
- error:
-    sock_close(sock);
-    sock->fd = -1;
-    return;
-}
-
 
 #if 0
 /*
@@ -585,37 +508,43 @@ int CheckAllowed(char *user, char *nick, char *addr, char *host)
 
 
 /*
- * A client has requested a playing connection with this server.
- * See if we have room for one more player and if his name is not
- * already in use by some other player.  Because the confirmation
- * may get lost we are willing to send it another time if the
- * client connection is still in the CONN_LISTENING state.
+ * Register an admitted gameplay stream.  Session admission has already
+ * validated the peer and selected the protocol version.
  */
 
 extern int min_fd;
 
-int Setup_connection(char *user, char *nick, char *dpy, int team,
-		     char *addr, char *host, unsigned version)
+static void Record_connection_open(const sock_t *sock, const char *user,
+				   const char *nick, const char *dpy,
+				   int team, const char *addr,
+				   const char *host, unsigned version,
+				   int peer_port)
 {
-    int i, free_conn_index = max_connections, my_port;
+    *playback_ei++ = main_loops;
+    strcpy(playback_es, user);
+    while (*playback_es++);
+    strcpy(playback_es, nick);
+    while (*playback_es++);
+    strcpy(playback_es, dpy);
+    while (*playback_es++);
+    *playback_ei++ = team;
+    strcpy(playback_es, addr);
+    while (*playback_es++);
+    strcpy(playback_es, host);
+    while (*playback_es++);
+    *playback_ei++ = version;
+    *playback_ei++ = sock->fd - min_fd;
+    *playback_ei++ = peer_port;
+}
+
+int Setup_connection(sock_t *accepted, char *user, char *nick, char *dpy,
+		     int team, char *addr, char *host, unsigned version)
+{
+    int i;
+    int free_conn_index = max_connections;
+    int peer_port;
     sock_t sock;
     connection_t *connp;
-
-    if (rrecord) {
-	*playback_ei++ = main_loops;
-	strcpy(playback_es, user);
-	while (*playback_es++);
-	strcpy(playback_es, nick);
-	while (*playback_es++);
-	strcpy(playback_es, dpy);
-	while (*playback_es++);
-	*playback_ei++ = team;
-	strcpy(playback_es, addr);
-	while (*playback_es++);
-	strcpy(playback_es, host);
-	while (*playback_es++);
-	*playback_ei++ = version;
-    }
 
     for (i = 0; i < max_connections; i++) {
 	if (playback) {
@@ -630,22 +559,8 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
 		free_conn_index = i;
 	    continue;
 	}
-	if (strcasecmp(connp->nick, nick) == 0) {
-	    if (connp->state == CONN_LISTENING
-		&& strcmp(user, connp->user) == 0
-		&& strcmp(dpy, connp->dpy) == 0
-		&& version == connp->version)
-		/*
-		 * May happen for multi-homed hosts
-		 * and if previous packet got lost.
-		 */
-		return connp->my_port;
-	    else
-		/*
-		 * Nick already in use.
-		 */
-		return -1;
-	}
+	if (strcasecmp(connp->nick, nick) == 0)
+	    return -1;
     }
 
     if (free_conn_index >= max_connections) {
@@ -655,34 +570,32 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
     }
     connp = &Conn[free_conn_index];
 
-    if (!playback) {
-	Create_client_socket(&sock, &my_port);
-	if (rrecord) {
-	    *playback_ei++ = sock.fd - min_fd;
-	    *playback_ei++ = my_port;
-	}
-    } else {
+    if (playback) {
 	sock_init(&sock);
-	/* Playback has no listener to accept; recorded input represents the
-	 * already accepted TCP stream. */
+	/* Recorded reads model an already accepted TCP stream. */
 	sock.flags |= SOCK_FLAG_TCP | SOCK_FLAG_CONNECT;
 	sock.fd = *playback_ei++;
-	my_port = *playback_ei++;
+	peer_port = *playback_ei++;
+    } else {
+	if (accepted == NULL || accepted->fd == SOCK_FD_INVALID) {
+	    errno = EINVAL;
+	    return -1;
+	}
+	sock = *accepted;
+	accepted->fd = SOCK_FD_INVALID;
+	peer_port = sock_get_last_port(&sock);
     }
-    if (sock.fd == -1)
- 	return -1;
 
     Sockbuf_init(&connp->w, &sock, SERVER_SEND_SIZE,
 		 SOCKBUF_WRITE | SOCKBUF_FRAMED);
-
     Sockbuf_init(&connp->r, &sock, SERVER_RECV_SIZE,
 		 SOCKBUF_READ | SOCKBUF_FRAMED);
-
-    Sockbuf_init(&connp->c, (sock_t *) NULL, MAX_SOCKBUF_SIZE,
+    Sockbuf_init(&connp->c, NULL, MAX_SOCKBUF_SIZE,
 		 SOCKBUF_WRITE | SOCKBUF_READ | SOCKBUF_LOCK);
 
     connp->ind = free_conn_index;
-    connp->my_port = my_port;
+    connp->my_port = options.contactPort;
+    connp->his_port = peer_port;
     connp->user = xp_strdup(user);
     connp->nick = xp_strdup(nick);
     connp->dpy = xp_strdup(dpy);
@@ -693,9 +606,8 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
     connp->version = version;
     Feature_init(connp);
     connp->start = main_loops;
-    connp->magic = /*randomMT() +*/ my_port + sock.fd + team + main_loops;
+    connp->magic = options.contactPort + sock.fd + team + main_loops;
     connp->id = NO_ID;
-    connp->timeout = LISTEN_TIMEOUT;
     connp->last_key_change = 0;
     connp->reliable_offset = 0;
     connp->reliable_unsent = 0;
@@ -714,8 +626,9 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
     connp->debris_colors = 0;
     connp->spark_rand = DEF_SPARK_RAND;
     connp->last_mouse_pos = 0;
-    connp->rectype = rplayback ? 2-playback : 0;
-    Conn_set_state(connp, CONN_LISTENING, CONN_FREE);
+    connp->rectype = rplayback ? 2 - playback : 0;
+    Conn_set_state(connp, CONN_DRAIN, CONN_SETUP);
+
     if (connp->w.buf == NULL
 	|| connp->r.buf == NULL
 	|| connp->c.buf == NULL
@@ -723,147 +636,29 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
 	|| connp->nick == NULL
 	|| connp->dpy == NULL
 	|| connp->addr == NULL
-	|| connp->host == NULL
-	) {
+	|| connp->host == NULL) {
 	error("Not enough memory for connection");
-	/* socket is not yet connected, but it doesn't matter much. */
 	Destroy_connection(connp, "no memory");
 	return -1;
     }
 
+    if (rrecord)
+	Record_connection_open(&sock, user, nick, dpy, team, addr, host,
+			       version, peer_port);
+
     install_input(Handle_input, sock.fd, connp);
-
-    return my_port;
-}
-
-static int Accept_client_connection(connection_t *connp)
-{
-    int listener_fd = connp->w.sock.fd;
-    sock_t accepted;
-    char *peer_addr;
-
-    errno = 0;
-    if (sock_accept(&connp->w.sock, &accepted) == SOCK_IS_ERROR) {
-	if (errno == EWOULDBLOCK || errno == EAGAIN)
-	    return 0;
-	error("Cannot accept TCP gameplay connection (%d)", errno);
-	return -1;
-    }
-
-    peer_addr = sock_get_last_addr(&accepted);
-    if (strcmp(peer_addr, connp->addr) != 0) {
-	warn("Ignoring TCP gameplay connection from %s; expected %s",
-	     peer_addr, connp->addr);
-	sock_close(&accepted);
-	return 0;
-    }
-    connp->his_port = sock_get_last_port(&accepted);
-
-    if (sock_set_non_blocking(&accepted, 1) == SOCK_IS_ERROR
-	|| sock_set_tcp_nodelay(&accepted, 1) == SOCK_IS_ERROR) {
-	error("Cannot configure accepted TCP gameplay connection");
-	sock_close(&accepted);
-	return -1;
-    }
-    if (sock_set_receive_buffer_size(&accepted,
-				     SERVER_RECV_SIZE + 256) == SOCK_IS_ERROR)
-	error("Cannot set receive buffer size to %d", SERVER_RECV_SIZE + 256);
-    if (sock_set_send_buffer_size(&accepted,
-				  SERVER_SEND_SIZE + 256) == SOCK_IS_ERROR)
-	error("Cannot set send buffer size to %d", SERVER_SEND_SIZE + 256);
-
-    /* The recording scheduler identifies handlers by descriptor offset.
-     * Keep the listener descriptor so recorded and live handler indices stay
-     * identical after accept().  dup2() atomically closes the listener. */
-    if (accepted.fd != listener_fd) {
-	int accepted_fd = accepted.fd;
-
-	if (dup2(accepted_fd, listener_fd) == -1) {
-	    error("Cannot preserve TCP gameplay descriptor");
-	    sock_close(&accepted);
-	    return -1;
-	}
-	close(accepted_fd);
-	accepted.fd = listener_fd;
-    }
-
-    connp->w.sock = accepted;
-    connp->r.sock = accepted;
     xpprintf("%s TCP gameplay connection established on port %d.\n",
-	     showtime(), connp->my_port);
-    return 1;
-}
+	     showtime(), options.contactPort);
+    xpprintf("%s Welcome %s=%s@%s|%s (%s/%d) (version %04x)\n",
+	     showtime(), nick, user, host, dpy, addr, peer_port, version);
 
-/*
- * Accept and verify a connection that is in the listening state.
- */
-static int Handle_listening(connection_t *connp)
-{
-    unsigned char type;
-    int n;
-    char nick[MAX_CHARS], user[MAX_CHARS];
-
-    if (connp->state != CONN_LISTENING) {
-	Destroy_connection(connp, "not listening");
-	return -1;
-    }
-    if (BIT(connp->w.sock.flags, SOCK_FLAG_CONNECT) == 0) {
-	n = Accept_client_connection(connp);
-	if (n <= 0) {
-	    if (n < 0)
-		Destroy_connection(connp, "accept error");
-	    return n;
-	}
-    }
-
-    Sockbuf_clear(&connp->r);
-    errno = 0;
-    n = Sockbuf_readRec(&connp->r);
-    if (n <= 0) {
-	if (n == 0 || errno == EWOULDBLOCK || errno == EAGAIN)
-	    n = 0;
-	else
-	    Destroy_connection(connp, "read first packet error");
-	return n;
-    }
-    xpprintf("%s Welcome %s=%s@%s|%s (%s/%d)", showtime(),
-	     connp->nick, connp->user, connp->host, connp->dpy,
-	     connp->addr, connp->his_port);
-    xpprintf(" (version %04x)\n", connp->version);
-    if (connp->r.ptr[0] != PKT_VERIFY) {
-	Send_reply(connp, PKT_VERIFY, PKT_FAILURE);
-	Send_reliable(connp);
-	Destroy_connection(connp, "not connecting");
-	return -1;
-    }
-    if ((n = Packet_scanf(&connp->r, "%c%s%s",
-			  &type, user, nick)) <= 0) {
-	Send_reply(connp, PKT_VERIFY, PKT_FAILURE);
-	Send_reliable(connp);
-	Destroy_connection(connp, "verify incomplete");
-	return -1;
-    }
-    Fix_user_name(user);
-    Fix_nick_name(nick);
-    if (strcmp(user, connp->user) || strcmp(nick, connp->nick)) {
-	xpprintf("%s Client verified incorrectly (%s,%s)(%s,%s)\n",
-		 showtime(), user, nick, connp->user, connp->nick);
-	Send_reply(connp, PKT_VERIFY, PKT_FAILURE);
-	Send_reliable(connp);
-	Destroy_connection(connp, "verify incorrect");
-	return -1;
-    }
-    Sockbuf_clear(&connp->w);
-    if (Send_reply(connp, PKT_VERIFY, PKT_SUCCESS) == -1
-	|| Packet_printf(&connp->c, "%c%u", PKT_MAGIC, connp->magic) <= 0
-	|| Send_reliable(connp) <= 0) {
-	Destroy_connection(connp, "confirm failed");
+    if (Packet_printf(&connp->c, "%c%u", PKT_MAGIC, connp->magic) <= 0
+	|| Send_reliable(connp) < 0) {
+	Destroy_connection(connp, "session confirmation failed");
 	return -1;
     }
 
-    Conn_set_state(connp, CONN_DRAIN, CONN_SETUP);
-
-    return 1;	/* success! */
+    return 0;
 }
 
 /*
@@ -1302,10 +1097,7 @@ static void Handle_input(int fd, void *arg)
 	receive_tbl = &login_receive[0];
     else if (connp->state & (CONN_DRAIN | CONN_SETUP))
 	receive_tbl = &drain_receive[0];
-    else if (connp->state == CONN_LISTENING) {
-	Handle_listening(connp);
-	return;
-    } else {
+    else {
 	if (connp->state != CONN_FREE)
 	    Destroy_connection(connp, "not input");
 	return;
@@ -1447,8 +1239,6 @@ int Input(void)
     }
 
     if (num_logins | num_logouts) {
-	/* Tell the meta server */
-	Meta_update(true);
 	num_logins = 0;
 	num_logouts = 0;
     }

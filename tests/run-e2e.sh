@@ -44,8 +44,6 @@ for required_file in "$client" "$server" "$map"; do
 done
 
 runtime_dir=$(mktemp -d "${TMPDIR:-/tmp}/xpilot-sdl2-e2e.XXXXXX")
-meta_pid=
-meta_fixture_pid=
 server_pid=
 client_pid=
 window_id=
@@ -71,16 +69,14 @@ capture_window()
 cleanup()
 {
     cleanup_deadline=$(($(date +%s) + 5))
-    for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
-        "$server_pid"; do
+    for process_id in "$client_pid" "$server_pid"; do
         if test -n "$process_id" && kill -0 "$process_id" 2>/dev/null; then
             kill -TERM "$process_id" 2>/dev/null || true
         fi
     done
     while :; do
         cleanup_running=0
-        for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
-            "$server_pid"; do
+	for process_id in "$client_pid" "$server_pid"; do
             if test -n "$process_id" \
                 && kill -0 "$process_id" 2>/dev/null; then
                 cleanup_running=1
@@ -90,8 +86,7 @@ cleanup()
             break
         fi
         if test "$(date +%s)" -ge "$cleanup_deadline"; then
-            for process_id in "$client_pid" "$meta_pid" \
-                "$meta_fixture_pid" "$server_pid"; do
+	    for process_id in "$client_pid" "$server_pid"; do
                 if test -n "$process_id" \
                     && kill -0 "$process_id" 2>/dev/null; then
                     kill -KILL "$process_id" 2>/dev/null || true
@@ -101,8 +96,7 @@ cleanup()
         fi
         sleep 0.1
     done
-    for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
-        "$server_pid"; do
+    for process_id in "$client_pid" "$server_pid"; do
         if test -n "$process_id"; then
             wait "$process_id" 2>/dev/null || true
         fi
@@ -159,34 +153,6 @@ core_context_logged()
 {
     grep -Eq '^OpenGL context: .*, profile=core, attributes=[0-9]+\.[0-9]+$' \
         "$1" 2>/dev/null
-}
-
-meta_initialized()
-{
-    grep -q "SDL_ttf initialized" "$runtime_dir/meta.log" 2>/dev/null \
-        && core_context_logged "$runtime_dir/meta.log"
-}
-
-meta_ui_ready()
-{
-    if ! kill -0 "$meta_pid" 2>/dev/null; then
-        fail "client stopped before the metaserver UI was drawn"
-    fi
-    grep -q '^Metaserver UI ready: background=semantic, buttons=3/3, draws=4$' \
-        "$runtime_dir/meta.log" 2>/dev/null
-}
-
-meta_fixture_ready()
-{
-    if ! kill -0 "$meta_fixture_pid" 2>/dev/null; then
-        fail "local metaserver fixture stopped before listening"
-    fi
-    test -s "$runtime_dir/meta-fixture.port"
-}
-
-meta_fixture_served()
-{
-    test -s "$runtime_dir/meta-fixture.served"
 }
 
 server_ready()
@@ -291,116 +257,23 @@ printf 'xpilot.texturePath: %s:%s\n' \
     >"$runtime_dir/xpilotrc"
 export XPILOTRC="$runtime_dir/xpilotrc"
 
-node -e '
-const fs = require("fs");
-const net = require("net");
-const portFile = process.argv[1];
-const servedFile = process.argv[2];
-const response = Array.from({ length: 12 }, (_, index) => [
-  "4.7.3",
-  `fixture${index}.local`,
-  String(15000 + index),
-  String(index),
-  "fixture-map",
-  "100x100",
-  "test-author",
-  "ok",
-  "10",
-  "20",
-  "-",
-  "no",
-  "100",
-  "0",
-  "0",
-  `127.0.0.${index + 1}`,
-  "10",
-  "0",
-].join(":"))
-  .join("\n") + "\n";
-let responseSent = false;
-const server = net.createServer((socket) => {
-  fs.appendFileSync(servedFile, "served\n");
-  if (responseSent) {
-    socket.end();
-    return;
-  }
-  responseSent = true;
-  socket.end(response);
-});
-server.listen(0, "127.0.0.1", () => {
-  fs.writeFileSync(portFile, String(server.address().port));
-});
-const stop = () => server.close(() => process.exit(0));
-process.on("SIGTERM", stop);
-process.on("SIGINT", stop);
-' "$runtime_dir/meta-fixture.port" "$runtime_dir/meta-fixture.served" \
-    >"$runtime_dir/meta-fixture.log" 2>&1 &
-meta_fixture_pid=$!
-wait_until "local metaserver fixture" 10 meta_fixture_ready
-export XPILOT_META_HOST=127.0.0.1
-export XPILOT_META_HOST_TWO=127.0.0.1
-XPILOT_META_PORT=$(sed -n '1p' "$runtime_dir/meta-fixture.port")
-export XPILOT_META_PORT
-
-# With no arguments the SDL client takes the graphical metaserver path.  This
-# scenario requires a completed metaserver fetch so it exercises the actual
-# semantic background and button draw, presentation, and graceful teardown.
-"$client" >"$runtime_dir/meta.log" 2>&1 &
-meta_pid=$!
-window_owner_pid=$meta_pid
-wait_until "no-argument SDL initialization" 15 meta_initialized
-wait_until "metaserver text renderers" 10 \
-    grep -q '^Font text renderers ready: game=renderer map=renderer$' \
-        "$runtime_dir/meta.log"
-wait_until "semantic metaserver UI" 20 meta_ui_ready
-wait_until "local metaserver request" 5 meta_fixture_served
-find_game_window || fail "metaserver window was not visible"
-capture_window metaserver
-kill -0 "$meta_pid" 2>/dev/null \
-    || fail "metaserver client exited before Escape"
-meta_deadline=$(($(date +%s) + 20))
-meta_escape_sent=false
-while kill -0 "$meta_pid" 2>/dev/null \
-    && test "$(date +%s)" -lt "$meta_deadline"; do
-    if find_game_window \
-        && xdotool key --clearmodifiers --window "$window_id" Escape \
-            >/dev/null 2>&1; then
-        meta_escape_sent=true
-    fi
-    sleep 0.1
-done
-$meta_escape_sent || fail "could not send Escape to the metaserver UI"
-kill -0 "$meta_pid" 2>/dev/null \
-    && fail "metaserver UI did not close after Escape"
-finished_meta_pid=$meta_pid
-set +e
-wait "$meta_pid"
-meta_status=$?
-set -e
-meta_pid=
-window_id=
-if test "$meta_status" -ne 0; then
-    fail "metaserver client returned status $meta_status"
-fi
-wait_until "metaserver window teardown" 5 process_window_absent \
-    "$finished_meta_pid"
-
 port=$(node -e '
-const socket = require("dgram").createSocket("udp4");
-socket.bind(0, "127.0.0.1", () => {
-  process.stdout.write(String(socket.address().port));
-  socket.close();
+const net = require("net");
+const listener = net.createServer();
+listener.listen(0, "127.0.0.1", () => {
+  process.stdout.write(String(listener.address().port));
+  listener.close();
 });')
 
 recording="$runtime_dir/gameplay.rec"
-"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+"$server" -map "$map" -port "$port" -noQuit \
     -recordMode 1 -recordFile "$recording" \
     >"$runtime_dir/server.log" 2>&1 &
 server_pid=$!
 wait_until "local server readiness" 20 server_ready
 
-"$client" -geometry 800x600 -join -port "$port" -name SDL2Smoke \
-    127.0.0.1 >"$runtime_dir/client.log" 2>&1 &
+"$client" -geometry 800x600 -port "$port" -name SDL2Smoke \
+    >"$runtime_dir/client.log" 2>&1 &
 client_pid=$!
 window_owner_pid=$client_pid
 wait_until "SDL game window" 20 find_game_window
@@ -461,12 +334,13 @@ server_pid=
 test -s "$recording" || fail "server did not produce a gameplay recording"
 
 playback_port=$(node -e '
-const socket = require("dgram").createSocket("udp4");
-socket.bind(0, "127.0.0.1", () => {
-  process.stdout.write(String(socket.address().port));
-  socket.close();
+const net = require("net");
+const listener = net.createServer();
+listener.listen(0, "127.0.0.1", () => {
+  process.stdout.write(String(listener.address().port));
+  listener.close();
 });')
-"$server" -map "$map" -port "$playback_port" -noQuit +reportMeta \
+"$server" -map "$map" -port "$playback_port" -noQuit \
     -recordMode 2 -recordFile "$recording" \
     >"$runtime_dir/playback.log" 2>&1 &
 server_pid=$!

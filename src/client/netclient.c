@@ -364,89 +364,126 @@ int Net_setup(void)
     return 0;
 }
 
-/*
- * Send the first packet to the server with our name,
- * nick and display contained in it.
- * The server uses this data to verify that the stream
- * belongs to the right contact request, since it already has
- * this info from the ENTER_GAME_pack.
- */
-#define	MAX_VERIFY_RETRIES	5
-int Net_verify(char *user_name, char *nick_name, char *disp)
-{
-    int		n,
-		type,
-		result,
-		retries;
-    time_t	last;
+#define SESSION_OPEN_TIMEOUT 5
 
-    for (retries = 0;;) {
-	if (retries == 0 || time(NULL) - last >= 3) {
-	    if (retries++ >= MAX_VERIFY_RETRIES) {
-		warn("Can't connect to server after %d retries", retries);
-		return -1;
-	    }
-	    Sockbuf_clear(&wbuf);
-	    /* IFWINDOWS( Trace("Verifying to sock=%d\n", wbuf.sock) ); */
-	    n = Packet_printf(&wbuf, "%c%s%s%s", PKT_VERIFY,
-			      user_name, nick_name, disp);
-	    if (n <= 0 || Sockbuf_flush(&wbuf) <= 0) {
-		error("Can't send verify packet");
-		return -1;
-	    }
-	    time(&last);
-	    if (retries > 1) {
-		printf("Waiting for verify response\n");
-		IFWINDOWS( Progress("Waiting for verify response") );
-	    }
-	}
-	sock_set_timeout(&rbuf.sock, 1, 0);
-	if (sock_readable(&rbuf.sock) == 0)
-	    continue;
-	Sockbuf_clear(&rbuf);
-	if (Sockbuf_read(&rbuf) == -1) {
-	    error("Can't read verify reply packet");
-	    return -1;
-	}
-	if (rbuf.len <= 0)
-	    continue;
-	if (rbuf.ptr[0] != PKT_RELIABLE) {
-	    if (rbuf.ptr[0] == PKT_QUIT) {
-		warn("Server closed connection");
-		return -1;
-	    } else {
-		warn("Bad packet type when verifying (%d)", rbuf.ptr[0]);
-		return -1;
-	    }
-	}
-	if (Receive_reliable() == -1)
-	    return -1;
-	if (Sockbuf_flush(&wbuf) == -1)
-	    return -1;
-	if (cbuf.len == 0)
-	    continue;
-	if (Receive_reply(&type, &result) <= 0) {
-	    warn("Can't receive verify reply packet");
-	    return -1;
-	}
-	if (type != PKT_VERIFY) {
-	    warn("Verify wrong reply type (%d)", type);
-	    return -1;
-	}
-	if (result != PKT_SUCCESS) {
-	    warn("Verification failed (%d)", result);
-	    return -1;
-	}
-	if (Receive_magic() <= 0) {
-	    error("Can't receive magic packet after verify");
-	    return -1;
-	}
-	break;
+static double session_deadline;
+
+static int Wait_for_session_socket(bool writable)
+{
+    struct timeval now;
+    struct timeval timeout;
+    fd_set read_fds;
+    fd_set write_fds;
+    double remaining;
+    int status;
+
+    gettimeofday(&now, NULL);
+    remaining = session_deadline - timeval_to_seconds(&now);
+    if (remaining <= 0) {
+	errno = ETIMEDOUT;
+	return 0;
     }
-    if (retries > 1) {
-	printf("Verified correctly\n");
-	IFWINDOWS( Progress("Verified correctly") );
+    timeout = seconds_to_timeval(remaining);
+    FD_ZERO(&read_fds);
+    FD_ZERO(&write_fds);
+    if (writable)
+	FD_SET(wbuf.sock.fd, &write_fds);
+    else
+	FD_SET(rbuf.sock.fd, &read_fds);
+
+    do {
+	status = select(wbuf.sock.fd + 1,
+			writable ? NULL : &read_fds,
+			writable ? &write_fds : NULL, NULL, &timeout);
+    } while (status < 0 && errno == EINTR);
+    return status;
+}
+
+static int Flush_session_frame(void)
+{
+    while (wbuf.len > 0 || wbuf.frame_output_len > 0) {
+	if (Sockbuf_flush(&wbuf) < 0)
+	    return -1;
+	if (wbuf.len == 0 && wbuf.frame_output_len == 0)
+	    return 0;
+	if (Wait_for_session_socket(true) <= 0)
+	    return -1;
     }
+    return 0;
+}
+
+static int Read_session_frame(void)
+{
+    Sockbuf_clear(&rbuf);
+    for (;;) {
+	if (Wait_for_session_socket(false) <= 0)
+	    return -1;
+	if (Sockbuf_read(&rbuf) < 0)
+	    return -1;
+	if (rbuf.len > 0)
+	    return rbuf.len;
+    }
+}
+
+int Net_open_game_session(const char *user_name, const char *nick_name,
+			  const char *display_name, const char *host_name,
+			  int team, unsigned *selected_version)
+{
+    session_game_open_t request;
+    session_reply_t reply;
+
+    if (user_name == NULL || nick_name == NULL || display_name == NULL
+	|| host_name == NULL || selected_version == NULL) {
+	errno = EINVAL;
+	return -1;
+    }
+
+    memset(&request, 0, sizeof(request));
+    request.polygon_version = POLYGON_VERSION;
+    request.legacy_version = OLD_VERSION;
+    strlcpy(request.user, user_name, sizeof(request.user));
+    strlcpy(request.nick, nick_name, sizeof(request.nick));
+    strlcpy(request.display, display_name, sizeof(request.display));
+    strlcpy(request.host, host_name, sizeof(request.host));
+    request.team = team;
+
+    Sockbuf_clear(&wbuf);
+    if (Session_encode_game_open(&wbuf, &request) <= 0
+	|| Flush_session_frame() == -1) {
+	error("Can't send gameplay session request");
+	return -1;
+    }
+    if (Read_session_frame() == -1
+	|| Session_decode_reply(&rbuf, &reply) <= 0) {
+	error("Can't read gameplay session response");
+	return -1;
+    }
+    if (reply.status != SUCCESS) {
+	warn("Gameplay session rejected: %s", reply.reason);
+	return -1;
+    }
+    if (reply.selected_version != POLYGON_VERSION
+	&& reply.selected_version != OLD_VERSION) {
+	warn("Server selected unsupported protocol version %04x",
+	     reply.selected_version);
+	return -1;
+    }
+    *selected_version = reply.selected_version;
+
+    if (Read_session_frame() == -1) {
+	error("Can't read gameplay session confirmation");
+	return -1;
+    }
+    if (rbuf.ptr[0] != PKT_RELIABLE) {
+	warn("Bad packet type in session confirmation (%d)", rbuf.ptr[0]);
+	return -1;
+    }
+    if (Receive_reliable() == -1 || Sockbuf_flush(&wbuf) == -1
+	|| cbuf.len == 0 || Receive_magic() <= 0) {
+	error("Can't complete gameplay session confirmation");
+	return -1;
+    }
+    session_deadline = 0;
     return 0;
 }
 
@@ -464,8 +501,13 @@ int Net_init(char *server, int port)
     int			i;
     size_t		size;
     sock_t		sock;
+    struct timeval	started_at;
 
     assert(server != NULL);
+
+    gettimeofday(&started_at, NULL);
+    session_deadline = timeval_to_seconds(&started_at)
+	+ SESSION_OPEN_TIMEOUT;
 
 #ifndef _WINDOWS
     signal(SIGPIPE, SIG_IGN);
@@ -497,7 +539,8 @@ int Net_init(char *server, int port)
 	}
     }
 
-    if (sock_connect(&sock, server, port) == -1) {
+    if (sock_connect_with_timeout(&sock, server, port,
+				  SESSION_OPEN_TIMEOUT) == -1) {
 	error("Can't connect to server %s on port %d", server, port);
 	sock_close(&sock);
 	return -1;
@@ -508,10 +551,6 @@ int Net_init(char *server, int port)
 	return -1;
     }
     wbuf.sock = sock;
-    if (sock_set_non_blocking(&sock, 1) == -1) {
-	error("Can't make socket non-blocking");
-	return -1;
-    }
     if (sock_set_send_buffer_size(&sock, CLIENT_SEND_SIZE + 256) == -1)
 	error("Can't set send buffer size to %d", CLIENT_SEND_SIZE + 256);
 

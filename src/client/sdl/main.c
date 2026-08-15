@@ -21,8 +21,6 @@
 #include "xpclient_sdl.h"
 
 #include "sdlinit.h"
-#include "sdlmeta.h"
-
 static void Main_shutdown(void)
 {
     Net_cleanup();
@@ -46,8 +44,8 @@ const char *Program_name(void)
 
 int main(int argc, char *argv[])
 {
-    bool auto_shutdown = false;
-    int result;
+    const char *server_name;
+    char *server_address;
 
     init_error(argv[0]);
 
@@ -75,47 +73,46 @@ int main(int argc, char *argv[])
 	exit(1);
     }
 
-    if (xpArgs.text || xpArgs.auto_connect || argv[1]) {
-	if (!Contact_servers(argc - 1, &argv[1],
-			     xpArgs.auto_connect, xpArgs.list_servers,
-			     auto_shutdown, xpArgs.shutdown_reason,
-			     0, NULL, NULL, NULL, NULL,
-			     &connectParam))
-	    return 0;
-	if (Init_window()) {
-	    error("Could not initialize SDL, check your settings.");
-	    exit(1);
-	}
-    } else {
-	if (Init_window()) {
-	    error("Could not initialize SDL, check your settings.");
-	    exit(1);
-	}
-	while (1) {
-	    result = Meta_window(&connectParam);
-	    if (result < 0) return 0;
-	    if (result == 0) break;
-	}
+    if (argc > 2) {
+	error("Specify at most one server host.");
+	exit(1);
+    }
+    server_name = argc == 2 ? argv[1] : "127.0.0.1";
+    server_address = sock_get_addr_by_name(server_name);
+    if (server_address == NULL) {
+	error("Can't find the server '%s'.", server_name);
+	exit(1);
+    }
+    strlcpy(connectParam.server_name, server_name,
+	    sizeof(connectParam.server_name));
+    strlcpy(connectParam.server_addr, server_address,
+	    sizeof(connectParam.server_addr));
+    connectParam.login_port = connectParam.contact_port;
+
+    if (Init_window()) {
+	error("Could not initialize SDL, check your settings.");
+	exit(1);
     }
 
     /* If something goes wrong before Client_setup I'll leave the
      * cleanup to the OS because afaik Client_cleanup will clean
      * stuff initialized in Client_setup. */
 
-    if (Client_init(connectParam.server_name, connectParam.server_version)) {
-	error("failed to initialize client"); 
-	exit(1);
-    }
-
-    
     if (Net_init(connectParam.server_addr, connectParam.login_port)) {
 	error("failed to initialize networking"); 
 	exit(1);
     }
-    if (Net_verify(connectParam.user_name, 
-		   connectParam.nick_name, 
-		   connectParam.disp_name)) {
-	error("failed to verify networking"); 
+    if (Net_open_game_session(connectParam.user_name,
+			      connectParam.nick_name,
+			      connectParam.disp_name,
+			      connectParam.host_name,
+			      connectParam.team,
+			      &connectParam.server_version)) {
+	error("failed to open gameplay session");
+	exit(1);
+    }
+    if (Client_init(connectParam.server_name, connectParam.server_version)) {
+	error("failed to initialize client");
 	exit(1);
     }
     if (Net_setup()) {

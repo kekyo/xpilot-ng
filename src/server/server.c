@@ -4,11 +4,11 @@
  * Copyright (C) 2000-2004 by
  *
  *      Uoti Urpala          <uau@users.sourceforge.net>
- *      Kristian Söderblom   <kps@users.sourceforge.net>
+ *      Kristian SÃ¶derblom   <kps@users.sourceforge.net>
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -146,24 +146,20 @@ int main(int argc, char **argv)
 	serverAddr = xp_strdup(addr);
 	strlcpy(Server.host, options.serverHost, sizeof(Server.host));
     } else
-	sock_get_local_hostname(Server.host, sizeof Server.host,
-				(options.reportToMetaServer != 0 &&
-				 options.searchDomainForXPilot != 0));
+	sock_get_local_hostname(Server.host, sizeof Server.host, 0);
 
     Get_login_name(Server.owner, sizeof Server.owner);
 
     /* Log, if enabled. */
     Log_game("START");
 
-    if (!Contact_init())
-	End_game();
-
-    Meta_init();
-
     Timing_setup();
     Check_playerlimit();
 
     if (Setup_net_server() == -1)
+	End_game();
+
+    if (!Contact_init())
 	End_game();
 
 #ifndef _WINDOWS
@@ -222,9 +218,6 @@ void Main_loop(void)
 
     main_loops++;
 
-    if ((main_loops & 0x3F) == 0)
-	Meta_update(false);
-
     /*
      * Check for possible shutdown, the server will
      * shutdown when ShutdownServer (a counter) reaches 0.
@@ -261,8 +254,7 @@ void Main_loop(void)
 
     if (!options.NoQuit
 	&& NumPlayers == NumRobots + NumPseudoPlayers
-	&& !login_in_progress
-	&& !NumQueuedPlayers) {
+	&& !login_in_progress) {
 
 	if (!NoPlayersEnteredYet)
 	    End_game();
@@ -275,7 +267,7 @@ void Main_loop(void)
     }
 
     playback = record = 0;
-    Queue_loop();
+    Session_poll();
     playback = rplayback;
     record = rrecord;
 
@@ -296,7 +288,7 @@ void Main_loop(void)
 	playback_ei++;
 	i = *playback_ei++;
 	j = *playback_ei++;
-	Setup_connection(a, b, c, i, d, e, j);
+	Setup_connection(NULL, a, b, c, i, d, e, j);
     }
 
     gettimeofday(&tv2, NULL);
@@ -349,9 +341,6 @@ void End_game(void)
 	options.recordMode = 0;
 	Init_recording();
     }
-
-    /* Tell meta server that we are gone. */
-    Meta_gone();
 
     Contact_cleanup();
 
@@ -854,4 +843,3 @@ void Hitmasks_init(void)
     Target_init();
     Team_immunity_init();
 }
-

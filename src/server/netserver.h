@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -32,11 +32,30 @@
 #endif
 
 int Setup_net_server(void);
+/**
+ * Return the number of gameplay connection slots allocated by the server.
+ *
+ * @return Nonnegative gameplay connection capacity.
+ */
+int Net_server_connection_limit(void);
 void Conn_change_nick(connection_t *connp, const char *nick);
 void Destroy_connection(connection_t *connp, const char *reason);
 int Check_connection(char *real, char *nick, char *dpy, char *addr);
-int Setup_connection(char *real, char *nick, char *dpy, int team,
-		     char *addr, char *host, unsigned version);
+/**
+ * Promote an accepted TCP stream to a gameplay connection.
+ *
+ * @param accepted Accepted stream, or NULL while replaying a recording.
+ * @param real User identity supplied by the client.
+ * @param nick Requested player nickname.
+ * @param dpy Client display identifier.
+ * @param team Selected team or TEAM_NOT_SET.
+ * @param addr Numeric peer address.
+ * @param host Client-reported host identifier.
+ * @param version Protocol version selected for the current map.
+ * @return Zero on success, or -1 when no connection can be created.
+ */
+int Setup_connection(sock_t *accepted, char *real, char *nick, char *dpy,
+		     int team, char *addr, char *host, unsigned version);
 int Input(void);
 int Send_reply(connection_t *connp, int replyto, int result);
 int Send_self(connection_t *connp, player_t *pl,

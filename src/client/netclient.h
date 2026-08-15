@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -62,7 +62,20 @@ extern long last_keyboard_ack;
 extern bool dirPrediction;
 
 int Net_setup(void);
-int Net_verify(char *real, char *nick, char *dpy);
+/**
+ * Admit the connected stream as a gameplay session.
+ *
+ * @param real User identity sent to the server.
+ * @param nick Requested player nickname.
+ * @param dpy Client display identifier.
+ * @param host Client host identifier.
+ * @param team Requested team or TEAM_NOT_SET.
+ * @param selected_version Receives the protocol selected by the server.
+ * @return Zero on success, or -1 on rejection or transport failure.
+ */
+int Net_open_game_session(const char *real, const char *nick,
+			  const char *dpy, const char *host, int team,
+			  unsigned *selected_version);
 int Net_init(char *server, int port);
 void Net_cleanup(void);
 void Net_key_change(void);
