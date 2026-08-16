@@ -292,6 +292,10 @@ void Gui_paint_fuel(int x, int y, double fuel)
 
     Image_paint(IMG_FUELCELL, x, y, 0, fuelColorRGBA);
 
+    /* A station with no visible fill has no fuel sprite to draw. */
+    if (size <= 0)
+	return;
+
     area.x = 0;
     area.y = (int)((BLOCK_SZ - 2 * FUEL_BORDER)
 		   * (1 - fuel / MAX_STATION_FUEL));
