@@ -115,6 +115,15 @@ typedef struct FakeImage {
     int color;
 } FakeImage;
 
+typedef struct FakeImageArea {
+    int index;
+    int x;
+    int y;
+    int frame;
+    irec_t area;
+    int color;
+} FakeImageArea;
+
 typedef struct FakeMapText {
     font_data *font;
     int color;
@@ -147,9 +156,11 @@ static FakeStroke strokes[MAX_STROKES];
 static FakeStippledStroke stippled_strokes[MAX_STIPPLED_STROKES];
 static FakeText last_text;
 static FakeImage last_image;
+static FakeImageArea last_image_area;
 static FakeMapText last_map_text;
 static FakeHudText last_hud_text;
 static image_t fake_asteroid_image;
+static image_t fake_fuel_image;
 static char last_measured_text[50];
 static int event_count;
 static int operation_result_pending;
@@ -168,6 +179,7 @@ static int transform_attempts;
 static int scissor_attempts;
 static int text_attempts;
 static int image_attempts;
+static int image_area_attempts;
 static int image_lookup_attempts;
 static int map_text_attempts;
 static int measure_attempts;
@@ -569,9 +581,11 @@ static void reset_frame(void)
     memset(stippled_strokes, 0, sizeof(stippled_strokes));
     memset(&last_text, 0, sizeof(last_text));
     memset(&last_image, 0, sizeof(last_image));
+    memset(&last_image_area, 0, sizeof(last_image_area));
     memset(&last_map_text, 0, sizeof(last_map_text));
     memset(&last_hud_text, 0, sizeof(last_hud_text));
     memset(&fake_asteroid_image, 0, sizeof(fake_asteroid_image));
+    memset(&fake_fuel_image, 0, sizeof(fake_fuel_image));
     memset(last_measured_text, 0, sizeof(last_measured_text));
     memset(&gamefont, 0, sizeof(gamefont));
     memset(&mapfont, 0, sizeof(mapfont));
@@ -598,6 +612,7 @@ static void reset_frame(void)
     scissor_attempts = 0;
     text_attempts = 0;
     image_attempts = 0;
+    image_area_attempts = 0;
     image_lookup_attempts = 0;
     map_text_attempts = 0;
     measure_attempts = 0;
@@ -688,6 +703,7 @@ static void reset_frame(void)
     fuelNotify = 100.0;
     loopsSlow = 0;
     loops = 0;
+    fake_fuel_image.num_frames = 16;
     num_polygon_styles = 0;
     max_polygon_styles = NELEM(fake_polygon_styles);
     Sdlgui_test_set_textured_balls(0);
@@ -1039,7 +1055,35 @@ void Image_paint(int index, int x, int y, int frame, int color)
 image_t *Image_get(int index)
 {
     image_lookup_attempts++;
-    return index == IMG_ASTEROID ? &fake_asteroid_image : NULL;
+    if (index == IMG_ASTEROID)
+        return &fake_asteroid_image;
+    if (index == IMG_FUEL)
+        return &fake_fuel_image;
+    return NULL;
+}
+
+void Image_paint_area(int index, int x, int y, int frame,
+                      irec_t *area, int color)
+{
+    RendererStatus status = Sdl_renderer_track_frame_result(
+        &fake_sdl_renderer, RENDERER_STATUS_OK);
+
+    if (status != RENDERER_STATUS_OK)
+        return;
+    image_attempts++;
+    image_area_attempts++;
+    record_event(PAINT_EVENT_IMAGE);
+    last_image_area.index = index;
+    last_image_area.x = x;
+    last_image_area.y = y;
+    last_image_area.frame = frame;
+    if (area != NULL)
+        last_image_area.area = *area;
+    last_image_area.color = color;
+    operation_result_pending++;
+    status = area != NULL && area->w > 0 && area->h > 0
+        ? image_result : RENDERER_STATUS_INVALID_ARGUMENT;
+    (void)Sdl_renderer_track_frame_result(&fake_sdl_renderer, status);
 }
 
 void Image_paint_hud(int index, int x, int y, int frame, int color)
@@ -3757,6 +3801,56 @@ static int check_world_wall_paths_and_fuel_precedence(void)
         0, closed_line, 2, color, 0, RENDERER_BLEND_ALPHA, 71);
 }
 
+static int check_empty_and_filled_fuel_station_images(void)
+{
+    const uint32_t color = UINT32_C(0x12345678);
+
+    reset_frame();
+    fuelColorRGBA = color;
+
+    Gui_paint_fuel(100, 200, 0.0);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(image_lookup_attempts == 1);
+    TEST_CHECK(image_attempts == 1);
+    TEST_CHECK(image_area_attempts == 0);
+    TEST_CHECK(event_count == 1);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(last_image.index == IMG_FUELCELL);
+    TEST_CHECK(last_image.x == 100);
+    TEST_CHECK(last_image.y == 200);
+    TEST_CHECK(last_image.frame == 0);
+    TEST_CHECK(last_image.color == (int)color);
+
+    reset_frame();
+    fuelColorRGBA = color;
+
+    Gui_paint_fuel(100, 200, MAX_STATION_FUEL);
+
+    TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
+    TEST_CHECK(image_lookup_attempts == 1);
+    TEST_CHECK(image_attempts == 2);
+    TEST_CHECK(image_area_attempts == 1);
+    TEST_CHECK(event_count == 2);
+    TEST_CHECK(events[0] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(events[1] == PAINT_EVENT_IMAGE);
+    TEST_CHECK(last_image.index == IMG_FUELCELL);
+    TEST_CHECK(last_image.x == 100);
+    TEST_CHECK(last_image.y == 200);
+    TEST_CHECK(last_image.frame == 0);
+    TEST_CHECK(last_image.color == (int)color);
+    TEST_CHECK(last_image_area.index == IMG_FUEL);
+    TEST_CHECK(last_image_area.x == 103);
+    TEST_CHECK(last_image_area.y == 203);
+    TEST_CHECK(last_image_area.frame == 4);
+    TEST_CHECK(last_image_area.area.x == 0);
+    TEST_CHECK(last_image_area.area.y == 0);
+    TEST_CHECK(last_image_area.area.w == 29);
+    TEST_CHECK(last_image_area.area.h == 29);
+    TEST_CHECK(last_image_area.color == (int)color);
+    return 0;
+}
+
 static int check_world_stippled_lines_are_semantic(void)
 {
     static const float points[][2] = {
@@ -5768,6 +5862,8 @@ int main(void)
     if (check_world_border_rectangles_are_semantic() != 0)
         return 1;
     if (check_world_wall_paths_and_fuel_precedence() != 0)
+        return 1;
+    if (check_empty_and_filled_fuel_station_images() != 0)
         return 1;
     if (check_world_stippled_lines_are_semantic() != 0)
         return 1;
