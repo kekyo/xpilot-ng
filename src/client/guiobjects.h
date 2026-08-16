@@ -32,12 +32,66 @@ void Gui_paint_ball_connector(int x_1, int y_1, int x_2, int y_2);
 
 void Gui_paint_mine(int x, int y, int teammine, char *name);
 
+/**
+ * Begin a contiguous group of spark particles.
+ *
+ * @remarks Always pair this call with Gui_paint_sparks_end(), including when
+ *          no spark is appended. Backends may combine the group while
+ *          retaining traversal order.
+ */
+void Gui_paint_sparks_begin(void);
+/**
+ * Paint one spark particle.
+ *
+ * @param color Client spark color selector in the range 0 through 7.
+ * @param x Horizontal screen-relative coordinate.
+ * @param y Vertical screen-relative coordinate with an upward-positive axis.
+ *
+ * @remarks A standalone call is valid. Calls bracketed by
+ *          Gui_paint_sparks_begin() and Gui_paint_sparks_end() belong to one
+ *          contiguous traversal group.
+ */
 void Gui_paint_spark(int color, int x, int y);
+/** End and submit a group begun by Gui_paint_sparks_begin(). */
+void Gui_paint_sparks_end(void);
 
+/**
+ * Paint a wreckage outline.
+ *
+ * @param x Horizontal center coordinate.
+ * @param y Vertical center coordinate.
+ * @param deadly Whether the wreckage is deadly.
+ * @param wtype Wreckage shape index in the range [0, NUM_WRECKAGE_SHAPES).
+ * @param rot Rotation lookup-table index in the range [0, RES).
+ * @param size Scale value in the range [0, 255].
+ */
 void Gui_paint_wreck(int x, int y, bool deadly, int wtype, int rot, int size);
 
+/**
+ * Begin a contiguous group of asteroids.
+ *
+ * @remarks Pair this call with Gui_paint_asteroids_end(), including when the
+ *          group is empty.
+ */
 void Gui_paint_asteroids_begin(void);
+/** Finish the current asteroid group. */
 void Gui_paint_asteroids_end(void);
+
+/**
+ * Append one asteroid to the current asteroid group.
+ *
+ * @param x Horizontal center in the current world coordinate space.
+ * @param y Vertical center in the current world coordinate space.
+ * @param type Axis selector in the range 0 through 255; its low three bits
+ *        select the signed rotation axis.
+ * @param rot Rotation phase in the range 0 through 255, reduced modulo
+ *        TABLE_SIZE.
+ * @param size Scale selector in the range 0 through 255; zero contributes no
+ *        geometry.
+ *
+ * @remarks Call this function only between Gui_paint_asteroids_begin() and
+ *          Gui_paint_asteroids_end().
+ */
 void Gui_paint_asteroid(int x, int y, int type, int rot, int size);
 
 void Gui_paint_fastshot(int color, int x, int y);
@@ -48,12 +102,51 @@ void Gui_paint_missiles_begin(void);
 void Gui_paint_missiles_end(void);
 void Gui_paint_missile(int x, int y, int len, int dir);
 
+/**
+ * Prepare to paint a contiguous group of lasers.
+ *
+ * @remarks Always pair this call with Gui_paint_lasers_end(), including when
+ * no laser is appended.
+ */
 void Gui_paint_lasers_begin(void);
+/**
+ * Finish the current laser group and restore backend drawing state.
+ *
+ * @remarks Call exactly once after each Gui_paint_lasers_begin().
+ */
 void Gui_paint_lasers_end(void);
+/**
+ * Append one backend-specific laser to the current laser group.
+ *
+ * @param color Client color selector.
+ * @param x_1 Horizontal start coordinate.
+ * @param y_1 Vertical start coordinate.
+ * @param len Laser length.
+ * @param dir Direction lookup-table index.
+ *
+ * @remarks Gui_paint_lasers_begin() must have been called. The caller must
+ * provide @p dir in the range [0, TABLE_SIZE).
+ */
 void Gui_paint_laser(int color, int x_1, int y_1, int len, int dir);
 
 void Gui_paint_paused(int x, int y, int count);
+/** Begin a contiguous group of appearing indicators. */
+void Gui_paint_appearing_begin(void);
+/**
+ * Paint one appearing indicator.
+ *
+ * @param x Horizontal center in world coordinates.
+ * @param y Vertical center in world coordinates.
+ * @param id Player identifier used to select the indicator color.
+ * @param count Appearance progress value; nonnegative values are not clamped.
+ *
+ * @remarks A standalone call is valid. Calls bracketed by
+ *          Gui_paint_appearing_begin() and Gui_paint_appearing_end() may be
+ *          combined by the backend while retaining their traversal order.
+ */
 void Gui_paint_appearing(int x, int y, int id, int count);
+/** End and submit a group begun by Gui_paint_appearing_begin(). */
+void Gui_paint_appearing_end(void);
 
 void Gui_paint_ecm(int x, int y, int size);
 
@@ -68,10 +161,22 @@ void Gui_paint_all_connectors_begin(void);
 void Gui_paint_ships_begin(void);
 void Gui_paint_ships_end(void);
 
+/**
+ * Paint one ship and its requested status indicators.
+ *
+ * @param x Horizontal center in world coordinates.
+ * @param y Vertical center in world coordinates.
+ * @param dir Direction lookup-table index in the range [0, RES).
+ * @param id Player identifier used to select the ship appearance.
+ * @param cloak Nonzero when the ship is cloaked.
+ * @param phased Nonzero when the ship is phased.
+ * @param shield Nonzero when the shield is active.
+ * @param deflector Nonzero when the deflector is active.
+ * @param eshield Nonzero when the emergency shield is active.
+ */
 void Gui_paint_ship(int x, int y, int dir, int id, int cloak, int phased,
 		    int shield, int deflector, int eshield);
 
 void Store_guiobject_options(void);
 
 #endif
-

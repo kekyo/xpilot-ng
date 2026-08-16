@@ -29,7 +29,7 @@
 # include "begin_code.h"
 #endif
 #ifdef MACOSX_FRAMEWORKS
-# include <SDL/begin_code.h>
+# include <SDL2/begin_code.h>
 #endif
 
 /*! Number of visible characters in a line. Lines in the history, the commandline, or CON_Out strings cannot be longer
@@ -71,7 +71,6 @@ extern "C" {
 	/*! This is a struct for each consoles data */
 	typedef struct console_information_td {
 		int Visible;						/*! enum that tells which visible state we are in CON_CLOSED, CON_OPEN, CON_CLOSING, CON_OPENING */
-		int WasUnicode;						/*! stores the UNICODE value before the console was shown. On Hide() the UNICODE value is restored. */
 		int RaiseOffset;					/*! Offset used in show/hide animation */
 		int HideKey;						/*! the key that can hide the console */
 		char **ConsoleLines;				/*! List of all the past lines */
@@ -104,6 +103,7 @@ extern "C" {
 
 		int FontHeight;						/*! The height of the font used in the console */
 		int FontWidth;						/*! The width of the font used in the console (Remark that the console needs FIXED width fonts!!) */
+		SDL_Keymod TextInputModifiers;			/*! Modifiers tracked while SDL text input is active. */
 	} ConsoleInformation;
 
 	/*! Takes keys from the keyboard and inputs them to the console if the console isVisible().
@@ -128,7 +128,7 @@ extern "C" {
 		@param lines The total number of lines in the history
 		@param rect Position and size of the new console */
 	extern DECLSPEC ConsoleInformation* SDLCALL CON_Init(const char *FontName, SDL_Surface *DisplayScreen, int lines, SDL_Rect rect);
-	/*! Frees DT_DrawText and calls CON_Free */
+	/*! Frees the console's bitmap font and calls CON_Free */
 	extern DECLSPEC void SDLCALL CON_Destroy(ConsoleInformation *console);
 	/*! Frees all the memory loaded by the console */
 	extern DECLSPEC void SDLCALL CON_Free(ConsoleInformation *console);
@@ -140,14 +140,15 @@ extern "C" {
 	/*! Internal: Sets the alpha channel of an SDL_Surface to the specified value.
 		Preconditions: the surface in question is RGBA. 0 <= a <= 255, where 0 is transparent and 255 opaque */
 	extern DECLSPEC void SDLCALL CON_AlphaGL(SDL_Surface *s, int alpha);
-	/*! Sets a background image for the console */
+	/*! Sets a background image for the console. Passing NULL removes the current image.
+		The previous background remains active if preparing the replacement fails. */
 	extern DECLSPEC int SDLCALL CON_Background(ConsoleInformation *console, const char *image, int x, int y);
 	/*! Changes current position of the console to the new given coordinates */
 	extern DECLSPEC void SDLCALL CON_Position(ConsoleInformation *console, int x, int y);
-	/*! Changes the size of the console */
+	/*! Changes the size of the console. The previous surfaces remain active if resizing fails. */
 	extern DECLSPEC int SDLCALL CON_Resize(ConsoleInformation *console, SDL_Rect rect);
 	/*! Beams a console to another screen surface. Needed if you want to make a Video restart in your program. This
-		function first changes the OutputScreen Pointer then calls CON_Resize to adjust the new size. ***Will disappear in the next major release. Instead
+		function changes the OutputScreen pointer only after the replacement surfaces are ready. ***Will disappear in the next major release. Instead
 		i will introduce a new function called CON_ReInit or something that adjusts the internal parameters etc *** */
 	extern DECLSPEC int SDLCALL CON_Transfer(ConsoleInformation* console, SDL_Surface* new_outputscreen, SDL_Rect rect);
 	/*! Give focus to a console. Make it the "topmost" console. This console will receive events
@@ -205,11 +206,11 @@ extern "C" {
 	extern DECLSPEC void SDLCALL Cursor_Del(ConsoleInformation *console);
 	/*! Internal: Called if you press BACKSPACE (deletes character left of cursor) */
 	extern DECLSPEC void SDLCALL Cursor_BSpace(ConsoleInformation *console);
-	/*! Internal: Called if you type in a character (add the char to the command) */
-	extern DECLSPEC void SDLCALL Cursor_Add(ConsoleInformation *console, SDL_Event *event);
+	/*! Internal: append one printable ASCII character to the command. */
+	extern DECLSPEC void SDLCALL Cursor_Add(ConsoleInformation *console, char character);
     	
 	/* add string to commandline */
-	extern DECLSPEC void SDLCALL Add_String_to_Console(char *text);
+	extern DECLSPEC void SDLCALL Add_String_to_Console(const char *text);
     	
 	/*! Internal: Called if you press Ctrl-C (deletes the commandline) */
 	extern DECLSPEC void SDLCALL Clear_Command(ConsoleInformation *console);
@@ -232,7 +233,7 @@ extern "C" {
 # include "close_code.h"
 #endif
 #ifdef MACOSX_FRAMEWORKS
-# include <SDL/close_code.h>
+# include <SDL2/close_code.h>
 #endif
 
 #endif /* SDL_CONSOLE_H */

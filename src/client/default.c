@@ -158,11 +158,14 @@ static bool Set_team(xp_option_t *opt, int value)
 
 static bool Set_texturePath(xp_option_t *opt, const char *value)
 {
+    char *newTexturePath = xp_safe_strdup(value);
+    char *newRealTexturePath = xp_safe_strdup(value);
+
     UNUSED_PARAM(opt);
     XFREE(texturePath);
-    texturePath = xp_safe_strdup(value);
-    if (realTexturePath == NULL) 
-	realTexturePath = xp_safe_strdup(value);
+    XFREE(realTexturePath);
+    texturePath = newTexturePath;
+    realTexturePath = newRealTexturePath;
     return true;
 }
 static const char *Get_texturePath(xp_option_t *opt)

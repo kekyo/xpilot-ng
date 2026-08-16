@@ -1,7 +1,7 @@
 /*
  * XPilotNG/SDL, an SDL/OpenGL XPilot client.
  *
- * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,27 +22,45 @@
 
 extern int Process_event(SDL_Event *evt);
 
+static int Poll_input(void)
+{
+    SDL_Event evt;
+
+    while (SDL_PollEvent(&evt)) {
+	if (Process_event(&evt) == 0)
+	    return 1;
+    }
+    return 0;
+}
+
 void Game_loop(void)
 {
     fd_set rfds;
-    int n, netfd;
+    int n, netfd, result;
     struct timeval tv;
-    SDL_Event evt;
+
+    if ((result = Net_input()) == -1) {
+	error("Bad server input");
+	return;
+    }
+    if (Poll_input())
+	return;
+
+    if (Net_flush() == -1)
+	return;
 
     if ((netfd = Net_fd()) == -1) {
-        error("Bad net fd");
-        return;
+	error("Bad socket filedescriptor");
+	return;
     }
+    Net_key_change();
 
     while (1) {
-        FD_ZERO(&rfds);
-        FD_SET(netfd, &rfds);
-        tv.tv_sec = 0;
-        tv.tv_usec = 5000; /* wait max 5 ms */
+	FD_ZERO(&rfds);
+	FD_SET(netfd, &rfds);
+	tv.tv_sec = 0;
+	tv.tv_usec = 5000; /* wait max 5 ms */
 
-	/*
-	 * don't bother about return value, since we wait only 5 ms anyway
-	 */
 	if (maxMouseTurnsPS > 0)
 	    Client_check_pointer_move_interval();
 
@@ -53,14 +71,18 @@ void Game_loop(void)
 	    error("Select failed");
 	    return;
         }
-	if (n > 0) {
-	    if (Net_input() == -1) {
+	if (n > 0 || result > 1) {
+	    result = Net_input();
+	    if (result == -1) {
 		warn("Bad net input.  Have a nice day!");
 		return;
 	    }
 	}
-	while (SDL_PollEvent(&evt)) 
-	    Process_event(&evt);
+	if (Poll_input())
+	    return;
+	if (Net_flush() == -1) {
+	    error("Bad net flush");
+	    return;
+	}
     }
 }
-

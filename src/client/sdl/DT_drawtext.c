@@ -1,7 +1,7 @@
 /*
  * XPilotNG/SDL, an SDL/OpenGL XPilot client.
  *
- * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@
 
 /*  DT_drawtext.c
  *  Written By: Garrett Banuk <mongoose@mongeese.org>
- *  Modified for xpilot: Juha Lindström <juhal@users.sourceforge.net>
+ *  Modified for xpilot: Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  */
 
 #include "xpclient_sdl.h"
@@ -69,13 +69,13 @@ int DT_LoadFont(const char *BitmapName, int flags) {
 
 
 	while(*CurrentFont) {
+		FontNumber = (*CurrentFont)->FontNumber + 1;
 		CurrentFont = &((*CurrentFont)->NextFont);
-		FontNumber++;
 	}
 
 	/* load the font bitmap */
 
-#ifdef HAVE_SDLIMAGE
+#ifdef HAVE_SDL_IMAGE
 	Temp = IMG_Load(BitmapName);
 #else
 	Temp = SDL_LoadBMP(BitmapName);
@@ -89,12 +89,25 @@ int DT_LoadFont(const char *BitmapName, int flags) {
 
 	/* Add a font to the list */
 	*CurrentFont = (BitFont *) malloc(sizeof(BitFont));
+	if (*CurrentFont == NULL) {
+		PRINT_ERROR("Could not allocate a font");
+		SDL_FreeSurface(Temp);
+		return -1;
+	}
 
-	(*CurrentFont)->FontSurface = SDL_DisplayFormat(Temp);
-	SDL_FreeSurface(Temp);
+	/* SDL2 has no implicit display surface for OpenGL windows.  Keep the
+	 * loaded surface; SDL_BlitSurface converts it to the destination format. */
+	(*CurrentFont)->FontSurface = Temp;
 
 	(*CurrentFont)->CharWidth = (*CurrentFont)->FontSurface->w / 256;
 	(*CurrentFont)->CharHeight = (*CurrentFont)->FontSurface->h;
+	if ((*CurrentFont)->CharWidth <= 0 || (*CurrentFont)->CharHeight <= 0) {
+		PRINT_ERROR("Font bitmap must contain 256 non-empty glyph cells");
+		SDL_FreeSurface((*CurrentFont)->FontSurface);
+		free(*CurrentFont);
+		*CurrentFont = NULL;
+		return -1;
+	}
 	(*CurrentFont)->FontNumber = FontNumber;
 	(*CurrentFont)->NextFont = NULL;
 
@@ -104,9 +117,36 @@ int DT_LoadFont(const char *BitmapName, int flags) {
 	 * as transparent.
 	 */
 	if(flags & TRANS_FONT) {
-	    SDL_SetColorKey((*CurrentFont)->FontSurface, SDL_SRCCOLORKEY | SDL_RLEACCEL, SDL_MapRGB((*CurrentFont)->FontSurface->format, 255, 0, 255));
+	    if (SDL_SetColorKey((*CurrentFont)->FontSurface, SDL_TRUE,
+				SDL_MapRGB((*CurrentFont)->FontSurface->format,
+					   255, 0, 255)) < 0
+		|| SDL_SetSurfaceRLE((*CurrentFont)->FontSurface, SDL_TRUE) < 0) {
+		PRINT_ERROR(SDL_GetError());
+		SDL_FreeSurface((*CurrentFont)->FontSurface);
+		free(*CurrentFont);
+		*CurrentFont = NULL;
+		return -1;
+	    }
 	}
 	return FontNumber;
+}
+
+int DT_UnloadFont(int FontNumber) {
+	BitFont **CurrentFont = &BitFonts;
+	BitFont *font;
+
+	while (*CurrentFont) {
+		if ((*CurrentFont)->FontNumber == FontNumber) {
+			font = *CurrentFont;
+			*CurrentFont = font->NextFont;
+			SDL_FreeSurface(font->FontSurface);
+			free(font);
+			return 0;
+		}
+		CurrentFont = &((*CurrentFont)->NextFont);
+	}
+
+	return -1;
 }
 
 /* Takes the font type, coords, and text to draw to the surface*/
@@ -207,5 +247,3 @@ void DT_DestroyDrawText(void) {
 
 	BitFonts = NULL;
 }
-
-

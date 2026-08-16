@@ -1,7 +1,7 @@
 /*
  * XPilotNG/SDL, an SDL/OpenGL XPilot client. Copyright (C) 2003-2004 by 
  *
- *     Juha Lindström <juhal@users.sourceforge.net>
+ *     Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *     Erik Andersson <deity_at_home.se>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -22,12 +22,12 @@
 
 #include "xpclient_sdl.h"
 
+#include "sdlevent.h"
 #include "sdlinit.h"
 #include "sdlkeys.h"
 #include "console.h"
 #include "sdlpaint.h"
 #include "glwidgets.h"
-#include "../xhacks.h"
 
 /* TODO: remove these from client.h and put them in *event.h */
 bool            initialPointerControl = false;
@@ -37,7 +37,62 @@ static int	mouseMovement;	/* horizontal mouse movement. */
 GLWidget *clicktarget[NUM_MOUSE_BUTTONS];
 GLWidget *hovertarget = NULL;
 
-int Process_event(SDL_Event *evt);
+static void release_input_state(void)
+{
+    GLWidget *target;
+    int button, x, y;
+
+    SDL_GetMouseState(&x, &y);
+    Key_clear_counts();
+
+    for (button = 1; button <= NUM_MOUSE_BUTTONS; button++) {
+	Pointer_button_released(button);
+	target = clicktarget[button - 1];
+	if (target != NULL && target->button != NULL)
+	    target->button((Uint8)button, SDL_RELEASED, x, y,
+			   target->buttondata);
+	clicktarget[button - 1] = NULL;
+    }
+
+    if (hovertarget != NULL && hovertarget->hover != NULL)
+	hovertarget->hover(false, x, y, hovertarget->hoverdata);
+    hovertarget = NULL;
+}
+
+static void process_mouse_button(Uint8 button, Uint8 state, int x, int y)
+{
+    GLWidget *target;
+
+    if (button < 1 || button > NUM_MOUSE_BUTTONS)
+	return;
+
+    if (clData.pointerControl) {
+	if (state == SDL_PRESSED)
+	    Pointer_button_pressed(button);
+	else
+	    Pointer_button_released(button);
+	return;
+    }
+
+    if (state == SDL_PRESSED) {
+	target = FindGLWidget(MainWidget, x, y);
+	clicktarget[button - 1] = target;
+	if (target != NULL && target->button != NULL)
+	    target->button(button, state, x, y, target->buttondata);
+    } else {
+	target = clicktarget[button - 1];
+	if (target != NULL && target->button != NULL)
+	    target->button(button, state, x, y, target->buttondata);
+	clicktarget[button - 1] = NULL;
+    }
+}
+
+/* XPilot's SDL1 bindings reserve buttons 4 and 5 for synthesized wheel
+ * events.  SDL2 uses the same values for physical X1 and X2 buttons. */
+static bool is_sdl2_side_button(Uint8 button)
+{
+    return button == SDL_BUTTON_X1 || button == SDL_BUTTON_X2;
+}
 
 void Platform_specific_pointer_control_set_state(bool on)
 {
@@ -45,22 +100,16 @@ void Platform_specific_pointer_control_set_state(bool on)
 
     if (on) {
     	MainWidget_ShowMenu(MainWidget, false);
-	SDL_WM_GrabInput(SDL_GRAB_ON);
+	if (SDL_SetRelativeMouseMode(SDL_TRUE) < 0)
+	    warn("Could not enable relative mouse mode: %s", SDL_GetError());
+	Set_window_grab(true);
 	SDL_ShowCursor(SDL_DISABLE);
     } else {
     	MainWidget_ShowMenu(MainWidget, true);
-	SDL_WM_GrabInput(SDL_GRAB_OFF);
+	SDL_SetRelativeMouseMode(SDL_FALSE);
+	Set_window_grab(false);
 	SDL_ShowCursor(SDL_ENABLE);
     }
-    
-#ifdef HAVE_XF86MISC
-    {
-	SDL_SysWMinfo info;
-	SDL_VERSION(&info.version);
-	if (SDL_GetWMInfo(&info) > 0)
-	    Disable_emulate3buttons(on, info.info.x11.display);
-    }
-#endif
 }
 
 void Platform_specific_talk_set_state(bool on)
@@ -84,45 +133,9 @@ void Toggle_radar_and_scorelist(void)
     return;
 }
 
-#ifndef _WINDOWS
-extern int videoFlags;
-void Toggle_fullscreen(void)
-{
-    static int initial_w = -1, initial_h = -1;
-    int w, h;
-
-    if (initial_w == -1) {
-	initial_w = draw_width;
-	initial_h = draw_height;
-    }
-
-    if (videoFlags & SDL_FULLSCREEN) {
-	videoFlags ^= SDL_FULLSCREEN;
-	Resize_Window(initial_w, initial_h);
-	return;
-    }
-
-    w = initial_w = draw_width;
-    h = initial_h = draw_height;
-
-    videoFlags ^= SDL_FULLSCREEN;
-    if (Resize_Window(w, h) == 0)
-	return;
-
-    videoFlags ^= SDL_FULLSCREEN;
-    Resize_Window(initial_w, initial_h);
-    Add_message("Failed to change video mode. [*Client reply*]");
-}
-#else
-void Toggle_fullscreen(void)
-{
-    Add_message("Changing mode does not work in Windows. [*Client reply*]");
-}
-#endif
-
 int Process_event(SDL_Event *evt)
 {
-    int button;
+    int button, wheel_y, x, y;
 
     mouseMovement = 0;
 
@@ -136,6 +149,7 @@ int Process_event(SDL_Event *evt)
 	
     case SDL_KEYDOWN:
 	if (Console_isVisible()) break;
+	if (evt->key.repeat != 0) break;
 	Keyboard_button_pressed((xp_keysym_t)evt->key.keysym.sym);
 	break;
 	
@@ -147,18 +161,10 @@ int Process_event(SDL_Event *evt)
 	
     case SDL_MOUSEBUTTONDOWN:
 	button = evt->button.button;
-	if (!clData.pointerControl) {
-	    if ( (clicktarget[button-1] = FindGLWidget(MainWidget,evt->button.x,evt->button.y)) ) {
-	    	if (clicktarget[button-1]->button) {
-		    clicktarget[button-1]->button(button,evt->button.state,
-		    	    	    	    evt->button.x,evt->button.y,
-					    clicktarget[button-1]->buttondata);
-		}
-	    }
-	    
-	} else {
-	    Pointer_button_pressed(button);
-	}
+	if (is_sdl2_side_button(button))
+	    break;
+	process_mouse_button(button, evt->button.state,
+			     evt->button.x, evt->button.y);
 	break;
 	
     case SDL_MOUSEMOTION:
@@ -168,21 +174,28 @@ int Process_event(SDL_Event *evt)
 	    /*xpprintf("mouse motion xrel=%i yrel=%i\n",evt->motion.xrel,evt->motion.yrel);*/
 	    /*for (i = 0;i<NUM_MOUSE_BUTTONS;++i)*/ /* dragdrop for all mouse buttons*/
 	    if (clicktarget[0]) { /*is button one pressed?*/
-	    	/*xpprintf("SDL_MOUSEBUTTONDOWN drag: area found!\n");*/
-	    	if (clicktarget[0]->motion) {
-		    clicktarget[0]->motion(evt->motion.xrel,evt->motion.yrel,
-		    	    	    	evt->button.x,evt->button.y,
-					clicktarget[0]->motiondata);
+		/*xpprintf("SDL_MOUSEBUTTONDOWN drag: area found!\n");*/
+		if (clicktarget[0]->motion) {
+		    clicktarget[0]->motion(evt->motion.xrel,
+					   evt->motion.yrel,
+					   evt->motion.x,
+					   evt->motion.y,
+					   clicktarget[0]->motiondata);
 		}
 	    } else {
-    	    	GLWidget *tmp = FindGLWidget(MainWidget,evt->button.x,evt->button.y);
+		GLWidget *tmp = FindGLWidget(MainWidget, evt->motion.x,
+					     evt->motion.y);
 		if (tmp != hovertarget) {
-    	    	    if (hovertarget && hovertarget->hover) {
-		    	hovertarget->hover(false,evt->button.x,evt->button.y,hovertarget->hoverdata);
+		    if (hovertarget && hovertarget->hover) {
+			hovertarget->hover(false, evt->motion.x,
+					   evt->motion.y,
+					   hovertarget->hoverdata);
 		    }
-		    tmp = FindGLWidget(MainWidget,evt->button.x,evt->button.y);
+		    tmp = FindGLWidget(MainWidget, evt->motion.x,
+					   evt->motion.y);
 		    if (tmp && tmp->hover)
-    	    	    	tmp->hover(true,evt->button.x,evt->button.y,tmp->hoverdata);
+			tmp->hover(true, evt->motion.x, evt->motion.y,
+				   tmp->hoverdata);
 		    hovertarget = tmp;
 		}
 	    }
@@ -191,22 +204,31 @@ int Process_event(SDL_Event *evt)
 	
     case SDL_MOUSEBUTTONUP:
 	button = evt->button.button;
-	if (clData.pointerControl) {
-	    Pointer_button_released(button);
-	} else {
-	    if ( clicktarget[button-1] ) {
-	    	if (clicktarget[button-1]->button) {
-		    clicktarget[button-1]->button(button,evt->button.state,
-		    	    	    	    	evt->button.x,evt->button.y,
-						clicktarget[button-1]->buttondata);
-		}
-		clicktarget[button-1] = NULL;
-	    }
+	if (is_sdl2_side_button(button))
+	    break;
+	process_mouse_button(button, evt->button.state,
+			     evt->button.x, evt->button.y);
+	break;
+
+    case SDL_MOUSEWHEEL:
+	wheel_y = evt->wheel.y;
+	if (evt->wheel.direction == SDL_MOUSEWHEEL_FLIPPED)
+	    wheel_y = -wheel_y;
+	SDL_GetMouseState(&x, &y);
+	button = wheel_y > 0 ? 4 : 5;
+	while (wheel_y != 0) {
+	    process_mouse_button(button, SDL_PRESSED, x, y);
+	    process_mouse_button(button, SDL_RELEASED, x, y);
+	    wheel_y += wheel_y > 0 ? -1 : 1;
 	}
 	break;
 
-    case SDL_VIDEORESIZE:     
-        Resize_Window(evt->resize.w, evt->resize.h);          
+    case SDL_WINDOWEVENT:
+	if (evt->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+	    Window_size_changed(evt->window.data1, evt->window.data2);
+	} else if (evt->window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
+	    release_input_state();
+	}
         break;
 
     default:

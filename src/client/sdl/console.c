@@ -1,7 +1,7 @@
 /*
  * XPilotNG/SDL, an SDL/OpenGL XPilot client.
  *
- * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,34 +68,36 @@ int Console_init(void)
     return 0;
 }
 
-void Console_paint(void)
+int Console_prepare(Renderer *renderer)
 {
-    if (!Console_isVisible()) return;
-    if (console->Visible != CON_OPEN) Console_refresh();
+    if (console == NULL || renderer == NULL)
+	return -1;
+
+    if (console->Visible != CON_CLOSED && console->Visible != CON_OPEN)
+	Console_refresh();
+
+    return sdl_window_prepare(&console_window, renderer);
+}
+
+RendererStatus Console_paint(void)
+{
+    if (!Console_isVisible())
+	return RENDERER_STATUS_OK;
     console_window.x = (draw_width - console_window.w) / 2;
     console_window.y = (draw_height - console_window.h) / 2;
-    sdl_window_paint(&console_window);
-    glBegin(GL_LINE_LOOP);
-    glColor4ub(0, 0, 0, 0xff);
-    glVertex2i(console_window.x, console_window.y + console_window.h + 2);    
-    glColor4ub(0, 0x90, 0x00, 0xff);
-    glVertex2i(console_window.x, console_window.y);
-    glColor4ub(0, 0, 0, 0xff);
-    glVertex2i(console_window.x + console_window.w, console_window.y);
-    glColor4ub(0, 0x90, 0x00, 0xff);
-    glVertex2i(console_window.x + console_window.w, 
-	       console_window.y + console_window.h + 2);
-    glEnd();
+    return sdl_window_paint(&console_window, NULL);
 }
 
 void Console_show(void)
 {
     CON_Show(console);
+    SDL_StartTextInput();
     Console_refresh();
 }
 
 void Console_hide(void)
 {
+    SDL_StopTextInput();
     CON_Hide(console);
 }
 
@@ -113,7 +115,7 @@ int Console_process(SDL_Event *e)
     return 0;
 }
 
-void Paste_String_to_Console(char *text)
+void Paste_String_to_Console(const char *text)
 {
     Add_String_to_Console(text);
     Console_refresh();

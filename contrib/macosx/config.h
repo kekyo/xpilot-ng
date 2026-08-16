@@ -312,9 +312,6 @@
 /* enable sdl client */
 #define SDL_CLIENT 1
 
-/* enable sdl gameloop in sdl client */
-#define SDL_GAMELOOP 1
-
 /* enable new server scheduling most useful on Linux 2.6 */
 /* #undef SELECT_SCHED */
 

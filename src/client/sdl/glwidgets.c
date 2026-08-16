@@ -21,10 +21,10 @@
 #include "xpclient_sdl.h"
 
 #include "sdlpaint.h"
-#include "images.h"
+#include "sdlinit.h"
 #include "text.h"
 #include "glwidgets.h"
-#include "scrap.h"
+#include "sdlclipboard.h"
 
 /****************************************************/
 /* BEGIN: Main GLWidget stuff	    	    	    */
@@ -35,8 +35,132 @@ static void confmenu_callback( void );
 static void hover_optionWidget( int over, Uint16 x , Uint16 y , void *data );
 static void clear_eventTarget( GLWidget *widget );
 
-static char *scrap = NULL;
 static GLWidget *scraptarget = NULL;
+
+static RendererStatus Begin_semantic_widget(
+    SdlRenderer **sdl_renderer, Renderer **renderer)
+{
+    RendererStatus status;
+
+    if (sdl_renderer == NULL || renderer == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    *sdl_renderer = Get_sdl_renderer();
+    *renderer = NULL;
+    if (*sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    status = Sdl_renderer_track_frame_result(
+	*sdl_renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    *renderer = Sdl_renderer_frontend(*sdl_renderer);
+    if (*renderer == NULL) {
+	return Sdl_renderer_track_frame_result(
+	    *sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    }
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Track_semantic_widget(
+    SdlRenderer *sdl_renderer, RendererStatus status)
+{
+    if (sdl_renderer == NULL)
+	return status;
+    return Sdl_renderer_track_frame_result(sdl_renderer, status);
+}
+
+static RendererStatus Fill_semantic_widget_bounds(
+    SdlRenderer *sdl_renderer, Renderer *renderer,
+    const SDL_Rect *bounds, Uint32 rgba)
+{
+    RendererStatus status;
+
+    if (sdl_renderer == NULL || renderer == NULL || bounds == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (bounds->w <= 0 || bounds->h <= 0)
+	return RENDERER_STATUS_OK;
+    status = Track_semantic_widget(
+	sdl_renderer,
+	Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA));
+    if (status == RENDERER_STATUS_OK) {
+	status = Track_semantic_widget(
+	    sdl_renderer,
+	    Renderer_fill_rect(
+		renderer,
+		(float)bounds->x, (float)bounds->y,
+		(float)bounds->w, (float)bounds->h,
+		Renderer_color_from_rgba32(rgba)));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Track_semantic_widget(
+	    sdl_renderer,
+	    Sdl_renderer_flush(sdl_renderer));
+    }
+    return status;
+}
+
+typedef struct SemanticWidgetBatch {
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    int has_accepted_commands;
+} SemanticWidgetBatch;
+
+static RendererStatus Begin_semantic_widget_batch(SemanticWidgetBatch *batch)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    batch->sdl_renderer = NULL;
+    batch->renderer = NULL;
+    batch->status = Begin_semantic_widget(
+	&batch->sdl_renderer, &batch->renderer);
+    batch->has_accepted_commands = 0;
+    return batch->status;
+}
+
+static RendererStatus Track_semantic_widget_batch(
+    SemanticWidgetBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    batch->status = Track_semantic_widget(batch->sdl_renderer, status);
+    return batch->status;
+}
+
+static RendererStatus Accept_semantic_widget_command(
+    SemanticWidgetBatch *batch, RendererStatus status)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (status == RENDERER_STATUS_OK)
+	batch->has_accepted_commands = 1;
+    return Track_semantic_widget_batch(batch, status);
+}
+
+static RendererStatus Set_semantic_widget_batch_blend(
+    SemanticWidgetBatch *batch, RendererBlendMode blend)
+{
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (batch->status != RENDERER_STATUS_OK)
+	return batch->status;
+    return Track_semantic_widget_batch(
+	batch, Renderer_set_blend(batch->renderer, blend));
+}
+
+static RendererStatus Finish_semantic_widget_batch(
+    SemanticWidgetBatch *batch)
+{
+    RendererStatus flush_status;
+
+    if (batch == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!batch->has_accepted_commands || batch->sdl_renderer == NULL)
+	return batch->status;
+    flush_status = Sdl_renderer_flush(
+	batch->sdl_renderer);
+    batch->has_accepted_commands = 0;
+    return Track_semantic_widget_batch(batch, flush_status);
+}
 
 GLWidget *Init_EmptyBaseGLWidget( void )
 {
@@ -368,42 +492,96 @@ bool DelGLWidgetListItem( GLWidget **list, GLWidget *widget )
  * the order is widget then its children (first to last)
  * then it moves onto the next widget in the list
  */
-void DrawGLWidgetsi( GLWidget *list, int x, int y, int w, int h)
+static RendererStatus DrawGLWidgetsi_internal(
+    GLWidget *list, int x, int y, int w, int h,
+    SdlRenderer *sdl_renderer,
+    const SdlUiDrawState *draw_state)
 {
     int x2,y2,w2,h2;
     GLWidget *curr;
+    RendererStatus status;
     
     curr = list;
     
     while (curr) {
-    	x2 = MAX(x,curr->bounds.x);
+	status = Sdl_ui_draw_state_status(draw_state);
+	if (status == RENDERER_STATUS_OK)
+	    status = Sdl_renderer_frame_result(sdl_renderer);
+	if (status != RENDERER_STATUS_OK)
+	    return status;
+	x2 = MAX(x,curr->bounds.x);
     	y2 = MAX(y,curr->bounds.y);
     	w2 = MIN(x+w,curr->bounds.x+curr->bounds.w) - x2;
     	h2 = MIN(y+h,curr->bounds.y+curr->bounds.h) - y2;
 	if ( (w2 > 0) && (h2 > 0) ) {
-    	    glEnable(GL_BLEND);
-    	    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	    glScissor(x2, draw_height - y2 - h2, w2+1, h2+1);
+	    RendererRect semantic_clip = {x2, y2, w2 + 1, h2 + 1};
+
+	    status = Sdl_renderer_track_frame_result(
+		sdl_renderer,
+		Sdl_renderer_set_logical_scissor(
+		    sdl_renderer, &semantic_clip));
+	    if (status != RENDERER_STATUS_OK)
+		return status;
 	    if (curr->Draw) curr->Draw(curr);
-	    glDisable(GL_BLEND);
-	
-	    DrawGLWidgetsi(curr->children,x2, y2, w2, h2);
-	    glScissor(x, draw_height - y - h, w, h);
+	    status = Sdl_ui_draw_state_status(draw_state);
+	    if (status == RENDERER_STATUS_OK)
+		status = Sdl_renderer_frame_result(sdl_renderer);
+	    if (status != RENDERER_STATUS_OK)
+		return status;
+
+	    status = DrawGLWidgetsi_internal(
+		curr->children, x2, y2, w2, h2,
+		sdl_renderer, draw_state);
+	    if (status == RENDERER_STATUS_OK) {
+		RendererRect inherited_clip = {x, y, w, h};
+
+		status = Sdl_renderer_track_frame_result(
+		    sdl_renderer,
+		    Sdl_renderer_set_logical_scissor(
+			sdl_renderer, &inherited_clip));
+	    }
+	    if (status != RENDERER_STATUS_OK)
+		return status;
 	}
 	
 	curr = curr->next;
     }
+    return RENDERER_STATUS_OK;
 }
-void DrawGLWidgets( GLWidget *list )
+
+RendererStatus DrawGLWidgetsi_checked(GLWidget *list, int x, int y,
+                                      int w, int h,
+                                      SdlRenderer *sdl_renderer,
+                                      const SdlUiDrawState *draw_state)
 {
-    glScissor(0, 0, draw_width, draw_height);
-    glEnable(GL_SCISSOR_TEST);
-    DrawGLWidgetsi( list , 0, 0, draw_width, draw_height );
-    glDisable(GL_SCISSOR_TEST);
+    RendererStatus status;
+
+    if (sdl_renderer == NULL || draw_state == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    status = Sdl_ui_draw_state_status(draw_state);
+    if (status == RENDERER_STATUS_OK)
+	status = Sdl_renderer_frame_result(sdl_renderer);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    status = DrawGLWidgetsi_internal(
+	list, x, y, w, h, sdl_renderer, draw_state);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    return Sdl_renderer_track_frame_result(
+	sdl_renderer,
+	Sdl_renderer_set_logical_scissor(sdl_renderer, NULL));
+}
+RendererStatus DrawGLWidgets_checked(
+    GLWidget *list, SdlRenderer *sdl_renderer,
+    const SdlUiDrawState *draw_state)
+{
+    return DrawGLWidgetsi_checked(
+	list, 0, 0, draw_width, draw_height,
+	sdl_renderer, draw_state);
 }
 
 /*
- * Similar to DrawGLWidgets, but this one needs to traverse the
+ * Similar to DrawGLWidgets_checked, but this one needs to traverse the
  * tree in reverse order! (since the things painted last will
  * be seen ontop, thus should get first pick of events
  * So it will descend to the last child in the list's last widget
@@ -439,21 +617,14 @@ GLWidget *FindGLWidget( GLWidget *list, Uint16 x, Uint16 y )
     return FindGLWidgeti( list, x, y );
 }
 
-void load_textscrap(char *text)
+void load_textscrap(const char *text)
 {
-    char *cp;
-    int   i;
-    
-    if (!text) return;
-    
+    if (!text)
+	return;
+
     scraptarget = NULL;
-    scrap = realloc(scrap, strlen(text)+1);
-    strcpy(scrap, text);
-    for ( cp=scrap, i=0; i<(int)strlen(scrap); ++cp, ++i ) {
-    	if ( *cp == '\n' )
-    	    *cp = '\r';
-    }
-    put_scrap(TextScrap('T','E','X','T'), strlen(scrap), scrap);
+    if (Sdl_clipboard_set_text(text) < 0)
+	warn("Could not set clipboard text: %s", SDL_GetError());
 }
 /****************************************************/
 /* END: Main GLWidget stuff 	    	    	    */
@@ -489,10 +660,14 @@ static void button_ArrowWidget( Uint8 button, Uint8 state, Uint16 x, Uint16 y, v
 
 static void Paint_ArrowWidget( GLWidget *widget )
 {
-    GLWidget *tmp;
     SDL_Rect *b;
     ArrowWidget *wid_info;
     ArrowWidget_dir_t dir;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererColor color;
+    RendererVertex2D vertices[3];
+    RendererStatus status;
     static Uint32 normalcolor  = 0xff0000ff;
     static Uint32 presscolor   = 0x00ff00ff;
     static Uint32 tapcolor     = 0xffffffff;
@@ -500,51 +675,87 @@ static void Paint_ArrowWidget( GLWidget *widget )
     
     if (!widget) return;
     	
-    tmp = widget;
-    b = &(tmp->bounds);
-    wid_info = (ArrowWidget *)(tmp->wid_info);
-    
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
+    b = &widget->bounds;
+    wid_info = widget->wid_info;
+
     if (wid_info->locked) {
-    	set_alphacolor( lockcolor );
+	color = Renderer_color_from_rgba32(lockcolor);
     } else if (wid_info->press) {
     	if (wid_info->action) {
 	    wid_info->action(wid_info->actiondata);
 	}
-	set_alphacolor( presscolor );
+	color = Renderer_color_from_rgba32(presscolor);
     } else if (wid_info->tap) {
-    	set_alphacolor( tapcolor );
-    	wid_info->tap = false;
+	color = Renderer_color_from_rgba32(tapcolor);
+	wid_info->tap = false;
     } else {
-    	set_alphacolor( normalcolor );
+	color = Renderer_color_from_rgba32(normalcolor);
     }
-    
+
     dir = wid_info->direction;
-    glBegin(GL_POLYGON);
     switch ( dir ) {
     	case RIGHTARROW:
-	    glVertex2i(b->x 	    ,b->y   	);
-	    glVertex2i(b->x 	    ,b->y+b->h	);
-	    glVertex2i(b->x + b->w  ,b->y+b->h/2);
+	    vertices[0] = (RendererVertex2D){
+		(float)b->x, (float)b->y, 0.0f, 0.0f, color};
+	    vertices[1] = (RendererVertex2D){
+		(float)b->x, (float)(b->y + b->h), 0.0f, 0.0f, color};
+	    vertices[2] = (RendererVertex2D){
+		(float)(b->x + b->w), (float)(b->y + b->h / 2),
+		0.0f, 0.0f, color};
 	    break;
     	case UPARROW:
-	    glVertex2i(b->x + b->w/2,b->y   	);
-	    glVertex2i(b->x 	    ,b->y+b->h	);
-	    glVertex2i(b->x + b->w  ,b->y+b->h	);
+	    vertices[0] = (RendererVertex2D){
+		(float)(b->x + b->w / 2), (float)b->y,
+		0.0f, 0.0f, color};
+	    vertices[1] = (RendererVertex2D){
+		(float)b->x, (float)(b->y + b->h), 0.0f, 0.0f, color};
+	    vertices[2] = (RendererVertex2D){
+		(float)(b->x + b->w), (float)(b->y + b->h),
+		0.0f, 0.0f, color};
 	    break;
     	case LEFTARROW:
-	    glVertex2i(b->x + b->w  ,b->y   	);
-	    glVertex2i(b->x 	    ,b->y+b->h/2);
-	    glVertex2i(b->x + b->w  ,b->y+b->h	);
+	    vertices[0] = (RendererVertex2D){
+		(float)(b->x + b->w), (float)b->y, 0.0f, 0.0f, color};
+	    vertices[1] = (RendererVertex2D){
+		(float)b->x, (float)(b->y + b->h / 2),
+		0.0f, 0.0f, color};
+	    vertices[2] = (RendererVertex2D){
+		(float)(b->x + b->w), (float)(b->y + b->h),
+		0.0f, 0.0f, color};
 	    break;
     	case DOWNARROW:
-	    glVertex2i(b->x 	    ,b->y   	);
-	    glVertex2i(b->x + b->w/2,b->y+b->h	);
-	    glVertex2i(b->x + b->w  ,b->y   	);
+	    vertices[0] = (RendererVertex2D){
+		(float)b->x, (float)b->y, 0.0f, 0.0f, color};
+	    vertices[1] = (RendererVertex2D){
+		(float)(b->x + b->w / 2), (float)(b->y + b->h),
+		0.0f, 0.0f, color};
+	    vertices[2] = (RendererVertex2D){
+		(float)(b->x + b->w), (float)b->y, 0.0f, 0.0f, color};
 	    break;
 	default:
 	    error("Weird direction for ArrowWidget! (direction:%i)\n",dir);
+	    (void)Track_semantic_widget(
+		sdl_renderer, RENDERER_STATUS_INVALID_ARGUMENT);
+	    return;
     }
-    glEnd();
+    status = Track_semantic_widget(
+	sdl_renderer,
+	Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA));
+    if (status == RENDERER_STATUS_OK) {
+	status = Track_semantic_widget(
+	    sdl_renderer,
+	    Renderer_draw_triangles(renderer, NULL, vertices, 3));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Track_semantic_widget(
+	    sdl_renderer,
+	    Sdl_renderer_flush(sdl_renderer));
+    }
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw arrow widget");
 }
 
 GLWidget *Init_ArrowWidget( ArrowWidget_dir_t direction,int width, int height,
@@ -610,10 +821,16 @@ static void button_ButtonWidget( Uint8 button, Uint8 state, Uint16 x, Uint16 y, 
 static void Paint_ButtonWidget( GLWidget *widget )
 {
     ButtonWidget *wid_info;
-    int color;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    Uint32 color;
     
     if (!widget) return;	
     if (!(wid_info = (ButtonWidget *)(widget->wid_info))) return;
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
     
     if (wid_info->pressed) {
     	if (wid_info->pressed_color)
@@ -626,14 +843,11 @@ static void Paint_ButtonWidget( GLWidget *widget )
 	    color = *(wid_info->normal_color);
 	else color = greenRGBA;
     }
-    
-    set_alphacolor(color);
-    glBegin(GL_QUADS);
-    	glVertex2i( widget->bounds.x 	    	    	, widget->bounds.y	    	    	);
-    	glVertex2i( widget->bounds.x	    	    	, widget->bounds.y+widget->bounds.h	);
-    	glVertex2i( widget->bounds.x+widget->bounds.w	, widget->bounds.y+widget->bounds.h	);
-    	glVertex2i( widget->bounds.x+widget->bounds.w	, widget->bounds.y	    	    	);
-    glEnd();
+
+    status = Fill_semantic_widget_bounds(
+	sdl_renderer, renderer, &widget->bounds, color);
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw button widget");
 }
 
 GLWidget *Init_ButtonWidget( Uint32 *normal_color, Uint32 *pressed_color, Uint8 depress_time, void (*action)(void *data), void *actiondata)
@@ -699,20 +913,25 @@ static void button_SlideWidget( Uint8 button, Uint8 state, Uint16 x, Uint16 y, v
 
 static void Paint_SlideWidget( GLWidget *widget )
 {
-    GLWidget *tmp;
     SDL_Rect *b;
     SlideWidget *wid_info;
-
-   
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererColor top_color;
+    RendererColor bottom_color;
+    RendererVertex2D vertices[6];
+    RendererStatus status;
     static Uint32 normalcolor	= 0xff0000ff;
     static Uint32 presscolor	= 0x00ff00ff;
     static Uint32 lockcolor 	= 0x333333ff;
     Uint32 color;
 
     if (!widget) return;
-    tmp = widget;
-    b = &(tmp->bounds);
-    wid_info = (SlideWidget *)(tmp->wid_info);
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
+    b = &widget->bounds;
+    wid_info = widget->wid_info;
     
     if (wid_info->locked) {
     	color = lockcolor;
@@ -721,17 +940,35 @@ static void Paint_SlideWidget( GLWidget *widget )
     } else {
     	color = normalcolor;
     }
-
-    glBegin(GL_QUADS);
-    	set_alphacolor(color	    	    	);
-	glVertex2i(b->x     	, b->y	    	);
-    	set_alphacolor(color	    	    	);
-    	glVertex2i(b->x + b->w	, b->y	    	);
-    	set_alphacolor(color & 0xffffff77   	);
-    	glVertex2i(b->x + b->w	, b->y + b->h	);
-    	set_alphacolor(color & 0xffffff77   	);
-    	glVertex2i(b->x     	, b->y + b->h	);
-    glEnd();
+    top_color = Renderer_color_from_rgba32(color);
+    bottom_color = Renderer_color_from_rgba32(color & 0xffffff77);
+    vertices[0] = (RendererVertex2D){
+	(float)b->x, (float)b->y, 0.0f, 0.0f, top_color};
+    vertices[1] = (RendererVertex2D){
+	(float)(b->x + b->w), (float)b->y, 0.0f, 0.0f, top_color};
+    vertices[2] = (RendererVertex2D){
+	(float)(b->x + b->w), (float)(b->y + b->h),
+	0.0f, 0.0f, bottom_color};
+    vertices[3] = vertices[0];
+    vertices[4] = vertices[2];
+    vertices[5] = (RendererVertex2D){
+	(float)b->x, (float)(b->y + b->h),
+	0.0f, 0.0f, bottom_color};
+    status = Track_semantic_widget(
+	sdl_renderer,
+	Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA));
+    if (status == RENDERER_STATUS_OK) {
+	status = Track_semantic_widget(
+	    sdl_renderer,
+	    Renderer_draw_triangles(renderer, NULL, vertices, 6));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Track_semantic_widget(
+	    sdl_renderer,
+	    Sdl_renderer_flush(sdl_renderer));
+    }
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw slide widget");
 }
 
 GLWidget *Init_SlideWidget( bool locked,
@@ -836,16 +1073,19 @@ static void SetBounds_ScrollbarWidget( GLWidget *widget, SDL_Rect *b )
 static void Paint_ScrollbarWidget( GLWidget *widget )
 {
     static Uint32 bgcolor  = 0x00000044;
-    SDL_Rect *b = &(widget->bounds);
-    
-    set_alphacolor( bgcolor );
-    
-    glBegin(GL_QUADS);
-    	glVertex2i(b->x     	, b->y);
-    	glVertex2i(b->x + b->w	, b->y);
-    	glVertex2i(b->x + b->w	, b->y + b->h);
-    	glVertex2i(b->x     	, b->y + b->h);
-    glEnd();
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+
+    if (widget == NULL)
+	return;
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
+    status = Fill_semantic_widget_bounds(
+	sdl_renderer, renderer, &widget->bounds, bgcolor);
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw scrollbar widget");
 }
 
 static void motion_ScrollbarWidget( Sint16 xrel, Sint16 yrel, Uint16 x, Uint16 y, void *data )
@@ -853,8 +1093,9 @@ static void motion_ScrollbarWidget( Sint16 xrel, Sint16 yrel, Uint16 x, Uint16 y
     GLWidget *tmp;
     ScrollbarWidget *wid_info;
     GLWidget *slide;
-    Sint16 *coord1, coord2 = 0, min, max, size, move;
-    GLfloat oldpos;
+    int *coord1;
+    int coord2 = 0, min, max, size, move;
+    float oldpos;
 
     if (!data) return;
 
@@ -896,7 +1137,7 @@ static void motion_ScrollbarWidget( Sint16 xrel, Sint16 yrel, Uint16 x, Uint16 y
     *coord1 = coord2;
 
     oldpos = wid_info->pos;
-    wid_info->pos = ((GLfloat)(*coord1 - min))/((GLfloat)(max - min));
+    wid_info->pos = ((float)(*coord1 - min))/((float)(max - min));
     
     if ( (oldpos != wid_info->pos) && wid_info->poschange )
     	wid_info->poschange(wid_info->pos,wid_info->poschangedata);
@@ -914,7 +1155,7 @@ static void release_ScrollbarWidget( void *releasedata )
     wid_info->oldmoves = 0;
 }
 
-void ScrollbarWidget_SetSlideSize( GLWidget *widget, GLfloat size )
+void ScrollbarWidget_SetSlideSize( GLWidget *widget, float size )
 {
     ScrollbarWidget *sb;
     
@@ -933,8 +1174,9 @@ void ScrollbarWidget_SetSlideSize( GLWidget *widget, GLfloat size )
     SetBounds_ScrollbarWidget(widget,&(widget->bounds));
 }
 
-GLWidget *Init_ScrollbarWidget( bool locked, GLfloat pos, GLfloat size, ScrollWidget_dir_t dir,
-    	    	    	    	void (*poschange)( GLfloat pos , void *poschangedata),
+GLWidget *Init_ScrollbarWidget( bool locked, float pos, float size,
+				ScrollWidget_dir_t dir,
+				void (*poschange)( float pos , void *poschangedata),
 				void *poschangedata )
 {
     ScrollbarWidget *wid_info;
@@ -1034,44 +1276,45 @@ bool LabelWidget_SetColor( GLWidget *widget , Uint32 *fgcolor, Uint32 *bgcolor )
 }
 static void Paint_LabelWidget( GLWidget *widget )
 {
-    GLWidget *tmp;
     SDL_Rect *b;
     LabelWidget *wid_info;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
     int x, y, alpha;
     Uint32 color;
     static int flasher = 0;
 
     if (!widget) return;
-     
-    tmp = widget;
-    b = &(tmp->bounds);
-    wid_info = (LabelWidget *)(tmp->wid_info);
-    
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
+    b = &widget->bounds;
+    wid_info = widget->wid_info;
+
     if ( (wid_info->bgcolor) && *(wid_info->bgcolor) ) {
-    	set_alphacolor(*(wid_info->bgcolor));
-    
-    	glBegin(GL_QUADS);
-    	    glVertex2i(b->x     	,b->y);
-   	    glVertex2i(b->x + b->w  ,b->y);
-    	    glVertex2i(b->x + b->w  ,b->y+b->h);
-    	    glVertex2i(b->x     	,b->y+b->h);
-     	glEnd();
+	status = Fill_semantic_widget_bounds(
+	    sdl_renderer, renderer, b, *(wid_info->bgcolor));
+        if (status != RENDERER_STATUS_OK) {
+	    warn("Could not draw label widget background");
+	    return;
+	}
     }
     
-    x = wid_info->align == LEFT   ? tmp->bounds.x :
-	wid_info->align == CENTER ? tmp->bounds.x + tmp->bounds.w / 2 :
-	tmp->bounds.x + tmp->bounds.w;
-    y = wid_info->valign == DOWN   ? tmp->bounds.y :
-	wid_info->valign == CENTER ? tmp->bounds.y + tmp->bounds.h / 2 :
-	tmp->bounds.y + tmp->bounds.h;
+    x = wid_info->align == LEFT   ? widget->bounds.x :
+	wid_info->align == CENTER ? widget->bounds.x + widget->bounds.w / 2 :
+	widget->bounds.x + widget->bounds.w;
+    y = wid_info->valign == DOWN   ? widget->bounds.y :
+	wid_info->valign == CENTER ? widget->bounds.y + widget->bounds.h / 2 :
+	widget->bounds.y + widget->bounds.h;
 
     
     if ( wid_info->fgcolor )
     	color = *(wid_info->fgcolor);
     else
     	color = whiteRGBA;
-	
-    if (scraptarget == tmp) {
+
+    if (scraptarget == widget) {
 	alpha = MAX(0,MIN(255,(color & 255) + tsin(flasher)*64));
 	flasher += TABLE_SIZE/clientFPS;
     	if (flasher >= TABLE_SIZE) flasher -= TABLE_SIZE;
@@ -1079,13 +1322,17 @@ static void Paint_LabelWidget( GLWidget *widget )
 	color = (color&0xFFFFFF00) + alpha;
     }
 	
-    disp_text(&(wid_info->tex), 
-    	    	color, 
-    	    	wid_info->align, 
-    	    	wid_info->valign, 
-    	    	x, 
-    	    	draw_height - y, 
-    	    	true);
+    status = Track_semantic_widget(
+	sdl_renderer,
+	disp_text(&(wid_info->tex),
+	    color,
+	    wid_info->align,
+	    wid_info->valign,
+	    x,
+	    draw_height - y,
+	    true));
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw label widget text");
 }
 
 GLWidget *Init_LabelWidget( const char *text , Uint32 *fgcolor, Uint32 *bgcolor, int align, int valign  )
@@ -1109,6 +1356,7 @@ GLWidget *Init_LabelWidget( const char *text , Uint32 *fgcolor, Uint32 *bgcolor,
 	return NULL;
     }
     wid_info = (LabelWidget *)tmp->wid_info;
+    memset(wid_info, 0, sizeof(*wid_info));
 
     if ( !render_text(&gamefont, text, &(((LabelWidget *)tmp->wid_info)->tex)) ) {
     	free(tmp->wid_info);
@@ -1159,37 +1407,47 @@ static void button_LabeledRadiobuttonWidget( Uint8 button, Uint8 state, Uint16 x
 
 static void Paint_LabeledRadiobuttonWidget( GLWidget *widget )
 {
-    GLWidget *tmp;
-    SDL_Rect *b;
     LabeledRadiobuttonWidget *wid_info;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    string_tex_t *texture;
+    Uint32 background_color;
+    Uint32 text_color;
     static Uint32 false_bg_color	= 0x00000044;
     static Uint32 true_bg_color	    	= 0x00000044;
     static Uint32 false_text_color	= 0xff0000ff;
     static Uint32 true_text_color	= 0x00ff00ff;
 
     if (!widget) return;
-     
-    tmp = widget;
-    b = &(tmp->bounds);
-    wid_info = (LabeledRadiobuttonWidget *)(tmp->wid_info);
-    
-    if (wid_info->state)
-    	set_alphacolor(true_bg_color);
-    else
-    	set_alphacolor(false_bg_color);
-    
-    glBegin(GL_QUADS);
-    	glVertex2i(b->x     	,b->y);
-   	glVertex2i(b->x + b->w  ,b->y);
-    	glVertex2i(b->x + b->w  ,b->y+b->h);
-    	glVertex2i(b->x     	,b->y+b->h);
-     glEnd();
-    
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
+    wid_info = widget->wid_info;
     if (wid_info->state) {
-    	disp_text(wid_info->ontex, true_text_color, CENTER, CENTER,tmp->bounds.x+tmp->bounds.w/2, draw_height - tmp->bounds.y-tmp->bounds.h/2, true);
+	background_color = true_bg_color;
+	text_color = true_text_color;
+	texture = wid_info->ontex;
     } else {
-    	disp_text(wid_info->offtex, false_text_color, CENTER, CENTER, tmp->bounds.x+tmp->bounds.w/2, draw_height - tmp->bounds.y-tmp->bounds.h/2, true);
+	background_color = false_bg_color;
+	text_color = false_text_color;
+	texture = wid_info->offtex;
     }
+    status = Fill_semantic_widget_bounds(
+	sdl_renderer, renderer, &widget->bounds, background_color);
+    if (status != RENDERER_STATUS_OK) {
+	warn("Could not draw labeled radio button background");
+	return;
+    }
+    status = Track_semantic_widget(
+	sdl_renderer,
+	disp_text(
+	    texture, text_color, CENTER, CENTER,
+	    widget->bounds.x + widget->bounds.w / 2,
+	    draw_height - widget->bounds.y - widget->bounds.h / 2,
+	    true));
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw labeled radio button text");
 }
 
 GLWidget *Init_LabeledRadiobuttonWidget( string_tex_t *ontex, string_tex_t *offtex,
@@ -1199,7 +1457,7 @@ GLWidget *Init_LabeledRadiobuttonWidget( string_tex_t *ontex, string_tex_t *offt
     GLWidget	    	    	*tmp;
     LabeledRadiobuttonWidget	*wid_info;
 
-    if (!ontex || !(ontex->tex_list) || !offtex || !(offtex->tex_list) ) {
+    if (!ontex || !(ontex->cache) || !offtex || !(offtex->cache) ) {
     	error("texure(s) missing for Init_LabeledRadiobuttonWidget.");
 	return NULL;
     }
@@ -1331,6 +1589,9 @@ static void Paint_BoolChooserWidget( GLWidget *widget )
 {
     /*static int name_color   = 0xffff66ff;*/
     BoolChooserWidget *wid_info;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
 
     if (!widget) {
     	error("Paint_BoolChooserWidget: widget missing!");
@@ -1346,15 +1607,15 @@ static void Paint_BoolChooserWidget( GLWidget *widget )
     	error("Paint_BoolChooserWidget: wid_info missing!");
 	return;
     }
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
 
     if ( (wid_info->bgcolor) && *(wid_info->bgcolor) ) {
-    	set_alphacolor( *(wid_info->bgcolor) );
-    	glBegin(GL_QUADS);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y+widget->bounds.h	);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y+widget->bounds.h	);
-    	glEnd();
+	status = Fill_semantic_widget_bounds(
+	    sdl_renderer, renderer, &widget->bounds, *(wid_info->bgcolor));
+	if (status != RENDERER_STATUS_OK)
+	    warn("Could not draw boolean chooser background");
     }
 }
 
@@ -1375,8 +1636,8 @@ GLWidget *Init_BoolChooserWidget( const char *name, bool *value, Uint32 *fgcolor
 
     
     if (!BoolChooserWidget_ontex) {
-    	if ((BoolChooserWidget_ontex = XMALLOC(string_tex_t, 1))) {
-	    if (!(BoolChooserWidget_offtex = XMALLOC(string_tex_t, 1))) {
+	if ((BoolChooserWidget_ontex = XCALLOC(string_tex_t, 1))) {
+	    if (!(BoolChooserWidget_offtex = XCALLOC(string_tex_t, 1))) {
 	    	XFREE(BoolChooserWidget_ontex);
 	    	error("Failed to malloc BoolChooserWidget_offtex in Init_BoolChooserWidget");
 	    	return NULL;
@@ -1543,7 +1804,6 @@ static void IntChooserWidget_Add( void *data )
 	    ((ArrowWidget *)tmp->rightarrow->wid_info)->locked = true;
 	tmp->direction = 2;
 	snprintf(valuetext,15,"%i",*(tmp->value));
-	free_string_texture(&(tmp->valuetex));
 	if(!render_text(&gamefont,valuetext,&(tmp->valuetex)))
 	    error("Failed to make value (%s=%i) texture for IntChooserWidget!\n",
 	    	((LabelWidget *)(tmp->name->wid_info))->tex.text,*(tmp->value));
@@ -1581,7 +1841,6 @@ static void IntChooserWidget_Subtract( void *data )
 	    ((ArrowWidget *)tmp->leftarrow->wid_info)->locked = true;
 	tmp->direction = -2;
 	snprintf(valuetext,15,"%i",*(tmp->value));
-	free_string_texture(&(tmp->valuetex));
 	if(!render_text(&gamefont,valuetext,&(tmp->valuetex)))
 	    error("Failed to make value (%s=%i) texture for IntChooserWidget!\n",
 	    ((LabelWidget *)(tmp->name->wid_info))->tex.text,*(tmp->value));
@@ -1593,6 +1852,10 @@ static void IntChooserWidget_Subtract( void *data )
 static void Paint_IntChooserWidget( GLWidget *widget )
 {
     IntChooserWidget *wid_info;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    Uint32 color;
 
     if (!widget) {
     	error("Paint_IntChooserWidget: argument is NULL!");
@@ -1605,23 +1868,31 @@ static void Paint_IntChooserWidget( GLWidget *widget )
     	error("Paint_IntChooserWidget: wid_info missing");
 	return;
     }
-    
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
+
     if (wid_info->direction > 0) --(wid_info->direction);
     else if (wid_info->direction < 0) ++(wid_info->direction);
 
     if ( (wid_info->bgcolor) && *(wid_info->bgcolor) ) {
-    	set_alphacolor(*(wid_info->bgcolor));
-    	glBegin(GL_QUADS);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y+widget->bounds.h	);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y+widget->bounds.h	);
-    	glEnd();
+	status = Fill_semantic_widget_bounds(
+	    sdl_renderer, renderer, &widget->bounds, *(wid_info->bgcolor));
+	if (status != RENDERER_STATUS_OK) {
+	    warn("Could not draw integer chooser background");
+	    return;
+	}
     }
-    if ( wid_info->fgcolor )
-    	disp_text(&(wid_info->valuetex), *(wid_info->fgcolor), RIGHT, CENTER, wid_info->rightarrow->bounds.x-1/*value_>*/-2/*>_|*/, draw_height - widget->bounds.y - widget->bounds.h/2, true );
-    else
-    	disp_text(&(wid_info->valuetex), whiteRGBA, RIGHT, CENTER, wid_info->rightarrow->bounds.x-1/*value_>*/-2/*>_|*/, draw_height - widget->bounds.y - widget->bounds.h/2, true );
+    color = wid_info->fgcolor ? *(wid_info->fgcolor) : whiteRGBA;
+    status = Track_semantic_widget(
+	sdl_renderer,
+	disp_text(
+	    &(wid_info->valuetex), color, RIGHT, CENTER,
+	    wid_info->rightarrow->bounds.x - 1/*value_>*/ - 2/*>_|*/,
+	    draw_height - widget->bounds.y - widget->bounds.h / 2,
+	    true));
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw integer chooser value");
 }
 
 GLWidget *Init_IntChooserWidget( const char *name, int *value, int minval, int maxval, Uint32 *fgcolor,
@@ -1631,7 +1902,7 @@ GLWidget *Init_IntChooserWidget( const char *name, int *value, int minval, int m
     GLWidget *tmp;
     IntChooserWidget *wid_info;
     char valuetext[16];
-    string_tex_t tmp_tex;
+    string_tex_t tmp_tex = {0};
     int buttonsize;
 
     if (!value) {
@@ -1654,13 +1925,14 @@ GLWidget *Init_IntChooserWidget( const char *name, int *value, int minval, int m
         error("Failed to malloc in Init_IntChooserWidget");
 	return NULL;
     }
+    memset(tmp->wid_info, 0, sizeof(IntChooserWidget));
 
     /* hehe ugly hack to guess max size of value strings
      * monospace font is preferred
      */
     if (render_text(&gamefont,"555.55",&tmp_tex)) {
-    	free_string_texture(&tmp_tex);
 	valuespace = tmp_tex.width+4;
+	free_string_texture(&tmp_tex);
     } else {
     	valuespace = 50;
     }
@@ -1809,7 +2081,6 @@ static void DoubleChooserWidget_Add( void *data )
 	    ((ArrowWidget *)tmp->rightarrow->wid_info)->locked = true;
 	tmp->direction = 2;
 	snprintf(valuetext,15,"%1.2f",*(tmp->value));
-	free_string_texture(&(tmp->valuetex));
 	if(!render_text(&gamefont,valuetext,&(tmp->valuetex)))
 	    error("Failed to make value (%s=%1.2f) texture for doubleChooserWidget!\n",
 	    	    ((LabelWidget *)(tmp->name->wid_info))->tex.text,*(tmp->value));
@@ -1843,7 +2114,6 @@ static void DoubleChooserWidget_Subtract( void *data )
 	    ((ArrowWidget *)tmp->leftarrow->wid_info)->locked = true;
 	tmp->direction = -2;
 	snprintf(valuetext,15,"%1.2f",*(tmp->value));
-	free_string_texture(&(tmp->valuetex));
 	if(!render_text(&gamefont,valuetext,&(tmp->valuetex)))
 	    error("Failed to make value (%s=%1.2f) texture for doubleChooserWidget!\n",
 	    	    ((LabelWidget *)(tmp->name->wid_info))->tex.text,*(tmp->value));
@@ -1855,6 +2125,10 @@ static void DoubleChooserWidget_Subtract( void *data )
 static void Paint_DoubleChooserWidget( GLWidget *widget )
 {
     DoubleChooserWidget *wid_info;
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererStatus status;
+    Uint32 color;
 
     if (!widget) {
     	error("Paint_DoubleChooserWidget: argument is NULL!");
@@ -1867,24 +2141,31 @@ static void Paint_DoubleChooserWidget( GLWidget *widget )
     	error("Paint_DoubleChooserWidget: wid_info missing");
 	return;
     }
+    status = Begin_semantic_widget(&sdl_renderer, &renderer);
+    if (status != RENDERER_STATUS_OK)
+	return;
 
     if (wid_info->direction > 0) --(wid_info->direction);
     else if (wid_info->direction < 0) ++(wid_info->direction);
 
     if ( (wid_info->bgcolor) && *(wid_info->bgcolor) ) {
-    	set_alphacolor(*(wid_info->bgcolor));
-    	glBegin(GL_QUADS);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y+widget->bounds.h	);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y+widget->bounds.h	);
-    	glEnd();
+	status = Fill_semantic_widget_bounds(
+	    sdl_renderer, renderer, &widget->bounds, *(wid_info->bgcolor));
+	if (status != RENDERER_STATUS_OK) {
+	    warn("Could not draw double chooser background");
+	    return;
+	}
     }
-
-    if ( wid_info->fgcolor )
-    	disp_text(&(wid_info->valuetex), *(wid_info->fgcolor), RIGHT, CENTER, wid_info->rightarrow->bounds.x-1/*value_>*/-2/*>_|*/, draw_height - widget->bounds.y - widget->bounds.h/2, true );
-    else
-    	disp_text(&(wid_info->valuetex), whiteRGBA, RIGHT, CENTER, wid_info->rightarrow->bounds.x-1/*value_>*/-2/*>_|*/, draw_height - widget->bounds.y - widget->bounds.h/2, true );
+    color = wid_info->fgcolor ? *(wid_info->fgcolor) : whiteRGBA;
+    status = Track_semantic_widget(
+	sdl_renderer,
+	disp_text(
+	    &(wid_info->valuetex), color, RIGHT, CENTER,
+	    wid_info->rightarrow->bounds.x - 1/*value_>*/ - 2/*>_|*/,
+	    draw_height - widget->bounds.y - widget->bounds.h / 2,
+	    true));
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw double chooser value");
 }
 
 GLWidget *Init_DoubleChooserWidget( const char *name, double *value, double minval, double maxval,
@@ -1893,7 +2174,7 @@ GLWidget *Init_DoubleChooserWidget( const char *name, double *value, double minv
 {
     int valuespace;
     GLWidget *tmp;
-    string_tex_t tmp_tex;
+    string_tex_t tmp_tex = {0};
     DoubleChooserWidget *wid_info;
     char valuetext[16];
     int buttonsize;
@@ -1918,13 +2199,14 @@ GLWidget *Init_DoubleChooserWidget( const char *name, double *value, double minv
         error("Failed to malloc in Init_DoubleChooserWidget");
 	return NULL;
     }
+    memset(tmp->wid_info, 0, sizeof(DoubleChooserWidget));
     
     /* hehe ugly hack to guess max size of value strings
      * monospace font is preferred
      */
     if (render_text(&gamefont,"555.55",&tmp_tex)) {
-    	free_string_texture(&tmp_tex);
 	valuespace = tmp_tex.width+4;
+	free_string_texture(&tmp_tex);
     } else {
     	valuespace = 50;
     }
@@ -2049,6 +2331,9 @@ static void SetBounds_ColorChooserWidget( GLWidget *widget, SDL_Rect *b )
 static void Paint_ColorChooserWidget( GLWidget *widget )
 {
     ColorChooserWidget *wid_info;
+    SemanticWidgetBatch batch;
+    RendererColor color;
+    RendererVertex2D vertices[3];
 
     if (!widget) {
     	error("Paint_ColorChooserWidget: argument is NULL!");
@@ -2062,21 +2347,42 @@ static void Paint_ColorChooserWidget( GLWidget *widget )
 	return;
     }
 
-    if ( (wid_info->bgcolor) && *(wid_info->bgcolor) ) {
-    	set_alphacolor(*(wid_info->bgcolor));
-    	glBegin(GL_QUADS);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w    ,widget->bounds.y	    	    	);
-    	    glVertex2i(widget->bounds.x+widget->bounds.w    ,widget->bounds.y+widget->bounds.h	);
-    	    glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y+widget->bounds.h	);
-    	glEnd();
+    if (Begin_semantic_widget_batch(&batch) != RENDERER_STATUS_OK)
+	return;
+    color = Renderer_color_from_rgba32(blackRGBA);
+    vertices[0] = (RendererVertex2D){
+	(float)wid_info->button->bounds.x,
+	(float)wid_info->button->bounds.y,
+	0.0f, 0.0f, color};
+    vertices[1] = (RendererVertex2D){
+	(float)wid_info->button->bounds.x,
+	(float)(wid_info->button->bounds.y + wid_info->button->bounds.h),
+	0.0f, 0.0f, color};
+    vertices[2] = (RendererVertex2D){
+	(float)(wid_info->button->bounds.x + wid_info->button->bounds.w),
+	(float)(wid_info->button->bounds.y + wid_info->button->bounds.h),
+	0.0f, 0.0f, color};
+    (void)Set_semantic_widget_batch_blend(
+	&batch, RENDERER_BLEND_ALPHA);
+    if (batch.status == RENDERER_STATUS_OK
+	&& wid_info->bgcolor != NULL && *(wid_info->bgcolor) != 0
+	&& widget->bounds.w > 0 && widget->bounds.h > 0) {
+	(void)Accept_semantic_widget_command(
+	    &batch,
+	    Renderer_fill_rect(
+		batch.renderer,
+		(float)widget->bounds.x, (float)widget->bounds.y,
+		(float)widget->bounds.w, (float)widget->bounds.h,
+		Renderer_color_from_rgba32(*(wid_info->bgcolor))));
     }
-    set_alphacolor(blackRGBA);
-    glBegin(GL_TRIANGLES);
-    	glVertex2i(wid_info->button->bounds.x ,wid_info->button->bounds.y);
-    	glVertex2i(wid_info->button->bounds.x ,wid_info->button->bounds.y + wid_info->button->bounds.h);
-    	glVertex2i(wid_info->button->bounds.x +wid_info->button->bounds.w ,wid_info->button->bounds.y + wid_info->button->bounds.h);
-    glEnd();
+    if (batch.status == RENDERER_STATUS_OK) {
+	(void)Accept_semantic_widget_command(
+	    &batch,
+	    Renderer_draw_triangles(batch.renderer, NULL, vertices, 3));
+    }
+    (void)Finish_semantic_widget_batch(&batch);
+    if (batch.status != RENDERER_STATUS_OK)
+	warn("Could not draw color chooser widget");
 }
 
 static void action_ColorChooserWidget(void *data)
@@ -2258,6 +2564,15 @@ static void Paint_ColorModWidget( GLWidget *widget )
 {
     ColorModWidget *wid_info;
     SDL_Rect b;
+    SemanticWidgetBatch batch;
+    RendererColor black;
+    RendererColor white;
+    RendererColor value_color;
+    RendererVertex2D diagonal[6];
+    RendererVertex2D fan[12];
+    RendererVertex2D inner[6];
+    RendererPoint2D fan_points[6];
+    int index;
 
     if (!widget) {
     	error("Paint_ColorModWidget: argument is NULL!");
@@ -2275,56 +2590,95 @@ static void Paint_ColorModWidget( GLWidget *widget )
     	error("Paint_ColorModWidget: wid_info missing");
 	return;
     }
-
-    if ( (wid_info->bgcolor) && *(wid_info->bgcolor) ) {
-    	b.x = widget->bounds.x;
-    	b.y = widget->bounds.y;
-    	b.w = widget->bounds.w;
-    	b.h = widget->bounds.h;
-    	set_alphacolor(*(wid_info->bgcolor));
-    	glBegin(GL_QUADS);
-    	    glVertex2i(b.x  	,b.y	    );
-    	    glVertex2i(b.x+b.w	,b.y	    );
-    	    glVertex2i(b.x+b.w	,b.y+b.h    );
-    	    glVertex2i(b.x  	,b.y+b.h    );
-    	glEnd();
-    }
-    
+    if (Begin_semantic_widget_batch(&batch) != RENDERER_STATUS_OK)
+	return;
     b.x = wid_info->redpick->bounds.x + wid_info->redpick->bounds.w + 16;
     b.y = widget->bounds.y + 2;
     b.w = widget->bounds.x + widget->bounds.w - 2 - b.x;
     b.h = widget->bounds.y + widget->bounds.h - 2 - b.y;
-    
-    glBegin(GL_TRIANGLES);
-    	set_alphacolor(blackRGBA);
-    	glVertex2i(b.x	    ,b.y    	);
-    	glVertex2i(b.x	    ,b.y+b.h    );
-    	glVertex2i(b.x+b.w  ,b.y+b.h    );
-    	set_alphacolor(whiteRGBA);
-    	glVertex2i(b.x	    ,b.y    	);
-    	glVertex2i(b.x+b.w  ,b.y+b.h    );
-    	glVertex2i(b.x+b.w  ,b.y    	);
-    glEnd();
-    
-    glBegin(GL_POLYGON);
-    	set_alphacolor(whiteRGBA);
-    	glVertex2i(b.x + (GLint)(0.9*b.w)   ,b.y + b.h	    	    );
-    	glVertex2i(b.x + b.w	    	    ,b.y + b.h	    	    );
-    	glVertex2i(b.x + b.w	    	    ,b.y + (GLint)(0.9*b.h) );
-    	set_alphacolor(blackRGBA);
-    	glVertex2i(b.x + (GLint)(0.1*b.w)   ,b.y    	    	    );
-    	glVertex2i(b.x	    	    	    ,b.y    	    	    );
-    	glVertex2i(b.x	    	    	    ,b.y + (GLint)(0.1*b.h) );
-    glEnd();
-    
-    glBegin(GL_QUADS);
-    	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    	set_alphacolor(*(wid_info->value));
-    	glVertex2i(b.x + (GLint)(0.1*b.w)   ,b.y + (GLint)(0.1*b.h) );
-    	glVertex2i(b.x + (GLint)(0.1*b.w)   ,b.y + (GLint)(0.9*b.h) );
-    	glVertex2i(b.x + (GLint)(0.9*b.w)   ,b.y + (GLint)(0.9*b.h) );
-    	glVertex2i(b.x + (GLint)(0.9*b.w)   ,b.y + (GLint)(0.1*b.h) );
-    glEnd();
+
+    black = Renderer_color_from_rgba32(blackRGBA);
+    white = Renderer_color_from_rgba32(whiteRGBA);
+    value_color = Renderer_color_from_rgba32(*(wid_info->value));
+    diagonal[0] = (RendererVertex2D){b.x, b.y, 0, 0, black};
+    diagonal[1] = (RendererVertex2D){b.x, b.y + b.h, 0, 0, black};
+    diagonal[2] = (RendererVertex2D){
+	b.x + b.w, b.y + b.h, 0, 0, black};
+    diagonal[3] = (RendererVertex2D){b.x, b.y, 0, 0, white};
+    diagonal[4] = (RendererVertex2D){
+	b.x + b.w, b.y + b.h, 0, 0, white};
+    diagonal[5] = (RendererVertex2D){b.x + b.w, b.y, 0, 0, white};
+
+    fan_points[0] = (RendererPoint2D){
+	b.x + (int)(0.9 * b.w), b.y + b.h};
+    fan_points[1] = (RendererPoint2D){b.x + b.w, b.y + b.h};
+    fan_points[2] = (RendererPoint2D){
+	b.x + b.w, b.y + (int)(0.9 * b.h)};
+    fan_points[3] = (RendererPoint2D){
+	b.x + (int)(0.1 * b.w), b.y};
+    fan_points[4] = (RendererPoint2D){b.x, b.y};
+    fan_points[5] = (RendererPoint2D){
+	b.x, b.y + (int)(0.1 * b.h)};
+    for (index = 0; index < 4; index++) {
+	RendererColor second = index + 1 < 3 ? white : black;
+	RendererColor third = index + 2 < 3 ? white : black;
+	int base = index * 3;
+
+	fan[base] = (RendererVertex2D){
+	    fan_points[0].x, fan_points[0].y, 0, 0, white};
+	fan[base + 1] = (RendererVertex2D){
+	    fan_points[index + 1].x, fan_points[index + 1].y,
+	    0, 0, second};
+	fan[base + 2] = (RendererVertex2D){
+	    fan_points[index + 2].x, fan_points[index + 2].y,
+	    0, 0, third};
+    }
+
+    inner[0] = (RendererVertex2D){
+	b.x + (int)(0.1 * b.w), b.y + (int)(0.1 * b.h),
+	0, 0, value_color};
+    inner[1] = (RendererVertex2D){
+	b.x + (int)(0.1 * b.w), b.y + (int)(0.9 * b.h),
+	0, 0, value_color};
+    inner[2] = (RendererVertex2D){
+	b.x + (int)(0.9 * b.w), b.y + (int)(0.9 * b.h),
+	0, 0, value_color};
+    inner[3] = inner[0];
+    inner[4] = inner[2];
+    inner[5] = (RendererVertex2D){
+	b.x + (int)(0.9 * b.w), b.y + (int)(0.1 * b.h),
+	0, 0, value_color};
+
+    (void)Set_semantic_widget_batch_blend(&batch, RENDERER_BLEND_ALPHA);
+    if (batch.status == RENDERER_STATUS_OK
+	&& wid_info->bgcolor != NULL && *(wid_info->bgcolor) != 0
+	&& widget->bounds.w > 0 && widget->bounds.h > 0) {
+	(void)Accept_semantic_widget_command(
+	    &batch,
+	    Renderer_fill_rect(
+		batch.renderer,
+		(float)widget->bounds.x, (float)widget->bounds.y,
+		(float)widget->bounds.w, (float)widget->bounds.h,
+		Renderer_color_from_rgba32(*(wid_info->bgcolor))));
+    }
+    if (batch.status == RENDERER_STATUS_OK) {
+	(void)Accept_semantic_widget_command(
+	    &batch,
+	    Renderer_draw_triangles(batch.renderer, NULL, diagonal, 6));
+    }
+    if (batch.status == RENDERER_STATUS_OK) {
+	(void)Accept_semantic_widget_command(
+	    &batch,
+	    Renderer_draw_triangles(batch.renderer, NULL, fan, 12));
+    }
+    if (batch.status == RENDERER_STATUS_OK) {
+	(void)Accept_semantic_widget_command(
+	    &batch,
+	    Renderer_draw_triangles(batch.renderer, NULL, inner, 6));
+    }
+    (void)Finish_semantic_widget_batch(&batch);
+    if (batch.status != RENDERER_STATUS_OK)
+	warn("Could not draw color modifier widget");
 }
 
 static void Callback_ColorModWidget(void *tmp, const char *value)
@@ -2748,34 +3102,50 @@ static void Paint_ListWidget( GLWidget *widget )
 {
     ListWidget *wid_info;
     GLWidget *curr;
-    int count = 0;
-    Uint32  *col;
+    SemanticWidgetBatch batch;
+    int use_first_background = 1;
+    int blend_set = 0;
 
-    if (!widget) return;
-    
+    if (!widget) {
+	error("Paint_ListWidget: argument is NULL!");
+	return;
+    }
     wid_info = (ListWidget *)(widget->wid_info);
-
-    glBegin(GL_QUADS);
+    if (!wid_info) {
+	error("Paint_ListWidget: wid_info missing!");
+	return;
+    }
+    if (Begin_semantic_widget_batch(&batch) != RENDERER_STATUS_OK)
+	return;
 
     curr = widget->children;
-    while (curr) {
-    	if (count % 2) col = wid_info->bg2;
-    	else col = wid_info->bg1;
-	
-	++count;
-    
-    	if (*col) {
-    	    set_alphacolor(*col);
+    while (curr && batch.status == RENDERER_STATUS_OK) {
+	Uint32 *color = use_first_background
+	    ? wid_info->bg1 : wid_info->bg2;
 
-    	    glVertex2i(curr->bounds.x	    	    	,curr->bounds.y	    	    	);
-    	    glVertex2i(curr->bounds.x+widget->bounds.w	,curr->bounds.y	    	    	);
-    	    glVertex2i(curr->bounds.x+widget->bounds.w	,curr->bounds.y+curr->bounds.h	);
-    	    glVertex2i(curr->bounds.x 	    	    	,curr->bounds.y+curr->bounds.h	);
-    	}
-    	curr = curr->next;
+	use_first_background = !use_first_background;
+	if (*color != 0 && widget->bounds.w > 0 && curr->bounds.h > 0) {
+	    if (!blend_set) {
+		(void)Set_semantic_widget_batch_blend(
+		    &batch, RENDERER_BLEND_ALPHA);
+		if (batch.status == RENDERER_STATUS_OK)
+		    blend_set = 1;
+	    }
+	    if (batch.status == RENDERER_STATUS_OK) {
+		(void)Accept_semantic_widget_command(
+		    &batch,
+		    Renderer_fill_rect(
+			batch.renderer,
+			(float)curr->bounds.x, (float)curr->bounds.y,
+			(float)widget->bounds.w, (float)curr->bounds.h,
+			Renderer_color_from_rgba32(*color)));
+	    }
+	}
+	curr = curr->next;
     }
-
-    glEnd();
+    (void)Finish_semantic_widget_batch(&batch);
+    if (batch.status != RENDERER_STATUS_OK)
+	warn("Could not draw list widget background");
 }
 
 /* This setbounds method has very special behaviour; basically
@@ -2929,10 +3299,10 @@ GLWidget *Init_ListWidget( Uint16 x, Uint16 y, Uint32 *bg1, Uint32 *bg2, Uint32 
 /****************************/
 /* Begin: ScrollPaneWidget  */
 /****************************/
-static void ScrollPaneWidget_poschange( GLfloat pos , void *data );
+static void ScrollPaneWidget_poschange( float pos , void *data );
 static void SetBounds_ScrollPaneWidget( GLWidget *widget, SDL_Rect *b );
 
-static void ScrollPaneWidget_poschange( GLfloat pos , void *data )
+static void ScrollPaneWidget_poschange( float pos , void *data )
 {
     GLWidget *widget;
     GLWidget *masque;
@@ -2983,7 +3353,7 @@ static void SetBounds_ScrollPaneWidget(GLWidget *widget, SDL_Rect *b )
 {
     ScrollPaneWidget *wid_info;
     SDL_Rect bounds;
-    GLfloat pos;
+    float pos;
     int i;
     
     if (!widget) return;
@@ -3107,7 +3477,7 @@ static void SetBounds_ScrollPaneWidget(GLWidget *widget, SDL_Rect *b )
 	}
     
 	if (wid_info->hori_scroller) {
-	    ScrollbarWidget_SetSlideSize(wid_info->hori_scroller,MIN(((GLfloat)wid_info->masque->bounds.w)/((GLfloat)bounds.w),1.0f));
+	    ScrollbarWidget_SetSlideSize(wid_info->hori_scroller,MIN(((float)wid_info->masque->bounds.w)/((float)bounds.w),1.0f));
     	    pos = MIN( ((ScrollbarWidget *)(wid_info->hori_scroller->wid_info))->pos, 1.0f - ((ScrollbarWidget *)(wid_info->hori_scroller->wid_info))->size);
     	    bounds.x = (Sint16)(wid_info->masque->bounds.x - pos*(wid_info->content->bounds.x));
 	} else {
@@ -3115,7 +3485,7 @@ static void SetBounds_ScrollPaneWidget(GLWidget *widget, SDL_Rect *b )
 	}
 	
 	if (wid_info->vert_scroller) {
-	    ScrollbarWidget_SetSlideSize(wid_info->vert_scroller,MIN(((GLfloat)wid_info->masque->bounds.h)/((GLfloat)bounds.h),1.0f));
+	    ScrollbarWidget_SetSlideSize(wid_info->vert_scroller,MIN(((float)wid_info->masque->bounds.h)/((float)bounds.h),1.0f));
     	    pos = MIN( ((ScrollbarWidget *)(wid_info->vert_scroller->wid_info))->pos, 1.0f - ((ScrollbarWidget *)(wid_info->vert_scroller->wid_info))->size);
     	    bounds.y = (Sint16)(wid_info->masque->bounds.y - pos*(wid_info->content->bounds.h));
 	} else {
@@ -3287,10 +3657,10 @@ static void SetBounds_MainWidget( GLWidget *widget, SDL_Rect *b )
 }
 
 extern int Console_isVisible(void);
-extern void Paste_String_to_Console(char *text);
+extern void Paste_String_to_Console(const char *text);
 static void button_MainWidget( Uint8 button, Uint8 state , Uint16 x , Uint16 y, void *data )
 {
-    int scraplen;
+    char *clipboard_text;
     
     if (!data) return;
 
@@ -3301,9 +3671,13 @@ static void button_MainWidget( Uint8 button, Uint8 state , Uint16 x , Uint16 y, 
 	if (button == 2) {
     	    if (Console_isVisible()) {
 	    	scraptarget = NULL;
-	    	get_scrap(TextScrap('T','E','X','T'), &scraplen, &scrap);
-		if ( scraplen == 0 ) return;
-		Paste_String_to_Console(scrap);
+		clipboard_text = Sdl_clipboard_get_text();
+		if (clipboard_text == NULL || clipboard_text[0] == '\0') {
+		    Sdl_clipboard_free_text(clipboard_text);
+		    return;
+		}
+		Paste_String_to_Console(clipboard_text);
+		Sdl_clipboard_free_text(clipboard_text);
 	    }
 	}
     }
@@ -3317,7 +3691,6 @@ static void Close_MainWidget ( GLWidget *widget )
 	return;
     }
     
-    if ( scrap ) free(scrap);
 }
 
 GLWidget *Init_MainWidget( font_data *font )
@@ -3454,7 +3827,7 @@ static void confmenu_callback( void )
 
 static void ConfMenuWidget_Quit( void *data )
 {
-    SDL_Event quit;
+    SDL_Event quit = {0};
     quit.type = SDL_QUIT;
     SDL_PushEvent(&quit);
 }
@@ -3736,6 +4109,9 @@ static void Paint_ConfMenuWidget( GLWidget *widget )
     Uint32 edgeColor = 0xff0000ff;
     Uint32 bgColor = 0x0000ff88;
     ConfMenuWidget *wid_info;
+    SemanticWidgetBatch batch;
+    RendererPoint2D edge_points[4];
+    RendererColor edge_colors[4];
 
     if (!widget ) {
     	error("Paint_ConfMenuWidget: tried to paint NULL ConfMenuWidget!");
@@ -3772,27 +4148,55 @@ static void Paint_ConfMenuWidget( GLWidget *widget )
     	    	ListWidget_Append(wid_info->button_list,wid_info->jlb);
 	    	wid_info->paused = false;
 	    }
-    	}
+	}
     }
-    
-    set_alphacolor(bgColor);
-    glBegin(GL_QUADS);
-    	glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y	    	    	);
-    	glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y	    	    	);
-    	glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y+widget->bounds.h	);
-    	glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y+widget->bounds.h	);
-    glEnd();
-    glBegin(GL_LINE_LOOP);
-    	set_alphacolor(edgeColor);
-    	glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y	    	    	);
-    	set_alphacolor(bgColor | 0x000000ff);
-    	glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y	    	    	);
-    	set_alphacolor(edgeColor);
-    	glVertex2i(widget->bounds.x+widget->bounds.w,widget->bounds.y+widget->bounds.h	);
-    	set_alphacolor(bgColor | 0x000000ff);
-    	glVertex2i(widget->bounds.x 	    	    ,widget->bounds.y+widget->bounds.h	);
-    glEnd();
+
+    if (Begin_semantic_widget_batch(&batch) != RENDERER_STATUS_OK)
+	return;
+    if (widget->bounds.w > 0 && widget->bounds.h > 0) {
+	edge_points[0] = (RendererPoint2D){
+	    widget->bounds.x, widget->bounds.y};
+	edge_points[1] = (RendererPoint2D){
+	    widget->bounds.x + widget->bounds.w, widget->bounds.y};
+	edge_points[2] = (RendererPoint2D){
+	    widget->bounds.x + widget->bounds.w,
+	    widget->bounds.y + widget->bounds.h};
+	edge_points[3] = (RendererPoint2D){
+	    widget->bounds.x, widget->bounds.y + widget->bounds.h};
+	edge_colors[0] = Renderer_color_from_rgba32(edgeColor);
+	edge_colors[1] = Renderer_color_from_rgba32(bgColor | 0x000000ff);
+	edge_colors[2] = edge_colors[0];
+	edge_colors[3] = edge_colors[1];
+
+	(void)Set_semantic_widget_batch_blend(
+	    &batch, RENDERER_BLEND_ALPHA);
+	if (batch.status == RENDERER_STATUS_OK) {
+	    (void)Accept_semantic_widget_command(
+		&batch,
+		Renderer_fill_rect(
+		    batch.renderer,
+		    (float)widget->bounds.x, (float)widget->bounds.y,
+		    (float)widget->bounds.w, (float)widget->bounds.h,
+		    Renderer_color_from_rgba32(bgColor)));
+	}
+	if (batch.status == RENDERER_STATUS_OK) {
+	    (void)Accept_semantic_widget_command(
+		&batch,
+		Renderer_stroke_colored_path(
+		    batch.renderer, edge_points, edge_colors, 4, 1.0f, 1));
+	}
+    }
+    (void)Finish_semantic_widget_batch(&batch);
+    if (batch.status != RENDERER_STATUS_OK)
+	warn("Could not draw configuration menu widget");
 }
+
+#ifdef XPILOT_GLWIDGETS_TEST_HOOKS
+void Glwidgets_test_paint_conf_menu(GLWidget *widget)
+{
+    Paint_ConfMenuWidget(widget);
+}
+#endif
 
 GLWidget *Init_ConfMenuWidget( Uint16 x, Uint16 y )
 {
@@ -3965,6 +4369,8 @@ static void Button_ImageButtonWidget(Uint8 button, Uint8 state, Uint16 x,
 static void Close_ImageButtonWidget(GLWidget *widget)
 {
     ImageButtonWidget *info;
+    RendererStatus status;
+
     if (!widget) return;
     if (widget->WIDGET != IMAGEBUTTONWIDGET) {
     	error("Wrong widget type for Close_ImageButtonWidget [%i]",
@@ -3972,15 +4378,19 @@ static void Close_ImageButtonWidget(GLWidget *widget)
 	return;
     }
     info = (ImageButtonWidget*)widget->wid_info;
+    status = Sdl_ui_image_pair_cleanup(&info->images);
+    if (status != RENDERER_STATUS_OK)
+        error("Failed to release button images [%d]", (int)status);
     free_string_texture(&(info->tex));
-    if (info->imageUp) glDeleteTextures(1, &(info->imageUp));
-    if (info->imageDown) glDeleteTextures(1, &(info->imageDown));
 }
 
 static void Paint_ImageButtonWidget(GLWidget *widget)
 {
     SDL_Rect *b;
     ImageButtonWidget *info;
+    const SdlUiImage *image;
+    RendererRect image_bounds;
+    RendererStatus status;
     int x, y, c;
 
     if (!widget) return;
@@ -3988,38 +4398,24 @@ static void Paint_ImageButtonWidget(GLWidget *widget)
     b = &(widget->bounds);
     info = (ImageButtonWidget*)(widget->wid_info);
 
-    if (info->state != SDL_PRESSED) {
-	if (info->imageUp) {
-	    set_alphacolor(info->bg);
-	    glBindTexture(GL_TEXTURE_2D, info->imageUp);
-	    glEnable(GL_TEXTURE_2D);
-	    glBegin(GL_QUADS);
-	    glTexCoord2f(info->txcUp.MinX, info->txcUp.MinY); 
-	    glVertex2i(b->x, b->y);
-	    glTexCoord2f(info->txcUp.MaxX, info->txcUp.MinY); 
-	    glVertex2i(b->x + b->w , b->y);
-	    glTexCoord2f(info->txcUp.MaxX, info->txcUp.MaxY); 
-	    glVertex2i(b->x + b->w , b->y + b->h);
-	    glTexCoord2f(info->txcUp.MinY, info->txcUp.MaxY); 
-	    glVertex2i(b->x, b->y + b->h);
-	    glEnd();
-	}
-    } else {
-	if (info->imageDown) {
-	    set_alphacolor(info->bg);
-	    glBindTexture(GL_TEXTURE_2D, info->imageDown);
-	    glEnable(GL_TEXTURE_2D);
-	    glBegin(GL_QUADS);
-	    glTexCoord2f(info->txcDown.MinX, info->txcDown.MinY); 
-	    glVertex2i(b->x, b->y);
-	    glTexCoord2f(info->txcDown.MaxX, info->txcDown.MinY); 
-	    glVertex2i(b->x + b->w , b->y);
-	    glTexCoord2f(info->txcDown.MaxX, info->txcDown.MaxY); 
-	    glVertex2i(b->x + b->w , b->y + b->h);
-	    glTexCoord2f(info->txcDown.MinY, info->txcDown.MaxY); 
-	    glVertex2i(b->x, b->y + b->h);
-	    glEnd();
-	}
+    if (Sdl_ui_draw_state_status(info->draw_state) != RENDERER_STATUS_OK)
+        return;
+
+    image = info->state != SDL_PRESSED
+        ? &info->images.first : &info->images.second;
+    if (info->images.first.texture != NULL
+        && info->images.second.texture != NULL) {
+        image_bounds.x = b->x;
+        image_bounds.y = b->y;
+        image_bounds.width = b->w;
+        image_bounds.height = b->h;
+        status = Sdl_ui_image_draw_tracked(
+            info->draw_state, info->sdl_renderer, image, &image_bounds,
+            Renderer_color_from_rgba32(info->bg));
+        if (status != RENDERER_STATUS_OK) {
+            error("Failed to draw button image [%d]", (int)status);
+            return;
+        }
     }
     
     x = widget->bounds.x + widget->bounds.w / 2;
@@ -4035,7 +4431,22 @@ static void Paint_ImageButtonWidget(GLWidget *widget)
 	      true);
 }
 
-GLWidget *Init_ImageButtonWidget(const char *text,
+int ImageButtonWidget_has_semantic_images(const GLWidget *widget)
+{
+    const ImageButtonWidget *info;
+
+    if (widget == NULL || widget->WIDGET != IMAGEBUTTONWIDGET
+        || widget->wid_info == NULL) {
+        return 0;
+    }
+    info = widget->wid_info;
+    return info->images.first.texture != NULL
+        && info->images.second.texture != NULL;
+}
+
+GLWidget *Init_ImageButtonWidget(SdlRenderer *sdl_renderer,
+                                 SdlUiDrawState *draw_state,
+                                 const char *text,
 				 const char *upImage,
 				 const char *downImage,
 				 Uint32 bg, 
@@ -4044,12 +4455,20 @@ GLWidget *Init_ImageButtonWidget(const char *text,
 {
     GLWidget *tmp;
     ImageButtonWidget *info;
-    SDL_Surface *surface;
-    char imagePath[256];
     int width, height;
+#ifdef HAVE_SDL_IMAGE
+    SDL_Surface *up_surface;
+    SDL_Surface *down_surface;
+    Renderer *renderer;
+    RendererStatus status;
+    char up_image_path[256];
+    char down_image_path[256];
+    int up_path_length;
+    int down_path_length;
+#endif
     
-    if (!text) {
-    	error("text missing for Init_ImageButtonWidget.");
+    if (sdl_renderer == NULL || draw_state == NULL || !text) {
+	error("renderer, draw state, or text missing for Init_ImageButtonWidget");
 	return NULL;
     }
     tmp	= Init_EmptyBaseGLWidget();
@@ -4064,12 +4483,13 @@ GLWidget *Init_ImageButtonWidget(const char *text,
 	return NULL;
     }
 
+    memset(info, 0, sizeof(*info));
     info->onClick = onClick;
     info->fg = fg;
     info->bg = bg;
     info->state = SDL_RELEASED;
-    info->imageUp = 0;
-    info->imageDown = 0;
+    info->sdl_renderer = sdl_renderer;
+    info->draw_state = draw_state;
 
     if (!render_text(&gamefont, text, &(info->tex))) {
     	free(info);
@@ -4081,25 +4501,49 @@ GLWidget *Init_ImageButtonWidget(const char *text,
     height = info->tex.height + 1;
 
 #ifdef HAVE_SDL_IMAGE
-    sprintf(imagePath, "%s%s", CONF_TEXTUREDIR, upImage);
-    surface = IMG_Load(imagePath);
-    if (surface) {
-	info->imageUp = SDL_GL_LoadTexture(surface, &(info->txcUp));
-	if (width < surface->w) width = surface->w;
-	if (height < surface->h) height = surface->h;
-	SDL_FreeSurface(surface);
+    up_surface = NULL;
+    down_surface = NULL;
+    renderer = Sdl_renderer_frontend(sdl_renderer);
+    if (upImage == NULL || downImage == NULL) {
+        error("Button image filename missing");
     } else {
-	error("Failed to load button image %s", imagePath);
-    }
-    sprintf(imagePath, "%s%s", CONF_TEXTUREDIR, downImage);
-    surface = IMG_Load(imagePath);
-    if (surface) {
-	info->imageDown = SDL_GL_LoadTexture(surface, &(info->txcDown));
-	if (width < surface->w) width = surface->w;
-	if (height < surface->h) height = surface->h;
-	SDL_FreeSurface(surface);
-    } else {
-	error("Failed to load button image %s", imagePath);
+        up_path_length = snprintf(up_image_path, sizeof(up_image_path),
+                                  "%s%s", CONF_TEXTUREDIR, upImage);
+        down_path_length = snprintf(down_image_path, sizeof(down_image_path),
+                                    "%s%s", CONF_TEXTUREDIR, downImage);
+        if (up_path_length < 0
+            || (size_t)up_path_length >= sizeof(up_image_path)
+            || down_path_length < 0
+            || (size_t)down_path_length >= sizeof(down_image_path)) {
+            error("Button image path is too long");
+        } else {
+            up_surface = IMG_Load(up_image_path);
+            down_surface = IMG_Load(down_image_path);
+            if (up_surface == NULL)
+                error("Failed to load button image %s", up_image_path);
+            if (down_surface == NULL)
+                error("Failed to load button image %s", down_image_path);
+            if (up_surface != NULL && down_surface != NULL) {
+                status = Sdl_ui_image_pair_init(
+                    &info->images, renderer, up_surface, down_surface);
+                if (status == RENDERER_STATUS_OK) {
+                    if (width < info->images.first.content_width)
+                        width = info->images.first.content_width;
+                    if (height < info->images.first.content_height)
+                        height = info->images.first.content_height;
+                    if (width < info->images.second.content_width)
+                        width = info->images.second.content_width;
+                    if (height < info->images.second.content_height)
+                        height = info->images.second.content_height;
+                } else {
+                    error("Failed to create button images [%d]", (int)status);
+                }
+            }
+            if (up_surface != NULL)
+                SDL_FreeSurface(up_surface);
+            if (down_surface != NULL)
+                SDL_FreeSurface(down_surface);
+        }
     }
 #endif
 

@@ -177,6 +177,7 @@ static void Paint_debris(int x_areas, int y_areas, int areas, int max_)
 	  (color))
 #endif
 
+    Gui_paint_sparks_begin();
     for (i = 0; i < max_; i++) {
 	if (num_debris[i] > 0) {
 	    x = BASE_X(i);
@@ -190,6 +191,7 @@ static void Paint_debris(int x_areas, int y_areas, int areas, int max_)
 	    RELEASE(debris_ptr[i], num_debris[i], max_debris[i]);
 	}
     }
+    Gui_paint_sparks_end();
 }
 
 
@@ -406,6 +408,7 @@ static void Paint_appearing(void)
     int i, x, y;
 
     if (num_appearing > 0) {
+	Gui_paint_appearing_begin();
 	for (i = 0; i < num_appearing; i++) {
 	    x = appearing_ptr[i].x;
 	    y = appearing_ptr[i].y;
@@ -413,6 +416,7 @@ static void Paint_appearing(void)
 		Gui_paint_appearing(x, y, appearing_ptr[i].id,
 				    appearing_ptr[i].count);
 	}
+	Gui_paint_appearing_end();
 	RELEASE(appearing_ptr, num_appearing, max_appearing);
     }
 }
