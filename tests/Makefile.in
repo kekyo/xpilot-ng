@@ -255,6 +255,8 @@ am_test_sdl_event_OBJECTS = test_sdl_event.$(OBJEXT) \
 	sdlevent.$(OBJEXT)
 test_sdl_event_OBJECTS = $(am_test_sdl_event_OBJECTS)
 test_sdl_event_DEPENDENCIES =
+test_sdl_event_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(test_sdl_event_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdl_game_frame_OBJECTS = test_sdl_game_frame.$(OBJEXT) \
 	sdlgameframe.$(OBJEXT)
 test_sdl_game_frame_OBJECTS = $(am_test_sdl_game_frame_OBJECTS)
@@ -1008,6 +1010,9 @@ test_sdl_clipboard_LDADD = @SDL3_LIBS@
 test_sdl_event_SOURCES = test_sdl_event.c \
 	$(top_srcdir)/src/client/sdl/sdlevent.c
 
+test_sdl_event_LDFLAGS = $(AM_LDFLAGS) \
+	-Wl,--wrap=SDL_GetMouseState
+
 test_sdl_event_LDADD = @SDL3_LIBS@
 test_gl_core_resources_SOURCES = test_gl_core_resources.c \
 	$(top_srcdir)/src/client/sdl/gl_diagnostics.c \
@@ -1127,7 +1132,11 @@ test_sdl_renderer_scissor_SOURCES = test_sdl_renderer_scissor.c \
 test_sdl_renderer_scissor_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
-test_sdl_renderer_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_sdl_renderer_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=SDL_GL_GetCurrentWindow \
+	-Wl,--wrap=SDL_GL_GetCurrentContext \
+	-Wl,--wrap=SDL_GL_GetProcAddress \
+	-Wl,--wrap=SDL_GetWindowSizeInPixels
 test_sdl_renderer_scissor_LDADD = @SDL3_LIBS@ @GL_LIBS@
 test_sdl_init_core_profile_SOURCES = test_sdl_init_core_profile.c \
 	$(top_srcdir)/src/client/sdl/sdlinit.c
@@ -1479,7 +1488,7 @@ test-sdl-console$(EXEEXT): $(test_sdl_console_OBJECTS) $(test_sdl_console_DEPEND
 
 test-sdl-event$(EXEEXT): $(test_sdl_event_OBJECTS) $(test_sdl_event_DEPENDENCIES) $(EXTRA_test_sdl_event_DEPENDENCIES)
 	@rm -f test-sdl-event$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(test_sdl_event_OBJECTS) $(test_sdl_event_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(test_sdl_event_LINK) $(test_sdl_event_OBJECTS) $(test_sdl_event_LDADD) $(LIBS)
 
 test-sdl-game-frame$(EXEEXT): $(test_sdl_game_frame_OBJECTS) $(test_sdl_game_frame_DEPENDENCIES) $(EXTRA_test_sdl_game_frame_DEPENDENCIES)
 	@rm -f test-sdl-game-frame$(EXEEXT)

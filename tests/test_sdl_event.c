@@ -133,7 +133,7 @@ void Pointer_button_released(int button)
     pointer_release_count[button - 1]++;
 }
 
-SDL_MouseButtonFlags SDL_GetMouseState(float *x, float *y)
+SDL_MouseButtonFlags __wrap_SDL_GetMouseState(float *x, float *y)
 {
     if (x != NULL) {
         *x = focus_mouse_x;

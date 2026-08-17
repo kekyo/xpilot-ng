@@ -85,6 +85,8 @@ test_sdl_clipboard_LDADD = @SDL3_LIBS@
 
 test_sdl_event_SOURCES = test_sdl_event.c \
 	$(top_srcdir)/src/client/sdl/sdlevent.c
+test_sdl_event_LDFLAGS = $(AM_LDFLAGS) \
+	-Wl,--wrap=SDL_GetMouseState
 test_sdl_event_LDADD = @SDL3_LIBS@
 
 test_gl_core_resources_SOURCES = test_gl_core_resources.c \
@@ -192,7 +194,11 @@ test_sdl_renderer_scissor_SOURCES = test_sdl_renderer_scissor.c \
 	$(top_srcdir)/src/client/sdl/sdlrenderer.c
 test_sdl_renderer_scissor_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
-test_sdl_renderer_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_sdl_renderer_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=SDL_GL_GetCurrentWindow \
+	-Wl,--wrap=SDL_GL_GetCurrentContext \
+	-Wl,--wrap=SDL_GL_GetProcAddress \
+	-Wl,--wrap=SDL_GetWindowSizeInPixels
 test_sdl_renderer_scissor_LDADD = @SDL3_LIBS@ @GL_LIBS@
 
 test_sdl_init_core_profile_SOURCES = test_sdl_init_core_profile.c \

@@ -187,24 +187,24 @@ RendererStatus Renderer_gl_core_create(RendererGLProcLoader loader,
         ? RENDERER_STATUS_OK : RENDERER_STATUS_OUT_OF_MEMORY;
 }
 
-SDL_Window *SDLCALL SDL_GL_GetCurrentWindow(void)
+SDL_Window *SDLCALL __wrap_SDL_GL_GetCurrentWindow(void)
 {
     return (SDL_Window *)&fake_window_storage;
 }
 
-SDL_GLContext SDLCALL SDL_GL_GetCurrentContext(void)
+SDL_GLContext SDLCALL __wrap_SDL_GL_GetCurrentContext(void)
 {
     return (SDL_GLContext)&fake_context_storage;
 }
 
-SDL_FunctionPointer SDLCALL SDL_GL_GetProcAddress(const char *name)
+SDL_FunctionPointer SDLCALL __wrap_SDL_GL_GetProcAddress(const char *name)
 {
     (void)name;
     return fake_proc;
 }
 
-bool SDLCALL SDL_GetWindowSizeInPixels(SDL_Window *window, int *width,
-                                       int *height)
+bool SDLCALL __wrap_SDL_GetWindowSizeInPixels(SDL_Window *window, int *width,
+                                              int *height)
 {
     (void)window;
     *width = drawable_width;
