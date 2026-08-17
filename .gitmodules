@@ -1,5 +1,5 @@
 [submodule "zlib"]
-	path = zlib
+	path = vendor/zlib
 	url = https://github.com/madler/zlib
 [submodule "vendor/sdl3/SDL"]
 	path = vendor/sdl3/SDL
