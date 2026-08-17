@@ -5,7 +5,7 @@
 
 #include "text_geometry.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 /** Opaque atlas owning one renderer texture and immutable glyph metrics. */
 typedef struct TextAtlas TextAtlas;

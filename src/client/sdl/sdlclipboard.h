@@ -13,7 +13,7 @@
 #include "xpclient_sdl.h"
 
 /**
- * Copy text to the SDL2 clipboard with normalized Unix line endings.
+ * Copy text to the SDL3 clipboard with normalized Unix line endings.
  *
  * @param text NUL-terminated text to copy.
  * @return 0 on success, or -1 on allocation or SDL clipboard failure.
@@ -21,7 +21,7 @@
 int Sdl_clipboard_set_text(const char *text);
 
 /**
- * Retrieve text from the SDL2 clipboard.
+ * Retrieve text from the SDL3 clipboard.
  *
  * @return SDL-allocated text, or NULL when the clipboard is empty or fails.
  *         The caller must release the result with Sdl_clipboard_free_text().

@@ -43,17 +43,17 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "D:\projects\SDL_image-1.2.3\include" /I "D:\projects\zlib" /I "D:\projects\SDL_ttf-2.0.6\include" /I "D:\projects\SDL-1.2.6\include" /I ".." /I "..\..\common" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "ZLIB_DLL" /D "HAVE_SDL_IMAGE" /FR /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "D:\projects\SDL3_image\include" /I "D:\projects\vendor\zlib" /I "D:\projects\SDL3_ttf\include" /I "D:\projects\SDL3\include" /I ".." /I "..\..\common" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "ZLIB_DLL" /D "HAVE_SDL_IMAGE" /D "SDL_DISABLE_OLD_NAMES" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x40b /d "NDEBUG"
-# ADD RSC /l 0x40b /i "d:\projects\SDL-1.2.6\include" /d "NDEBUG"
+# ADD RSC /l 0x40b /i "D:\projects\SDL3\include" /d "NDEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /machine:I386
-# ADD LINK32 ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib SDL.lib SDL_ttf.lib zlib.lib opengl32.lib SDL_image.lib SDLmain.lib /nologo /subsystem:console /machine:I386 /libpath:"D:\projects\SDL_image-1.2.3\lib" /libpath:"D:\projects\SDL-1.2.6\lib" /libpath:"D:\projects\SDL_ttf-2.0.6\lib" /libpath:"D:\projects\zlib\dll32"
+# ADD LINK32 ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib SDL3.lib SDL3_ttf.lib zlib.lib opengl32.lib SDL3_image.lib /nologo /subsystem:console /machine:I386 /libpath:"D:\projects\SDL3_image\lib" /libpath:"D:\projects\SDL3\lib" /libpath:"D:\projects\SDL3_ttf\lib" /libpath:"D:\projects\vendor\zlib\dll32"
 # SUBTRACT LINK32 /pdb:none
 
 !ELSEIF  "$(CFG)" == "xpilot_sdl - Win32 Debug"
@@ -70,17 +70,17 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MD /W3 /Gm /GX /ZI /Od /I "D:\projects\zlib" /I "D:\projects\SDL_ttf-2.0.6\include" /I "D:\projects\SDL-1.2.6\include" /I ".." /I "..\..\common" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "ZLIB_DLL" /FR /YX /FD /GZ /c
+# ADD CPP /nologo /MD /W3 /Gm /GX /ZI /Od /I "D:\projects\SDL3_image\include" /I "D:\projects\vendor\zlib" /I "D:\projects\SDL3_ttf\include" /I "D:\projects\SDL3\include" /I ".." /I "..\..\common" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "ZLIB_DLL" /D "HAVE_SDL_IMAGE" /D "SDL_DISABLE_OLD_NAMES" /FR /YX /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x40b /d "_DEBUG"
-# ADD RSC /l 0x40b /i "D:\projects\SDL-1.2.6\include" /d "_DEBUG"
+# ADD RSC /l 0x40b /i "D:\projects\SDL3\include" /d "_DEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib SDL.lib SDL_ttf.lib zlib.lib opengl32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"D:\projects\SDL-1.2.6\lib" /libpath:"D:\projects\SDL_ttf-2.0.6\lib" /libpath:"D:\projects\zlib\dll32"
+# ADD LINK32 ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib SDL3.lib SDL3_ttf.lib zlib.lib opengl32.lib SDL3_image.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"D:\projects\SDL3_image\lib" /libpath:"D:\projects\SDL3\lib" /libpath:"D:\projects\SDL3_ttf\lib" /libpath:"D:\projects\vendor\zlib\dll32"
 # SUBTRACT LINK32 /pdb:none
 
 !ENDIF 

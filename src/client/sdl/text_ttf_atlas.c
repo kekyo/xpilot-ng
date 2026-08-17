@@ -2,7 +2,7 @@
 
 #include "text_ttf_atlas.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 typedef struct TextTtfAtlasSource {
     TTF_Font *font;
@@ -21,10 +21,10 @@ static RendererStatus Load_glyph(void *context, unsigned char byte,
     int max_y;
     int advance;
 
-    if (!TTF_GlyphIsProvided(source->font, character))
+    if (!TTF_FontHasGlyph(source->font, character))
         return RENDERER_STATUS_OK;
-    if (TTF_GlyphMetrics(source->font, character,
-                         &min_x, &max_x, &min_y, &max_y, &advance) < 0) {
+    if (!TTF_GetGlyphMetrics(source->font, character,
+                            &min_x, &max_x, &min_y, &max_y, &advance)) {
         return RENDERER_STATUS_BACKEND_ERROR;
     }
 
@@ -45,7 +45,7 @@ static RendererStatus Load_glyph(void *context, unsigned char byte,
 static void Release_glyph(void *context, TextAtlasGlyphSurface *glyph)
 {
     (void)context;
-    SDL_FreeSurface(glyph->surface);
+    SDL_DestroySurface(glyph->surface);
     glyph->surface = NULL;
 }
 
@@ -61,9 +61,9 @@ RendererStatus Text_ttf_atlas_create(Renderer *renderer, TTF_Font *font,
         return RENDERER_STATUS_INVALID_ARGUMENT;
 
     context.font = font;
-    context.ascent = TTF_FontAscent(font);
-    height = TTF_FontHeight(font);
-    line_skip = TTF_FontLineSkip(font);
+    context.ascent = TTF_GetFontAscent(font);
+    height = TTF_GetFontHeight(font);
+    line_skip = TTF_GetFontLineSkip(font);
     if (context.ascent < 0 || height <= 0 || line_skip <= 0)
         return RENDERER_STATUS_INVALID_ARGUMENT;
 

@@ -4,7 +4,7 @@
 #include "renderer_gl_core.h"
 #include "sdlrenderer.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <stddef.h>
 #include <string.h>
@@ -32,9 +32,13 @@ typedef struct FakeBackend {
 static FakeBackend backend;
 static int fake_window_storage;
 static int fake_context_storage;
-static int fake_proc_storage;
 static int drawable_width = 250;
 static int drawable_height = 120;
+static bool drawable_size_result = true;
+
+static void fake_proc(void)
+{
+}
 
 static int rect_equal(RendererRect left, RendererRect right)
 {
@@ -183,28 +187,58 @@ RendererStatus Renderer_gl_core_create(RendererGLProcLoader loader,
         ? RENDERER_STATUS_OK : RENDERER_STATUS_OUT_OF_MEMORY;
 }
 
-SDL_Window *SDLCALL SDL_GL_GetCurrentWindow(void)
+SDL_Window *SDLCALL __wrap_SDL_GL_GetCurrentWindow(void)
 {
     return (SDL_Window *)&fake_window_storage;
 }
 
-SDL_GLContext SDLCALL SDL_GL_GetCurrentContext(void)
+SDL_GLContext SDLCALL __wrap_SDL_GL_GetCurrentContext(void)
 {
-    return &fake_context_storage;
+    return (SDL_GLContext)&fake_context_storage;
 }
 
-void *SDLCALL SDL_GL_GetProcAddress(const char *name)
+SDL_FunctionPointer SDLCALL __wrap_SDL_GL_GetProcAddress(const char *name)
 {
     (void)name;
-    return &fake_proc_storage;
+    return fake_proc;
 }
 
-void SDLCALL SDL_GL_GetDrawableSize(SDL_Window *window, int *width,
-                                    int *height)
+bool SDLCALL __wrap_SDL_GetWindowSizeInPixels(SDL_Window *window, int *width,
+                                              int *height)
 {
     (void)window;
     *width = drawable_width;
     *height = drawable_height;
+    return drawable_size_result;
+}
+
+static int check_drawable_size_failure_is_reported(void)
+{
+    const RendererColor clear = {0, 0, 0, 255};
+    SDL_Window *window = (SDL_Window *)&fake_window_storage;
+    SdlRenderer *sdl_renderer = NULL;
+    RendererStatus size_status;
+    RendererStatus begin_status;
+    int width = 0;
+    int height = 0;
+
+    memset(&backend, 0, sizeof(backend));
+    backend.begin_result = RENDERER_STATUS_OK;
+    TEST_CHECK(Sdl_renderer_create(window, &sdl_renderer)
+               == RENDERER_STATUS_OK);
+
+    drawable_size_result = false;
+    size_status = Sdl_renderer_get_drawable_size(sdl_renderer, &width,
+                                                 &height);
+    begin_status = Sdl_renderer_begin_frame(sdl_renderer, 100, 80, clear);
+    drawable_size_result = true;
+
+    TEST_CHECK(size_status == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(begin_status == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(backend.begin_count == 0);
+    Sdl_renderer_destroy(sdl_renderer);
+    TEST_CHECK(backend.destroy_count == 1);
+    return 0;
 }
 
 static int check_logical_scissor_uses_drawable_pixels(void)
@@ -451,6 +485,7 @@ int main(void)
                == RENDERER_STATUS_INVALID_ARGUMENT);
     TEST_CHECK(Sdl_renderer_set_logical_scissor(NULL, NULL)
                == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(check_drawable_size_failure_is_reported() == 0);
     TEST_CHECK(check_logical_scissor_uses_drawable_pixels() == 0);
     TEST_CHECK(check_frame_result_is_sticky_until_successful_begin() == 0);
     TEST_CHECK(check_transform_failure_is_sticky_until_next_frame() == 0);

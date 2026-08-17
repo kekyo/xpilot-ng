@@ -259,7 +259,7 @@ static RendererStatus Run_world_object_stages(
 static void Scorelist_button(Uint8 button, Uint8 state, Uint16 x, Uint16 y, void *data)
 {
     GLWidget *widget = (GLWidget *)data;
-    if (state == SDL_PRESSED) {
+    if (state == true) {
     	if (button == 1) {
 	    scoreListMoving = true;
     	    if (DelGLWidgetListItem( widget->list, widget ))
@@ -271,7 +271,7 @@ static void Scorelist_button(Uint8 button, Uint8 state, Uint16 x, Uint16 y, void
 	}
     }
     
-    if (state == SDL_RELEASED) {
+    if (state == false) {
     	if (button == 1)
 	    scoreListMoving = false;
     }
@@ -816,8 +816,8 @@ void Paint_score_start(void)
 	fg.b = (scoreColorRGBA >> 8) & 255;
 	/* SDL 1.2_ttf ignored SDL_Color's fourth byte for blended text. */
 	fg.a = SDL_ALPHA_OPAQUE;
-    SDL_FillRect(scoreListWin.surface, NULL, 0);
-    header = TTF_RenderText_Blended(scoreListFont, headingStr, fg);
+    SDL_FillSurfaceRect(scoreListWin.surface, NULL, 0);
+    header = TTF_RenderText_Blended(scoreListFont, headingStr, 0, fg);
     if (header == NULL) {
 	error("scorelist header rendering failed: %s", SDL_GetError());
 	return;
@@ -831,7 +831,7 @@ void Paint_score_start(void)
 	     scoreListWin.w - SCORE_BORDER,
 	     scoreEntryRect.y + header->h + 2,
 	     0, 128, 0, 255);
-    SDL_FreeSurface(header);
+    SDL_DestroySurface(header);
 }
 
 void Paint_score_entry(int entry_num, other_t *other, bool is_team)
@@ -854,21 +854,7 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 	teamStr[1] = ' ';
 	raceStr[2] = ' ';
 
-	lineSpacing = TTF_FontLineSkip(scoreListFont) + 1;
-	/*
-	 * SDL_ttf 1.2 seems to have a broken TTF_FontLineSkip.
-	 * Enable workaround and print a warning.
-	 */
-	if (lineSpacing == 1) {
-	    static bool warned = false;
-	    if (!warned) {
-		warn("Enabling workaround for bug in SDL_ttf 1.2.");
-		warn("SDL_ttf 2.0 or newer should not have this problem.");
-		warned = true;
-	    }
-	    lineSpacing = 15;
-	}
-	/* End of SDL_ttf 1.2 bug workaround. */
+	lineSpacing = TTF_GetFontLineSkip(scoreListFont) + 1;
 
 	firstLine = 2*SCORE_BORDER + lineSpacing;
     }
@@ -950,7 +936,7 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 	fg.b = (color >> 8) & 255;
 	/* Preserve the opaque glyphs produced by SDL 1.2_ttf. */
 	fg.a = SDL_ALPHA_OPAQUE;
-    line = TTF_RenderText_Blended(scoreListFont, label, fg);
+    line = TTF_RenderText_Blended(scoreListFont, label, 0, fg);
     if (line == NULL) {
 	error("scorelist rendering failed: %s", SDL_GetError());
 	return;
@@ -971,5 +957,5 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 		 fg.r, fg.g, fg.b, 255);
     }
 
-    SDL_FreeSurface(line);
+    SDL_DestroySurface(line);
 }

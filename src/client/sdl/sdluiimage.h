@@ -13,7 +13,7 @@
 #include "renderer.h"
 #include "sdlrenderer.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 /** Renderer-owned texture and dimensions for one top-left-origin UI image. */
 typedef struct SdlUiImage {

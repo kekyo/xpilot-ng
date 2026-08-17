@@ -15,7 +15,7 @@
 #include "xpclient_sdl.h"
 
 /**
- * Translate one SDL2 event into the corresponding XPilot action.
+ * Translate one SDL3 event into the corresponding XPilot action.
  *
  * @param evt Event to process.
  * @return Non-zero after processing the event.

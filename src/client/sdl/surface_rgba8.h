@@ -10,7 +10,7 @@
 #ifndef SURFACE_RGBA8_H
 #define SURFACE_RGBA8_H
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <stddef.h>
 #include <stdint.h>

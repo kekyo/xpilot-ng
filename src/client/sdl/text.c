@@ -74,7 +74,7 @@ RendererStatus fontinit(font_data *ft_font, Renderer *renderer,
     ttf_font = TTF_OpenFont(fname, (int)size);
     if (ttf_font == NULL) {
 	fprintf(stderr, "Couldn't load %u pt font from %s: %s\n", size,
-		fname, TTF_GetError());
+		fname, SDL_GetError());
 	return RENDERER_STATUS_BACKEND_ERROR;
     }
     TTF_SetFontStyle(ttf_font, TTF_STYLE_NORMAL);

@@ -5,7 +5,7 @@
 #include "sdluiimage.h"
 #include "glwidgets.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -137,8 +137,7 @@ static SDL_Surface *create_fixture_surface(int width, int height,
     int x;
     int y;
 
-    surface = SDL_CreateRGBSurfaceWithFormat(
-        0, width, height, 32, SDL_PIXELFORMAT_RGBA32);
+    surface = SDL_CreateSurface(width, height, SDL_PIXELFORMAT_RGBA32);
     if (surface == NULL)
         return NULL;
     for (y = 0; y < height; y++) {
@@ -688,9 +687,9 @@ cleanup:
     fake_renderer.frame_active = 0;
     if (image.texture != NULL)
         Sdl_ui_image_cleanup(&image);
-    SDL_FreeSurface(single_surface);
-    SDL_FreeSurface(first_surface);
-    SDL_FreeSurface(second_surface);
+    SDL_DestroySurface(single_surface);
+    SDL_DestroySurface(first_surface);
+    SDL_DestroySurface(second_surface);
     release_fake_pixels();
     return result;
 }

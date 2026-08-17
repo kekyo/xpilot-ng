@@ -43,7 +43,7 @@ void Radar_update(void);
 int Radar_prepare(Renderer *renderer);
 
 #ifdef XPILOT_RADAR_TEST_HOOKS
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 /** @return Borrowed radar surface currently published to drawing code. */
 SDL_Surface *Radar_test_surface(void);

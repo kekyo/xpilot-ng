@@ -10,13 +10,13 @@ if test ! -x "$source_dir/configure"; then
     exit 1
 fi
 
-suite_dir=$(mktemp -d "${TMPDIR:-/tmp}/xpilot-sdl2-suite.XXXXXX")
+suite_dir=$(mktemp -d "${TMPDIR:-/tmp}/xpilot-sdl3-suite.XXXXXX")
 build_source_dir=$source_dir
 
 cleanup()
 {
     case "$suite_dir" in
-        "${TMPDIR:-/tmp}"/xpilot-sdl2-suite.*)
+        "${TMPDIR:-/tmp}"/xpilot-sdl3-suite.*)
             rm -rf -- "$suite_dir"
             ;;
     esac
@@ -60,6 +60,15 @@ else
     test_jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)
 fi
 
+vendor_build_dir="$suite_dir/vendor-sdl3-build"
+vendor_prefix="$suite_dir/vendor-sdl3-prefix"
+
+echo "===== build: vendored SDL3 dependencies ====="
+"$build_source_dir/vendor/sdl3/build.sh" \
+    --build-dir "$vendor_build_dir" \
+    --prefix "$vendor_prefix" \
+    --jobs "$test_jobs"
+
 run_configuration()
 {
     configuration_name=$1
@@ -87,9 +96,16 @@ run_configuration()
 
 # Every test is run through make check; the runner never selects an individual
 # test binary.  Separate build and install trees also catch source-tree leaks.
-run_configuration default
-run_configuration sdl-only \
+# Both dependency modes exercise the complete target set and the SDL-only set.
+run_configuration system-default --with-sdl3=system
+run_configuration system-sdl-only --with-sdl3=system \
+    --enable-sdl-client --disable-x11-client --disable-replay \
+    --disable-xp-mapedit
+run_configuration vendored-default \
+    --with-sdl3=vendored --with-sdl3-prefix="$vendor_prefix"
+run_configuration vendored-sdl-only \
+    --with-sdl3=vendored --with-sdl3-prefix="$vendor_prefix" \
     --enable-sdl-client --disable-x11-client --disable-replay \
     --disable-xp-mapedit
 
-echo "Both out-of-tree SDL2 configurations passed"
+echo "All system and vendored out-of-tree SDL3 configurations passed"

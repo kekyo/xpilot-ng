@@ -292,12 +292,12 @@ PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 POW_LIB = @POW_LIB@
 RANLIB = @RANLIB@
-SDL2_CFLAGS = @SDL2_CFLAGS@
-SDL2_IMAGE_CFLAGS = @SDL2_IMAGE_CFLAGS@
-SDL2_IMAGE_LIBS = @SDL2_IMAGE_LIBS@
-SDL2_LIBS = @SDL2_LIBS@
-SDL2_TTF_CFLAGS = @SDL2_TTF_CFLAGS@
-SDL2_TTF_LIBS = @SDL2_TTF_LIBS@
+SDL3_CFLAGS = @SDL3_CFLAGS@
+SDL3_IMAGE_CFLAGS = @SDL3_IMAGE_CFLAGS@
+SDL3_IMAGE_LIBS = @SDL3_IMAGE_LIBS@
+SDL3_LIBS = @SDL3_LIBS@
+SDL3_TTF_CFLAGS = @SDL3_TTF_CFLAGS@
+SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 SOUND_LIBS = @SOUND_LIBS@
@@ -373,10 +373,11 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 noinst_LIBRARIES = libxp_libtess2.a
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
+	-DSDL_DISABLE_OLD_NAMES \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
-	@SDL2_CFLAGS@ @SDL2_IMAGE_CFLAGS@ @SDL2_TTF_CFLAGS@ \
+	@SDL3_CFLAGS@ @SDL3_IMAGE_CFLAGS@ @SDL3_TTF_CFLAGS@ \
 	@GL_CFLAGS@
 
 libxp_libtess2_a_SOURCES = \
@@ -417,7 +418,7 @@ xpilot_ng_sdl_SOURCES = asteroid_data.h DT_drawtext.c DT_drawtext.h \
 xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	libxp_libtess2.a \
-	@SDL2_IMAGE_LIBS@ @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
+	@SDL3_IMAGE_LIBS@ @SDL3_TTF_LIBS@ @SDL3_LIBS@ \
 	@GL_LIBS@ @SOUND_LIBS@ @W32_LIBS@
 
 EXTRA_DIST = xpilot.rc xpilot_sdl.dsp xpilot_sdl.dsw \

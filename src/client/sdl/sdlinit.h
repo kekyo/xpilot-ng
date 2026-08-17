@@ -24,7 +24,7 @@
 #include "sdlrenderer.h"
 
 /**
- * Initialize SDL2, the application window, and an OpenGL 3.3 core context.
+ * Initialize SDL3, the application window, and an OpenGL 3.3 core context.
  *
  * @return 0 on success, or -1 when initialization fails.
  */
@@ -64,5 +64,13 @@ void Swap_buffers(void);
  * @param on true to grab the window, false to release it.
  */
 void Set_window_grab(bool on);
+
+/**
+ * Enable or disable relative pointer motion for the application window.
+ *
+ * @param on true to enable relative motion, false to disable it.
+ * @return true on success, or false when SDL rejects the request.
+ */
+bool Set_relative_mouse_mode(bool on);
 
 #endif

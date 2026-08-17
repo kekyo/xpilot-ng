@@ -133,7 +133,7 @@ void Pointer_button_released(int button)
     pointer_release_count[button - 1]++;
 }
 
-Uint32 SDL_GetMouseState(int *x, int *y)
+SDL_MouseButtonFlags __wrap_SDL_GetMouseState(float *x, float *y)
 {
     if (x != NULL) {
         *x = focus_mouse_x;
@@ -147,6 +147,12 @@ Uint32 SDL_GetMouseState(int *x, int *y)
 void Set_window_grab(bool on)
 {
     (void)on;
+}
+
+bool Set_relative_mouse_mode(bool on)
+{
+    (void)on;
+    return true;
 }
 
 void Window_size_changed(int width, int height)
@@ -232,17 +238,17 @@ int main(void)
     reset_observations();
 
     memset(&event, 0, sizeof(event));
-    event.type = SDL_QUIT;
+    event.type = SDL_EVENT_QUIT;
     TEST_CHECK(Process_event(&event) == 1);
     TEST_CHECK(client_exit_count == 1);
     TEST_CHECK(last_exit_status == 0);
 
     memset(&event, 0, sizeof(event));
-    event.type = SDL_KEYDOWN;
-    event.key.keysym.sym = SDLK_a;
+    event.type = SDL_EVENT_KEY_DOWN;
+    event.key.key = SDLK_A;
     TEST_CHECK(Process_event(&event) == 1);
     TEST_CHECK(key_press_count == 1);
-    TEST_CHECK(last_pressed_key == (xp_keysym_t)SDLK_a);
+    TEST_CHECK(last_pressed_key == (xp_keysym_t)SDLK_A);
 
     event.key.repeat = 1;
     TEST_CHECK(Process_event(&event) == 1);
@@ -253,53 +259,64 @@ int main(void)
     TEST_CHECK(Process_event(&event) == 1);
     TEST_CHECK(key_press_count == 1);
 
-    event.type = SDL_KEYUP;
-    event.key.keysym.sym = SDLK_a;
+    event.type = SDL_EVENT_KEY_UP;
+    event.key.key = SDLK_A;
     TEST_CHECK(Process_event(&event) == 1);
     TEST_CHECK(key_release_count == 1);
-    TEST_CHECK(last_released_key == (xp_keysym_t)SDLK_a);
+    TEST_CHECK(last_released_key == (xp_keysym_t)SDLK_A);
 
     console_handles_event = 1;
-    event.key.keysym.sym = SDLK_b;
+    event.key.key = SDLK_B;
     TEST_CHECK(Process_event(&event) == 1);
     TEST_CHECK(key_release_count == 1);
     console_handles_event = 0;
     console_visible = 0;
 
     memset(&event, 0, sizeof(event));
-    event.type = SDL_MOUSEBUTTONDOWN;
-    event.button.state = SDL_PRESSED;
+    event.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+    event.button.down = true;
     event.button.button = 0;
     TEST_CHECK(Process_event(&event) == 1);
     event.button.button = NUM_MOUSE_BUTTONS + 1;
     TEST_CHECK(Process_event(&event) == 1);
-    event.type = SDL_MOUSEBUTTONUP;
-    event.button.state = SDL_RELEASED;
+    event.type = SDL_EVENT_MOUSE_BUTTON_UP;
+    event.button.down = false;
     TEST_CHECK(Process_event(&event) == 1);
     TEST_CHECK(widget_lookup_count == 0);
 
-    /* SDL2 assigns 4 and 5 to the physical X1/X2 buttons.  XPilot keeps
+    /* SDL3 assigns 4 and 5 to the physical X1/X2 buttons.  XPilot keeps
      * those legacy button numbers reserved for synthesized wheel events. */
-    event.type = SDL_MOUSEBUTTONDOWN;
-    event.button.state = SDL_PRESSED;
+    event.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+    event.button.down = true;
     event.button.button = SDL_BUTTON_X1;
     TEST_CHECK(Process_event(&event) == 1);
     event.button.button = SDL_BUTTON_X2;
     TEST_CHECK(Process_event(&event) == 1);
-    event.type = SDL_MOUSEBUTTONUP;
-    event.button.state = SDL_RELEASED;
+    event.type = SDL_EVENT_MOUSE_BUTTON_UP;
+    event.button.down = false;
     event.button.button = SDL_BUTTON_X1;
     TEST_CHECK(Process_event(&event) == 1);
     event.button.button = SDL_BUTTON_X2;
     TEST_CHECK(Process_event(&event) == 1);
     TEST_CHECK(widget_lookup_count == 0);
+
+    /* SDL3 exposes high-resolution wheel deltas as floats.  Fractional
+     * movement must accumulate until it represents a legacy wheel tick. */
+    memset(&event, 0, sizeof(event));
+    event.type = SDL_EVENT_MOUSE_WHEEL;
+    event.wheel.direction = SDL_MOUSEWHEEL_NORMAL;
+    event.wheel.y = 0.5f;
+    TEST_CHECK(Process_event(&event) == 1);
+    TEST_CHECK(widget_lookup_count == 0);
+    TEST_CHECK(Process_event(&event) == 1);
+    TEST_CHECK(widget_lookup_count == 1);
 
     memset(&drag_widget, 0, sizeof(drag_widget));
     drag_widget.motion = record_drag_motion;
     drag_widget.motiondata = &drag_marker;
     clicktarget[0] = &drag_widget;
     memset(&event, 0, sizeof(event));
-    event.type = SDL_MOUSEMOTION;
+    event.type = SDL_EVENT_MOUSE_MOTION;
     event.motion.xrel = -3;
     event.motion.yrel = 4;
     event.motion.x = 120;
@@ -322,8 +339,7 @@ int main(void)
 
     clData.pointerControl = false;
     memset(&event, 0, sizeof(event));
-    event.type = SDL_WINDOWEVENT;
-    event.window.event = SDL_WINDOWEVENT_SIZE_CHANGED;
+    event.type = SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED;
     event.window.data1 = 1024;
     event.window.data2 = 768;
     TEST_CHECK(Process_event(&event) == 1);
@@ -331,7 +347,7 @@ int main(void)
     TEST_CHECK(last_width == 1024);
     TEST_CHECK(last_height == 768);
 
-    event.window.event = SDL_WINDOWEVENT_MOVED;
+    event.type = SDL_EVENT_WINDOW_MOVED;
     TEST_CHECK(Process_event(&event) == 1);
     TEST_CHECK(resize_count == 1);
 
@@ -347,7 +363,7 @@ int main(void)
     memset(&hover_widget, 0, sizeof(hover_widget));
     hovertarget = &hover_widget;
 
-    event.window.event = SDL_WINDOWEVENT_FOCUS_LOST;
+    event.type = SDL_EVENT_WINDOW_FOCUS_LOST;
     TEST_CHECK(Process_event(&event) == 1);
     TEST_CHECK(key_clear_count == 1);
     TEST_CHECK(invalid_pointer_release_count == 0);
@@ -360,7 +376,7 @@ int main(void)
          button_index++) {
         TEST_CHECK(widget_release_count[button_index] == 1);
         TEST_CHECK(widget_release_button[button_index] == button_index + 1);
-        TEST_CHECK(widget_release_state[button_index] == SDL_RELEASED);
+        TEST_CHECK(widget_release_state[button_index] == false);
         TEST_CHECK(widget_release_x[button_index] == focus_mouse_x);
         TEST_CHECK(widget_release_y[button_index] == focus_mouse_y);
         TEST_CHECK(clicktarget[button_index] == NULL);

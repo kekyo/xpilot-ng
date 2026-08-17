@@ -81,17 +81,17 @@ static RendererStatus Copy_surface_rgba8(SDL_Surface *source,
     int locked = 0;
     int y;
 
-    converted = SDL_ConvertSurfaceFormat(source, SDL_PIXELFORMAT_RGBA32, 0);
+    converted = SDL_ConvertSurface(source, SDL_PIXELFORMAT_RGBA32);
     if (converted == NULL)
         return RENDERER_STATUS_BACKEND_ERROR;
     if (converted->w != source->w || converted->h != source->h
         || converted->pitch < converted->w * 4) {
-        SDL_FreeSurface(converted);
+        SDL_DestroySurface(converted);
         return RENDERER_STATUS_BACKEND_ERROR;
     }
     if (SDL_MUSTLOCK(converted)) {
-        if (SDL_LockSurface(converted) < 0) {
-            SDL_FreeSurface(converted);
+        if (!SDL_LockSurface(converted)) {
+            SDL_DestroySurface(converted);
             return RENDERER_STATUS_BACKEND_ERROR;
         }
         locked = 1;
@@ -105,7 +105,7 @@ static RendererStatus Copy_surface_rgba8(SDL_Surface *source,
     }
     if (locked)
         SDL_UnlockSurface(converted);
-    SDL_FreeSurface(converted);
+    SDL_DestroySurface(converted);
     return RENDERER_STATUS_OK;
 }
 

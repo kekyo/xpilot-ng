@@ -24,7 +24,13 @@
 #include "xpclient_sdl.h"
 #include "renderer.h"
 
-int Console_init(void);
+/**
+ * Initialize the in-game console for an SDL window.
+ *
+ * @param window Window that receives console text input.
+ * @return Zero on success, or -1 when initialization fails.
+ */
+int Console_init(SDL_Window *window);
 /**
  * Update console animation and publish dirty pixels to the renderer.
  *

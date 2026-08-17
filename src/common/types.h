@@ -31,15 +31,8 @@ typedef signed char	byte;
 #endif
 typedef unsigned char	u_byte;
 
-/*
- * On some systems an enum is smaller than an int.
- * On others bool is already a builtin type.
- * Using preprocessor macros to circumvent both situations.
- */
 #ifndef __cplusplus
-# define false	0
-# define true	1
-# define bool	char
+# include <stdbool.h>
 #endif
 
 typedef struct { float x, y; }		vector_t;

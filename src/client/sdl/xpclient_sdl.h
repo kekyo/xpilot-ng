@@ -26,28 +26,10 @@
 # include <windows.h>
 #endif
 
-/* determine if we use usual style including */
-#ifndef MACOSX_FRAMEWORKS
-# define USUAL_SDL_INCLUDE_CONVENTION 1
-#endif
-
-#ifdef USUAL_SDL_INCLUDE_CONVENTION
-# include "SDL.h"
-# include "SDL_events.h"
-# include "SDL_video.h"
-# include "SDL_version.h"
-# include "SDL_image.h"
-# include "SDL_ttf.h"
-#endif
-
-#ifdef MACOSX_FRAMEWORKS
-# include <SDL2/SDL.h>
-# include <SDL2/SDL_events.h>
-# include <SDL2/SDL_video.h>
-# include <SDL2/SDL_version.h>
-# include <SDL2_image/SDL_image.h>
-# include <SDL2_ttf/SDL_ttf.h>
-#endif
+/* SDL3 and its companion libraries use namespaced include paths. */
+#include <SDL3/SDL.h>
+#include <SDL3_image/SDL_image.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
 #define RMASK 0xff000000

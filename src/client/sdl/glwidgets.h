@@ -133,7 +133,7 @@ extern GLWidget *clicktarget[NUM_MOUSE_BUTTONS];
 extern GLWidget *hovertarget;
 
 /* puts text into the copy buffer */
-/** Copy widget text to the SDL2 clipboard. */
+/** Copy widget text to the SDL3 clipboard. */
 void load_textscrap(const char *text);
 /****************************************************/
 /* END: Main GLWidget stuff 	    	    	    */

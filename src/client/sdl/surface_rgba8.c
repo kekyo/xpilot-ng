@@ -64,9 +64,9 @@ SdlRgba8Image *Sdl_rgba8_image_create(SDL_Surface *source)
         SDL_SetError("Could not allocate RGBA8 texture pixels");
         goto failure;
     }
-    destination = SDL_CreateRGBSurfaceWithFormatFrom(
-        image->pixels, image->texture_width, image->texture_height,
-        32, (int)image->pitch, SDL_PIXELFORMAT_RGBA32);
+    destination = SDL_CreateSurfaceFrom(
+        image->texture_width, image->texture_height, SDL_PIXELFORMAT_RGBA32,
+        image->pixels, (int)image->pitch);
     if (destination == NULL)
         goto failure;
 
@@ -78,13 +78,13 @@ SdlRgba8Image *Sdl_rgba8_image_create(SDL_Surface *source)
                                    &destination_rect) < 0) {
         goto failure;
     }
-    SDL_FreeSurface(destination);
+    SDL_DestroySurface(destination);
     image->content_width = source->w;
     image->content_height = source->h;
     return image;
 
 failure:
-    SDL_FreeSurface(destination);
+    SDL_DestroySurface(destination);
     Sdl_rgba8_image_destroy(image);
     return NULL;
 }

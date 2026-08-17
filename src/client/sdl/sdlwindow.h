@@ -23,7 +23,7 @@
 
 #include "renderer.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 /** CPU surface and renderer texture backing one off-screen HUD window. */
 typedef struct sdl_window_t {

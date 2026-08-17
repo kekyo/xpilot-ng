@@ -2,8 +2,8 @@
 
 #include "text_ttf_atlas.h"
 
-#include <SDL.h>
-#include <SDL_ttf.h>
+#include <SDL3/SDL.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 #include <stdint.h>
 #include <string.h>
@@ -25,6 +25,23 @@ static RendererTexture fake_texture;
 static RendererTextureDesc created_desc;
 static int texture_create_count;
 static int texture_destroy_count;
+static bool fail_glyph_metrics;
+
+bool SDLCALL __real_TTF_GetGlyphMetrics(TTF_Font *font, Uint32 ch,
+                                        int *minx, int *maxx,
+                                        int *miny, int *maxy,
+                                        int *advance);
+
+bool SDLCALL __wrap_TTF_GetGlyphMetrics(TTF_Font *font, Uint32 ch,
+                                        int *minx, int *maxx,
+                                        int *miny, int *maxy,
+                                        int *advance)
+{
+    if (fail_glyph_metrics && ch == (Uint32)'A')
+        return false;
+    return __real_TTF_GetGlyphMetrics(font, ch, minx, maxx, miny, maxy,
+                                      advance);
+}
 
 RendererStatus Renderer_texture_create_with_desc(
     Renderer *renderer, const RendererTextureDesc *desc,
@@ -74,6 +91,26 @@ static int check_invalid_arguments_do_not_publish(TTF_Font *font)
     return 0;
 }
 
+static int check_metrics_failure_does_not_publish(TTF_Font *font)
+{
+    TextAtlas *atlas = NULL;
+    RendererStatus status;
+    bool atlas_was_published;
+
+    fail_glyph_metrics = true;
+    status = Text_ttf_atlas_create(&fake_renderer, font, &atlas);
+    fail_glyph_metrics = false;
+    atlas_was_published = atlas != NULL;
+    if (atlas != NULL)
+        Text_atlas_destroy(&atlas);
+    texture_create_count = 0;
+    texture_destroy_count = 0;
+
+    TEST_CHECK(status == RENDERER_STATUS_BACKEND_ERROR);
+    TEST_CHECK(!atlas_was_published);
+    return 0;
+}
+
 static int check_real_font_creates_self_contained_atlas(TTF_Font **font_pointer)
 {
     TextAtlas *atlas = NULL;
@@ -81,9 +118,9 @@ static int check_real_font_creates_self_contained_atlas(TTF_Font **font_pointer)
     const TextGeometryFont *geometry;
     TextGeometryMetrics fallback_metrics;
     TextGeometryMetrics unknown_metrics;
-    int font_ascent = TTF_FontAscent(font);
-    int font_height = TTF_FontHeight(font);
-    int font_line_skip = TTF_FontLineSkip(font);
+    int font_ascent = TTF_GetFontAscent(font);
+    int font_height = TTF_GetFontHeight(font);
+    int font_line_skip = TTF_GetFontLineSkip(font);
     int a_min_x;
     int a_max_x;
     int a_min_y;
@@ -97,13 +134,13 @@ static int check_real_font_creates_self_contained_atlas(TTF_Font **font_pointer)
     static const unsigned char fallback_text[] = "?";
     static const unsigned char unknown_text[] = {0x80};
 
-    TEST_CHECK(TTF_GlyphMetrics(font, (Uint16)'A',
-                                &a_min_x, &a_max_x,
-                                &a_min_y, &a_max_y, &a_advance) == 0);
-    TEST_CHECK(TTF_GlyphMetrics(font, (Uint16)' ',
-                                &space_min_x, &space_max_x,
-                                &space_min_y, &space_max_y,
-                                &space_advance) == 0);
+    TEST_CHECK(TTF_GetGlyphMetrics(font, (Uint16)'A',
+                                   &a_min_x, &a_max_x,
+                                   &a_min_y, &a_max_y, &a_advance));
+    TEST_CHECK(TTF_GetGlyphMetrics(font, (Uint16)' ',
+                                   &space_min_x, &space_max_x,
+                                   &space_min_y, &space_max_y,
+                                   &space_advance));
     TEST_CHECK(Text_ttf_atlas_create(&fake_renderer, font, &atlas)
                == RENDERER_STATUS_OK);
     TEST_CHECK(atlas != NULL);
@@ -163,14 +200,16 @@ int main(void)
     int result = 1;
 
     memset(&created_desc, 0, sizeof(created_desc));
-    if (SDL_Init(0) < 0)
+    if (!SDL_Init(0))
         return 1;
-    if (TTF_Init() < 0)
+    if (!TTF_Init())
         goto cleanup_sdl;
     font = TTF_OpenFont(XPILOT_TEST_FONT_PATH, 17);
     if (font == NULL)
         goto cleanup_ttf;
     if (check_invalid_arguments_do_not_publish(font) != 0)
+        goto cleanup_font;
+    if (check_metrics_failure_does_not_publish(font) != 0)
         goto cleanup_font;
     if (check_real_font_creates_self_contained_atlas(&font) != 0)
         goto cleanup_font;

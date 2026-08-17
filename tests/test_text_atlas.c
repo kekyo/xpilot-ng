@@ -2,7 +2,7 @@
 
 #include "text_atlas.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -104,9 +104,8 @@ static SDL_Surface *create_glyph_surface(unsigned char byte)
     int x;
     int y;
 
-    surface = SDL_CreateRGBSurfaceWithFormat(
-        0, glyph_width(byte), glyph_height(byte), 32,
-        SDL_PIXELFORMAT_RGBA32);
+    surface = SDL_CreateSurface(glyph_width(byte), glyph_height(byte),
+                                SDL_PIXELFORMAT_RGBA32);
     if (surface == NULL)
         return NULL;
     for (y = 0; y < surface->h; y++) {
@@ -153,7 +152,7 @@ static RendererStatus fixture_load_glyph(
     if (glyph->surface == NULL)
         return RENDERER_STATUS_OUT_OF_MEMORY;
     if (fixture->live_surfaces[byte] != NULL) {
-        SDL_FreeSurface(glyph->surface);
+        SDL_DestroySurface(glyph->surface);
         glyph->surface = NULL;
         return RENDERER_STATUS_INVALID_STATE;
     }
@@ -173,7 +172,7 @@ static void fixture_release_glyph(void *context,
         if (fixture->live_surfaces[byte] == glyph->surface) {
             fixture->live_surfaces[byte] = NULL;
             fixture->release_count++;
-            SDL_FreeSurface(glyph->surface);
+            SDL_DestroySurface(glyph->surface);
             glyph->surface = NULL;
             return;
         }
@@ -549,7 +548,7 @@ int main(void)
 {
     int result = 1;
 
-    if (SDL_Init(0) < 0)
+    if (!SDL_Init(0))
         return 1;
     if (check_ascii_prewarm_and_top_left_atlas() != 0)
         goto cleanup;

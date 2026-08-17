@@ -2,7 +2,7 @@
 
 #include "surface_rgba8.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <limits.h>
 #include <stdint.h>
@@ -45,8 +45,8 @@ static int check_bgra_pitch_and_top_left_order(void)
     SdlRgba8Image *image = NULL;
     int result = 0;
 
-    source = SDL_CreateRGBSurfaceWithFormatFrom(
-        pixels, 3, 2, 32, 16, SDL_PIXELFORMAT_BGRA32);
+    source = SDL_CreateSurfaceFrom(3, 2, SDL_PIXELFORMAT_BGRA32,
+                                   pixels, 16);
     TEST_CHECK_CLEANUP(source != NULL);
     image = Sdl_rgba8_image_create(source);
     TEST_CHECK_CLEANUP(image != NULL);
@@ -64,7 +64,7 @@ static int check_bgra_pitch_and_top_left_order(void)
 
 cleanup:
     Sdl_rgba8_image_destroy(image);
-    SDL_FreeSurface(source);
+    SDL_DestroySurface(source);
     return result;
 }
 
@@ -78,11 +78,10 @@ static int check_power_of_two_padding(void)
     int y;
     int result = 0;
 
-    source = SDL_CreateRGBSurfaceWithFormat(
-        0, 3, 3, 32, SDL_PIXELFORMAT_RGBA32);
+    source = SDL_CreateSurface(3, 3, SDL_PIXELFORMAT_RGBA32);
     TEST_CHECK_CLEANUP(source != NULL);
-    color = SDL_MapRGBA(source->format, 17, 34, 51, 68);
-    TEST_CHECK_CLEANUP(SDL_FillRect(source, &content, color) == 0);
+    color = SDL_MapSurfaceRGBA(source, 17, 34, 51, 68);
+    TEST_CHECK_CLEANUP(SDL_FillSurfaceRect(source, &content, color));
     image = Sdl_rgba8_image_create(source);
     TEST_CHECK_CLEANUP(image != NULL);
     TEST_CHECK_CLEANUP(image->texture_width == 4);
@@ -100,7 +99,7 @@ static int check_power_of_two_padding(void)
 
 cleanup:
     Sdl_rgba8_image_destroy(image);
-    SDL_FreeSurface(source);
+    SDL_DestroySurface(source);
     return result;
 }
 
@@ -120,40 +119,39 @@ static int check_color_key_and_source_state(void)
     Uint32 green_pixel;
     int result = 0;
 
-    source = SDL_CreateRGBSurfaceWithFormat(
-        0, 2, 1, 24, SDL_PIXELFORMAT_RGB24);
+    source = SDL_CreateSurface(2, 1, SDL_PIXELFORMAT_RGB24);
     TEST_CHECK_CLEANUP(source != NULL);
-    red_pixel = SDL_MapRGB(source->format, 255, 0, 0);
-    green_pixel = SDL_MapRGB(source->format, 0, 255, 0);
-    TEST_CHECK_CLEANUP(SDL_FillRect(source, &left, red_pixel) == 0);
-    TEST_CHECK_CLEANUP(SDL_FillRect(source, &right, green_pixel) == 0);
-    TEST_CHECK_CLEANUP(SDL_SetColorKey(source, SDL_TRUE, red_pixel) == 0);
-    TEST_CHECK_CLEANUP(SDL_SetSurfaceRLE(source, 1) == 0);
-    TEST_CHECK_CLEANUP(SDL_HasSurfaceRLE(source) == SDL_TRUE);
+    red_pixel = SDL_MapSurfaceRGB(source, 255, 0, 0);
+    green_pixel = SDL_MapSurfaceRGB(source, 0, 255, 0);
+    TEST_CHECK_CLEANUP(SDL_FillSurfaceRect(source, &left, red_pixel));
+    TEST_CHECK_CLEANUP(SDL_FillSurfaceRect(source, &right, green_pixel));
+    TEST_CHECK_CLEANUP(SDL_SetSurfaceColorKey(source, true, red_pixel));
+    TEST_CHECK_CLEANUP(SDL_SetSurfaceRLE(source, true));
+    TEST_CHECK_CLEANUP(SDL_SurfaceHasRLE(source));
     TEST_CHECK_CLEANUP(
-        SDL_SetSurfaceBlendMode(source, SDL_BLENDMODE_BLEND) == 0);
-    TEST_CHECK_CLEANUP(SDL_SetSurfaceAlphaMod(source, 73) == 0);
-    TEST_CHECK_CLEANUP(SDL_SetSurfaceColorMod(source, 11, 22, 33) == 0);
+        SDL_SetSurfaceBlendMode(source, SDL_BLENDMODE_BLEND));
+    TEST_CHECK_CLEANUP(SDL_SetSurfaceAlphaMod(source, 73));
+    TEST_CHECK_CLEANUP(SDL_SetSurfaceColorMod(source, 11, 22, 33));
 
     image = Sdl_rgba8_image_create(source);
     TEST_CHECK_CLEANUP(image != NULL);
     TEST_CHECK_CLEANUP(pixel_equals(image, 0, 0, 0, 0, 0, 0));
     TEST_CHECK_CLEANUP(pixel_equals(image, 1, 0, 0, 255, 0, 255));
-    TEST_CHECK_CLEANUP(SDL_GetSurfaceBlendMode(source, &blend_mode) == 0);
+    TEST_CHECK_CLEANUP(SDL_GetSurfaceBlendMode(source, &blend_mode));
     TEST_CHECK_CLEANUP(blend_mode == SDL_BLENDMODE_BLEND);
-    TEST_CHECK_CLEANUP(SDL_GetSurfaceAlphaMod(source, &alpha) == 0);
+    TEST_CHECK_CLEANUP(SDL_GetSurfaceAlphaMod(source, &alpha));
     TEST_CHECK_CLEANUP(alpha == 73);
     TEST_CHECK_CLEANUP(
-        SDL_GetSurfaceColorMod(source, &red, &green, &blue) == 0);
+        SDL_GetSurfaceColorMod(source, &red, &green, &blue));
     TEST_CHECK_CLEANUP(red == 11 && green == 22 && blue == 33);
-    TEST_CHECK_CLEANUP(SDL_GetColorKey(source, &key) == 0);
+    TEST_CHECK_CLEANUP(SDL_GetSurfaceColorKey(source, &key));
     TEST_CHECK_CLEANUP(key == red_pixel);
-    TEST_CHECK_CLEANUP(SDL_HasSurfaceRLE(source) == SDL_TRUE);
-    TEST_CHECK_CLEANUP(source->locked == 0);
+    TEST_CHECK_CLEANUP(SDL_SurfaceHasRLE(source));
+    TEST_CHECK_CLEANUP((source->flags & SDL_SURFACE_LOCKED) == 0);
 
 cleanup:
     Sdl_rgba8_image_destroy(image);
-    SDL_FreeSurface(source);
+    SDL_DestroySurface(source);
     return result;
 }
 
@@ -181,7 +179,7 @@ static int check_invalid_dimensions(void)
 
 int main(void)
 {
-    TEST_CHECK(SDL_Init(0) == 0);
+    TEST_CHECK(SDL_Init(0));
     TEST_CHECK(check_bgra_pitch_and_top_left_order() == 0);
     TEST_CHECK(check_power_of_two_padding() == 0);
     TEST_CHECK(check_color_key_and_source_state() == 0);

@@ -4,7 +4,7 @@
 #include "sdlmeta.h"
 #include "sdlrenderer.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <stdarg.h>
 #include <stdint.h>

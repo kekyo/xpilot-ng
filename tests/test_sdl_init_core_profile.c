@@ -6,9 +6,8 @@
 #include "sdlinit.h"
 #include "text.h"
 
-#include <SDL.h>
-#include <SDL_image.h>
-#include <SDL_ttf.h>
+#include <SDL3/SDL.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -117,35 +116,26 @@ void Console_cleanup(void)
 {
 }
 
-int SDLCALL __wrap_SDL_Init(Uint32 flags)
+bool SDLCALL __wrap_SDL_Init(SDL_InitFlags flags)
 {
     TEST_CHECK((flags & SDL_INIT_VIDEO) != 0);
-    return 0;
+    return true;
 }
 
 void SDLCALL __wrap_SDL_Quit(void)
 {
 }
 
-int SDLCALL __wrap_IMG_Init(int flags)
+bool SDLCALL __wrap_TTF_Init(void)
 {
-    return flags;
-}
-
-void SDLCALL __wrap_IMG_Quit(void)
-{
-}
-
-int SDLCALL __wrap_TTF_Init(void)
-{
-    return 0;
+    return true;
 }
 
 void SDLCALL __wrap_TTF_Quit(void)
 {
 }
 
-int SDLCALL __wrap_SDL_GL_SetAttribute(SDL_GLattr attribute, int value)
+bool SDLCALL __wrap_SDL_GL_SetAttribute(SDL_GLAttr attribute, int value)
 {
     call_sequence++;
     switch (attribute) {
@@ -164,15 +154,13 @@ int SDLCALL __wrap_SDL_GL_SetAttribute(SDL_GLattr attribute, int value)
     default:
         break;
     }
-    return 0;
+    return true;
 }
 
 SDL_Window *SDLCALL __wrap_SDL_CreateWindow(
-    const char *title, int x, int y, int width, int height, Uint32 flags)
+    const char *title, int width, int height, SDL_WindowFlags flags)
 {
     (void)title;
-    (void)x;
-    (void)y;
     (void)width;
     (void)height;
     call_sequence++;

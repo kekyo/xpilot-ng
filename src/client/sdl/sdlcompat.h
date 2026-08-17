@@ -10,7 +10,7 @@
 #ifndef SDLCOMPAT_H
 #define SDLCOMPAT_H
 
-#include "SDL.h"
+#include <SDL3/SDL.h>
 
 /**
  * Copy an SDL surface without applying its blend or modulation state.

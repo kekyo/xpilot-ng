@@ -5,7 +5,7 @@
 
 #include "text_atlas.h"
 
-#include <SDL_ttf.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 /**
  * Prewarm printable ASCII from an SDL_ttf font into one text atlas.

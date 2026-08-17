@@ -5,7 +5,7 @@
 #include "renderer.h"
 #include "sdlrenderer.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <stdarg.h>
 #include <stdint.h>
@@ -683,7 +683,7 @@ static int check_initial_prepare(GLWidget **widget_out,
     TEST_CHECK(*widget_out != NULL);
     surface = Radar_test_surface();
     TEST_CHECK(surface != NULL);
-    TEST_CHECK(surface->format->format == SDL_PIXELFORMAT_RGBA32);
+    TEST_CHECK(surface->format == SDL_PIXELFORMAT_RGBA32);
     TEST_CHECK(Radar_test_texture() == NULL);
     TEST_CHECK(rect_equal(Radar_test_bounds(), expected_bounds));
     TEST_CHECK(texture_create_attempts == 0);

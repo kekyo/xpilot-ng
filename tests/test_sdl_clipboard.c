@@ -7,9 +7,13 @@
 int main(void)
 {
     char *clipboard_text;
+    SDL_Environment *environment;
 
-    TEST_CHECK(SDL_setenv("SDL_VIDEODRIVER", "dummy", 1) == 0);
-    TEST_CHECK(SDL_Init(SDL_INIT_VIDEO) == 0);
+    environment = SDL_GetEnvironment();
+    TEST_CHECK(environment != NULL);
+    TEST_CHECK(SDL_SetEnvironmentVariable(
+        environment, "SDL_VIDEODRIVER", "dummy", true));
+    TEST_CHECK(SDL_Init(SDL_INIT_VIDEO));
 
     TEST_CHECK(Sdl_clipboard_set_text("first\r\nsecond\rthird\nfourth") == 0);
     clipboard_text = Sdl_clipboard_get_text();
