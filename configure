@@ -809,6 +809,8 @@ enable_replay
 enable_xp_mapedit
 enable_x11_client
 enable_sdl_client
+with_sdl3
+with_sdl3_prefix
 enable_sound
 enable_dependency_tracking
 with_x
@@ -1490,6 +1492,8 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-sdl3=PROVIDER    use system or vendored SDL3 dependencies [system]
+  --with-sdl3-prefix=PATH private SDL3 prefix built by vendor/sdl3/build.sh
   --with-x                use the X Window System
 
 Some influential environment variables:
@@ -3581,6 +3585,33 @@ if test x$enable_sdl_client = xyes; then
 printf "%s\n" "#define SDL_CLIENT 1" >>confdefs.h
 
 fi
+
+
+# Check whether --with-sdl3 was given.
+if test ${with_sdl3+y}
+then :
+  withval=$with_sdl3;
+else $as_nop
+  with_sdl3=system
+fi
+
+case "$with_sdl3" in
+	system|vendored)
+		;;
+	*)
+		as_fn_error $? "--with-sdl3 must be system or vendored" "$LINENO" 5
+		;;
+esac
+
+
+# Check whether --with-sdl3_prefix was given.
+if test ${with_sdl3_prefix+y}
+then :
+  withval=$with_sdl3_prefix;
+else $as_nop
+  with_sdl3_prefix=
+fi
+
 
 # Check whether --enable-sound was given.
 if test ${enable_sound+y}
@@ -6193,6 +6224,37 @@ printf "%s\n" "#define XP_MAPEDIT 1" >>confdefs.h
 fi
 
 if test x$enable_sdl_client = xyes; then
+	if test x$with_sdl3 = xvendored; then
+		if test -z "$with_sdl3_prefix"; then
+			as_fn_error $? "--with-sdl3=vendored requires --with-sdl3-prefix=PATH" "$LINENO" 5
+		fi
+		case "$with_sdl3_prefix" in
+			/*)
+				;;
+			*)
+				as_fn_error $? "--with-sdl3-prefix must be an absolute path" "$LINENO" 5
+				;;
+		esac
+		if test ! -d "$with_sdl3_prefix/lib/pkgconfig"; then
+			as_fn_error $? "vendored SDL3 pkg-config directory not found: $with_sdl3_prefix/lib/pkgconfig" "$LINENO" 5
+		fi
+		for sdl3_pc_file in sdl3.pc sdl3-image.pc sdl3-ttf.pc; do
+			if test ! -f "$with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file"; then
+				as_fn_error $? "vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file" "$LINENO" 5
+			fi
+		done
+
+		if test "${PKG_CONFIG_PATH+set}" = set; then
+			saved_sdl3_pkg_config_path=$PKG_CONFIG_PATH
+			sdl3_pkg_config_path_was_set=yes
+			PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig:$PKG_CONFIG_PATH"
+		else
+			sdl3_pkg_config_path_was_set=no
+			PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig"
+		fi
+		export PKG_CONFIG_PATH
+	fi
+
 
 pkg_failed=no
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for sdl3 >= 3.2.0" >&5
@@ -6466,6 +6528,35 @@ else
 printf "%s\n" "yes" >&6; }
 
 fi
+
+	if test x$with_sdl3 = xvendored; then
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static vendored SDL3 linker flags" >&5
+printf %s "checking for static vendored SDL3 linker flags... " >&6; }
+		SDL3_LIBS=`$PKG_CONFIG --static --libs sdl3`
+		if test $? -ne 0; then
+			as_fn_error $? "could not resolve static SDL3 linker flags" "$LINENO" 5
+		fi
+		SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
+		if test $? -ne 0; then
+			as_fn_error $? "could not resolve static SDL3_image linker flags" "$LINENO" 5
+		fi
+		SDL3_TTF_LIBS=`$PKG_CONFIG --static --libs sdl3-ttf`
+		if test $? -ne 0; then
+			as_fn_error $? "could not resolve static SDL3_ttf linker flags" "$LINENO" 5
+		fi
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+		if test x$sdl3_pkg_config_path_was_set = xyes; then
+			PKG_CONFIG_PATH=$saved_sdl3_pkg_config_path
+			export PKG_CONFIG_PATH
+		else
+			unset PKG_CONFIG_PATH
+		fi
+	fi
+
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: SDL3 dependency provider: $with_sdl3" >&5
+printf "%s\n" "$as_me: SDL3 dependency provider: $with_sdl3" >&6;}
 
 pkg_failed=no
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gl" >&5

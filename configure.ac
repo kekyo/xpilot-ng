@@ -94,6 +94,23 @@ if test x$enable_sdl_client = xyes; then
 	AC_DEFINE([SDL_CLIENT], 1, [enable sdl client])
 fi
 
+AC_ARG_WITH(sdl3,
+	AC_HELP_STRING([--with-sdl3=PROVIDER],
+			[use system or vendored SDL3 dependencies @<:@system@:>@]),
+[], [with_sdl3=system])
+case "$with_sdl3" in
+	system|vendored)
+		;;
+	*)
+		AC_MSG_ERROR([--with-sdl3 must be system or vendored])
+		;;
+esac
+
+AC_ARG_WITH(sdl3_prefix,
+	AC_HELP_STRING([--with-sdl3-prefix=PATH],
+			[private SDL3 prefix built by vendor/sdl3/build.sh]),
+[], [with_sdl3_prefix=])
+
 AC_ARG_ENABLE(sound,
 	AC_HELP_STRING([--enable-sound],
 			[enable OpenAL sound]), [])
@@ -201,9 +218,66 @@ fi
 
 dnl Libraries needed by the SDL client.
 if test x$enable_sdl_client = xyes; then
+	if test x$with_sdl3 = xvendored; then
+		if test -z "$with_sdl3_prefix"; then
+			AC_MSG_ERROR([--with-sdl3=vendored requires --with-sdl3-prefix=PATH])
+		fi
+		case "$with_sdl3_prefix" in
+			/*)
+				;;
+			*)
+				AC_MSG_ERROR([--with-sdl3-prefix must be an absolute path])
+				;;
+		esac
+		if test ! -d "$with_sdl3_prefix/lib/pkgconfig"; then
+			AC_MSG_ERROR([vendored SDL3 pkg-config directory not found: $with_sdl3_prefix/lib/pkgconfig])
+		fi
+		for sdl3_pc_file in sdl3.pc sdl3-image.pc sdl3-ttf.pc; do
+			if test ! -f "$with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file"; then
+				AC_MSG_ERROR([vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file])
+			fi
+		done
+
+		if test "${PKG_CONFIG_PATH+set}" = set; then
+			saved_sdl3_pkg_config_path=$PKG_CONFIG_PATH
+			sdl3_pkg_config_path_was_set=yes
+			PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig:$PKG_CONFIG_PATH"
+		else
+			sdl3_pkg_config_path_was_set=no
+			PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig"
+		fi
+		export PKG_CONFIG_PATH
+	fi
+
 	PKG_CHECK_MODULES([SDL3], [sdl3 >= 3.2.0])
 	PKG_CHECK_MODULES([SDL3_IMAGE], [sdl3-image >= 3.2.0])
 	PKG_CHECK_MODULES([SDL3_TTF], [sdl3-ttf >= 3.2.0])
+
+	if test x$with_sdl3 = xvendored; then
+		AC_MSG_CHECKING([for static vendored SDL3 linker flags])
+		SDL3_LIBS=`$PKG_CONFIG --static --libs sdl3`
+		if test $? -ne 0; then
+			AC_MSG_ERROR([could not resolve static SDL3 linker flags])
+		fi
+		SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
+		if test $? -ne 0; then
+			AC_MSG_ERROR([could not resolve static SDL3_image linker flags])
+		fi
+		SDL3_TTF_LIBS=`$PKG_CONFIG --static --libs sdl3-ttf`
+		if test $? -ne 0; then
+			AC_MSG_ERROR([could not resolve static SDL3_ttf linker flags])
+		fi
+		AC_MSG_RESULT([yes])
+
+		if test x$sdl3_pkg_config_path_was_set = xyes; then
+			PKG_CONFIG_PATH=$saved_sdl3_pkg_config_path
+			export PKG_CONFIG_PATH
+		else
+			unset PKG_CONFIG_PATH
+		fi
+	fi
+
+	AC_MSG_NOTICE([SDL3 dependency provider: $with_sdl3])
 	PKG_CHECK_MODULES([GL], [gl])
 	AC_DEFINE([HAVE_SDL_IMAGE], 1,
 		  [Define to 1 if you have the SDL_image library.])
