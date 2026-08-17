@@ -15,6 +15,46 @@ Additional requirements for the SDL client are:
     SDL3_image version 3.2.0 or newer
     OpenGL 3.3 core profile
 
+SDL3 DEPENDENCY PROVIDERS
+
+By default, configure finds SDL3, SDL3_image, and SDL3_ttf through the
+system pkg-config search path:
+
+    ./configure --with-sdl3=system
+
+The SDL3 projects can instead be built from the pinned git submodules.
+Initialize them before entering a network-isolated build environment:
+
+    git submodule update --init vendor/sdl3/SDL \
+        vendor/sdl3/SDL_image vendor/sdl3/SDL_ttf
+
+The dependency build and the XPilot NG build use separate out-of-tree
+directories and installation prefixes.  From the source directory, run:
+
+    xpilot_source_dir=$(pwd)
+    sdl3_build_dir="$xpilot_source_dir/build/vendor-sdl3"
+    sdl3_prefix="$xpilot_source_dir/build/vendor-sdl3-prefix"
+    vendor/sdl3/build.sh --build-dir "$sdl3_build_dir" \
+        --prefix "$sdl3_prefix"
+    mkdir -p "$xpilot_source_dir/build/xpilot-ng"
+    cd "$xpilot_source_dir/build/xpilot-ng"
+    "$xpilot_source_dir/configure" --with-sdl3=vendored \
+        --with-sdl3-prefix="$sdl3_prefix"
+    make
+
+Both paths passed to vendor/sdl3/build.sh and --with-sdl3-prefix must be
+absolute.  The script builds the three pinned SDL projects as static
+libraries.  Codec libraries used by SDL3_image and FreeType/HarfBuzz used by
+SDL3_ttf come from the build system, so their development packages are still
+required.  The script performs no dependency downloads.
+
+For a cross-build, pass an absolute CMake toolchain file with
+--toolchain-file.  Keep a distinct dependency build directory, dependency
+prefix, and XPilot NG build directory for every target platform.  This layout
+also allows a container build to initialize or materialize the submodules
+beforehand, mount the source read-only, and build without network access.
+See vendor/sdl3/README.md for the pinned versions and build contract.
+
 X11 is required when building the X11 client, replay program, or map editor,
 but the SDL client itself does not depend on X11.
 	
