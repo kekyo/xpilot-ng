@@ -1,3 +1,12 @@
 [submodule "zlib"]
 	path = zlib
 	url = https://github.com/madler/zlib
+[submodule "vendor/sdl3/SDL"]
+	path = vendor/sdl3/SDL
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "vendor/sdl3/SDL_image"]
+	path = vendor/sdl3/SDL_image
+	url = https://github.com/libsdl-org/SDL_image.git
+[submodule "vendor/sdl3/SDL_ttf"]
+	path = vendor/sdl3/SDL_ttf
+	url = https://github.com/libsdl-org/SDL_ttf.git
