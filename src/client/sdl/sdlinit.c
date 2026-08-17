@@ -43,7 +43,6 @@ static SDL_Window *main_window;
 static SDL_GLContext main_gl_context;
 static SdlRenderer *main_renderer;
 static bool sdl_initialized;
-static bool image_initialized;
 static bool ttf_initialized;
 static bool cleanup_registered;
 static bool playing_windows_initialized;
@@ -94,7 +93,7 @@ int Init_playing_windows(void)
 	error("widget initialization failed");
 	return -1;
     }
-    if (Console_init()) {
+    if (Console_init(main_window)) {
 	error("console initialization failed");
 	Close_Widget(&MainWidget);
 	return -1;
@@ -122,7 +121,7 @@ static void cleanup_window_system(void)
 	main_renderer = NULL;
     }
     if (main_gl_context != NULL) {
-	SDL_GL_DeleteContext(main_gl_context);
+	SDL_GL_DestroyContext(main_gl_context);
 	main_gl_context = NULL;
     }
     if (main_window != NULL) {
@@ -132,10 +131,6 @@ static void cleanup_window_system(void)
     if (ttf_initialized) {
 	TTF_Quit();
 	ttf_initialized = false;
-    }
-    if (image_initialized) {
-	IMG_Quit();
-	image_initialized = false;
     }
     if (sdl_initialized) {
 	SDL_Quit();
@@ -186,30 +181,26 @@ static bool cleanup_fonts(void)
 
 static bool closest_display_mode(int width, int height, SDL_DisplayMode *mode)
 {
-    SDL_DisplayMode requested;
-    int display_index;
+    SDL_DisplayID display_id;
 
-    display_index = SDL_GetWindowDisplayIndex(main_window);
-    if (display_index < 0)
+    display_id = SDL_GetDisplayForWindow(main_window);
+    if (display_id == 0)
 	return false;
 
-    memset(&requested, 0, sizeof(requested));
-    requested.w = width;
-    requested.h = height;
-    return SDL_GetClosestDisplayMode(display_index, &requested, mode) != NULL;
+    return SDL_GetClosestFullscreenDisplayMode(display_id, width, height,
+					       0.0f, false, mode);
 }
 
 int Init_window(void)
 {
     int value;
-    int image_flags;
     RendererStatus renderer_status;
     char defaultfontname[] = CONF_FONTDIR "FreeSansBoldOblique.ttf";
     bool gf_exists = true,df_exists = true,gf_init = false, mf_init = false;
 
     Conf_print();
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         error("failed to initialize SDL: %s", SDL_GetError());
         return -1;
     }
@@ -219,15 +210,8 @@ int Init_window(void)
 	cleanup_registered = true;
     }
 
-    image_flags = IMG_Init(IMG_INIT_PNG);
-    image_initialized = true;
-    if ((image_flags & IMG_INIT_PNG) != IMG_INIT_PNG) {
-	error("SDL_image PNG initialization failed: %s", IMG_GetError());
-	goto fail;
-    }
-
-    if (TTF_Init() < 0) {
-	error("SDL_ttf initialization failed: %s", TTF_GetError());
+    if (!TTF_Init()) {
+	error("SDL_ttf initialization failed: %s", SDL_GetError());
 	goto fail;
     }
     ttf_initialized = true;
@@ -235,35 +219,35 @@ int Init_window(void)
 
     num_spark_colors=8;
 
-    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) < 0) {
+    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3)) {
 	error("Could not request OpenGL context major version 3: %s",
 	      SDL_GetError());
 	goto fail;
     }
-    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) < 0) {
+    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3)) {
 	error("Could not request OpenGL context minor version 3: %s",
 	      SDL_GetError());
 	goto fail;
     }
-    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-			    SDL_GL_CONTEXT_PROFILE_CORE) < 0) {
+    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+			     SDL_GL_CONTEXT_PROFILE_CORE)) {
 	error("Could not request an OpenGL core profile: %s", SDL_GetError());
 	goto fail;
     }
-    if (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1) < 0) {
+    if (!SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1)) {
 	error("Could not enable OpenGL double buffering: %s", SDL_GetError());
 	goto fail;
     }
 
-    main_window = SDL_CreateWindow(TITLE,
-				   SDL_WINDOWPOS_CENTERED,
-				   SDL_WINDOWPOS_CENTERED,
-				   draw_width,
-				   draw_height,
+    main_window = SDL_CreateWindow(TITLE, draw_width, draw_height,
 				   SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (main_window == NULL) {
-	error("Could not create an SDL2 OpenGL window: %s", SDL_GetError());
+	error("Could not create an SDL3 OpenGL window: %s", SDL_GetError());
 	goto fail;
+    }
+    if (!SDL_SetWindowPosition(main_window, SDL_WINDOWPOS_CENTERED,
+			       SDL_WINDOWPOS_CENTERED)) {
+	warn("Could not center the SDL window: %s", SDL_GetError());
     }
 
     main_gl_context = SDL_GL_CreateContext(main_window);
@@ -279,7 +263,7 @@ int Init_window(void)
 	      (int)renderer_status);
 	goto fail;
     }
-    SDL_StopTextInput();
+    SDL_StopTextInput(main_window);
     windowed_width = draw_width;
     windowed_height = draw_height;
 
@@ -395,7 +379,7 @@ int Resize_Window(int width, int height)
 
     if (fullscreen) {
 	if (!closest_display_mode(width, height, &mode) ||
-	    SDL_SetWindowDisplayMode(main_window, &mode) < 0)
+	    !SDL_SetWindowFullscreenMode(main_window, &mode))
 	    return -1;
 	width = mode.w;
 	height = mode.h;
@@ -432,7 +416,16 @@ void Swap_buffers(void)
 void Set_window_grab(bool on)
 {
     if (main_window != NULL)
-	SDL_SetWindowGrab(main_window, on ? SDL_TRUE : SDL_FALSE);
+	SDL_SetWindowMouseGrab(main_window, on ? true : false);
+}
+
+bool Set_relative_mouse_mode(bool on)
+{
+    if (main_window == NULL) {
+	SDL_SetError("The application window is not initialized");
+	return false;
+    }
+    return SDL_SetWindowRelativeMouseMode(main_window, on);
 }
 
 void Toggle_fullscreen(void)
@@ -444,20 +437,20 @@ void Toggle_fullscreen(void)
 	return;
 
     if (fullscreen) {
-	if (SDL_SetWindowFullscreen(main_window, 0) < 0) {
+	if (!SDL_SetWindowFullscreen(main_window, false)) {
 	    Add_message("Failed to leave fullscreen mode. [*Client reply*]");
 	    return;
 	}
 	fullscreen = false;
-	SDL_SetWindowDisplayMode(main_window, NULL);
+	SDL_SetWindowFullscreenMode(main_window, NULL);
 	SDL_SetWindowSize(main_window, windowed_width, windowed_height);
     } else {
 	SDL_GetWindowSize(main_window, &windowed_width, &windowed_height);
 	if (!closest_display_mode(windowed_width, windowed_height, &mode) ||
-	    SDL_SetWindowDisplayMode(main_window, &mode) < 0 ||
-	    SDL_SetWindowFullscreen(main_window, SDL_WINDOW_FULLSCREEN) < 0) {
-	    SDL_SetWindowFullscreen(main_window, 0);
-	    SDL_SetWindowDisplayMode(main_window, NULL);
+	    !SDL_SetWindowFullscreenMode(main_window, &mode) ||
+	    !SDL_SetWindowFullscreen(main_window, true)) {
+	    SDL_SetWindowFullscreen(main_window, false);
+	    SDL_SetWindowFullscreenMode(main_window, NULL);
 	    SDL_SetWindowSize(main_window, windowed_width, windowed_height);
 	    Add_message("Failed to change video mode. [*Client reply*]");
 	    return;

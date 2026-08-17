@@ -81,7 +81,7 @@ static Uint32 Radar_surface_color(SDL_Surface *surface, color_t color)
 	alpha = (Uint8)(color >> 24);
     }
 
-    return SDL_MapRGBA(surface->format, red, green, blue, alpha);
+    return SDL_MapSurfaceRGBA(surface, red, green, blue, alpha);
 }
 
 static int Radar_scale_bounds(const SDL_Rect *requested, SDL_Rect *scaled)
@@ -179,7 +179,7 @@ static void Radar_paint_block(GLWidget *radar, SDL_Surface *s, int xi, int yi, c
     block.w = (xi + 1) * radar->bounds.w / Setup->x - block.x;
     block.h = radar->bounds.h - yi * radar->bounds.h / Setup->y - block.y;
 
-    SDL_FillRect(s, &block, Radar_surface_color(s, color));
+    SDL_FillSurfaceRect(s, &block, Radar_surface_color(s, color));
 }
 
 /*
@@ -217,7 +217,7 @@ static void Radar_paint_world_blocks(GLWidget *radar, SDL_Surface *s)
     }
 
     if (SDL_MUSTLOCK(s)) SDL_LockSurface(s);
-    SDL_FillRect(s, NULL, Radar_surface_color(s, bgRadarColorValue));
+    SDL_FillSurfaceRect(s, NULL, Radar_surface_color(s, bgRadarColorValue));
 
     /* Scan the map and paint the blocks */
     for (xi = 0; xi < Setup->x; xi++) {
@@ -264,7 +264,7 @@ static void Radar_paint_world_polygons(GLWidget *radar, SDL_Surface *s)
     color_t color;
 
     if (SDL_MUSTLOCK(s)) SDL_LockSurface(s);
-    SDL_FillRect(s, NULL, Radar_surface_color(s, bgRadarColorValue));
+    SDL_FillSurfaceRect(s, NULL, Radar_surface_color(s, bgRadarColorValue));
 
     for (i = 0; i < num_polygons; i++) {
 
@@ -428,7 +428,7 @@ static void move(Sint16 xrel,Sint16 yrel,Uint16 x,Uint16 y, void *data)
 static void button( Uint8 button, Uint8 state , Uint16 x , Uint16 y, void *data )
 {
     GLWidget *widget = (GLWidget *)data;
-    if (state == SDL_PRESSED) {
+    if (state == true) {
     	if (button == 1) {
     	    if (DelGLWidgetListItem( widget->list, widget ))
 	    	AppendGLWidgetList( widget->list, widget );
@@ -466,16 +466,16 @@ static SDL_Surface *Radar_create_surface(const SDL_Rect *bounds)
 	return NULL;
     }
 
-    surface = SDL_CreateRGBSurfaceWithFormat(
-	0, texture_width, texture_height, 32, SDL_PIXELFORMAT_RGBA32);
+    surface = SDL_CreateSurface(texture_width, texture_height,
+				SDL_PIXELFORMAT_RGBA32);
     if (surface == NULL) {
 	error("Could not create radar surface: %s", SDL_GetError());
 	return NULL;
     }
-    if (SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE) < 0
-	|| SDL_SetSurfaceAlphaMod(surface, SDL_ALPHA_OPAQUE) < 0) {
+    if (!SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE)
+	|| !SDL_SetSurfaceAlphaMod(surface, SDL_ALPHA_OPAQUE)) {
 	error("Could not configure radar surface: %s", SDL_GetError());
-	SDL_FreeSurface(surface);
+	SDL_DestroySurface(surface);
 	return NULL;
     }
     Radar_paint_surface(surface, bounds);
@@ -515,7 +515,7 @@ static int Radar_replace(Renderer *renderer, const SDL_Rect *bounds)
 	return -1;
     if (Radar_create_texture(
 	    renderer, candidate_surface, &candidate_texture) != 0) {
-	SDL_FreeSurface(candidate_surface);
+	SDL_DestroySurface(candidate_surface);
 	return -1;
     }
 
@@ -527,11 +527,11 @@ static int Radar_replace(Renderer *renderer, const SDL_Rect *bounds)
 	    != RENDERER_STATUS_OK) {
 	    warn("Could not release replacement radar texture");
 	}
-	SDL_FreeSurface(candidate_surface);
+	SDL_DestroySurface(candidate_surface);
 	return -1;
     }
 
-    SDL_FreeSurface(radar_surface);
+    SDL_DestroySurface(radar_surface);
     radar_surface = candidate_surface;
     radar_renderer = renderer;
     radar_texture = candidate_texture;
@@ -643,7 +643,7 @@ static void Radar_cleanup( GLWidget *widget )
     }
     radar_texture = NULL;
     radar_renderer = NULL;
-    SDL_FreeSurface(radar_surface);
+    SDL_DestroySurface(radar_surface);
     radar_surface = NULL;
     radar_widget = NULL;
     radar_dirty = 0;

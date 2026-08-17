@@ -43,7 +43,7 @@ for required_file in "$client" "$server" "$map"; do
     fi
 done
 
-runtime_dir=$(mktemp -d "${TMPDIR:-/tmp}/xpilot-sdl2-e2e.XXXXXX")
+runtime_dir=$(mktemp -d "${TMPDIR:-/tmp}/xpilot-sdl3-e2e.XXXXXX")
 meta_pid=
 meta_fixture_pid=
 server_pid=
@@ -108,7 +108,7 @@ cleanup()
         fi
     done
     case "$runtime_dir" in
-        "${TMPDIR:-/tmp}"/xpilot-sdl2-e2e.*)
+        "${TMPDIR:-/tmp}"/xpilot-sdl3-e2e.*)
             rm -rf -- "$runtime_dir"
             ;;
     esac
@@ -202,7 +202,7 @@ client_accepted()
     if ! kill -0 "$client_pid" 2>/dev/null; then
         fail "client stopped before joining the server"
     fi
-    grep -q "Welcome .*SDL2Smoke" "$runtime_dir/server.log" 2>/dev/null
+    grep -q "Welcome .*SDL3Smoke" "$runtime_dir/server.log" 2>/dev/null
 }
 
 game_frame_ready()
@@ -369,7 +369,7 @@ socket.bind(0, "127.0.0.1", () => {
 server_pid=$!
 wait_until "local server readiness" 20 server_ready
 
-"$client" -geometry 800x600 -join -port "$port" -name SDL2Smoke \
+"$client" -geometry 800x600 -join -port "$port" -name SDL3Smoke \
     127.0.0.1 >"$runtime_dir/client.log" 2>&1 &
 client_pid=$!
 window_owner_pid=$client_pid
@@ -398,7 +398,7 @@ xdotool key --window "$window_id" Up Return >/dev/null 2>&1 \
     || fail "could not send gameplay key events"
 xdotool key --window "$window_id" m >/dev/null 2>&1 \
     || fail "could not open the console"
-xdotool type --window "$window_id" --delay 10 SDL2Smoke >/dev/null 2>&1 \
+xdotool type --window "$window_id" --delay 10 SDL3Smoke >/dev/null 2>&1 \
     || fail "could not enter console text"
 xdotool key --window "$window_id" Return >/dev/null 2>&1 \
     || fail "could not submit console text"
@@ -427,4 +427,4 @@ wait_until "server shutdown" 10 process_stopped "$server_pid"
 wait "$server_pid" 2>/dev/null || true
 server_pid=
 
-echo "SDL2 E2E smoke passed"
+echo "SDL3 E2E smoke passed"

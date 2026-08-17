@@ -10,9 +10,9 @@ To compile XPilot NG, you'll need at least:
 
 Additional requirements for the SDL client are:
 
-    SDL2 version 2.0.9 or newer
-    SDL2_ttf version 2.0.12 or newer
-    SDL2_image version 2.0.0 or newer
+    SDL3 version 3.2.0 or newer
+    SDL3_ttf version 3.2.0 or newer
+    SDL3_image version 3.2.0 or newer
     OpenGL 3.3 core profile
 
 X11 is required when building the X11 client, replay program, or map editor,

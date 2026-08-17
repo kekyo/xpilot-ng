@@ -5,7 +5,7 @@
 
 #include "renderer.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 /** Renderer facade borrowing one SDL OpenGL window and its current context. */
 typedef struct SdlRenderer SdlRenderer;

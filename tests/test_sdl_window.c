@@ -6,7 +6,7 @@
 #include "sdlrenderer.h"
 #include "sdlwindow.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <stdarg.h>
 #include <stdint.h>
@@ -438,10 +438,10 @@ static int check_initial_prepare(sdl_window_t *window,
     TEST_CHECK(texture_create_attempts == 0);
     TEST_CHECK(texture_destroy_calls == 0);
 
-    background = SDL_MapRGBA(window->surface->format, 10, 20, 30, 40);
-    marker = SDL_MapRGBA(window->surface->format, 70, 80, 90, 100);
-    TEST_CHECK(SDL_FillRect(window->surface, NULL, background) == 0);
-    TEST_CHECK(SDL_FillRect(window->surface, &marker_rect, marker) == 0);
+    background = SDL_MapSurfaceRGBA(window->surface, 10, 20, 30, 40);
+    marker = SDL_MapSurfaceRGBA(window->surface, 70, 80, 90, 100);
+    TEST_CHECK(SDL_FillSurfaceRect(window->surface, NULL, background));
+    TEST_CHECK(SDL_FillSurfaceRect(window->surface, &marker_rect, marker));
     sdl_window_refresh(window);
 
     surface_before_failure = window->surface;
@@ -484,8 +484,8 @@ static int check_dirty_refresh_and_semantic_paint(
     const RendererColor black = {0, 0, 0, 255};
     const RendererColor green = {0, 144, 0, 255};
 
-    changed = SDL_MapRGBA(window->surface->format, 101, 102, 103, 104);
-    TEST_CHECK(SDL_FillRect(window->surface, &changed_rect, changed) == 0);
+    changed = SDL_MapSurfaceRGBA(window->surface, 101, 102, 103, 104);
+    TEST_CHECK(SDL_FillSurfaceRect(window->surface, &changed_rect, changed));
     attempts_before = texture_create_attempts;
     destroys_before = texture_destroy_calls;
     reset_paint_frame();

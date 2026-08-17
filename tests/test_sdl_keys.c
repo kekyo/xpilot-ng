@@ -12,8 +12,8 @@ typedef struct {
 int main(void)
 {
     static const key_case_t cases[] = {
-        { "a", SDLK_a },
-        { "A", SDLK_a },
+        { "a", SDLK_A },
+        { "A", SDLK_A },
         { "Return", SDLK_RETURN },
         { "Linefeed", SDLK_RETURN },
         { "Shift_L", SDLK_LSHIFT },

@@ -5,9 +5,9 @@
 #include "renderer_gl_core.h"
 #include "text_geometry.h"
 
-#include <SDL.h>
-#include <SDL_opengl.h>
-#include <SDL_opengl_glext.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_opengl.h>
+#include <SDL3/SDL_opengl_glext.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -270,12 +270,12 @@ static int verify_context_attributes(int major, int minor, int profile,
     int actual_minor = 0;
     int actual_profile = 0;
 
-    if (SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,
-                            &actual_major) != 0
-        || SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,
-                               &actual_minor) != 0
-        || SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                               &actual_profile) != 0) {
+    if (!SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,
+                             &actual_major)
+        || !SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,
+                                &actual_minor)
+        || !SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                                &actual_profile)) {
         fprintf(stderr, "Could not query %s context attributes: %s\n",
                 title, SDL_GetError());
         return 1;
@@ -305,21 +305,21 @@ static int create_context(TestContext *test_context, int major, int minor,
 {
     memset(test_context, 0, sizeof(*test_context));
     SDL_GL_ResetAttributes();
-    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, major) != 0
-        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minor) != 0
-        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profile) != 0
-        || SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8) != 0
-        || SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8) != 0
-        || SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8) != 0
-        || SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8) != 0) {
+    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, major)
+        || !SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minor)
+        || !SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profile)
+        || !SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8)
+        || !SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8)
+        || !SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8)
+        || !SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8)) {
         fprintf(stderr, "Could not request %s context: %s\n",
                 title, SDL_GetError());
         return 1;
     }
 
     test_context->window = SDL_CreateWindow(
-        title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        FRAME_WIDTH, FRAME_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
+        title, FRAME_WIDTH, FRAME_HEIGHT,
+        SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
     if (test_context->window == NULL) {
         fprintf(stderr, "Could not create %s window: %s\n",
                 title, SDL_GetError());
@@ -331,8 +331,8 @@ static int create_context(TestContext *test_context, int major, int minor,
                 title, SDL_GetError());
         return 1;
     }
-    if (SDL_GL_MakeCurrent(test_context->window,
-                           test_context->context) != 0) {
+    if (!SDL_GL_MakeCurrent(test_context->window,
+                            test_context->context)) {
         fprintf(stderr, "Could not make %s context current: %s\n",
                 title, SDL_GetError());
         return 1;
@@ -373,7 +373,7 @@ static void destroy_context(TestContext *test_context)
 {
     if (test_context->context != NULL
         && SDL_GL_MakeCurrent(test_context->window,
-                              test_context->context) == 0) {
+                              test_context->context)) {
         if (test_context->framebuffer != 0)
             test_context->framebuffer_api.destroy(
                 1, &test_context->framebuffer);
@@ -381,7 +381,7 @@ static void destroy_context(TestContext *test_context)
             glDeleteTextures(1, &test_context->color_texture);
     }
     if (test_context->context != NULL)
-        SDL_GL_DeleteContext(test_context->context);
+        SDL_GL_DestroyContext(test_context->context);
     if (test_context->window != NULL)
         SDL_DestroyWindow(test_context->window);
     memset(test_context, 0, sizeof(*test_context));
@@ -396,7 +396,7 @@ static int check_factory_failure_contract(RendererFactory factory,
     int result = 1;
 
     TEST_CHECK_CLEANUP(SDL_GL_MakeCurrent(test_context->window,
-                                          test_context->context) == 0);
+                                          test_context->context));
     TEST_CHECK_CLEANUP(factory(load_gl_proc, NULL, NULL)
                        == RENDERER_STATUS_INVALID_ARGUMENT);
     TEST_CHECK_CLEANUP(factory(NULL, NULL, &renderer)
@@ -414,8 +414,8 @@ static int check_factory_failure_contract(RendererFactory factory,
 cleanup:
     if (renderer != NULL) {
         if (SDL_GL_GetCurrentContext() != test_context->context
-            && SDL_GL_MakeCurrent(test_context->window,
-                                  test_context->context) != 0) {
+            && !SDL_GL_MakeCurrent(test_context->window,
+                                   test_context->context)) {
             fprintf(stderr, "Could not restore context for renderer "
                     "cleanup: %s\n", SDL_GetError());
         } else {
@@ -626,7 +626,7 @@ static int render_scene(RendererFactory factory, TestContext *test_context,
 
     memset(&core_borrowed_state, 0, sizeof(core_borrowed_state));
     TEST_CHECK_CLEANUP(SDL_GL_MakeCurrent(test_context->window,
-                                          test_context->context) == 0);
+                                          test_context->context));
     test_context->framebuffer_api.bind(GL_FRAMEBUFFER,
                                        test_context->framebuffer);
     if (exercise_core_borrowed_state) {
@@ -809,8 +809,8 @@ cleanup:
     end_borrowed_upload_state(test_context, &unpack_buffer);
     if (renderer != NULL) {
         if (SDL_GL_GetCurrentContext() != test_context->context
-            && SDL_GL_MakeCurrent(test_context->window,
-                                  test_context->context) != 0) {
+            && !SDL_GL_MakeCurrent(test_context->window,
+                                   test_context->context)) {
             fprintf(stderr, "Could not restore context for renderer "
                     "cleanup: %s\n", SDL_GetError());
             result = 1;
@@ -873,7 +873,7 @@ static int render_texture_sampling_scene(RendererFactory factory,
     int result = 1;
 
     TEST_CHECK_CLEANUP(SDL_GL_MakeCurrent(test_context->window,
-                                          test_context->context) == 0);
+                                          test_context->context));
     test_context->framebuffer_api.bind(GL_FRAMEBUFFER,
                                        test_context->framebuffer);
     TEST_CHECK_CLEANUP(factory(load_gl_proc, NULL, &renderer)
@@ -1049,7 +1049,7 @@ int main(void)
     int result = 1;
 
     memset(&core_context, 0, sizeof(core_context));
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL video initialization failed: %s\n",
                 SDL_GetError());
         goto cleanup;

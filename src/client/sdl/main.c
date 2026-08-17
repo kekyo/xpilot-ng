@@ -20,6 +20,8 @@
 
 #include "xpclient_sdl.h"
 
+#include <SDL3/SDL_main.h>
+
 #include "sdlinit.h"
 #include "sdlmeta.h"
 

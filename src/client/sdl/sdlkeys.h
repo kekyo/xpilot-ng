@@ -26,7 +26,7 @@
 #define NUM_MOUSE_BUTTONS 5
 
 /**
- * Convert an XPilot key name to an SDL2 keycode.
+ * Convert an XPilot key name to an SDL3 keycode.
  *
  * @param name Key name from the XPilot configuration.
  * @return The matching keycode, or SDLK_UNKNOWN.
@@ -34,9 +34,9 @@
 SDL_Keycode Get_key_by_name(const char *name);
 
 /**
- * Find the canonical XPilot name for an SDL2 keycode.
+ * Find the canonical XPilot name for an SDL3 keycode.
  *
- * @param key SDL2 keycode to look up.
+ * @param key SDL3 keycode to look up.
  * @return Static key name, or NULL when the key is unknown.
  */
 const char *Get_name_by_key(SDL_Keycode key);

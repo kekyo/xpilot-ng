@@ -4,10 +4,11 @@ AUTOMAKE_OPTIONS = subdir-objects
 bin_PROGRAMS = xpilot-ng-sdl
 noinst_LIBRARIES = libxp_libtess2.a
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
+	-DSDL_DISABLE_OLD_NAMES \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
-	@SDL2_CFLAGS@ @SDL2_IMAGE_CFLAGS@ @SDL2_TTF_CFLAGS@ \
+	@SDL3_CFLAGS@ @SDL3_IMAGE_CFLAGS@ @SDL3_TTF_CFLAGS@ \
 	@GL_CFLAGS@
 libxp_libtess2_a_SOURCES = \
 	third_party/libtess2/Include/tesselator.h \
@@ -51,7 +52,7 @@ xpilot_ng_sdl_SOURCES = \
 xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	libxp_libtess2.a \
-	@SDL2_IMAGE_LIBS@ @SDL2_TTF_LIBS@ @SDL2_LIBS@ \
+	@SDL3_IMAGE_LIBS@ @SDL3_TTF_LIBS@ @SDL3_LIBS@ \
 	@GL_LIBS@ @SOUND_LIBS@ @W32_LIBS@
 
 if COND_WINDOWS

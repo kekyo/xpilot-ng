@@ -13,7 +13,7 @@ int Sdl_clipboard_set_text(const char *text)
 {
     char *normalized;
     size_t input_index, output_index, length;
-    int result;
+    bool result;
 
     if (text == NULL)
 	return -1;
@@ -37,12 +37,12 @@ int Sdl_clipboard_set_text(const char *text)
 
     result = SDL_SetClipboardText(normalized);
     SDL_free(normalized);
-    return result;
+    return result ? 0 : -1;
 }
 
 char *Sdl_clipboard_get_text(void)
 {
-    if (SDL_HasClipboardText() != SDL_TRUE)
+    if (SDL_HasClipboardText() != true)
 	return NULL;
     return SDL_GetClipboardText();
 }

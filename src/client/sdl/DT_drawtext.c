@@ -91,11 +91,11 @@ int DT_LoadFont(const char *BitmapName, int flags) {
 	*CurrentFont = (BitFont *) malloc(sizeof(BitFont));
 	if (*CurrentFont == NULL) {
 		PRINT_ERROR("Could not allocate a font");
-		SDL_FreeSurface(Temp);
+		SDL_DestroySurface(Temp);
 		return -1;
 	}
 
-	/* SDL2 has no implicit display surface for OpenGL windows.  Keep the
+	/* SDL3 has no implicit display surface for OpenGL windows.  Keep the
 	 * loaded surface; SDL_BlitSurface converts it to the destination format. */
 	(*CurrentFont)->FontSurface = Temp;
 
@@ -103,7 +103,7 @@ int DT_LoadFont(const char *BitmapName, int flags) {
 	(*CurrentFont)->CharHeight = (*CurrentFont)->FontSurface->h;
 	if ((*CurrentFont)->CharWidth <= 0 || (*CurrentFont)->CharHeight <= 0) {
 		PRINT_ERROR("Font bitmap must contain 256 non-empty glyph cells");
-		SDL_FreeSurface((*CurrentFont)->FontSurface);
+		SDL_DestroySurface((*CurrentFont)->FontSurface);
 		free(*CurrentFont);
 		*CurrentFont = NULL;
 		return -1;
@@ -117,12 +117,12 @@ int DT_LoadFont(const char *BitmapName, int flags) {
 	 * as transparent.
 	 */
 	if(flags & TRANS_FONT) {
-	    if (SDL_SetColorKey((*CurrentFont)->FontSurface, SDL_TRUE,
-				SDL_MapRGB((*CurrentFont)->FontSurface->format,
-					   255, 0, 255)) < 0
-		|| SDL_SetSurfaceRLE((*CurrentFont)->FontSurface, SDL_TRUE) < 0) {
+	    if (!SDL_SetSurfaceColorKey((*CurrentFont)->FontSurface, true,
+				 SDL_MapSurfaceRGB((*CurrentFont)->FontSurface,
+						   255, 0, 255))
+		|| !SDL_SetSurfaceRLE((*CurrentFont)->FontSurface, true)) {
 		PRINT_ERROR(SDL_GetError());
-		SDL_FreeSurface((*CurrentFont)->FontSurface);
+		SDL_DestroySurface((*CurrentFont)->FontSurface);
 		free(*CurrentFont);
 		*CurrentFont = NULL;
 		return -1;
@@ -139,7 +139,7 @@ int DT_UnloadFont(int FontNumber) {
 		if ((*CurrentFont)->FontNumber == FontNumber) {
 			font = *CurrentFont;
 			*CurrentFont = font->NextFont;
-			SDL_FreeSurface(font->FontSurface);
+			SDL_DestroySurface(font->FontSurface);
 			free(font);
 			return 0;
 		}
@@ -241,7 +241,7 @@ void DT_DestroyDrawText(void) {
 		temp = CurrentFont;
 		CurrentFont = CurrentFont->NextFont;
 
-		SDL_FreeSurface(temp->FontSurface);
+		SDL_DestroySurface(temp->FontSurface);
 		free(temp);
 	}
 

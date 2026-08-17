@@ -19,26 +19,28 @@ int Sdl_blit_surface_unblended(SDL_Surface *source,
     Uint8 saved_red;
     Uint8 saved_green;
     Uint8 saved_blue;
-    int result;
-    int restore_result = 0;
+    bool result;
+    bool restore_result = true;
 
-    if (source == NULL || destination == NULL)
-	return SDL_SetError("Source and destination surfaces must not be NULL");
+    if (source == NULL || destination == NULL) {
+	SDL_SetError("Source and destination surfaces must not be NULL");
+	return -1;
+    }
 
-    if (SDL_GetSurfaceBlendMode(source, &saved_blend_mode) < 0
-	|| SDL_GetSurfaceAlphaMod(source, &saved_alpha) < 0
-	|| SDL_GetSurfaceColorMod(source, &saved_red, &saved_green,
-				  &saved_blue) < 0)
+    if (!SDL_GetSurfaceBlendMode(source, &saved_blend_mode)
+	|| !SDL_GetSurfaceAlphaMod(source, &saved_alpha)
+	|| !SDL_GetSurfaceColorMod(source, &saved_red, &saved_green,
+				   &saved_blue))
 	return -1;
 
-    if (SDL_SetSurfaceBlendMode(source, SDL_BLENDMODE_NONE) < 0)
+    if (!SDL_SetSurfaceBlendMode(source, SDL_BLENDMODE_NONE))
 	return -1;
-    if (SDL_SetSurfaceAlphaMod(source, SDL_ALPHA_OPAQUE) < 0) {
+    if (!SDL_SetSurfaceAlphaMod(source, SDL_ALPHA_OPAQUE)) {
 	SDL_SetSurfaceBlendMode(source, saved_blend_mode);
 	return -1;
     }
     if (SDL_SetSurfaceColorMod(source, SDL_ALPHA_OPAQUE,
-			       SDL_ALPHA_OPAQUE, SDL_ALPHA_OPAQUE) < 0) {
+			       SDL_ALPHA_OPAQUE, SDL_ALPHA_OPAQUE) == false) {
 	SDL_SetSurfaceAlphaMod(source, saved_alpha);
 	SDL_SetSurfaceBlendMode(source, saved_blend_mode);
 	return -1;
@@ -48,13 +50,13 @@ int Sdl_blit_surface_unblended(SDL_Surface *source,
 			     destination_rect);
 
     /* Attempt every restoration even if one of the SDL calls fails. */
-    if (SDL_SetSurfaceColorMod(source, saved_red, saved_green,
-			       saved_blue) < 0)
-	restore_result = -1;
-    if (SDL_SetSurfaceAlphaMod(source, saved_alpha) < 0)
-	restore_result = -1;
-    if (SDL_SetSurfaceBlendMode(source, saved_blend_mode) < 0)
-	restore_result = -1;
+    if (!SDL_SetSurfaceColorMod(source, saved_red, saved_green,
+			        saved_blue))
+	restore_result = false;
+    if (!SDL_SetSurfaceAlphaMod(source, saved_alpha))
+	restore_result = false;
+    if (!SDL_SetSurfaceBlendMode(source, saved_blend_mode))
+	restore_result = false;
 
-    return result < 0 || restore_result < 0 ? -1 : 0;
+    return result && restore_result ? 0 : -1;
 }

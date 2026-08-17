@@ -10,13 +10,13 @@ if test ! -x "$source_dir/configure"; then
     exit 1
 fi
 
-suite_dir=$(mktemp -d "${TMPDIR:-/tmp}/xpilot-sdl2-suite.XXXXXX")
+suite_dir=$(mktemp -d "${TMPDIR:-/tmp}/xpilot-sdl3-suite.XXXXXX")
 build_source_dir=$source_dir
 
 cleanup()
 {
     case "$suite_dir" in
-        "${TMPDIR:-/tmp}"/xpilot-sdl2-suite.*)
+        "${TMPDIR:-/tmp}"/xpilot-sdl3-suite.*)
             rm -rf -- "$suite_dir"
             ;;
     esac
@@ -92,4 +92,4 @@ run_configuration sdl-only \
     --enable-sdl-client --disable-x11-client --disable-replay \
     --disable-xp-mapedit
 
-echo "Both out-of-tree SDL2 configurations passed"
+echo "Both out-of-tree SDL3 configurations passed"

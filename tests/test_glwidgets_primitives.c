@@ -806,13 +806,13 @@ static int check_slide_geometry_colors_and_state(void)
         11.0f, 17.0f, 9.0f, 7.0f,
         normal_top, normal_bottom) == 0);
 
-    widget->button(2, SDL_PRESSED, 0, 0, widget->buttondata);
-    widget->button(2, SDL_RELEASED, 0, 0, widget->buttondata);
+    widget->button(2, true, 0, 0, widget->buttondata);
+    widget->button(2, false, 0, 0, widget->buttondata);
     TEST_CHECK(!info->sliding);
     TEST_CHECK(release_count == 0);
 
-    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
-    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(1, true, 0, 0, widget->buttondata);
+    widget->button(1, true, 0, 0, widget->buttondata);
     TEST_CHECK(info->sliding);
     TEST_CHECK(release_count == 0);
     reset_frame();
@@ -821,10 +821,10 @@ static int check_slide_geometry_colors_and_state(void)
         11.0f, 17.0f, 9.0f, 7.0f,
         sliding_top, sliding_bottom) == 0);
 
-    widget->button(2, SDL_RELEASED, 0, 0, widget->buttondata);
+    widget->button(2, false, 0, 0, widget->buttondata);
     TEST_CHECK(info->sliding);
     TEST_CHECK(release_count == 0);
-    widget->button(1, SDL_RELEASED, 0, 0, widget->buttondata);
+    widget->button(1, false, 0, 0, widget->buttondata);
     TEST_CHECK(!info->sliding);
     TEST_CHECK(release_count == 1);
     destroy_widget(widget);
@@ -957,13 +957,13 @@ static int check_radio_background_text_and_toggle(void)
         21.0f, 31.0f, 11.0f, 9.0f, background_color,
         &off_texture, 0xff0000ff, CENTER, CENTER, 26, 66) == 0);
 
-    widget->button(1, SDL_RELEASED, 0, 0, widget->buttondata);
-    widget->button(2, SDL_PRESSED, 0, 0, widget->buttondata);
-    widget->button(2, SDL_RELEASED, 0, 0, widget->buttondata);
+    widget->button(1, false, 0, 0, widget->buttondata);
+    widget->button(2, true, 0, 0, widget->buttondata);
+    widget->button(2, false, 0, 0, widget->buttondata);
     TEST_CHECK(!info->state);
     TEST_CHECK(capture.calls == 0);
 
-    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(1, true, 0, 0, widget->buttondata);
     TEST_CHECK(info->state);
     TEST_CHECK(capture.calls == 1);
     TEST_CHECK(capture.state);
@@ -973,10 +973,10 @@ static int check_radio_background_text_and_toggle(void)
         21.0f, 31.0f, 11.0f, 9.0f, background_color,
         &on_texture, 0x00ff00ff, CENTER, CENTER, 26, 66) == 0);
 
-    widget->button(1, SDL_RELEASED, 0, 0, widget->buttondata);
+    widget->button(1, false, 0, 0, widget->buttondata);
     TEST_CHECK(info->state);
     TEST_CHECK(capture.calls == 1);
-    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(1, true, 0, 0, widget->buttondata);
     TEST_CHECK(!info->state);
     TEST_CHECK(capture.calls == 2);
     TEST_CHECK(!capture.state);
@@ -1109,11 +1109,11 @@ static int check_button_geometry_colors_and_state(void)
     TEST_CHECK(action_count == 0);
 
     loopsSlow = 200;
-    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(1, true, 0, 0, widget->buttondata);
     TEST_CHECK(info->pressed);
     TEST_CHECK(info->press_time == 200);
     TEST_CHECK(action_count == 1);
-    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(1, true, 0, 0, widget->buttondata);
     TEST_CHECK(action_count == 1);
 
     reset_frame();
@@ -1151,7 +1151,7 @@ static int check_button_geometry_colors_and_state(void)
     widget->Draw(widget);
     TEST_CHECK(check_successful_fill(
         11.0f, 17.0f, 9.0f, 7.0f, default_normal_color) == 0);
-    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(1, true, 0, 0, widget->buttondata);
     TEST_CHECK(action_count == 2);
     reset_frame();
     widget->Draw(widget);
@@ -1204,14 +1204,14 @@ static int check_state_colors(void)
     TEST_CHECK(check_successful_draw(normal_color, points) == 0);
     TEST_CHECK(action_count == 0);
 
-    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(1, true, 0, 0, widget->buttondata);
     reset_frame();
     widget->Draw(widget);
     TEST_CHECK(check_successful_draw(press_color, points) == 0);
     TEST_CHECK(action_count == 1);
-    widget->button(1, SDL_RELEASED, 0, 0, widget->buttondata);
+    widget->button(1, false, 0, 0, widget->buttondata);
 
-    widget->button(2, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(2, true, 0, 0, widget->buttondata);
     TEST_CHECK(action_count == 2);
     TEST_CHECK(info->tap);
     reset_frame();
@@ -1621,7 +1621,7 @@ static int check_int_chooser_parent_paint(void)
     TEST_CHECK(!right_arrow->tap);
     allocations_before_update = live_text_allocations;
     info->rightarrow->button(
-        2, SDL_PRESSED, 0, 0, info->rightarrow->buttondata);
+        2, true, 0, 0, info->rightarrow->buttondata);
     TEST_CHECK(value == 5);
     TEST_CHECK(info->direction == 2);
     TEST_CHECK(right_arrow->tap);
@@ -1702,7 +1702,7 @@ static int check_double_chooser_parent_paint(void)
     TEST_CHECK(!left_arrow->tap);
     allocations_before_update = live_text_allocations;
     info->leftarrow->button(
-        2, SDL_PRESSED, 0, 0, info->leftarrow->buttondata);
+        2, true, 0, 0, info->leftarrow->buttondata);
     TEST_CHECK(value > 1.239 && value < 1.241);
     TEST_CHECK(info->direction == -2);
     TEST_CHECK(left_arrow->tap);
@@ -2552,11 +2552,11 @@ static int check_label_scrap_button(void)
 
     TEST_CHECK(widget != NULL);
     reset_frame();
-    widget->button(1, SDL_RELEASED, 0, 0, widget->buttondata);
-    widget->button(2, SDL_PRESSED, 0, 0, widget->buttondata);
-    widget->button(2, SDL_RELEASED, 0, 0, widget->buttondata);
+    widget->button(1, false, 0, 0, widget->buttondata);
+    widget->button(2, true, 0, 0, widget->buttondata);
+    widget->button(2, false, 0, 0, widget->buttondata);
     TEST_CHECK(clipboard_attempts == 0);
-    widget->button(1, SDL_PRESSED, 0, 0, widget->buttondata);
+    widget->button(1, true, 0, 0, widget->buttondata);
     TEST_CHECK(clipboard_attempts == 1);
     TEST_CHECK(strcmp(clipboard_text, "copy-me") == 0);
 

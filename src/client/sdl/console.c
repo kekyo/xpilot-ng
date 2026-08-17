@@ -26,20 +26,25 @@
 
 static sdl_window_t console_window;
 static ConsoleInformation *console;
+static SDL_Window *text_input_window;
 
 void command_handler(ConsoleInformation *, char *);
 
 static void Console_refresh(void)
 {
-    SDL_FillRect(console_window.surface, NULL, 0);
+    SDL_FillSurfaceRect(console_window.surface, NULL, 0);
     CON_UpdateConsole(console);
     CON_DrawConsole(console);
     sdl_window_refresh(&console_window);
 }
 
-int Console_init(void)
+int Console_init(SDL_Window *window)
 {
     SDL_Rect cr;
+
+    if (window == NULL)
+	return -1;
+    text_input_window = window;
     cr.w = 500;
     cr.h = 100;
     if (cr.w > draw_width) cr.w = draw_width;
@@ -91,13 +96,13 @@ RendererStatus Console_paint(void)
 void Console_show(void)
 {
     CON_Show(console);
-    SDL_StartTextInput();
+    SDL_StartTextInput(text_input_window);
     Console_refresh();
 }
 
 void Console_hide(void)
 {
-    SDL_StopTextInput();
+    SDL_StopTextInput(text_input_window);
     CON_Hide(console);
 }
 
@@ -124,7 +129,9 @@ void Paste_String_to_Console(const char *text)
 void Console_cleanup(void)
 {
     CON_Destroy(console);
+    console = NULL;
     sdl_window_destroy(&console_window);
+    text_input_window = NULL;
 }
 
 void Console_print(const char *str, ...)

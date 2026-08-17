@@ -92,7 +92,6 @@
 				E34F6DB708F85951007373A1,
 				E34F6C1A08F84289007373A1,
 				E3E0ADF2080517E70080821B,
-				E3E0ADF0080517D80080821B,
 				E3E0ADEC080517970080821B,
 			);
 			isa = PBXGroup;
@@ -152,10 +151,11 @@
 			buildRules = (
 			);
 			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = /Library/Frameworks;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = SDL_DISABLE_OLD_NAMES=1;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = contrib/macosx/config.h;
-				HEADER_SEARCH_PATHS = /Library/Frameworks/SDL.framework/Versions/Current/Headers;
 				INFOPLIST_FILE = contrib/macosx/Info.plist;
 				INSTALL_PATH = /Applications;
 				LIBRARY_SEARCH_PATHS = /opt/local/lib;
@@ -184,7 +184,6 @@
 		8D11072C0486CEB800E47090 = {
 			buildActionMask = 2147483647;
 			files = (
-				E3E0A578080515800080821B,
 				E34F6A8908F83B24007373A1,
 				E34F6A8E08F83B24007373A1,
 				E34F6A9208F83B24007373A1,
@@ -2859,7 +2858,6 @@
 				E34F6BDA08F84223007373A1,
 				E34F6C4808F842DB007373A1,
 				E34F6BDC08F84223007373A1,
-				E34F6BDD08F84223007373A1,
 				E34F6BDE08F84223007373A1,
 			);
 			isa = PBXCopyFilesBuildPhase;
@@ -2885,12 +2883,6 @@
 			settings = {
 			};
 		};
-		E34F6BDD08F84223007373A1 = {
-			fileRef = E3E0ADF0080517D80080821B;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 		E34F6BDE08F84223007373A1 = {
 			fileRef = E3E0ADEC080517970080821B;
 			isa = PBXBuildFile;
@@ -2900,8 +2892,8 @@
 		E34F6C1A08F84289007373A1 = {
 			isa = PBXFileReference;
 			lastKnownFileType = wrapper.framework;
-			name = SDL.framework;
-			path = /Library/Frameworks/SDL.framework;
+			name = SDL3.framework;
+			path = /Library/Frameworks/SDL3.framework;
 			refType = 0;
 			sourceTree = "<absolute>";
 		};
@@ -2912,7 +2904,6 @@
 				E34F6C4308F842CE007373A1,
 				E34F6C4408F842CF007373A1,
 				E34F6C4508F842D0007373A1,
-				E34F6C4608F842D0007373A1,
 				E34F6C4708F842D1007373A1,
 				E34F6DB808F85951007373A1,
 				E34F6DCD08F859C1007373A1,
@@ -2940,12 +2931,6 @@
 		};
 		E34F6C4508F842D0007373A1 = {
 			fileRef = E3E0ADF2080517E70080821B;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		E34F6C4608F842D0007373A1 = {
-			fileRef = E3E0ADF0080517D80080821B;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -3177,28 +3162,6 @@
 			path = config.h;
 			refType = 4;
 			sourceTree = "<group>";
-		};
-		E3E0A573080515800080821B = {
-			fileEncoding = 30;
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.c.h;
-			path = macosx_sdlmain.h;
-			refType = 4;
-			sourceTree = "<group>";
-		};
-		E3E0A574080515800080821B = {
-			fileEncoding = 30;
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.c.objc;
-			path = macosx_sdlmain.m;
-			refType = 4;
-			sourceTree = "<group>";
-		};
-		E3E0A578080515800080821B = {
-			fileRef = E3E0A574080515800080821B;
-			isa = PBXBuildFile;
-			settings = {
-			};
 		};
 		E3E0AA0B080515FE0080821B = {
 			children = (
@@ -3470,8 +3433,6 @@
 				E34F6A1E08F83A53007373A1,
 				E34F6A1F08F83A53007373A1,
 				E34F6A2008F83A53007373A1,
-				E3E0A573080515800080821B,
-				E3E0A574080515800080821B,
 				E34F6A2108F83A53007373A1,
 				E34F6A2208F83A53007373A1,
 				E34F6A2308F83A53007373A1,
@@ -3775,24 +3736,16 @@
 		E3E0ADEC080517970080821B = {
 			isa = PBXFileReference;
 			lastKnownFileType = wrapper.framework;
-			name = SDL_ttf.framework;
-			path = /Library/Frameworks/SDL_ttf.framework;
-			refType = 0;
-			sourceTree = "<absolute>";
-		};
-		E3E0ADF0080517D80080821B = {
-			isa = PBXFileReference;
-			lastKnownFileType = wrapper.framework;
-			name = SDL_mixer.framework;
-			path = /Library/Frameworks/SDL_mixer.framework;
+			name = SDL3_ttf.framework;
+			path = /Library/Frameworks/SDL3_ttf.framework;
 			refType = 0;
 			sourceTree = "<absolute>";
 		};
 		E3E0ADF2080517E70080821B = {
 			isa = PBXFileReference;
 			lastKnownFileType = wrapper.framework;
-			name = SDL_image.framework;
-			path = /Library/Frameworks/SDL_image.framework;
+			name = SDL3_image.framework;
+			path = /Library/Frameworks/SDL3_image.framework;
 			refType = 0;
 			sourceTree = "<absolute>";
 		};

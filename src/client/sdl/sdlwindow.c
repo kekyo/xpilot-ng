@@ -56,20 +56,20 @@ static SDL_Surface *create_surface(int width, int height)
 	return NULL;
     }
 
-    surface = SDL_CreateRGBSurfaceWithFormat(
-	0, texture_width, texture_height, 32, SDL_PIXELFORMAT_RGBA32);
+    surface = SDL_CreateSurface(texture_width, texture_height,
+				SDL_PIXELFORMAT_RGBA32);
     if (surface == NULL) {
 	error("failed to create SDL surface: %s", SDL_GetError());
 	return NULL;
     }
-    if (SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE) < 0) {
+    if (!SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE)) {
 	error("failed to disable SDL surface blending: %s", SDL_GetError());
-	SDL_FreeSurface(surface);
+	SDL_DestroySurface(surface);
 	return NULL;
     }
-    if (SDL_FillRect(surface, NULL, 0) < 0) {
+    if (!SDL_FillSurfaceRect(surface, NULL, 0)) {
 	error("failed to clear SDL surface: %s", SDL_GetError());
-	SDL_FreeSurface(surface);
+	SDL_DestroySurface(surface);
 	return NULL;
     }
     return surface;
@@ -185,20 +185,20 @@ int sdl_window_resize(sdl_window_t *win, int width, int height)
     if (surface == NULL)
 	return -1;
     if (win->surface != NULL
-	&& SDL_BlitSurface(win->surface, NULL, surface, NULL) < 0) {
+	&& !SDL_BlitSurface(win->surface, NULL, surface, NULL)) {
 	error("failed to copy SDL surface: %s", SDL_GetError());
-	SDL_FreeSurface(surface);
+	SDL_DestroySurface(surface);
 	return -1;
     }
 
     if (win->texture != NULL
 	&& replace_texture(win, win->renderer, surface, &replacement) != 0) {
-	SDL_FreeSurface(surface);
+	SDL_DestroySurface(surface);
 	return -1;
     }
 
     if (win->surface != NULL)
-	SDL_FreeSurface(win->surface);
+	SDL_DestroySurface(win->surface);
     win->surface = surface;
     win->w = width;
     win->h = height;
@@ -327,6 +327,6 @@ void sdl_window_destroy(sdl_window_t *win)
 	}
     }
     if (win->surface != NULL)
-	SDL_FreeSurface(win->surface);
+	SDL_DestroySurface(win->surface);
     memset(win, 0, sizeof(*win));
 }

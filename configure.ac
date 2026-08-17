@@ -201,9 +201,9 @@ fi
 
 dnl Libraries needed by the SDL client.
 if test x$enable_sdl_client = xyes; then
-	PKG_CHECK_MODULES([SDL2], [sdl2 >= 2.0.9])
-	PKG_CHECK_MODULES([SDL2_IMAGE], [SDL2_image >= 2.0.0])
-	PKG_CHECK_MODULES([SDL2_TTF], [SDL2_ttf >= 2.0.12])
+	PKG_CHECK_MODULES([SDL3], [sdl3 >= 3.2.0])
+	PKG_CHECK_MODULES([SDL3_IMAGE], [sdl3-image >= 3.2.0])
+	PKG_CHECK_MODULES([SDL3_TTF], [sdl3-ttf >= 3.2.0])
 	PKG_CHECK_MODULES([GL], [gl])
 	AC_DEFINE([HAVE_SDL_IMAGE], 1,
 		  [Define to 1 if you have the SDL_image library.])

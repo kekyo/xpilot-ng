@@ -642,7 +642,7 @@ static void button_ArrowWidget( Uint8 button, Uint8 state, Uint16 x, Uint16 y, v
     
     if (!data) return;
     tmp = (ArrowWidget *)(((GLWidget *)data)->wid_info);
-    if (state == SDL_PRESSED && !(tmp->locked)) {
+    if (state == true && !(tmp->locked)) {
 	if (button == 1) {
     	    tmp->press = true;
 	}
@@ -651,7 +651,7 @@ static void button_ArrowWidget( Uint8 button, Uint8 state, Uint16 x, Uint16 y, v
 	    if (tmp->action) tmp->action(tmp->actiondata);
 	}
     }
-    if (state == SDL_RELEASED) {
+    if (state == false) {
 	if (button == 1) {
     	    tmp->press = false;
 	}
@@ -808,7 +808,7 @@ static void button_ButtonWidget( Uint8 button, Uint8 state, Uint16 x, Uint16 y, 
     
     if (!data) return;
     tmp = (ButtonWidget *)(((GLWidget *)data)->wid_info);
-    if (state == SDL_PRESSED) {
+    if (state == true) {
     	if (tmp->pressed) return;
 	if (button == 1) {
     	    tmp->pressed = true;
@@ -898,12 +898,12 @@ static void button_SlideWidget( Uint8 button, Uint8 state, Uint16 x, Uint16 y, v
     if (!data) return;
 
     tmp = (SlideWidget *)(((GLWidget *)data)->wid_info);
-    if (state == SDL_PRESSED && !(tmp->sliding)) {
+    if (state == true && !(tmp->sliding)) {
 	if (button == 1) {
     	    tmp->sliding = true;
 	}
     }
-    if (state == SDL_RELEASED) {
+    if (state == false) {
 	if (button == 1) {
     	    tmp->sliding = false;
 	    if (tmp->release) tmp->release(tmp->releasedata);
@@ -1235,7 +1235,7 @@ static void button_LabelWidget( Uint8 button, Uint8 state, Uint16 x, Uint16 y, v
     
     if (!data) return;
     tmp = (LabelWidget *)(((GLWidget *)data)->wid_info);
-    if (state == SDL_PRESSED) {
+    if (state == true) {
 	if (button == 1) {
 	    if ((tmp->tex).text) {
 	    	load_textscrap((tmp->tex).text);
@@ -1394,7 +1394,7 @@ static void button_LabeledRadiobuttonWidget( Uint8 button, Uint8 state, Uint16 x
     LabeledRadiobuttonWidget *tmp;
     if (!data) return;
     tmp = (LabeledRadiobuttonWidget *)(((GLWidget *)data)->wid_info);
-    if (state == SDL_PRESSED) {
+    if (state == true) {
 	if (button == 1) {
 	    /* Toggle state, and call (*action)*/
 	    tmp->state = !(tmp->state);
@@ -3664,7 +3664,7 @@ static void button_MainWidget( Uint8 button, Uint8 state , Uint16 x , Uint16 y, 
     
     if (!data) return;
 
-    if (state == SDL_PRESSED) {
+    if (state == true) {
 	if (button == 1) {
 	    Key_press(KEY_POINTER_CONTROL);
 	}
@@ -3828,7 +3828,7 @@ static void confmenu_callback( void )
 static void ConfMenuWidget_Quit( void *data )
 {
     SDL_Event quit = {0};
-    quit.type = SDL_QUIT;
+    quit.type = SDL_EVENT_QUIT;
     SDL_PushEvent(&quit);
 }
 
@@ -4357,7 +4357,7 @@ static void Button_ImageButtonWidget(Uint8 button, Uint8 state, Uint16 x,
     if (info->state == state) return;
     info->state = state;
 
-    if (state != SDL_PRESSED && info->onClick) {
+    if (state != true && info->onClick) {
 	if (x >= widget->bounds.x
 	    && x <= widget->bounds.x + widget->bounds.w
 	    && y >= widget->bounds.y
@@ -4401,7 +4401,7 @@ static void Paint_ImageButtonWidget(GLWidget *widget)
     if (Sdl_ui_draw_state_status(info->draw_state) != RENDERER_STATUS_OK)
         return;
 
-    image = info->state != SDL_PRESSED
+    image = info->state != true
         ? &info->images.first : &info->images.second;
     if (info->images.first.texture != NULL
         && info->images.second.texture != NULL) {
@@ -4421,7 +4421,7 @@ static void Paint_ImageButtonWidget(GLWidget *widget)
     x = widget->bounds.x + widget->bounds.w / 2;
     y = widget->bounds.y + widget->bounds.h / 2;
     c = (int)(info->fg ? info->fg : whiteRGBA);
-    if (info->state == SDL_PRESSED) {
+    if (info->state == true) {
 	x += 1;
 	y += 1;
     }
@@ -4487,7 +4487,7 @@ GLWidget *Init_ImageButtonWidget(SdlRenderer *sdl_renderer,
     info->onClick = onClick;
     info->fg = fg;
     info->bg = bg;
-    info->state = SDL_RELEASED;
+    info->state = false;
     info->sdl_renderer = sdl_renderer;
     info->draw_state = draw_state;
 
@@ -4540,9 +4540,9 @@ GLWidget *Init_ImageButtonWidget(SdlRenderer *sdl_renderer,
                 }
             }
             if (up_surface != NULL)
-                SDL_FreeSurface(up_surface);
+                SDL_DestroySurface(up_surface);
             if (down_surface != NULL)
-                SDL_FreeSurface(down_surface);
+                SDL_DestroySurface(down_surface);
         }
     }
 #endif

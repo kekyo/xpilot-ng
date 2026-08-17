@@ -8,9 +8,9 @@
 #include "text.h"
 #include "text_atlas.h"
 
-#include <SDL.h>
-#include <SDL_opengl.h>
-#include <SDL_ttf.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_opengl.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -104,10 +104,10 @@ int Text_renderer_matches(const TextRenderer *text_renderer,
         && text_renderer->atlas == atlas;
 }
 
-extern TTF_Font *__real_TTF_OpenFont(const char *file, int ptsize);
+extern TTF_Font *__real_TTF_OpenFont(const char *file, float ptsize);
 extern void __real_TTF_CloseFont(TTF_Font *font);
 
-TTF_Font *__wrap_TTF_OpenFont(const char *file, int ptsize)
+TTF_Font *__wrap_TTF_OpenFont(const char *file, float ptsize)
 {
     TTF_Font *font = __real_TTF_OpenFont(file, ptsize);
 
@@ -352,25 +352,22 @@ int main(void)
     int actual_profile = 0;
     int ttf_initialized = 0;
 
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL video initialization failed: %s\n",
                 SDL_GetError());
         return 1;
     }
     SDL_GL_ResetAttributes();
-    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) != 0
-        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) != 0
-        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                               SDL_GL_CONTEXT_PROFILE_CORE) != 0) {
+    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3)
+        || !SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3)
+        || !SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                                SDL_GL_CONTEXT_PROFILE_CORE)) {
         fprintf(stderr, "OpenGL core attribute request failed: %s\n",
                 SDL_GetError());
         failure_count++;
         goto cleanup;
     }
-    window = SDL_CreateWindow("XPilot OpenGL core resource test",
-                              SDL_WINDOWPOS_UNDEFINED,
-                              SDL_WINDOWPOS_UNDEFINED,
-                              64, 64,
+    window = SDL_CreateWindow("XPilot OpenGL core resource test", 64, 64,
                               SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
     if (window == NULL) {
         fprintf(stderr, "SDL OpenGL window creation failed: %s\n",
@@ -386,19 +383,19 @@ int main(void)
         goto cleanup;
     }
     CHECK_CONTINUE(SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,
-                                       &actual_major) == 0);
+                                       &actual_major));
     CHECK_CONTINUE(SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,
-                                       &actual_minor) == 0);
+                                       &actual_minor));
     CHECK_CONTINUE(SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                                       &actual_profile) == 0);
+                                       &actual_profile));
     CHECK_CONTINUE(actual_major > 3
                    || (actual_major == 3 && actual_minor >= 3));
     CHECK_CONTINUE(actual_profile == SDL_GL_CONTEXT_PROFILE_CORE);
     CHECK_CONTINUE(glGetString(GL_VERSION) != NULL);
 
-    if (TTF_Init() < 0) {
+    if (!TTF_Init()) {
         fprintf(stderr, "SDL_ttf initialization failed: %s\n",
-                TTF_GetError());
+                SDL_GetError());
         failure_count++;
         goto cleanup;
     }
@@ -420,7 +417,7 @@ cleanup:
     if (ttf_initialized)
         TTF_Quit();
     if (context != NULL)
-        SDL_GL_DeleteContext(context);
+        SDL_GL_DestroyContext(context);
     if (window != NULL)
         SDL_DestroyWindow(window);
     SDL_Quit();

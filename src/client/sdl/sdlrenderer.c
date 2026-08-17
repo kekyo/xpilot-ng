@@ -95,10 +95,11 @@ RendererStatus Sdl_renderer_get_drawable_size(SdlRenderer *renderer,
 
     if (renderer == NULL || width == NULL || height == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
-    SDL_GL_GetDrawableSize(renderer->window, &drawable_width,
-                           &drawable_height);
-    if (drawable_width <= 0 || drawable_height <= 0)
+    if (!SDL_GetWindowSizeInPixels(renderer->window, &drawable_width,
+                                   &drawable_height)
+        || drawable_width <= 0 || drawable_height <= 0) {
         return RENDERER_STATUS_BACKEND_ERROR;
+    }
     *width = drawable_width;
     *height = drawable_height;
     return RENDERER_STATUS_OK;

@@ -3,8 +3,8 @@
 #include "renderer_gl.h"
 #include "sdlrenderer.h"
 
-#include <SDL.h>
-#include <SDL_opengl.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_opengl.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -20,7 +20,7 @@ typedef struct TestContext {
 static void destroy_context(TestContext *test_context)
 {
     if (test_context->context != NULL)
-        SDL_GL_DeleteContext(test_context->context);
+        SDL_GL_DestroyContext(test_context->context);
     if (test_context->window != NULL)
         SDL_DestroyWindow(test_context->window);
     memset(test_context, 0, sizeof(*test_context));
@@ -36,17 +36,17 @@ static int create_context(TestContext *test_context, int profile,
 
     memset(test_context, 0, sizeof(*test_context));
     SDL_GL_ResetAttributes();
-    if (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1) != 0
-        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) != 0
-        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) != 0
-        || SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profile) != 0) {
+    if (!SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1)
+        || !SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3)
+        || !SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3)
+        || !SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profile)) {
         fprintf(stderr, "%s: could not request %s context: %s\n",
                 failure_prefix, title, SDL_GetError());
         return 0;
     }
     test_context->window = SDL_CreateWindow(
-        title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        FRAME_WIDTH, FRAME_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
+        title, FRAME_WIDTH, FRAME_HEIGHT,
+        SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
     if (test_context->window == NULL) {
         fprintf(stderr, "%s: could not create %s window: %s\n",
                 failure_prefix, title, SDL_GetError());
@@ -58,12 +58,12 @@ static int create_context(TestContext *test_context, int profile,
                 failure_prefix, title, SDL_GetError());
         return 0;
     }
-    if (SDL_GL_MakeCurrent(test_context->window,
-                           test_context->context) != 0
-        || SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major) != 0
-        || SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor) != 0
-        || SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                               &actual_profile) != 0
+    if (!SDL_GL_MakeCurrent(test_context->window,
+                            test_context->context)
+        || !SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major)
+        || !SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor)
+        || !SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                                &actual_profile)
         || major < 3 || (major == 3 && minor < 3)
         || (actual_profile & profile) == 0) {
         fprintf(stderr, "%s: requested %s context is unavailable "
@@ -80,7 +80,7 @@ static int check_compatibility_context_is_rejected(TestContext *test_context)
     SdlRenderer *renderer = NULL;
 
     TEST_CHECK(SDL_GL_MakeCurrent(test_context->window,
-                                  test_context->context) == 0);
+                                  test_context->context));
     TEST_CHECK(Sdl_renderer_create(test_context->window, &renderer)
                == RENDERER_STATUS_BACKEND_ERROR);
     TEST_CHECK(renderer == NULL);
@@ -102,7 +102,7 @@ static int check_core_context_is_accepted(TestContext *test_context)
     int drawable_height = 0;
 
     TEST_CHECK(SDL_GL_MakeCurrent(test_context->window,
-                                  test_context->context) == 0);
+                                  test_context->context));
     TEST_CHECK(Sdl_renderer_create(test_context->window, &renderer)
                == RENDERER_STATUS_OK);
     TEST_CHECK(renderer != NULL);
@@ -148,7 +148,7 @@ int main(void)
 
     memset(&compatibility_context, 0, sizeof(compatibility_context));
     memset(&core_context, 0, sizeof(core_context));
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL video initialization failed: %s\n",
                 SDL_GetError());
         goto cleanup;

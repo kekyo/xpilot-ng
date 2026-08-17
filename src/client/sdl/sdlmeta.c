@@ -623,7 +623,7 @@ static void Button_MetaRowWidget(Uint8 button, Uint8 state, Uint16 x,
     MetaRowWidget *row;
     SDL_Event evt = {0};
 
-    if (state != SDL_PRESSED) return;
+    if (state != true) return;
     if (button != 1) return;
 
     widget = (GLWidget*)data;
@@ -634,7 +634,7 @@ static void Button_MetaRowWidget(Uint8 button, Uint8 state, Uint16 x,
 
     row = (MetaRowWidget*)widget->wid_info;
     if (row->is_selected) {
-	evt.type = SDL_USEREVENT;
+	evt.type = SDL_EVENT_USER;
 	evt.user.code = EVENT_JOIN;
 	evt.user.data1 = row->sip;
 	SDL_PushEvent(&evt);
@@ -926,7 +926,7 @@ static void Close_MetaWidget(GLWidget *widget)
 static void OnClick_Join(GLWidget *widget)
 {
     SDL_Event evt = {0};
-    evt.type = SDL_USEREVENT;
+    evt.type = SDL_EVENT_USER;
     evt.user.code = EVENT_JOIN;
     evt.user.data1 = NULL;
     SDL_PushEvent(&evt);
@@ -935,7 +935,7 @@ static void OnClick_Join(GLWidget *widget)
 static void OnClick_Refresh(GLWidget *widget)
 {
     SDL_Event evt = {0};
-    evt.type = SDL_USEREVENT;
+    evt.type = SDL_EVENT_USER;
     evt.user.code = EVENT_REFRESH;
     evt.user.data1 = NULL;
     SDL_PushEvent(&evt);
@@ -944,7 +944,7 @@ static void OnClick_Refresh(GLWidget *widget)
 static void OnClick_Quit(GLWidget *widget)
 {
     SDL_Event evt = {0};
-    evt.type = SDL_QUIT;
+    evt.type = SDL_EVENT_QUIT;
     SDL_PushEvent(&evt);
 }
 
@@ -999,7 +999,7 @@ static GLWidget *Init_MetaWidget(SdlRenderer *sdl_renderer,
 	if (status != RENDERER_STATUS_OK)
 	    warn("Could not create the metaserver background (%d)",
 		 (int)status);
-	SDL_FreeSurface(surface);
+	SDL_DestroySurface(surface);
     }
 #endif
 
@@ -1026,16 +1026,16 @@ static bool join_server(Connect_param_t *conpar, server_info_t *sip)
     return false;
 }
 
-static void handleKeyPress(GLWidget *meta, SDL_Keysym *keysym)
+static void handleKeyPress(GLWidget *meta, SDL_Keycode key)
 {
     /*static unsigned int row = 1;*/
     SDL_Event evt = {0};
     
-    switch ( keysym->sym )
+    switch (key)
     {
     case SDLK_ESCAPE:
 	/* ESC key was pressed */
-	evt.type = SDL_QUIT;
+	evt.type = SDL_EVENT_QUIT;
 	SDL_PushEvent(&evt);
 	break;
     case SDLK_F11:
@@ -1262,19 +1262,19 @@ int Meta_window(Connect_param_t *conpar)
 	    ui_ready_reported = 1;
 	}
 	
-	if (SDL_WaitEvent(&evt) == 0) {
+	if (!SDL_WaitEvent(&evt)) {
 	    error("Could not wait for an SDL event: %s", SDL_GetError());
 	    break;
 	}
 	do {
 	    
 	    switch(evt.type) {
-	    case SDL_QUIT:
+	    case SDL_EVENT_QUIT:
 		exit_requested = 1;
 		result = -1;
 		break;
 		
-	    case SDL_USEREVENT:
+	    case SDL_EVENT_USER:
 		if (evt.user.code == EVENT_JOIN) {
 		    server = (server_info_t*)evt.user.data1;
 		    if (server == NULL)
@@ -1290,33 +1290,34 @@ int Meta_window(Connect_param_t *conpar)
 		}
 		break;
 
-	    case SDL_KEYDOWN:
+	    case SDL_EVENT_KEY_DOWN:
 	        /* handle key presses */
-	        handleKeyPress( meta, &evt.key.keysym );
+	        handleKeyPress(meta, evt.key.key);
 	        break;
 
-	    case SDL_MOUSEBUTTONDOWN:
-		target = FindGLWidgeti(meta, evt.button.x, evt.button.y);
+	    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+		target = FindGLWidgeti(meta, (int)evt.button.x,
+				       (int)evt.button.y);
 		if (target && target->button)
 		    target->button(evt.button.button, 
-				   evt.button.state,
-				   evt.button.x,
-				   evt.button.y,
+				   evt.button.down,
+				   (Uint16)evt.button.x,
+				   (Uint16)evt.button.y,
 				   target->buttondata);
 		break;
 		
-	    case SDL_MOUSEBUTTONUP:
+	    case SDL_EVENT_MOUSE_BUTTON_UP:
 		if (target && target->button) {
 		    target->button(evt.button.button, 
-				   evt.button.state,
-				   evt.button.x,
-				   evt.button.y,
+				   evt.button.down,
+				   (Uint16)evt.button.x,
+				   (Uint16)evt.button.y,
 				   target->buttondata);
 		    target = NULL;
 		}
 		break;
 		
-	case SDL_MOUSEMOTION:
+	case SDL_EVENT_MOUSE_MOTION:
 		if (target && target->motion)
 		    target->motion(evt.motion.xrel,
 				   evt.motion.yrel,
@@ -1325,15 +1326,13 @@ int Meta_window(Connect_param_t *conpar)
 				   target->motiondata);
 		break;
 
-	    case SDL_WINDOWEVENT:
-		if (evt.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-		    Window_size_changed(evt.window.data1, evt.window.data2);
-		    root->bounds.w = draw_width;
-		    root->bounds.h = draw_height;
-		}
-		if (evt.window.event != SDL_WINDOWEVENT_EXPOSED &&
-		    evt.window.event != SDL_WINDOWEVENT_SIZE_CHANGED)
-		    break;
+	    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+		Window_size_changed(evt.window.data1, evt.window.data2);
+		root->bounds.w = draw_width;
+		root->bounds.h = draw_height;
+		break;
+
+	    case SDL_EVENT_WINDOW_EXPOSED:
 		break;
 	    }
 	} while (!exit_requested && SDL_PollEvent(&evt));

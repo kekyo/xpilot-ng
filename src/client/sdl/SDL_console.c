@@ -41,24 +41,21 @@
  * is currently taking keyboard input. */
 static ConsoleInformation *Topmost;
 
-static SDL_Surface *CON_CreateSurface(const SDL_PixelFormat *format,
+static SDL_Surface *CON_CreateSurface(SDL_PixelFormat format,
 				      int width, int height)
 {
     SDL_Surface *surface;
 
-    if (format == NULL || width <= 0 || height <= 0) {
+    if (format == SDL_PIXELFORMAT_UNKNOWN || width <= 0 || height <= 0) {
 	SDL_SetError("Invalid console surface parameters");
 	return NULL;
     }
 
-    surface = SDL_CreateRGBSurface(0, width, height,
-				   format->BitsPerPixel,
-				   format->Rmask, format->Gmask,
-				   format->Bmask, format->Amask);
+    surface = SDL_CreateSurface(width, height, format);
     if (surface == NULL)
 	return NULL;
-    if (SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE) < 0) {
-	SDL_FreeSurface(surface);
+    if (!SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE)) {
+	SDL_DestroySurface(surface);
 	return NULL;
     }
     return surface;
@@ -72,9 +69,9 @@ static int CON_PrepareInputBackground(SDL_Surface *input_background,
 {
     SDL_Rect backgroundsrc, backgrounddest;
 
-    if (SDL_FillRect(input_background, NULL,
-		     SDL_MapRGBA(input_background->format, 0, green, 0,
-				 SDL_ALPHA_OPAQUE)) < 0)
+    if (!SDL_FillSurfaceRect(input_background, NULL,
+		     SDL_MapSurfaceRGBA(input_background, 0, green, 0,
+					SDL_ALPHA_OPAQUE)))
 	return -1;
     if (background_image == NULL)
 	return 0;
@@ -91,7 +88,7 @@ static int CON_PrepareInputBackground(SDL_Surface *input_background,
     backgrounddest.h = input_background->h;
 
     return SDL_BlitSurface(background_image, &backgroundsrc,
-			   input_background, &backgrounddest);
+			   input_background, &backgrounddest) ? 0 : -1;
 }
 
 /*  Takes keys from the keyboard and inputs them to the console
@@ -106,38 +103,38 @@ SDL_Event *CON_Events(SDL_Event * event)
     if (!CON_isVisible(Topmost))
 	return event;
 
-    if (event->type == SDL_KEYUP) {
-	Topmost->TextInputModifiers = event->key.keysym.mod;
+    if (event->type == SDL_EVENT_KEY_UP) {
+	Topmost->TextInputModifiers = event->key.mod;
 	return event;
     }
 
-    if (event->type == SDL_KEYDOWN) {
-	Topmost->TextInputModifiers = event->key.keysym.mod;
-	if (event->key.keysym.mod & KMOD_CTRL) {
+    if (event->type == SDL_EVENT_KEY_DOWN) {
+	Topmost->TextInputModifiers = event->key.mod;
+	if (event->key.mod & SDL_KMOD_CTRL) {
 	    /* CTRL pressed */
 	    /* kps - please modify this to work like in talk.c */
-	    switch (event->key.keysym.sym) {
-	    case SDLK_a:
+	    switch (event->key.key) {
+	    case SDLK_A:
 		Cursor_Home(Topmost);
 		break;
-	    case SDLK_b:
+	    case SDLK_B:
 		Cursor_Left(Topmost);
 		break;
-	    case SDLK_f:
+	    case SDLK_F:
 		Cursor_Right(Topmost);
 		break;
-	    case SDLK_e:
+	    case SDLK_E:
 		Cursor_End(Topmost);
 		break;
 		/*
 		 * kps - Ctrl-k should really just clear from current
 		 * cursor position to end of line.
 		 */
-	    case SDLK_k:
-	    case SDLK_u:
+	    case SDLK_K:
+	    case SDLK_U:
 		Clear_Command(Topmost);
 		break;
-	    case SDLK_l:
+	    case SDLK_L:
 		Clear_History(Topmost);
 		CON_UpdateConsole(Topmost);
 		break;
@@ -145,14 +142,14 @@ SDL_Event *CON_Events(SDL_Event * event)
 		return event;
 	    }
 #if 0
-	} else if (event->key.keysym.mod & KMOD_ALT) {
+	} else if (event->key.mod & SDL_KMOD_ALT) {
 	    /* the console does not handle ALT combinations! */
 	    return event;
 #endif
 	} else {
-	    switch (event->key.keysym.sym) {
+	    switch (event->key.key) {
 	    case SDLK_HOME:
-		if (event->key.keysym.mod & KMOD_SHIFT) {
+		if (event->key.mod & SDL_KMOD_SHIFT) {
 		    Topmost->ConsoleScrollBack = Topmost->LineBuffer - 1;
 		    CON_UpdateConsole(Topmost);
 		} else {
@@ -160,7 +157,7 @@ SDL_Event *CON_Events(SDL_Event * event)
 		}
 		break;
 	    case SDLK_END:
-		if (event->key.keysym.mod & KMOD_SHIFT) {
+		if (event->key.mod & SDL_KMOD_SHIFT) {
 		    Topmost->ConsoleScrollBack = 0;
 		    CON_UpdateConsole(Topmost);
 		} else {
@@ -249,8 +246,8 @@ SDL_Event *CON_Events(SDL_Event * event)
 	}
 	return NULL;
     }
-    if (event->type == SDL_TEXTINPUT) {
-	if (Topmost->TextInputModifiers & (KMOD_CTRL | KMOD_ALT | KMOD_GUI))
+    if (event->type == SDL_EVENT_TEXT_INPUT) {
+	if (Topmost->TextInputModifiers & (SDL_KMOD_CTRL | SDL_KMOD_ALT | SDL_KMOD_GUI))
 	    return NULL;
 	for (input = (const unsigned char *)event->text.text;
 	     *input != '\0'; input++) {
@@ -284,9 +281,9 @@ void CON_UpdateConsole(ConsoleInformation * console)
     Screenlines = console->ConsoleSurface->h / console->FontHeight;
 
 
-    SDL_FillRect(console->ConsoleSurface, NULL,
-		 SDL_MapRGBA(console->ConsoleSurface->format, 0, 20, 0,
-			     SDL_ALPHA_OPAQUE));
+    SDL_FillSurfaceRect(console->ConsoleSurface, NULL,
+		 SDL_MapSurfaceRGBA(console->ConsoleSurface, 0, 20, 0,
+				    SDL_ALPHA_OPAQUE));
 
     /* draw the background image if there is one */
     if (console->BackgroundImage) {
@@ -379,9 +376,9 @@ void CON_DrawConsole(ConsoleInformation * console)
     DestRect.w = console->ConsoleSurface->w;
     DestRect.h = console->RaiseOffset;
 
-    SDL_FillRect(console->OutputScreen, &DestRect,
-		 SDL_MapRGBA(console->ConsoleSurface->format,
-			     255, 255, 255, console->ConsoleAlpha));
+    SDL_FillSurfaceRect(console->OutputScreen, &DestRect,
+		 SDL_MapSurfaceRGBA(console->OutputScreen,
+				    255, 255, 255, console->ConsoleAlpha));
     SDL_BlitSurface(console->ConsoleSurface, &SrcRect,
 		    console->OutputScreen, &DestRect);
 
@@ -398,7 +395,7 @@ ConsoleInformation *CON_Init(const char *FontName,
     bool font_loaded = false;
 
     if (FontName == NULL || DisplayScreen == NULL ||
-	DisplayScreen->format == NULL || DisplayScreen->w <= 0 ||
+	DisplayScreen->format == SDL_PIXELFORMAT_UNKNOWN || DisplayScreen->w <= 0 ||
 	DisplayScreen->h <= 0 || lines <= 0) {
 	PRINT_ERROR("Invalid console initialization parameters");
 	return NULL;
@@ -477,9 +474,9 @@ ConsoleInformation *CON_Init(const char *FontName,
 	PRINT_ERROR("Couldn't create the ConsoleSurface\n");
 	goto fail;
     }
-    if (SDL_FillRect(newinfo->ConsoleSurface, NULL,
-		     SDL_MapRGBA(newinfo->ConsoleSurface->format, 0, 20, 0,
-				 newinfo->ConsoleAlpha)) < 0) {
+    if (!SDL_FillSurfaceRect(newinfo->ConsoleSurface, NULL,
+		     SDL_MapSurfaceRGBA(newinfo->ConsoleSurface, 0, 20, 0,
+					newinfo->ConsoleAlpha))) {
 	PRINT_ERROR(SDL_GetError());
 	goto fail;
     }
@@ -613,9 +610,9 @@ void CON_Free(ConsoleInformation * console)
     free(console->ConsoleLines);
     free(console->CommandLines);
     free(console->Prompt);
-    SDL_FreeSurface(console->BackgroundImage);
-    SDL_FreeSurface(console->InputBackground);
-    SDL_FreeSurface(console->ConsoleSurface);
+    SDL_DestroySurface(console->BackgroundImage);
+    SDL_DestroySurface(console->InputBackground);
+    SDL_DestroySurface(console->ConsoleSurface);
     console->ConsoleLines = NULL;
     console->CommandLines = NULL;
     console->Prompt = NULL;
@@ -817,7 +814,7 @@ int CON_Background(ConsoleInformation * console, const char *image, int x,
     SDL_Surface *old_input_background;
 
     if (console == NULL || console->OutputScreen == NULL ||
-	console->OutputScreen->format == NULL ||
+	console->OutputScreen->format == SDL_PIXELFORMAT_UNKNOWN ||
 	console->ConsoleSurface == NULL || console->InputBackground == NULL)
 	return 1;
 
@@ -835,18 +832,18 @@ int CON_Background(ConsoleInformation * console, const char *image, int x,
 	}
 
 	new_background =
-	    SDL_ConvertSurface(temp, console->OutputScreen->format, 0);
-	SDL_FreeSurface(temp);
+	    SDL_ConvertSurface(temp, console->OutputScreen->format);
+	SDL_DestroySurface(temp);
 	temp = NULL;
 	if (new_background == NULL) {
 	    fprintf(stderr, "Cannot convert background %s: %s\n", image,
 		    SDL_GetError());
 	    return 1;
 	}
-	if (SDL_SetSurfaceBlendMode(new_background, SDL_BLENDMODE_NONE) < 0) {
+	if (!SDL_SetSurfaceBlendMode(new_background, SDL_BLENDMODE_NONE)) {
 	    fprintf(stderr, "Cannot prepare background %s: %s\n", image,
 		    SDL_GetError());
-	    SDL_FreeSurface(new_background);
+	    SDL_DestroySurface(new_background);
 	    return 1;
 	}
     }
@@ -860,8 +857,8 @@ int CON_Background(ConsoleInformation * console, const char *image, int x,
 				   console->ConsoleSurface, new_background,
 				   x, y, 0) < 0) {
 	PRINT_ERROR(SDL_GetError());
-	SDL_FreeSurface(new_input_background);
-	SDL_FreeSurface(new_background);
+	SDL_DestroySurface(new_input_background);
+	SDL_DestroySurface(new_background);
 	return 1;
     }
 
@@ -873,8 +870,8 @@ int CON_Background(ConsoleInformation * console, const char *image, int x,
 	console->BackX = x;
 	console->BackY = y;
     }
-    SDL_FreeSurface(old_input_background);
-    SDL_FreeSurface(old_background);
+    SDL_DestroySurface(old_input_background);
+    SDL_DestroySurface(old_background);
 
     CON_UpdateConsole(console);
     return 0;
@@ -909,7 +906,7 @@ static int CON_ResizeForOutput(ConsoleInformation *console,
     int new_disp_x, new_disp_y, new_visible_characters;
 
     if (console == NULL || output_screen == NULL ||
-	output_screen->format == NULL || output_screen->w <= 0 ||
+	output_screen->format == SDL_PIXELFORMAT_UNKNOWN || output_screen->w <= 0 ||
 	output_screen->h <= 0 || console->FontWidth <= 0 ||
 	console->FontHeight <= 0 || output_screen == console->ConsoleSurface ||
 	output_screen == console->InputBackground ||
@@ -941,11 +938,11 @@ static int CON_ResizeForOutput(ConsoleInformation *console,
 	PRINT_ERROR("Couldn't create the console->ConsoleSurface\n");
 	return 1;
     }
-    if (SDL_FillRect(new_console_surface, NULL,
-		     SDL_MapRGBA(new_console_surface->format, 0, 20, 0,
-				 console->ConsoleAlpha)) < 0) {
+    if (!SDL_FillSurfaceRect(new_console_surface, NULL,
+		     SDL_MapSurfaceRGBA(new_console_surface, 0, 20, 0,
+					console->ConsoleAlpha))) {
 	PRINT_ERROR(SDL_GetError());
-	SDL_FreeSurface(new_console_surface);
+	SDL_DestroySurface(new_console_surface);
 	return 1;
     }
 
@@ -954,7 +951,7 @@ static int CON_ResizeForOutput(ConsoleInformation *console,
 					      console->FontHeight);
     if (new_input_background == NULL) {
 	PRINT_ERROR("Couldn't create the input background\n");
-	SDL_FreeSurface(new_console_surface);
+	SDL_DestroySurface(new_console_surface);
 	return 1;
     }
     if (CON_PrepareInputBackground(new_input_background,
@@ -963,16 +960,16 @@ static int CON_ResizeForOutput(ConsoleInformation *console,
 				   console->BackX, console->BackY,
 				   console->BackgroundImage == NULL ? 20 : 0) < 0) {
 	PRINT_ERROR(SDL_GetError());
-	SDL_FreeSurface(new_input_background);
-	SDL_FreeSurface(new_console_surface);
+	SDL_DestroySurface(new_input_background);
+	SDL_DestroySurface(new_console_surface);
 	return 1;
     }
 
     new_visible_characters =
 	(rect.w - CON_CHAR_BORDER) / console->FontWidth;
     if (new_visible_characters <= 0) {
-	SDL_FreeSurface(new_input_background);
-	SDL_FreeSurface(new_console_surface);
+	SDL_DestroySurface(new_input_background);
+	SDL_DestroySurface(new_console_surface);
 	return 1;
     }
     if (new_visible_characters > CON_CHARS_PER_LINE)
@@ -989,8 +986,8 @@ static int CON_ResizeForOutput(ConsoleInformation *console,
 
     /* Now reset some stuff dependent on the previous size */
     console->ConsoleScrollBack = 0;
-    SDL_FreeSurface(old_input_background);
-    SDL_FreeSurface(old_console_surface);
+    SDL_DestroySurface(old_input_background);
+    SDL_DestroySurface(old_console_surface);
 
     CON_UpdateConsole(console);
     return 0;
