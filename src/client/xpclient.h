@@ -38,11 +38,6 @@
 
 #ifdef _WINDOWS
 # include <direct.h>
-#ifdef _MSC_VER
-# define snprintf _snprintf
-# define printf Trace
-# define X_OK 0
-#endif
 # define F_OK 0
 # define W_OK 2
 # define R_OK 4

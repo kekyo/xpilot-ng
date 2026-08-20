@@ -59,7 +59,6 @@ if COND_WINDOWS
   xpilot_ng_sdl_SOURCES += win32hacks.c
 endif
 
-EXTRA_DIST = xpilot.rc xpilot_sdl.dsp xpilot_sdl.dsw \
-	third_party/libtess2/LICENSE.txt \
+EXTRA_DIST = third_party/libtess2/LICENSE.txt \
 	third_party/libtess2/README.md \
 	third_party/libtess2/UPSTREAM.md

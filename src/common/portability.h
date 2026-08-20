@@ -85,12 +85,6 @@ extern int xpprintf(const char* fmt, ...);
  */
 extern bool is_this_windows(void);
 
-#ifdef _MSC_VER
-typedef unsigned short uint16_t; /* e.g. in client.c */
-typedef unsigned int uint32_t;
-typedef int int32_t;
-#endif
-
 #ifdef _WINDOWS
 /*
  * Defines gettimeofday

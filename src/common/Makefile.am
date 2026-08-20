@@ -15,9 +15,7 @@ libxpcommon_a_SOURCES = \
 	randommt.c rules.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \
 	strcasecmp.c strdup.c strlcpy.c \
-	types.h \
+	types.h win32.h \
 	version.h \
 	wreckshape.h \
 	xpcommon.h xpconfig.h xpmap.h xpmemory.c
-
-SUBDIRS = NT

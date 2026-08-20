@@ -421,8 +421,7 @@ xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	@SDL3_IMAGE_LIBS@ @SDL3_TTF_LIBS@ @SDL3_LIBS@ \
 	@GL_LIBS@ @SOUND_LIBS@ @W32_LIBS@
 
-EXTRA_DIST = xpilot.rc xpilot_sdl.dsp xpilot_sdl.dsw \
-	third_party/libtess2/LICENSE.txt \
+EXTRA_DIST = third_party/libtess2/LICENSE.txt \
 	third_party/libtess2/README.md \
 	third_party/libtess2/UPSTREAM.md
 
