@@ -46,7 +46,7 @@ TESTS = test-framed-stream test-game-transport \
 	test-text-atlas test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
 	run-renderer-gl-core.sh run-sdl-renderer-core-context.sh \
-	run-vendored-zlib.sh run-e2e.sh
+	run-build-wrapper.sh run-vendored-zlib.sh run-e2e.sh
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
@@ -422,10 +422,13 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_SDL_OBJECT_DIR; \
 	XPILOT_SDL_BINARY='$(abs_top_builddir)/src/client/sdl/xpilot-ng-sdl'; \
 	export XPILOT_SDL_BINARY; \
+	XPILOT_BUILD_WRAPPER='$(abs_top_srcdir)/build.sh'; \
+	export XPILOT_BUILD_WRAPPER; \
 	XPILOT_VENDOR_ZLIB_SOURCE='$(abs_top_srcdir)/vendor/zlib'; \
 	export XPILOT_VENDOR_ZLIB_SOURCE;
 
-EXTRA_DIST = run-e2e.sh run-full-suite.sh run-gl-core-resources.sh \
+EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
+	run-gl-core-resources.sh \
 	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
 	run-sdl-renderer-core-context.sh run-vendored-zlib.sh \
 	test_helpers.h

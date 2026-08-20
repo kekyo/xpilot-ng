@@ -10,6 +10,7 @@ Makefile
 /stamp-h1
 /build-sdl
 /install-sdl
+/build/
 
 *.o
 *.a
