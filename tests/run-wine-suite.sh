@@ -8,8 +8,8 @@ usage()
 Usage: tests/run-wine-suite.sh --build-dir PATH --package-dir PATH \
        --wine-prefix PATH --arch ARCH [--jobs NUMBER]
 
-Build and run the supported Windows unit tests, then exercise UDP and TCP
-gameplay with the packaged server and SDL client under Wine and Xvfb.
+Build and run the supported Windows unit tests, then exercise every UDP/TCP
+contact and gameplay combination plus metaserver reporting under Wine and Xvfb.
 EOF
 }
 
@@ -152,6 +152,7 @@ runtime_dir=$(mktemp -d \
 runtime_package="$runtime_dir/package"
 server_pid=
 client_pid=
+meta_report_fixture_pid=
 server_log=
 client_log=
 window_id=
@@ -171,14 +172,16 @@ dump_logs()
 cleanup()
 {
     cleanup_deadline=$(($(date +%s) + 10))
-    for process_id in "$client_pid" "$server_pid"; do
+    for process_id in "$client_pid" "$server_pid" \
+        "$meta_report_fixture_pid"; do
         if test -n "$process_id" && kill -0 "$process_id" 2>/dev/null; then
             kill -TERM "$process_id" 2>/dev/null || true
         fi
     done
     while :; do
         cleanup_running=false
-        for process_id in "$client_pid" "$server_pid"; do
+        for process_id in "$client_pid" "$server_pid" \
+            "$meta_report_fixture_pid"; do
             if test -n "$process_id" \
                 && kill -0 "$process_id" 2>/dev/null; then
                 cleanup_running=true
@@ -186,7 +189,8 @@ cleanup()
         done
         test "$cleanup_running" = false && break
         if test "$(date +%s)" -ge "$cleanup_deadline"; then
-            for process_id in "$client_pid" "$server_pid"; do
+            for process_id in "$client_pid" "$server_pid" \
+                "$meta_report_fixture_pid"; do
                 if test -n "$process_id" \
                     && kill -0 "$process_id" 2>/dev/null; then
                     kill -KILL "$process_id" 2>/dev/null || true
@@ -196,7 +200,8 @@ cleanup()
         fi
         sleep 0.1
     done
-    for process_id in "$client_pid" "$server_pid"; do
+    for process_id in "$client_pid" "$server_pid" \
+        "$meta_report_fixture_pid"; do
         if test -n "$process_id"; then
             wait "$process_id" 2>/dev/null || true
         fi
@@ -259,6 +264,23 @@ client_departed()
     grep -q "Goodbye .*$client_name" "$server_log" 2>/dev/null
 }
 
+meta_report_fixture_ready()
+{
+    if ! kill -0 "$meta_report_fixture_pid" 2>/dev/null; then
+        fail "local metaserver report fixture stopped before listening"
+    fi
+    test -s "$runtime_dir/meta-report-fixture.port"
+}
+
+meta_tcp_transport_reported()
+{
+    test -s "$runtime_dir/meta-report-fixture.received" \
+        && grep -q "^source-port $meta_report_contact_port$" \
+            "$runtime_dir/meta-report-fixture.received" \
+        && grep -q '^add version 4.7.3ng+ct=tcp+gt=udp$' \
+            "$runtime_dir/meta-report-fixture.received"
+}
+
 reserve_contact_port()
 {
     node -e '
@@ -290,17 +312,81 @@ stop_server()
     server_pid=
 }
 
+run_meta_report_case()
+{
+    node -e '
+const dgram = require("node:dgram");
+const fs = require("node:fs");
+const portFile = process.argv[1];
+const receivedFile = process.argv[2];
+const socket = dgram.createSocket("udp4");
+socket.on("error", (error) => {
+  process.stderr.write(`${error.stack}\n`);
+  socket.close(() => process.exit(1));
+});
+socket.on("message", (message, remote) => {
+  const payload = message.toString("utf8").replace(/\0+$/, "");
+  fs.appendFileSync(
+    receivedFile,
+    `source-port ${remote.port}\n${payload}\n---\n`,
+  );
+});
+socket.bind(0, "127.0.0.1", () => {
+  fs.writeFileSync(portFile, String(socket.address().port));
+});
+const stop = () => socket.close(() => process.exit(0));
+process.on("SIGTERM", stop);
+process.on("SIGINT", stop);
+' "$runtime_dir/meta-report-fixture.port" \
+        "$runtime_dir/meta-report-fixture.received" \
+        >"$runtime_dir/meta-report-fixture.log" 2>&1 &
+    meta_report_fixture_pid=$!
+    wait_until "local metaserver report fixture" 10 \
+        meta_report_fixture_ready
+
+    meta_report_contact_port=$(reserve_contact_port)
+    meta_report_port=$(sed -n '1p' \
+        "$runtime_dir/meta-report-fixture.port")
+    server_log="$runtime_dir/server-meta-tcp-contact.log"
+    (
+        cd "$runtime_package"
+        XPILOT_META_REPORT_HOST=127.0.0.1 \
+        XPILOT_META_REPORT_HOST_TWO=127.0.0.1 \
+        XPILOT_META_REPORT_PORT="$meta_report_port" \
+            exec "$wine_program" ./xpilot-ng-server.exe \
+                -map lib/maps/ndh.xp2 \
+                -port "$meta_report_contact_port" \
+                -noQuit -reportMeta \
+                -contactTransport tcp -gameTransport udp
+    ) >"$server_log" 2>&1 &
+    server_pid=$!
+    wait_until "TCP-contact metaserver report startup" 30 server_ready
+    wait_until "TCP-contact metaserver transport advertisement" 20 \
+        meta_tcp_transport_reported
+    stop_server
+
+    kill -TERM "$meta_report_fixture_pid" 2>/dev/null || true
+    wait "$meta_report_fixture_pid" 2>/dev/null || true
+    meta_report_fixture_pid=
+}
+
 run_gameplay_case()
 {
-    gameplay_transport=$1
+    contact_transport=$1
+    gameplay_transport=$2
+    transport_case="$contact_transport-contact-$gameplay_transport-game"
     contact_port=$(reserve_contact_port)
-    server_log="$runtime_dir/server-$gameplay_transport.log"
-    client_log="$runtime_dir/client-$gameplay_transport.log"
-    case "$architecture:$gameplay_transport" in
-	x86:udp) client_name=W32UDP ;;
-	x86:tcp) client_name=W32TCP ;;
-	x86_64:udp) client_name=W64UDP ;;
-	x86_64:tcp) client_name=W64TCP ;;
+    server_log="$runtime_dir/server-$transport_case.log"
+    client_log="$runtime_dir/client-$transport_case.log"
+    case "$architecture:$contact_transport:$gameplay_transport" in
+	x86:udp:udp) client_name=W32UU ;;
+	x86:udp:tcp) client_name=W32UT ;;
+	x86:tcp:udp) client_name=W32TU ;;
+	x86:tcp:tcp) client_name=W32TT ;;
+	x86_64:udp:udp) client_name=W64UU ;;
+	x86_64:udp:tcp) client_name=W64UT ;;
+	x86_64:tcp:udp) client_name=W64TU ;;
+	x86_64:tcp:tcp) client_name=W64TT ;;
     esac
 
     (
@@ -309,10 +395,11 @@ run_gameplay_case()
             -map lib/maps/ndh.xp2 \
             -port "$contact_port" \
             -noQuit +reportMeta \
+            -contactTransport "$contact_transport" \
             -gameTransport "$gameplay_transport"
     ) >"$server_log" 2>&1 &
     server_pid=$!
-    wait_until "$gameplay_transport server readiness" 30 server_ready
+    wait_until "$transport_case server readiness" 30 server_ready
 
     (
         cd "$runtime_package"
@@ -321,23 +408,24 @@ run_gameplay_case()
             -join \
             -port "$contact_port" \
             -name "$client_name" \
+            -contactTransport "$contact_transport" \
             -gameTransport "$gameplay_transport" \
             127.0.0.1
     ) >"$client_log" 2>&1 &
     client_pid=$!
 
-    wait_until "$gameplay_transport client login" 30 client_joined
-    wait_until "$gameplay_transport SDL window" 30 find_game_window
-    wait_until "$gameplay_transport OpenGL context" 30 \
+    wait_until "$transport_case client login" 30 client_joined
+    wait_until "$transport_case SDL window" 30 find_game_window
+    wait_until "$transport_case OpenGL context" 30 \
         grep -q '^OpenGL context:' "$client_log"
-    wait_until "$gameplay_transport text renderers" 30 \
+    wait_until "$transport_case text renderers" 30 \
         grep -q '^Font text renderers ready: game=renderer map=renderer' \
             "$client_log"
 
     xdotool key --clearmodifiers --window "$window_id" Escape y \
         >/dev/null 2>&1 \
-        || fail "could not request a graceful $gameplay_transport client quit"
-    wait_until "$gameplay_transport client shutdown" 20 \
+        || fail "could not request a graceful $transport_case client quit"
+    wait_until "$transport_case client shutdown" 20 \
         process_stopped "$client_pid"
     set +e
     wait "$client_pid"
@@ -345,11 +433,11 @@ run_gameplay_case()
     set -e
     client_pid=
     test "$client_status" -eq 0 \
-        || fail "$gameplay_transport client returned status $client_status"
-    wait_until "$gameplay_transport server departure" 10 client_departed
+        || fail "$transport_case client returned status $client_status"
+    wait_until "$transport_case server departure" 10 client_departed
 
     if grep -q 'accept error' "$server_log"; then
-        fail "$gameplay_transport server reported an accept failure"
+        fail "$transport_case server reported an accept failure"
     fi
     stop_server
     window_id=
@@ -390,7 +478,11 @@ for unit_test in test-framed-stream test-game-transport test-socket-io \
     run_wine_unit_test "$unit_test"
 done
 
-run_gameplay_case udp
-run_gameplay_case tcp
+run_meta_report_case
+for contact_transport in udp tcp; do
+    for gameplay_transport in udp tcp; do
+        run_gameplay_case "$contact_transport" "$gameplay_transport"
+    done
+done
 
-echo "Wine $architecture unit and UDP/TCP integration tests passed"
+echo "Wine $architecture unit, metaserver, and UDP/TCP integration tests passed"
