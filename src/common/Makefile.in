@@ -109,10 +109,11 @@ am__v_AR_1 =
 libxpcommon_a_AR = $(AR) $(ARFLAGS)
 libxpcommon_a_LIBADD =
 am_libxpcommon_a_OBJECTS = arraylist.$(OBJEXT) checknames.$(OBJEXT) \
-	config.$(OBJEXT) error.$(OBJEXT) list.$(OBJEXT) math.$(OBJEXT) \
-	net.$(OBJEXT) portability.$(OBJEXT) randommt.$(OBJEXT) \
-	shipshape.$(OBJEXT) socklib.$(OBJEXT) strcasecmp.$(OBJEXT) \
-	strdup.$(OBJEXT) strlcpy.$(OBJEXT) xpmemory.$(OBJEXT)
+	config.$(OBJEXT) error.$(OBJEXT) game_transport.$(OBJEXT) \
+	list.$(OBJEXT) math.$(OBJEXT) net.$(OBJEXT) \
+	portability.$(OBJEXT) randommt.$(OBJEXT) shipshape.$(OBJEXT) \
+	socklib.$(OBJEXT) strcasecmp.$(OBJEXT) strdup.$(OBJEXT) \
+	strlcpy.$(OBJEXT) xpmemory.$(OBJEXT)
 libxpcommon_a_OBJECTS = $(am_libxpcommon_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -131,12 +132,12 @@ depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/arraylist.Po \
 	./$(DEPDIR)/checknames.Po ./$(DEPDIR)/config.Po \
-	./$(DEPDIR)/error.Po ./$(DEPDIR)/list.Po ./$(DEPDIR)/math.Po \
-	./$(DEPDIR)/net.Po ./$(DEPDIR)/portability.Po \
-	./$(DEPDIR)/randommt.Po ./$(DEPDIR)/shipshape.Po \
-	./$(DEPDIR)/socklib.Po ./$(DEPDIR)/strcasecmp.Po \
-	./$(DEPDIR)/strdup.Po ./$(DEPDIR)/strlcpy.Po \
-	./$(DEPDIR)/xpmemory.Po
+	./$(DEPDIR)/error.Po ./$(DEPDIR)/game_transport.Po \
+	./$(DEPDIR)/list.Po ./$(DEPDIR)/math.Po ./$(DEPDIR)/net.Po \
+	./$(DEPDIR)/portability.Po ./$(DEPDIR)/randommt.Po \
+	./$(DEPDIR)/shipshape.Po ./$(DEPDIR)/socklib.Po \
+	./$(DEPDIR)/strcasecmp.Po ./$(DEPDIR)/strdup.Po \
+	./$(DEPDIR)/strlcpy.Po ./$(DEPDIR)/xpmemory.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -355,6 +356,7 @@ libxpcommon_a_SOURCES = \
 	bit.h \
 	checknames.c checknames.h click.h commonproto.h config.c const.h \
 	error.c error.h \
+	game_transport.c game_transport.h \
 	item.h \
 	keys.h \
 	list.c list.h \
@@ -424,6 +426,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/checknames.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/config.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/error.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/game_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/list.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/math.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/net.Po@am__quote@ # am--include-marker
@@ -656,6 +659,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/checknames.Po
 	-rm -f ./$(DEPDIR)/config.Po
 	-rm -f ./$(DEPDIR)/error.Po
+	-rm -f ./$(DEPDIR)/game_transport.Po
 	-rm -f ./$(DEPDIR)/list.Po
 	-rm -f ./$(DEPDIR)/math.Po
 	-rm -f ./$(DEPDIR)/net.Po
@@ -716,6 +720,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/checknames.Po
 	-rm -f ./$(DEPDIR)/config.Po
 	-rm -f ./$(DEPDIR)/error.Po
+	-rm -f ./$(DEPDIR)/game_transport.Po
 	-rm -f ./$(DEPDIR)/list.Po
 	-rm -f ./$(DEPDIR)/math.Po
 	-rm -f ./$(DEPDIR)/net.Po

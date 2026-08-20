@@ -68,6 +68,7 @@ extern struct options {
     char	*mapName;
     char	*mapAuthor;
     int 	contactPort;
+    char	*gameTransport;
     char	*serverHost;
     char	*greeting;
     bool	allowPlayerCrashes;

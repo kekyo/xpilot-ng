@@ -1,0 +1,77 @@
+/*
+ * XPilot NG, a multiplayer space war game.
+ *
+ * Copyright (C) 2026 XPilot NG contributors.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ */
+
+#ifndef GAME_TRANSPORT_H
+#define GAME_TRANSPORT_H
+
+#include <stdbool.h>
+
+/** UDP gameplay protocol version for polygon maps. */
+#define GAME_PROTOCOL_UDP_POLYGON_VERSION 0x4F15
+/** UDP gameplay protocol version for legacy maps. */
+#define GAME_PROTOCOL_UDP_LEGACY_VERSION 0x4501
+/** Framed TCP gameplay protocol version for polygon maps. */
+#define GAME_PROTOCOL_TCP_POLYGON_VERSION 0x4F16
+/** Framed TCP gameplay protocol version for legacy maps. */
+#define GAME_PROTOCOL_TCP_LEGACY_VERSION 0x4502
+
+/** Gameplay network transport selected at process startup. */
+typedef enum {
+    /** Preserve packet boundaries with UDP datagrams. */
+    GAME_TRANSPORT_UDP = 0,
+    /** Preserve packet boundaries with length-prefixed TCP records. */
+    GAME_TRANSPORT_TCP = 1
+} game_transport_t;
+
+/** Gameplay transport selected by the current client or server process. */
+extern game_transport_t gameTransport;
+
+/**
+ * Parse a gameplay transport option value.
+ *
+ * @param value Case-insensitive value, either `udp` or `tcp`.
+ * @param transport Receives the parsed transport.
+ * @return `true` when the complete value is valid, otherwise `false`.
+ */
+bool Game_transport_parse(const char *value, game_transport_t *transport);
+
+/**
+ * Return the option spelling for a gameplay transport.
+ *
+ * @param transport Transport to name.
+ * @return `udp`, `tcp`, or `unknown` for an invalid value.
+ */
+const char *Game_transport_name(game_transport_t transport);
+
+/**
+ * Return the wire protocol version for a gameplay transport and map format.
+ *
+ * @param transport Selected gameplay transport.
+ * @param polygon_map Whether the server uses the polygon map format.
+ * @return Protocol version, or zero for an invalid transport.
+ */
+unsigned Game_transport_protocol_version(game_transport_t transport,
+                                         bool polygon_map);
+
+/**
+ * Determine the gameplay transport represented by a protocol version.
+ *
+ * Historical protocol versions are classified as UDP. The two framed TCP
+ * versions are classified as TCP.
+ *
+ * @param version Protocol version from a contact packet.
+ * @param transport Receives the represented gameplay transport.
+ * @return `true` when the version identifies a supported transport.
+ */
+bool Game_transport_from_protocol_version(unsigned version,
+                                          game_transport_t *transport);
+
+#endif /* GAME_TRANSPORT_H */

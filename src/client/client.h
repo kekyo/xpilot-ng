@@ -569,7 +569,7 @@ extern int	cumulativeMouseMovement;
 
 extern char	modBankStr[][MAX_CHARS];/* modifier banks strings */
 
-extern int	clientPortStart;	/* First UDP port for clients */
+extern int	clientPortStart;	/* First network port for clients */
 extern int	clientPortEnd;		/* Last one (these are for firewalls) */
 extern int	baseWarningType;	/* Which type of base warning you prefer */
 extern int	maxCharsInNames;
@@ -649,7 +649,6 @@ extern long		time_left;
 
 extern bool roundend;
 extern bool played_this_round;
-extern int protocolVersion;
 
 /*
  * somewhere

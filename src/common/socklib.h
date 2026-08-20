@@ -51,7 +51,9 @@ typedef enum sock_call_e {
     SOCK_CALL_GETSOCKNAME,
     SOCK_CALL_GETSOCKOPT,
     SOCK_CALL_SETSOCKOPT,
-    SOCK_CALL_SELECT
+    SOCK_CALL_SELECT,
+    SOCK_CALL_LISTEN,
+    SOCK_CALL_ACCEPT
 } sock_call_t;
 
 typedef struct sock_timeout_s {
@@ -85,6 +87,33 @@ int sock_init(sock_t *sock);
 int sock_close(sock_t *sock);
 int sock_set_non_blocking(sock_t *sock, int flag);
 int sock_open_tcp(sock_t * sock);
+/**
+ * Open and bind a TCP stream socket.
+ *
+ * @param sock Socket object to initialize.
+ * @param dotaddr Local dotted-decimal address, or NULL for all interfaces.
+ * @param port Local port, or zero to select an ephemeral port.
+ * @return SOCK_IS_OK on success or SOCK_IS_ERROR on failure.
+ */
+int sock_open_tcp_bound(sock_t *sock, char *dotaddr, int port);
+/**
+ * Open a bound TCP stream listener.
+ *
+ * @param sock Socket object to initialize.
+ * @param dotaddr Local dotted-decimal address, or NULL for all interfaces.
+ * @param port Local port, or zero to select an ephemeral port.
+ * @param backlog Maximum number of pending connections accepted by the OS.
+ * @return SOCK_IS_OK on success or SOCK_IS_ERROR on failure.
+ */
+int sock_open_tcp_listener(sock_t *sock, char *dotaddr, int port, int backlog);
+/**
+ * Accept one TCP stream connection.
+ *
+ * @param listener Listening socket.
+ * @param accepted Socket object initialized with the accepted connection.
+ * @return SOCK_IS_OK on success or SOCK_IS_ERROR on failure.
+ */
+int sock_accept(sock_t *listener, sock_t *accepted);
 int sock_open_tcp_connected_non_blocking(sock_t *sock, char *host, int port);
 int sock_open_udp(sock_t *sock, char *dotaddr, int port);
 int sock_connect(sock_t *sock, char *host, int port);
@@ -104,6 +133,14 @@ int sock_get_error(sock_t *sock);
 int sock_set_broadcast(sock_t *sock, int flag);
 int sock_set_receive_buffer_size(sock_t *sock, int size);
 int sock_set_send_buffer_size(sock_t *sock, int size);
+/**
+ * Enable or disable immediate transmission of small TCP writes.
+ *
+ * @param sock Connected TCP socket.
+ * @param flag Nonzero to enable TCP_NODELAY, zero to disable it.
+ * @return SOCK_IS_OK on success or SOCK_IS_ERROR on failure.
+ */
+int sock_set_tcp_nodelay(sock_t *sock, int flag);
 int sock_set_timeout(sock_t *sock, int seconds, int useconds);
 int sock_readable(sock_t *sock);
 

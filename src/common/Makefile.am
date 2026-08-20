@@ -5,6 +5,7 @@ libxpcommon_a_SOURCES = \
 	bit.h \
 	checknames.c checknames.h click.h commonproto.h config.c const.h \
 	error.c error.h \
+	game_transport.c game_transport.h \
 	item.h \
 	keys.h \
 	list.c list.h \

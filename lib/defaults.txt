@@ -36,6 +36,10 @@ allowModifiers:         yes
 framesPerSecond:	50
 gameSpeed:		12.5
 
+# Gameplay uses UDP by default.  Select tcp here and on connecting clients
+# to use length-framed TCP gameplay sessions instead.
+gameTransport:		udp
+
 # Define a group of settings which make the world bouncy for players.
 define: SoftWalls \override: \multiline: EndSoftWalls
 EndSoftWalls
@@ -84,4 +88,3 @@ EndBounceAll
 # For Internet games we allow remote clients to bounce softly by
 # expanding the SoftWalls define.
 expand: SoftWalls
-

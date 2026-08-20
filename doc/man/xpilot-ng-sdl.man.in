@@ -25,6 +25,7 @@ xpilot \- XPilot multiplayer gravity war game client
 .B [-shutdown [\fImessage\fC]]
 .B [-display \fIstring\fC]
 .B [-port \fIport-number\fC]
+.B [-gameTransport \fIudp|tcp\fC]
 .B [-text]
 .B [\fIconfiguration-options]\fC
 .B [\fIserver-host ...\fC]
@@ -98,7 +99,11 @@ Specifies your wanted team number.
 Specifies which X server to contact.
 .TP 15
 .B -port \fInumber\fP
-Specifies the port number to use when contacting a server.
+Specifies the UDP contact port number to use when contacting a server.
+.TP 15
+.B -gameTransport \fIudp|tcp\fP
+Selects the gameplay transport.  The default is UDP.  The selected value
+must match the server, and the client does not fall back automatically.
 .TP 15
 .B -text
 Invokes the old text-based \fBcommand prompt\fP interface instead
@@ -1126,10 +1131,14 @@ Nick name of your player.
 Preferred team number.
 .TP 12
 .B port
-Set the port number of the server.
+Set the UDP contact port number of the server.
 Almost all servers use the default port, which is the
 recommended policy.  You can find out about which port
 is used by a server by querying the xpilot Meta server.
+.TP 12
+.B gameTransport
+Select the gameplay transport, either udp or tcp.  The default is udp.
+The value must match the server; there is no automatic fallback.
 .TP 12
 .B power
 Primary power setting of your engine.  Primary in this context means that it

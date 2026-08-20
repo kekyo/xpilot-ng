@@ -50,6 +50,9 @@ server_pid=
 client_pid=
 window_id=
 window_owner_pid=
+game_server_log=
+game_client_log=
+game_client_name=
 
 capture_window()
 {
@@ -192,26 +195,31 @@ meta_fixture_served()
 server_ready()
 {
     if ! kill -0 "$server_pid" 2>/dev/null; then
-        fail "server stopped before becoming ready"
+	fail "server stopped before becoming ready"
     fi
-    grep -q "Server runs at" "$runtime_dir/server.log" 2>/dev/null
+    grep -q "Server runs at" "$game_server_log" 2>/dev/null
 }
 
 client_accepted()
 {
     if ! kill -0 "$client_pid" 2>/dev/null; then
-        fail "client stopped before joining the server"
+	fail "client stopped before joining the server"
     fi
-    grep -q "Welcome .*SDL3Smoke" "$runtime_dir/server.log" 2>/dev/null
+    grep -q "Welcome .*$game_client_name" "$game_server_log" 2>/dev/null
+}
+
+client_departed()
+{
+    grep -q "Goodbye .*$game_client_name" "$game_server_log" 2>/dev/null
 }
 
 game_frame_ready()
 {
     if ! kill -0 "$client_pid" 2>/dev/null; then
-        fail "client stopped before presenting a semantic game frame"
+	fail "client stopped before presenting a semantic game frame"
     fi
     grep -q '^Game frame ready: semantic=ok, presented=1$' \
-        "$runtime_dir/client.log" 2>/dev/null
+	"$game_client_log" 2>/dev/null
 }
 
 runtime_logs_have_no_gl_errors()
@@ -251,10 +259,232 @@ process_window_absent()
     return 0
 }
 
+process_has_connected_inet_socket()
+{
+    node -e '
+const fs = require("fs");
+const pid = process.argv[1];
+const protocol = process.argv[2];
+const socketInodes = new Set();
+for (const fd of fs.readdirSync(`/proc/${pid}/fd`)) {
+  try {
+    const target = fs.readlinkSync(`/proc/${pid}/fd/${fd}`);
+    const match = /^socket:\[([0-9]+)\]$/.exec(target);
+    if (match) socketInodes.add(match[1]);
+  } catch {
+    // File descriptors may disappear while the process is running.
+  }
+}
+const connected = fs.readFileSync(`/proc/net/${protocol}`, "utf8")
+  .trim()
+  .split("\n")
+  .slice(1)
+  .some((line) => {
+    const fields = line.trim().split(/\s+/);
+    return socketInodes.has(fields[9])
+      && fields[2] !== "00000000:0000"
+      && (protocol === "udp" || fields[3] === "01");
+  });
+process.exit(connected ? 0 : 1);
+' "$1" "$2"
+}
+
 window_resized()
 {
     xdotool getwindowgeometry --shell "$window_id" 2>/dev/null \
-        | grep -q '^WIDTH=900$'
+	| grep -q '^WIDTH=900$'
+}
+
+reserve_contact_port()
+{
+    node -e '
+const socket = require("dgram").createSocket("udp4");
+socket.bind(0, "127.0.0.1", () => {
+  process.stdout.write(String(socket.address().port));
+  socket.close();
+});'
+}
+
+stop_local_server()
+{
+    kill -TERM "$server_pid" 2>/dev/null || true
+    wait_until "server shutdown" 10 process_stopped "$server_pid"
+    wait "$server_pid" 2>/dev/null || true
+    server_pid=
+}
+
+run_recording_playback()
+{
+    playback_case=$1
+    playback_transport=$2
+    playback_recording=$3
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-$playback_case-playback.log"
+
+    test -s "$playback_recording" \
+	|| fail "$playback_case recording was not written"
+    if test "$playback_transport" = default; then
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -recordFileName "$playback_recording" -recordMode 2 \
+	    >"$game_server_log" 2>&1 &
+    else
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -gameTransport "$playback_transport" \
+	    -recordFileName "$playback_recording" -recordMode 2 \
+	    >"$game_server_log" 2>&1 &
+    fi
+    server_pid=$!
+    wait_until "$playback_case playback startup" 20 \
+	grep -q "Server runs at" "$game_server_log"
+    wait_until "$playback_case recorded join" 20 \
+	grep -q "Welcome .*$game_client_name" "$game_server_log"
+    wait_until "$playback_case recorded quit" 20 \
+	grep -q "Goodbye .*$game_client_name" "$game_server_log"
+    stop_local_server
+}
+
+run_gameplay_case()
+{
+    game_case=$1
+    game_transport=$2
+    game_capture=$3
+    port=$(reserve_contact_port)
+    game_recording="$runtime_dir/server-$game_case.xpr"
+    game_server_log="$runtime_dir/server-$game_case.log"
+    game_client_log="$runtime_dir/client-$game_case.log"
+    case "$game_case" in
+    tcp)
+	game_client_name=SDL3TCP
+	;;
+    udp-default)
+	game_client_name=SDL3UDPDefault
+	;;
+    udp-explicit)
+	game_client_name=SDL3UDPOption
+	;;
+    esac
+
+    if test "$game_transport" = default; then
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -recordFileName "$game_recording" -recordMode 1 \
+	    >"$game_server_log" 2>&1 &
+    else
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -gameTransport "$game_transport" \
+	    -recordFileName "$game_recording" -recordMode 1 \
+	    >"$game_server_log" 2>&1 &
+    fi
+    server_pid=$!
+    wait_until "$game_case server readiness" 20 server_ready
+
+    if test "$game_transport" = default; then
+	"$client" -geometry 800x600 -join -port "$port" \
+	    -name "$game_client_name" 127.0.0.1 >"$game_client_log" 2>&1 &
+    else
+	"$client" -geometry 800x600 -join -port "$port" \
+	    -name "$game_client_name" -gameTransport "$game_transport" \
+	    127.0.0.1 >"$game_client_log" 2>&1 &
+    fi
+    client_pid=$!
+    window_owner_pid=$client_pid
+    wait_until "$game_case SDL game window" 20 find_game_window
+    wait_until "$game_case local client acceptance" 20 client_accepted
+    if test "$game_transport" = tcp; then
+	game_socket_protocol=tcp
+    else
+	game_socket_protocol=udp
+    fi
+    wait_until "$game_case client $game_socket_protocol connection" 5 \
+	process_has_connected_inet_socket "$client_pid" "$game_socket_protocol"
+    wait_until "$game_case server $game_socket_protocol connection" 5 \
+	process_has_connected_inet_socket "$server_pid" "$game_socket_protocol"
+    wait_until "$game_case game core OpenGL context diagnostics" 10 \
+	core_context_logged "$game_client_log"
+    wait_until "$game_case game text renderers" 10 \
+	grep -q '^Font text renderers ready: game=renderer map=renderer$' \
+	    "$game_client_log"
+    wait_until "$game_case semantic game frame presentation" 20 \
+	game_frame_ready
+    test -r "$runtime_dir/textures/ndh-1.3/bakedmud.pnm" \
+	|| fail "bundled map data was not extracted for $game_case"
+    test ! -e "$XPILOT_TEST_PKGDATADIR/textures/ndh-1.3.xpd" \
+	|| fail "bundled map data modified the installed texture directory"
+
+    xdotool windowsize "$window_id" 900 700 >/dev/null 2>&1 \
+	|| fail "could not request an SDL window resize for $game_case"
+    wait_until "$game_case SDL window resize" 10 window_resized
+    xdotool keydown --window "$window_id" Shift_L >/dev/null 2>&1 \
+	|| fail "could not send key-down event for $game_case"
+    xdotool keyup --window "$window_id" Shift_L >/dev/null 2>&1 \
+	|| fail "could not send key-up event for $game_case"
+    xdotool key --window "$window_id" Up Return >/dev/null 2>&1 \
+	|| fail "could not send gameplay key events for $game_case"
+    xdotool key --window "$window_id" m >/dev/null 2>&1 \
+	|| fail "could not open the console for $game_case"
+    xdotool type --window "$window_id" --delay 10 "$game_client_name" \
+	>/dev/null 2>&1 \
+	|| fail "could not enter console text for $game_case"
+    xdotool key --window "$window_id" Return >/dev/null 2>&1 \
+	|| fail "could not submit console text for $game_case"
+    if ! kill -0 "$client_pid" 2>/dev/null; then
+	fail "client stopped after resize/input events for $game_case"
+    fi
+    if test "$game_capture" = yes; then
+	capture_window game
+    fi
+
+    xdotool key --window "$window_id" Escape y >/dev/null 2>&1 \
+	|| fail "could not request a graceful client quit for $game_case"
+    wait_until "$game_case graceful client shutdown" 15 process_stopped \
+	"$client_pid"
+    finished_client_pid=$client_pid
+    set +e
+    wait "$client_pid"
+    client_status=$?
+    set -e
+    client_pid=
+    window_id=
+    if test "$client_status" -ne 0; then
+	fail "$game_case client returned status $client_status"
+    fi
+    wait_until "$game_case game window teardown" 5 process_window_absent \
+	"$finished_client_pid"
+    wait_until "$game_case server-side client departure" 5 client_departed
+    stop_local_server
+    run_recording_playback "$game_case" "$game_transport" "$game_recording"
+}
+
+run_transport_mismatch()
+{
+    server_transport=$1
+    client_transport=$2
+    game_case="mismatch-$server_transport-server-$client_transport-client"
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-$game_case.log"
+    game_client_log="$runtime_dir/client-$game_case.log"
+    game_client_name="SDL3Mismatch-$server_transport-$client_transport"
+
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	-gameTransport "$server_transport" >"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "$game_case server readiness" 20 server_ready
+
+    "$client" -geometry 800x600 -join -port "$port" \
+	-name "$game_client_name" -gameTransport "$client_transport" \
+	127.0.0.1 >"$game_client_log" 2>&1 &
+    client_pid=$!
+    rejected_client_pid=$client_pid
+    wait_until "$game_case client rejection" 15 process_stopped "$client_pid"
+    wait "$client_pid" 2>/dev/null || true
+    client_pid=
+    grep -q 'Gameplay transport mismatch with server' "$game_client_log" \
+	|| fail "$game_case did not report the transport mismatch"
+    if grep -q "Welcome .*$game_client_name" "$game_server_log"; then
+	fail "$game_case advanced to gameplay"
+    fi
+    wait_until "$game_case window absence" 5 process_window_absent \
+	"$rejected_client_pid"
+    stop_local_server
 }
 
 mkdir -p -- "$runtime_dir/textures"
@@ -357,74 +587,14 @@ fi
 wait_until "metaserver window teardown" 5 process_window_absent \
     "$finished_meta_pid"
 
-port=$(node -e '
-const socket = require("dgram").createSocket("udp4");
-socket.bind(0, "127.0.0.1", () => {
-  process.stdout.write(String(socket.address().port));
-  socket.close();
-});')
+run_gameplay_case tcp tcp no
+run_gameplay_case udp-default default yes
+run_gameplay_case udp-explicit udp no
+run_transport_mismatch udp tcp
+run_transport_mismatch tcp udp
 
-"$server" -map "$map" -port "$port" -noQuit +reportMeta \
-    >"$runtime_dir/server.log" 2>&1 &
-server_pid=$!
-wait_until "local server readiness" 20 server_ready
-
-"$client" -geometry 800x600 -join -port "$port" -name SDL3Smoke \
-    127.0.0.1 >"$runtime_dir/client.log" 2>&1 &
-client_pid=$!
-window_owner_pid=$client_pid
-wait_until "SDL game window" 20 find_game_window
-wait_until "local client acceptance" 20 client_accepted
-wait_until "game core OpenGL context diagnostics" 10 \
-    core_context_logged "$runtime_dir/client.log"
-wait_until "game text renderers" 10 \
-    grep -q '^Font text renderers ready: game=renderer map=renderer$' \
-        "$runtime_dir/client.log"
-wait_until "successful semantic game frame presentation" 20 \
-    game_frame_ready
-test -r "$runtime_dir/textures/ndh-1.3/bakedmud.pnm" \
-    || fail "bundled map data was not extracted into the configured texture path"
-test ! -e "$XPILOT_TEST_PKGDATADIR/textures/ndh-1.3.xpd" \
-    || fail "bundled map data modified the installed texture directory"
-
-xdotool windowsize "$window_id" 900 700 >/dev/null 2>&1 \
-    || fail "could not request an SDL window resize"
-wait_until "SDL window resize" 10 window_resized
-xdotool keydown --window "$window_id" Shift_L >/dev/null 2>&1 \
-    || fail "could not send key-down event"
-xdotool keyup --window "$window_id" Shift_L >/dev/null 2>&1 \
-    || fail "could not send key-up event"
-xdotool key --window "$window_id" Up Return >/dev/null 2>&1 \
-    || fail "could not send gameplay key events"
-xdotool key --window "$window_id" m >/dev/null 2>&1 \
-    || fail "could not open the console"
-xdotool type --window "$window_id" --delay 10 SDL3Smoke >/dev/null 2>&1 \
-    || fail "could not enter console text"
-xdotool key --window "$window_id" Return >/dev/null 2>&1 \
-    || fail "could not submit console text"
-if ! kill -0 "$client_pid" 2>/dev/null; then
-    fail "client stopped after resize/input events"
-fi
-capture_window game
-
-xdotool key --window "$window_id" Escape y >/dev/null 2>&1 \
-    || fail "could not request a graceful client quit"
-wait_until "graceful client shutdown" 15 process_stopped "$client_pid"
-set +e
-wait "$client_pid"
-client_status=$?
-set -e
-client_pid=
-if test "$client_status" -ne 0; then
-    fail "client returned status $client_status"
-fi
 if ! runtime_logs_have_no_gl_errors; then
     fail "OpenGL diagnostics reported a runtime error"
 fi
-
-kill -TERM "$server_pid" 2>/dev/null || true
-wait_until "server shutdown" 10 process_stopped "$server_pid"
-wait "$server_pid" 2>/dev/null || true
-server_pid=
 
 echo "SDL3 E2E smoke passed"

@@ -16,6 +16,26 @@ For further reading, see the manuals in the doc/man directory.
 
 
 
+GAMEPLAY TRANSPORT
+
+Gameplay connections use UDP by default.  To use TCP, start both endpoints
+with `-gameTransport tcp`, for example:
+
+        xpilot-ng-server -gameTransport tcp [other options]
+        xpilot-ng-sdl -gameTransport tcp -join server.example
+
+The client and server must select the same value (`udp` or `tcp`); there is no
+automatic fallback.  The `-port` option continues to identify the UDP contact
+port.  LAN discovery, metaserver, and lobby paths are unchanged.  The
+`clientPortStart` and `clientPortEnd` range applies to the selected gameplay
+protocol on the server and to the client's contact and gameplay sockets.
+
+TCP gameplay records contain a two-byte network-order payload length followed
+by an unchanged XPilot packet payload.  Server recordings must be replayed
+with the same `gameTransport` value that was used while recording.
+
+
+
 OTHER SOURCES OF INFORMATION ON THE INTERNET
 
 XPilot NG: http://xpilot.sourceforge.net/

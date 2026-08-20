@@ -241,7 +241,14 @@ Block map topology.
 .HP
 \fB\-contactPort\fR or port <integer>
 .IP
-The server contact port number.
+The UDP server contact port number.
+[ Flags: command, defaults ]
+.HP
+\fB\-gameTransport\fR <string>
+.IP
+Gameplay transport for player connections: udp or tcp.
+This value must match every client; there is no automatic fallback.
+The contact and discovery protocols remain UDP.
 [ Flags: command, defaults ]
 .HP
 \fB\-serverHost\fR <string>
@@ -1510,12 +1517,14 @@ the password file instead is recommended.
 .HP
 \fB\-clientPortStart\fR <integer>
 .IP
-Use UDP ports clientPortStart \- clientPortEnd (for firewalls)
+Restrict selected gameplay transport ports to clientPortStart \-
+clientPortEnd (for firewalls)
 [ Flags: command, defaults ]
 .HP
 \fB\-clientPortEnd\fR <integer>
 .IP
-Use UDP ports clientPortStart \- clientPortEnd (for firewalls)
+Restrict selected gameplay transport ports to clientPortStart \-
+clientPortEnd (for firewalls)
 [ Flags: command, defaults ]
 .HP
 \fB\-maxPauseTime\fR <integer>
@@ -1553,7 +1562,8 @@ If this is set to 1 when the server starts, the game is saved
 in the file specified by recordFileName. If set to 2 at startup,
 the server replays the recorded game. Joining players are
 spectators who can watch the recorded game from anyone's
-viewpoint. Can be set to 0 in the middle of a game to stoprecording.
+viewpoint. Playback must use the same gameTransport value as the
+recording. Can be set to 0 in the middle of a game to stop recording.
 [ Flags: command, defaults, invisible ]
 .HP
 \fB\-recordFileName\fR or recordFile <string>
