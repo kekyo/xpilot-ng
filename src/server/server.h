@@ -387,7 +387,7 @@ void Main_loop(void);
  */
 void Contact_cleanup(void);
 int Contact_init(void);
-void Contact(int fd, void *arg);
+void Contact(socket_handle_t fd, void *arg);
 void Queue_kick(const char *nick);
 void Queue_loop(void);
 int Queue_advance_player(char *name, char *msg, size_t size);

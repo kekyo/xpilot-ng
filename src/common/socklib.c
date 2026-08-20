@@ -41,6 +41,42 @@
 static jmp_buf		env;
 
 
+static int sock_native_error(void)
+{
+#ifdef _WINDOWS
+    return WSAGetLastError();
+#else
+    return errno;
+#endif
+}
+
+#ifdef _WINDOWS
+static int sock_windows_error_to_errno(int error_code)
+{
+    switch (error_code) {
+    case WSAEINTR:
+	return EINTR;
+    case WSAEWOULDBLOCK:
+	return EWOULDBLOCK;
+    case WSAEINPROGRESS:
+	return EINPROGRESS;
+    case WSAEALREADY:
+	return EALREADY;
+    case WSAEINVAL:
+	return EINVAL;
+    case WSAECONNRESET:
+	return ECONNRESET;
+    case WSAECONNREFUSED:
+	return ECONNREFUSED;
+    case WSAETIMEDOUT:
+	return ETIMEDOUT;
+    default:
+	return EIO;
+    }
+}
+#endif
+
+
 static struct hostent *sock_get_host_by_name(const char *name);
 static struct hostent *sock_get_host_by_addr(const char *addr,
 					     int len, int type);
@@ -75,14 +111,47 @@ static int sock_set_error(sock_t *sock, int err, sock_call_t call, int line)
 {
     DEB(printf("set error %d, %d, %d.  \"%s\"\n",
 	       err, call, line, strerror(err)));
-#ifdef _WINDOWS
-	DEB(printf("WSAGetLastError: %d\n", WSAGetLastError()));
-#endif
+    errno = err;
     sock->error.error = err;
     sock->error.call = call;
     sock->error.line = line;
 
     return SOCK_IS_ERROR;
+}
+
+static int sock_set_native_error(sock_t *sock, sock_call_t call, int line)
+{
+    int native_error = sock_native_error();
+
+#ifdef _WINDOWS
+    errno = sock_windows_error_to_errno(native_error);
+    sock->error.error = native_error;
+    sock->error.call = call;
+    sock->error.line = line;
+    DEB(printf("set Winsock error %d, %d, %d\n",
+	       native_error, call, line));
+    return SOCK_IS_ERROR;
+#else
+    return sock_set_error(sock, native_error, call, line);
+#endif
+}
+
+int sock_error_is_temporary(const sock_t *sock)
+{
+    if (sock == NULL)
+	return false;
+#ifdef _WINDOWS
+    return sock->error.error == WSAEINTR
+	|| sock->error.error == WSAEWOULDBLOCK
+	|| sock->error.error == WSAEINPROGRESS
+	|| sock->error.error == WSAEALREADY;
+#else
+    return sock->error.error == EINTR
+	|| sock->error.error == EWOULDBLOCK
+	|| sock->error.error == EAGAIN
+	|| sock->error.error == EINPROGRESS
+	|| sock->error.error == EALREADY;
+#endif
 }
 
 static int sock_check(sock_t *sock)
@@ -136,17 +205,19 @@ static void sock_free_lastaddr(sock_t *sock)
 int sock_startup()
 {
 #ifdef _WINDOWS
+    WORD requested_version = MAKEWORD(2, 2);
+    WSADATA wsa_data;
+    int status;
 
-	WORD wVersionRequested;
-	WSADATA wsaData;
-	
-	/* I have no idea which version of winsock supports
-	 * the required socket stuff. */
-	wVersionRequested = MAKEWORD( 1, 0 );
-	if (WSAStartup( wVersionRequested, &wsaData ))
-		return -1;
+    status = WSAStartup(requested_version, &wsa_data);
+    if (status != 0)
+	return SOCK_IS_ERROR;
+    if (LOBYTE(wsa_data.wVersion) != 2 || HIBYTE(wsa_data.wVersion) != 2) {
+	WSACleanup();
+	return SOCK_IS_ERROR;
+    }
 #endif
-	return 0; /* socket initialization only needed for windows */
+    return SOCK_IS_OK; /* socket initialization only needed for windows */
 }
 
 void sock_cleanup(void)
@@ -169,14 +240,22 @@ int sock_init(sock_t *sock)
     return sock_check(sock);
 }
 
+static int sock_close_native(sock_t *sock)
+{
+#ifdef _WINDOWS
+    if (closesocket(sock->fd) == SOCKET_ERROR)
+	return sock_set_native_error(sock, SOCK_CALL_CLOSE, __LINE__);
+#else
+    if (close(sock->fd) < 0)
+	return sock_set_native_error(sock, SOCK_CALL_CLOSE, __LINE__);
+#endif
+    return SOCK_IS_OK;
+}
+
 static int sock_close_tcp(sock_t *sock)
 {
-    int			status = SOCK_IS_OK;
+    int status = sock_close_native(sock);
 
-    if (close(sock->fd) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_CLOSE, __LINE__);
-	status = SOCK_IS_ERROR;
-    }
     sock_flags_remove(sock, SOCK_FLAG_TCP);
     sock->fd = SOCK_FD_INVALID;
 
@@ -185,12 +264,8 @@ static int sock_close_tcp(sock_t *sock)
 
 static int sock_close_udp(sock_t *sock)
 {
-    int			status = SOCK_IS_OK;
+    int status = sock_close_native(sock);
 
-    if (close(sock->fd) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_CLOSE, __LINE__);
-	status = SOCK_IS_ERROR;
-    }
     sock_flags_remove(sock, SOCK_FLAG_UDP);
     sock->fd = SOCK_FD_INVALID;
 
@@ -213,8 +288,9 @@ int sock_open_tcp(sock_t *sock)
     if (sock_init(sock))
 	return SOCK_IS_ERROR;
 
-    if ((sock->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-	return sock_set_error(sock, errno, SOCK_CALL_SOCKET, __LINE__);
+    sock->fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock->fd == SOCK_FD_INVALID)
+	return sock_set_native_error(sock, SOCK_CALL_SOCKET, __LINE__);
 
     sock_flags_add(sock, SOCK_FLAG_TCP);
 
@@ -229,8 +305,8 @@ static int sock_bind_tcp(sock_t *sock, char *dotaddr, int port)
     addr.sin_family = AF_INET;
     addr.sin_port = htons((unsigned short)port);
     addr.sin_addr.s_addr = dotaddr != NULL ? inet_addr(dotaddr) : INADDR_ANY;
-    if (bind(sock->fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-	return sock_set_error(sock, errno, SOCK_CALL_BIND, __LINE__);
+    if (bind(sock->fd, (struct sockaddr *)&addr, sizeof(addr)) == SOCK_IS_ERROR)
+	return sock_set_native_error(sock, SOCK_CALL_BIND, __LINE__);
     return SOCK_IS_OK;
 }
 
@@ -258,8 +334,8 @@ int sock_open_tcp_listener(sock_t *sock, char *dotaddr, int port, int backlog)
     if (sock_open_tcp(sock) == SOCK_IS_ERROR)
 	return SOCK_IS_ERROR;
     if (setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR,
-		   (void *)&flag, sizeof(flag)) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_SETSOCKOPT, __LINE__);
+		   (void *)&flag, sizeof(flag)) == SOCK_IS_ERROR) {
+	sock_set_native_error(sock, SOCK_CALL_SETSOCKOPT, __LINE__);
 	sock_close(sock);
 	return SOCK_IS_ERROR;
     }
@@ -267,8 +343,8 @@ int sock_open_tcp_listener(sock_t *sock, char *dotaddr, int port, int backlog)
 	sock_close(sock);
 	return SOCK_IS_ERROR;
     }
-    if (listen(sock->fd, backlog) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_LISTEN, __LINE__);
+    if (listen(sock->fd, backlog) == SOCK_IS_ERROR) {
+	sock_set_native_error(sock, SOCK_CALL_LISTEN, __LINE__);
 	sock_close(sock);
 	return SOCK_IS_ERROR;
     }
@@ -287,8 +363,8 @@ int sock_accept(sock_t *listener, sock_t *accepted)
     addrlen = sizeof(struct sockaddr_in);
     accepted->fd = accept(listener->fd,
 			  (struct sockaddr *)accepted->lastaddr, &addrlen);
-    if (accepted->fd < 0) {
-	sock_set_error(accepted, errno, SOCK_CALL_ACCEPT, __LINE__);
+    if (accepted->fd == SOCK_FD_INVALID) {
+	sock_set_native_error(accepted, SOCK_CALL_ACCEPT, __LINE__);
 	sock_free_lastaddr(accepted);
 	return SOCK_IS_ERROR;
     }
@@ -298,6 +374,13 @@ int sock_accept(sock_t *listener, sock_t *accepted)
 
 int sock_set_non_blocking(sock_t *sock, int flag)
 {
+#ifdef _WINDOWS
+    u_long mode = flag != 0 ? 1UL : 0UL;
+
+    if (ioctlsocket(sock->fd, FIONBIO, &mode) == 0)
+	return SOCK_IS_OK;
+    return sock_set_native_error(sock, SOCK_CALL_FCNTL, __LINE__);
+#else
 /*
  * There are some problems on some particular systems (suns) with
  * getting sockets to be non-blocking.  Just try all possible ways
@@ -349,7 +432,7 @@ int sock_set_non_blocking(sock_t *sock, int flag)
 #ifdef USE_FCNTL_FNDELAY
     if (fcntl(sock->fd, F_SETFL, (flag != 0) ? FNDELAY : 0) != -1)
 	return SOCK_IS_OK;
-    sock_set_error(sock, errno, SOCK_CALL_FCNTL, __LINE__);
+    sock_set_native_error(sock, SOCK_CALL_FCNTL, __LINE__);
     sprintf(buf, "fcntl FNDELAY failed in socklib.c line %d", __LINE__);
     perror(buf);
 #endif
@@ -357,7 +440,7 @@ int sock_set_non_blocking(sock_t *sock, int flag)
 #ifdef USE_IOCTL_FIONBIO
     if (ioctl(sock->fd, FIONBIO, &flag) == 0)
 	return SOCK_IS_OK;
-    sock_set_error(sock, errno, SOCK_CALL_FCNTL, __LINE__);
+    sock_set_native_error(sock, SOCK_CALL_FCNTL, __LINE__);
     sprintf(buf, "ioctl FIONBIO failed in socklib.c line %d", __LINE__);
     perror(buf);
 #endif
@@ -365,7 +448,7 @@ int sock_set_non_blocking(sock_t *sock, int flag)
 #ifdef USE_FCNTL_O_NONBLOCK
     if (fcntl(sock->fd, F_SETFL, (flag != 0) ? O_NONBLOCK : 0) != -1)
 	return SOCK_IS_OK;
-    sock_set_error(sock, errno, SOCK_CALL_FCNTL, __LINE__);
+    sock_set_native_error(sock, SOCK_CALL_FCNTL, __LINE__);
     sprintf(buf, "fcntl O_NONBLOCK failed in socklib.c line %d", __LINE__);
     perror(buf);
 #endif
@@ -373,12 +456,13 @@ int sock_set_non_blocking(sock_t *sock, int flag)
 #ifdef USE_FCNTL_O_NDELAY
     if (fcntl(sock->fd, F_SETFL, (flag != 0) ? O_NDELAY : 0) != -1)
 	return SOCK_IS_OK;
-    sock_set_error(sock, errno, SOCK_CALL_FCNTL, __LINE__);
+    sock_set_native_error(sock, SOCK_CALL_FCNTL, __LINE__);
     sprintf(buf, "fcntl O_NDELAY failed in socklib.c line %d", __LINE__);
     perror(buf);
 #endif
 
     return SOCK_IS_ERROR;
+#endif
 }
 
 int sock_open_tcp_connected_non_blocking(sock_t *sock, char *host, int port)
@@ -406,7 +490,7 @@ int sock_open_tcp_connected_non_blocking(sock_t *sock, char *host, int port)
 	 */
 	errno = 0;
 	if ((hp = sock_get_host_by_name(host)) == NULL) {
-	    sock_set_error(sock, errno, SOCK_CALL_GETHOSTBYNAME, __LINE__);
+	    sock_set_native_error(sock, SOCK_CALL_GETHOSTBYNAME, __LINE__);
 	    sock_close(sock);
 	    return SOCK_IS_ERROR;
 	}
@@ -416,19 +500,13 @@ int sock_open_tcp_connected_non_blocking(sock_t *sock, char *host, int port)
     }
 
     if (connect(sock->fd, (struct sockaddr *)&dest,
-		sizeof(struct sockaddr_in)) < 0) {
-
-#ifndef _WINDOWS
-  	if (errno != EINPROGRESS) {
-#else
- 	if (WSAGetLastError() != 10035) {
-#endif
-
-		sock_set_error(sock, errno, SOCK_CALL_CONNECT, __LINE__);
-		sock_close(sock);
-		return SOCK_IS_ERROR;
-		}
+		sizeof(struct sockaddr_in)) == SOCK_IS_ERROR) {
+	sock_set_native_error(sock, SOCK_CALL_CONNECT, __LINE__);
+	if (!sock_error_is_temporary(sock)) {
+	    sock_close(sock);
+	    return SOCK_IS_ERROR;
 	}
+    }
     sock_flags_add(sock, SOCK_FLAG_CONNECT);
 
     return SOCK_IS_OK;
@@ -441,8 +519,9 @@ int sock_open_udp(sock_t *sock, char *dotaddr, int port)
     if (sock_init(sock))
 	return SOCK_IS_ERROR;
 
-    if ((sock->fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-	return sock_set_error(sock, errno, SOCK_CALL_SOCKET, __LINE__);
+    sock->fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock->fd == SOCK_FD_INVALID)
+	return sock_set_native_error(sock, SOCK_CALL_SOCKET, __LINE__);
 
     sock_flags_add(sock, SOCK_FLAG_UDP);
 
@@ -450,8 +529,9 @@ int sock_open_udp(sock_t *sock, char *dotaddr, int port)
     addr.sin_family	 = AF_INET;
     addr.sin_port	 = htons((unsigned short)port);
     addr.sin_addr.s_addr = (dotaddr) ? inet_addr(dotaddr) : INADDR_ANY;
-    if (bind(sock->fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_BIND, __LINE__);
+    if (bind(sock->fd, (struct sockaddr *)&addr, sizeof(addr))
+	== SOCK_IS_ERROR) {
+	sock_set_native_error(sock, SOCK_CALL_BIND, __LINE__);
 	sock_close(sock);
 	return SOCK_IS_ERROR;
     }
@@ -479,8 +559,9 @@ int sock_connect(sock_t *sock, char *host, int port)
 	    = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
     }
 
-    if (connect(sock->fd, (struct sockaddr *)&dest, sizeof(dest)) < 0)
-	return sock_set_error(sock, errno, SOCK_CALL_CONNECT, __LINE__);
+    if (connect(sock->fd, (struct sockaddr *)&dest, sizeof(dest))
+	== SOCK_IS_ERROR)
+	return sock_set_native_error(sock, SOCK_CALL_CONNECT, __LINE__);
 
     sock_flags_add(sock, SOCK_FLAG_CONNECT);
 
@@ -554,8 +635,8 @@ int sock_read(sock_t *sock, char *buf, int len)
     int			count;
 
     count = recv(sock->fd, buf, len, 0);
-    if (count < 0)
-	sock_set_error(sock, errno, SOCK_CALL_IO, __LINE__);
+    if (count == SOCK_IS_ERROR)
+	sock_set_native_error(sock, SOCK_CALL_IO, __LINE__);
 
     return count;
 }
@@ -570,8 +651,8 @@ int sock_receive_any(sock_t *sock, char *buf, int len)
     addrlen = sizeof(struct sockaddr_in);
     count = recvfrom(sock->fd, buf, len, 0,
 		     (struct sockaddr *)(sock->lastaddr), &addrlen);
-    if (count < 0)
-	sock_set_error(sock, errno, SOCK_CALL_IO, __LINE__);
+    if (count == SOCK_IS_ERROR)
+	sock_set_native_error(sock, SOCK_CALL_IO, __LINE__);
 
     return count;
 }
@@ -598,8 +679,8 @@ int sock_send_dest(sock_t *sock, char *host, int port, char *buf, int len)
 
     count = sendto(sock->fd, buf, len, 0,
 		   (struct sockaddr *) &dest, sizeof(dest));
-    if (count < 0)
-	sock_set_error(sock, errno, SOCK_CALL_IO, __LINE__);
+    if (count == SOCK_IS_ERROR)
+	sock_set_native_error(sock, SOCK_CALL_IO, __LINE__);
 
     return count;
 }
@@ -609,8 +690,8 @@ int sock_write(sock_t *sock, char *buf, int len)
     int			count;
 
     count = send(sock->fd, buf, len, 0);
-    if (count < 0)
-	sock_set_error(sock, errno, SOCK_CALL_IO, __LINE__);
+    if (count == SOCK_IS_ERROR)
+	sock_set_native_error(sock, SOCK_CALL_IO, __LINE__);
 
     return count;
 }
@@ -727,8 +808,9 @@ int sock_get_port(sock_t *sock)
     socklen_t		len = sizeof(addr);
     unsigned short	port;
 
-    if (getsockname(sock->fd, (struct sockaddr *)&addr, &len) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_GETSOCKNAME, __LINE__);
+    if (getsockname(sock->fd, (struct sockaddr *)&addr, &len)
+	== SOCK_IS_ERROR) {
+	sock_set_native_error(sock, SOCK_CALL_GETSOCKNAME, __LINE__);
 	return SOCK_IS_ERROR;
     }
 
@@ -743,19 +825,26 @@ int sock_get_error(sock_t *sock)
     socklen_t		size = sizeof(err);
 
     if (getsockopt(sock->fd, SOL_SOCKET, SO_ERROR,
-		   (void *)&err, &size) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_GETSOCKOPT, __LINE__);
+		   (void *)&err, &size) == SOCK_IS_ERROR) {
+	sock_set_native_error(sock, SOCK_CALL_GETSOCKOPT, __LINE__);
 	return SOCK_IS_ERROR;
     }
+#ifdef _WINDOWS
+    errno = err == 0 ? 0 : sock_windows_error_to_errno(err);
+#else
     errno = err;
+#endif
+    sock->error.error = err;
+    sock->error.call = SOCK_CALL_GETSOCKOPT;
+    sock->error.line = __LINE__;
     return SOCK_IS_OK;
 }
 
 int sock_set_broadcast(sock_t *sock, int flag)
 {
     if (setsockopt(sock->fd, SOL_SOCKET, SO_BROADCAST,
-		   (void *)&flag, sizeof(flag)) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_SETSOCKOPT, __LINE__);
+		   (void *)&flag, sizeof(flag)) == SOCK_IS_ERROR) {
+	sock_set_native_error(sock, SOCK_CALL_SETSOCKOPT, __LINE__);
 	return SOCK_IS_ERROR;
     }
     return SOCK_IS_OK;
@@ -764,8 +853,8 @@ int sock_set_broadcast(sock_t *sock, int flag)
 int sock_set_receive_buffer_size(sock_t *sock, int size)
 {
     if (setsockopt(sock->fd, SOL_SOCKET, SO_RCVBUF,
-		   (void *)&size, sizeof(size)) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_SETSOCKOPT, __LINE__);
+		   (void *)&size, sizeof(size)) == SOCK_IS_ERROR) {
+	sock_set_native_error(sock, SOCK_CALL_SETSOCKOPT, __LINE__);
 	return SOCK_IS_ERROR;
     }
     return SOCK_IS_OK;
@@ -774,8 +863,8 @@ int sock_set_receive_buffer_size(sock_t *sock, int size)
 int sock_set_send_buffer_size(sock_t *sock, int size)
 {
     if (setsockopt(sock->fd, SOL_SOCKET, SO_SNDBUF,
-		   (void *)&size, sizeof(size)) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_SETSOCKOPT, __LINE__);
+		   (void *)&size, sizeof(size)) == SOCK_IS_ERROR) {
+	sock_set_native_error(sock, SOCK_CALL_SETSOCKOPT, __LINE__);
 	return SOCK_IS_ERROR;
     }
     return SOCK_IS_OK;
@@ -784,8 +873,8 @@ int sock_set_send_buffer_size(sock_t *sock, int size)
 int sock_set_tcp_nodelay(sock_t *sock, int flag)
 {
     if (setsockopt(sock->fd, IPPROTO_TCP, TCP_NODELAY,
-		   (void *)&flag, sizeof(flag)) < 0) {
-	sock_set_error(sock, errno, SOCK_CALL_SETSOCKOPT, __LINE__);
+		   (void *)&flag, sizeof(flag)) == SOCK_IS_ERROR) {
+	sock_set_native_error(sock, SOCK_CALL_SETSOCKOPT, __LINE__);
 	return SOCK_IS_ERROR;
     }
     return SOCK_IS_OK;
@@ -812,12 +901,15 @@ int sock_readable(sock_t *sock)
     FD_ZERO(&readfds);
     FD_SET(sock->fd, &readfds);
 
+#ifdef _WINDOWS
+    n = select(0, &readfds, NULL, NULL, &timeout);
+#else
     n = select(sock->fd + 1, &readfds, NULL, NULL, &timeout);
-    if (n == -1) {
-	if (errno != EINTR) {
-	    sock_set_error(sock, errno, SOCK_CALL_SELECT, __LINE__);
+#endif
+    if (n == SOCK_IS_ERROR) {
+	sock_set_native_error(sock, SOCK_CALL_SELECT, __LINE__);
+	if (!sock_error_is_temporary(sock))
 	    return SOCK_IS_ERROR;
-	}
 	return SOCK_IS_OK;
     }
 

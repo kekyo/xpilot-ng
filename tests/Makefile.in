@@ -89,7 +89,8 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 check_PROGRAMS = test-framed-stream$(EXEEXT) \
-	test-game-transport$(EXEEXT) test-meta-environment$(EXEEXT) \
+	test-game-transport$(EXEEXT) test-socket-io$(EXEEXT) \
+	test-meta-environment$(EXEEXT) \
 	test-sdl-versions$(EXEEXT) test-sdl-keys$(EXEEXT) \
 	test-sdl-console$(EXEEXT) test-sdl-surface$(EXEEXT) \
 	test-surface-rgba8$(EXEEXT) test-sdl-window$(EXEEXT) \
@@ -117,7 +118,8 @@ check_PROGRAMS = test-framed-stream$(EXEEXT) \
 	test-text-ttf-atlas$(EXEEXT) test-text-renderer$(EXEEXT) \
 	test-text-cache-adapter$(EXEEXT)
 TESTS = test-framed-stream$(EXEEXT) test-game-transport$(EXEEXT) \
-	test-meta-environment$(EXEEXT) test-sdl-versions$(EXEEXT) \
+	test-socket-io$(EXEEXT) test-meta-environment$(EXEEXT) \
+	test-sdl-versions$(EXEEXT) \
 	test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
 	test-sdl-window$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
@@ -392,6 +394,10 @@ test_sdlpaint_stage_OBJECTS = $(am_test_sdlpaint_stage_OBJECTS)
 test_sdlpaint_stage_DEPENDENCIES =
 test_sdlpaint_stage_LINK = $(CCLD) $(test_sdlpaint_stage_CFLAGS) \
 	$(CFLAGS) $(test_sdlpaint_stage_LDFLAGS) $(LDFLAGS) -o $@
+am_test_socket_io_OBJECTS = test_socket_io.$(OBJEXT)
+test_socket_io_OBJECTS = $(am_test_socket_io_OBJECTS)
+test_socket_io_DEPENDENCIES =  \
+	$(top_builddir)/src/common/libxpcommon.a
 am_test_surface_rgba8_OBJECTS = test_surface_rgba8.$(OBJEXT) \
 	surface_rgba8.$(OBJEXT) sdlcompat.$(OBJEXT)
 test_surface_rgba8_OBJECTS = $(am_test_surface_rgba8_OBJECTS)
@@ -526,6 +532,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po \
 	./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po \
 	./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po \
+	./$(DEPDIR)/test_socket_io.Po \
 	./$(DEPDIR)/test_surface_rgba8.Po \
 	./$(DEPDIR)/test_text_atlas.Po \
 	./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po \
@@ -583,7 +590,8 @@ SOURCES = $(test_framed_stream_SOURCES) $(test_game_transport_SOURCES) \
 	$(test_sdlgui_polygons_SOURCES) $(test_sdlgui_ships_SOURCES) \
 	$(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlmeta_primitives_SOURCES) \
-	$(test_sdlpaint_stage_SOURCES) $(test_surface_rgba8_SOURCES) \
+	$(test_sdlpaint_stage_SOURCES) $(test_socket_io_SOURCES) \
+	$(test_surface_rgba8_SOURCES) \
 	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES)
@@ -615,7 +623,8 @@ DIST_SOURCES = $(test_framed_stream_SOURCES) \
 	$(test_sdlgui_polygons_SOURCES) $(test_sdlgui_ships_SOURCES) \
 	$(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlmeta_primitives_SOURCES) \
-	$(test_sdlpaint_stage_SOURCES) $(test_surface_rgba8_SOURCES) \
+	$(test_sdlpaint_stage_SOURCES) $(test_socket_io_SOURCES) \
+	$(test_surface_rgba8_SOURCES) \
 	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES)
@@ -988,7 +997,11 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
 test_framed_stream_SOURCES = test_framed_stream.c
-test_framed_stream_LDADD = $(top_builddir)/src/common/libxpcommon.a
+test_framed_stream_LDADD = $(top_builddir)/src/common/libxpcommon.a \
+	@W32_LIBS@
+test_socket_io_SOURCES = test_socket_io.c
+test_socket_io_LDADD = $(top_builddir)/src/common/libxpcommon.a \
+	@W32_LIBS@
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
 	$(top_srcdir)/src/client/meta_test_support.h \
@@ -1595,6 +1608,10 @@ test-sdlpaint-stage$(EXEEXT): $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_sta
 	@rm -f test-sdlpaint-stage$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlpaint_stage_LINK) $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_stage_LDADD) $(LIBS)
 
+test-socket-io$(EXEEXT): $(test_socket_io_OBJECTS) $(test_socket_io_DEPENDENCIES) $(EXTRA_test_socket_io_DEPENDENCIES)
+	@rm -f test-socket-io$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_socket_io_OBJECTS) $(test_socket_io_LDADD) $(LIBS)
+
 test-surface-rgba8$(EXEEXT): $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_DEPENDENCIES) $(EXTRA_test_surface_rgba8_DEPENDENCIES)
 	@rm -f test-surface-rgba8$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_LDADD) $(LIBS)
@@ -1716,6 +1733,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_socket_io.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po@am__quote@ # am--include-marker
@@ -3091,6 +3109,13 @@ test-game-transport.log: test-game-transport$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-socket-io.log: test-socket-io$(EXEEXT)
+	@p='test-socket-io$(EXEEXT)'; \
+	b='test-socket-io'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-meta-environment.log: test-meta-environment$(EXEEXT)
 	@p='test-meta-environment$(EXEEXT)'; \
 	b='test-meta-environment'; \
@@ -3539,6 +3564,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
+	-rm -f ./$(DEPDIR)/test_socket_io.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po
@@ -3688,6 +3714,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
+	-rm -f ./$(DEPDIR)/test_socket_io.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po

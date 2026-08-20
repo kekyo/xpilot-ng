@@ -153,7 +153,7 @@ case "$target" in
 esac
 
 if test x$windows_target = xyes; then
-	W32_LIBS="-lmingw32 -lwsock32"
+	W32_LIBS="-lmingw32 -lws2_32"
 	AC_SUBST(W32_LIBS)
 	AC_DEFINE([_WINDOWS], 1, [compiling for windows target])
 
@@ -378,27 +378,32 @@ AC_TYPE_SIZE_T
 AC_STRUCT_TM
 
 dnl Check for socklen_t (in Unix98)
-AC_MSG_CHECKING(for socklen_t)
-AC_TRY_COMPILE([
-	#include <sys/types.h>
-	#include <sys/socket.h>
-	socklen_t x;
-], [],
-[
-	AC_MSG_RESULT(yes)
-], [
+if test x$windows_target = xyes; then
+	AC_MSG_CHECKING(for socklen_t)
+	AC_MSG_RESULT([provided by Winsock2])
+else
+	AC_MSG_CHECKING(for socklen_t)
 	AC_TRY_COMPILE([
 		#include <sys/types.h>
 		#include <sys/socket.h>
-		int accept(int, struct sockaddr *, size_t *);
-	], [], [
-		AC_MSG_RESULT(size_t)
-		AC_DEFINE(socklen_t, size_t, [socklen_t size])
+		socklen_t x;
+	], [],
+	[
+		AC_MSG_RESULT(yes)
 	], [
-		AC_MSG_RESULT(int)
-		AC_DEFINE(socklen_t, int, [socklen_t size])
+		AC_TRY_COMPILE([
+			#include <sys/types.h>
+			#include <sys/socket.h>
+			int accept(int, struct sockaddr *, size_t *);
+		], [], [
+			AC_MSG_RESULT(size_t)
+			AC_DEFINE(socklen_t, size_t, [socklen_t size])
+		], [
+			AC_MSG_RESULT(int)
+			AC_DEFINE(socklen_t, int, [socklen_t size])
+		])
 	])
-])
+fi
 
 dnl  Checks for library functions.
 

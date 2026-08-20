@@ -32,7 +32,14 @@
 
 #ifdef	_WINDOWS
 
-#include <winsock.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef FD_SETSIZE
+#define FD_SETSIZE 256
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
 #ifdef	__cplusplus
 extern "C" {

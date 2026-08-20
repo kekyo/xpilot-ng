@@ -465,9 +465,6 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	       <= 0) {
 	    if (len == 0)
 		return 0;
-#ifdef _WINDOWS
-	    errno = WSAGetLastError();
-#endif
 	    if (errno == EINTR) {
 		errno = 0;
 		continue;

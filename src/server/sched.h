@@ -29,8 +29,28 @@
 void block_timer(void);
 void allow_timer(void);
 
-void install_input(void (*func)(int, void *), int fd, void *arg);
-void remove_input(int fd);
+/** Callback invoked when a registered socket becomes readable. */
+typedef void (*sched_input_fn)(socket_handle_t fd, void *arg);
+
+/**
+ * Register a socket with the server scheduler.
+ *
+ * @param func Callback invoked for readable input.
+ * @param fd Native socket handle to monitor, or a recorded slot in playback.
+ * @param arg Opaque callback argument.
+ * @return Stable scheduler slot on success, or SOCK_IS_ERROR on failure.
+ */
+int install_input(sched_input_fn func, socket_handle_t fd, void *arg);
+/**
+ * Replace the native socket associated with an existing scheduler slot.
+ *
+ * @param old_fd Currently registered socket handle.
+ * @param new_fd Replacement socket handle.
+ * @return Stable scheduler slot on success, or SOCK_IS_ERROR on failure.
+ */
+int replace_input(socket_handle_t old_fd, socket_handle_t new_fd);
+/** Remove a socket from the server scheduler. */
+void remove_input(socket_handle_t fd);
 void sched(void);
 void stop_sched(void);
 

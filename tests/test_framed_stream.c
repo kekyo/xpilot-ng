@@ -1,13 +1,9 @@
 #include "test_helpers.h"
 
 #include <errno.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
-#include "net.h"
+#include "xpcommon.h"
 
 typedef struct {
     char bytes[128];
@@ -44,12 +40,20 @@ static int write_fatal_without_errno(sock_t *sock, char *buf, int len)
     return -1;
 }
 
-static int initialize_socket(sock_t *sock, int fd)
+static int open_connected_sockets(sock_t *sender, sock_t *receiver)
 {
-    TEST_CHECK(sock_init(sock) == 0);
-    sock->fd = fd;
-    sock->flags |= SOCK_FLAG_TCP | SOCK_FLAG_CONNECT;
-    TEST_CHECK(sock_set_non_blocking(sock, 1) == 0);
+    sock_t listener;
+    int port;
+
+    TEST_CHECK(sock_open_tcp_listener(&listener, "127.0.0.1", 0, 1) == 0);
+    port = sock_get_port(&listener);
+    TEST_CHECK(port > 0);
+    TEST_CHECK(sock_open_tcp(sender) == 0);
+    TEST_CHECK(sock_connect(sender, "127.0.0.1", port) == 0);
+    TEST_CHECK(sock_accept(&listener, receiver) == 0);
+    TEST_CHECK(sock_close(&listener) == 0);
+    TEST_CHECK(sock_set_tcp_nodelay(sender, 1) == 0);
+    TEST_CHECK(sock_set_non_blocking(receiver, 1) == 0);
     return 0;
 }
 
@@ -73,32 +77,34 @@ static int test_invalid_initialization(void)
 static int test_segmented_record(void)
 {
     static const char record[] = { 0, 5, 'h', 'e', 'l', 'l', 'o' };
-    int fds[2];
+    sock_t send_socket;
     sock_t receive_socket;
     sockbuf_t reader;
 
-    TEST_CHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    TEST_CHECK(initialize_socket(&receive_socket, fds[1]) == 0);
+    TEST_CHECK(open_connected_sockets(&send_socket, &receive_socket) == 0);
     TEST_CHECK(Sockbuf_init(&reader, &receive_socket, 64,
 			   SOCKBUF_READ | SOCKBUF_FRAMED) == 0);
 
-    TEST_CHECK(write(fds[0], record, 1) == 1);
+    TEST_CHECK(sock_write(&send_socket, (char *)record, 1) == 1);
+    TEST_CHECK(sock_readable(&receive_socket) == 1);
     TEST_CHECK(Sockbuf_read(&reader) == 0);
     TEST_CHECK(Sockbuf_clear(&reader) == 0);
 
-    TEST_CHECK(write(fds[0], record + 1, 3) == 3);
+    TEST_CHECK(sock_write(&send_socket, (char *)record + 1, 3) == 3);
+    TEST_CHECK(sock_readable(&receive_socket) == 1);
     TEST_CHECK(Sockbuf_read(&reader) == 0);
     TEST_CHECK(Sockbuf_clear(&reader) == 0);
 
-    TEST_CHECK(write(fds[0], record + 4, sizeof(record) - 4)
-	       == (ssize_t)(sizeof(record) - 4));
+    TEST_CHECK(sock_write(&send_socket, (char *)record + 4,
+			  sizeof(record) - 4) == (int)sizeof(record) - 4);
+    TEST_CHECK(sock_readable(&receive_socket) == 1);
     TEST_CHECK(Sockbuf_read(&reader) == 5);
     TEST_CHECK(reader.len == 5);
     TEST_CHECK(memcmp(reader.buf, "hello", 5) == 0);
 
     Sockbuf_cleanup(&reader);
-    close(fds[0]);
-    close(fds[1]);
+    sock_close(&send_socket);
+    sock_close(&receive_socket);
     return 0;
 }
 
@@ -108,26 +114,27 @@ static int test_coalesced_records(void)
 	0, 3, 'o', 'n', 'e',
 	0, 3, 't', 'w', 'o'
     };
-    int fds[2];
+    sock_t send_socket;
     sock_t receive_socket;
     sockbuf_t reader;
 
-    TEST_CHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    TEST_CHECK(initialize_socket(&receive_socket, fds[1]) == 0);
+    TEST_CHECK(open_connected_sockets(&send_socket, &receive_socket) == 0);
     TEST_CHECK(Sockbuf_init(&reader, &receive_socket, 64,
 			   SOCKBUF_READ | SOCKBUF_FRAMED) == 0);
-    TEST_CHECK(write(fds[0], records, sizeof(records))
-	       == (ssize_t)sizeof(records));
+    TEST_CHECK(sock_write(&send_socket, (char *)records, sizeof(records))
+	       == (int)sizeof(records));
 
+    TEST_CHECK(sock_readable(&receive_socket) == 1);
     TEST_CHECK(Sockbuf_read(&reader) == 3);
     TEST_CHECK(memcmp(reader.buf, "one", 3) == 0);
     TEST_CHECK(Sockbuf_clear(&reader) == 0);
+    TEST_CHECK(sock_readable(&receive_socket) == 1);
     TEST_CHECK(Sockbuf_read(&reader) == 3);
     TEST_CHECK(memcmp(reader.buf, "two", 3) == 0);
 
     Sockbuf_cleanup(&reader);
-    close(fds[0]);
-    close(fds[1]);
+    sock_close(&send_socket);
+    sock_close(&receive_socket);
     return 0;
 }
 
@@ -135,15 +142,12 @@ static int test_framed_write(void)
 {
     static char first[] = "first";
     static char second[] = "second";
-    int fds[2];
     sock_t send_socket;
     sock_t receive_socket;
     sockbuf_t writer;
     sockbuf_t reader;
 
-    TEST_CHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    TEST_CHECK(initialize_socket(&send_socket, fds[0]) == 0);
-    TEST_CHECK(initialize_socket(&receive_socket, fds[1]) == 0);
+    TEST_CHECK(open_connected_sockets(&send_socket, &receive_socket) == 0);
     TEST_CHECK(Sockbuf_init(&writer, &send_socket, 64,
 			   SOCKBUF_WRITE | SOCKBUF_FRAMED) == 0);
     TEST_CHECK(Sockbuf_init(&reader, &receive_socket, 64,
@@ -154,16 +158,18 @@ static int test_framed_write(void)
     TEST_CHECK(Sockbuf_write(&writer, second, 6) == 6);
     TEST_CHECK(Sockbuf_flush(&writer) == 6);
 
+    TEST_CHECK(sock_readable(&receive_socket) == 1);
     TEST_CHECK(Sockbuf_read(&reader) == 5);
     TEST_CHECK(memcmp(reader.buf, first, 5) == 0);
     TEST_CHECK(Sockbuf_clear(&reader) == 0);
+    TEST_CHECK(sock_readable(&receive_socket) == 1);
     TEST_CHECK(Sockbuf_read(&reader) == 6);
     TEST_CHECK(memcmp(reader.buf, second, 6) == 0);
 
     Sockbuf_cleanup(&writer);
     Sockbuf_cleanup(&reader);
-    close(fds[0]);
-    close(fds[1]);
+    sock_close(&send_socket);
+    sock_close(&receive_socket);
     return 0;
 }
 
@@ -248,60 +254,61 @@ static int test_invalid_frame_length_is_error(void)
 {
     static const unsigned char empty_record[] = { 0, 0 };
     static const unsigned char oversized_record[] = { 0, 65 };
-    int fds[2];
+    sock_t send_socket;
     sock_t receive_socket;
     sockbuf_t reader;
 
-    TEST_CHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    TEST_CHECK(initialize_socket(&receive_socket, fds[1]) == 0);
+    TEST_CHECK(open_connected_sockets(&send_socket, &receive_socket) == 0);
     TEST_CHECK(Sockbuf_init(&reader, &receive_socket, 64,
 			   SOCKBUF_READ | SOCKBUF_FRAMED) == 0);
-    TEST_CHECK(write(fds[0], empty_record, sizeof(empty_record))
-	       == (ssize_t)sizeof(empty_record));
+    TEST_CHECK(sock_write(&send_socket, (char *)empty_record,
+			  sizeof(empty_record)) == (int)sizeof(empty_record));
+    TEST_CHECK(sock_readable(&receive_socket) == 1);
     TEST_CHECK(Sockbuf_read(&reader) == -1);
     TEST_CHECK(errno == EMSGSIZE);
     TEST_CHECK((reader.state & SOCKBUF_ERROR) != 0);
     Sockbuf_cleanup(&reader);
-    close(fds[0]);
-    close(fds[1]);
+    sock_close(&send_socket);
+    sock_close(&receive_socket);
 
-    TEST_CHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    TEST_CHECK(initialize_socket(&receive_socket, fds[1]) == 0);
+    TEST_CHECK(open_connected_sockets(&send_socket, &receive_socket) == 0);
     TEST_CHECK(Sockbuf_init(&reader, &receive_socket, 64,
 			   SOCKBUF_READ | SOCKBUF_FRAMED) == 0);
-    TEST_CHECK(write(fds[0], oversized_record, sizeof(oversized_record))
-	       == (ssize_t)sizeof(oversized_record));
+    TEST_CHECK(sock_write(&send_socket, (char *)oversized_record,
+			  sizeof(oversized_record))
+	       == (int)sizeof(oversized_record));
+    TEST_CHECK(sock_readable(&receive_socket) == 1);
     TEST_CHECK(Sockbuf_read(&reader) == -1);
     TEST_CHECK(errno == EMSGSIZE);
     TEST_CHECK((reader.state & SOCKBUF_ERROR) != 0);
 
     Sockbuf_cleanup(&reader);
-    close(fds[0]);
-    close(fds[1]);
+    sock_close(&send_socket);
+    sock_close(&receive_socket);
     return 0;
 }
 
 static int test_eof_is_error(void)
 {
     static const unsigned char partial_record[] = { 0, 4, 'x' };
-    int fds[2];
+    sock_t send_socket;
     sock_t receive_socket;
     sockbuf_t reader;
 
-    TEST_CHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    TEST_CHECK(initialize_socket(&receive_socket, fds[1]) == 0);
+    TEST_CHECK(open_connected_sockets(&send_socket, &receive_socket) == 0);
     TEST_CHECK(Sockbuf_init(&reader, &receive_socket, 64,
 			   SOCKBUF_READ | SOCKBUF_FRAMED) == 0);
-    TEST_CHECK(write(fds[0], partial_record, sizeof(partial_record))
-	       == (ssize_t)sizeof(partial_record));
-    close(fds[0]);
+    TEST_CHECK(sock_write(&send_socket, (char *)partial_record,
+			  sizeof(partial_record)) == (int)sizeof(partial_record));
+    sock_close(&send_socket);
 
+    TEST_CHECK(sock_readable(&receive_socket) == 1);
     TEST_CHECK(Sockbuf_read(&reader) == -1);
     TEST_CHECK(errno == ECONNRESET);
     TEST_CHECK((reader.state & SOCKBUF_ERROR) != 0);
 
     Sockbuf_cleanup(&reader);
-    close(fds[1]);
+    sock_close(&receive_socket);
     return 0;
 }
 
@@ -323,7 +330,12 @@ static int test_tcp_socket_connection(void)
 
     option = 0;
     TEST_CHECK(getsockopt(accepted.fd, SOL_SOCKET, SO_TYPE,
-			  &option, &option_size) == 0);
+#ifdef _WINDOWS
+			  (char *)&option,
+#else
+			  &option,
+#endif
+			  &option_size) == 0);
     TEST_CHECK(option == SOCK_STREAM);
     TEST_CHECK(strcmp(sock_get_last_addr(&accepted), "127.0.0.1") == 0);
 
@@ -331,7 +343,12 @@ static int test_tcp_socket_connection(void)
     option = 0;
     option_size = sizeof(option);
     TEST_CHECK(getsockopt(accepted.fd, IPPROTO_TCP, TCP_NODELAY,
-			  &option, &option_size) == 0);
+#ifdef _WINDOWS
+			  (char *)&option,
+#else
+			  &option,
+#endif
+			  &option_size) == 0);
     TEST_CHECK(option != 0);
 
     sock_close(&accepted);
@@ -342,6 +359,7 @@ static int test_tcp_socket_connection(void)
 
 int main(void)
 {
+    TEST_CHECK(sock_startup() == 0);
     TEST_CHECK(test_invalid_initialization() == 0);
     TEST_CHECK(test_segmented_record() == 0);
     TEST_CHECK(test_coalesced_records() == 0);
@@ -352,5 +370,6 @@ int main(void)
     TEST_CHECK(test_invalid_frame_length_is_error() == 0);
     TEST_CHECK(test_eof_is_error() == 0);
     TEST_CHECK(test_tcp_socket_connection() == 0);
+    sock_cleanup();
     return 0;
 }

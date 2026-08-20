@@ -5284,7 +5284,7 @@ case "$target" in
 esac
 
 if test x$windows_target = xyes; then
-	W32_LIBS="-lmingw32 -lwsock32"
+	W32_LIBS="-lmingw32 -lws2_32"
 
 
 printf "%s\n" "#define _WINDOWS 1" >>confdefs.h
@@ -7335,6 +7335,10 @@ fi
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for socklen_t" >&5
 printf %s "checking for socklen_t... " >&6; }
+if test x$windows_target = xyes; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: provided by Winsock2" >&5
+printf "%s\n" "provided by Winsock2" >&6; }
+else
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -7395,6 +7399,8 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+fi
 
 
 
@@ -9535,5 +9541,3 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 printf "%s\n" "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
-
-

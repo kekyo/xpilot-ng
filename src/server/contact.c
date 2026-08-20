@@ -72,7 +72,13 @@ int Contact_init(void)
 	return false;
     }
 
-    install_input(Contact, contactSocket.fd, (void *) &contactSocket);
+    if (install_input(Contact, contactSocket.fd, (void *)&contactSocket)
+	== SOCK_IS_ERROR) {
+	error("Cannot register contact socket with scheduler");
+	Sockbuf_cleanup(&ibuf);
+	sock_close(&contactSocket);
+	return false;
+    }
     return true;
 }
 
@@ -258,7 +264,7 @@ static unsigned Version_to_magic(unsigned version)
     return MAGIC;
 }
 
-void Contact(int fd, void *arg)
+void Contact(socket_handle_t fd, void *arg)
 {
     int i, team, bytes, delay, qpos, status;
     char reply_to, ch;

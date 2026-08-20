@@ -92,7 +92,7 @@ static int Init_setup(void);
 static int Handle_listening(connection_t *connp);
 static int Handle_setup(connection_t *connp);
 static int Handle_login(connection_t *connp, char *errmsg, size_t errsize);
-static void Handle_input(int fd, void *arg);
+static void Handle_input(socket_handle_t fd, void *arg);
 
 static int Receive_keyboard(connection_t *connp);
 static int Receive_quit(connection_t *connp);
@@ -473,7 +473,7 @@ static void Create_client_socket(sock_t *sock, int *port)
 	if (status == SOCK_IS_ERROR) {
 	    error("Cannot create %s gameplay socket (%d)",
 		  Game_transport_name(gameTransport), sock->error.error);
-	    sock->fd = -1;
+	    sock->fd = SOCK_FD_INVALID;
 	    return;
         }
     }
@@ -487,7 +487,7 @@ static void Create_client_socket(sock_t *sock, int *port)
 		goto found;
 	}
 	error("Could not find a usable port in given port range");
-	sock->fd = -1;
+	sock->fd = SOCK_FD_INVALID;
 	return;
     }
  found:
@@ -508,7 +508,7 @@ static void Create_client_socket(sock_t *sock, int *port)
     return;
  error:
     sock_close(sock);
-    sock->fd = -1;
+    sock->fd = SOCK_FD_INVALID;
     return;
 }
 
@@ -628,12 +628,12 @@ int CheckAllowed(char *user, char *nick, char *addr, char *host)
  * client connection is still in the CONN_LISTENING state.
  */
 
-extern int min_fd;
-
 int Setup_connection(char *user, char *nick, char *dpy, int team,
 		     char *addr, char *host, unsigned version)
 {
     int i, free_conn_index = max_connections, my_port, transport_state;
+    int handler_slot;
+    int *recorded_handler_slot = NULL;
     sock_t sock;
     connection_t *connp;
 
@@ -694,7 +694,8 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
     if (!playback) {
 	Create_client_socket(&sock, &my_port);
 	if (rrecord) {
-	    *playback_ei++ = sock.fd - min_fd;
+	    recorded_handler_slot = playback_ei++;
+	    *recorded_handler_slot = SOCK_IS_ERROR;
 	    *playback_ei++ = my_port;
 	}
     } else {
@@ -703,10 +704,10 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
 	    sock.flags |= SOCK_FLAG_TCP | SOCK_FLAG_CONNECT;
 	else
 	    sock.flags |= SOCK_FLAG_UDP;
-	sock.fd = *playback_ei++;
+	sock.fd = (socket_handle_t)*playback_ei++;
 	my_port = *playback_ei++;
     }
-    if (sock.fd == -1)
+    if (sock.fd == SOCK_FD_INVALID)
  	return -1;
 
     transport_state = gameTransport == GAME_TRANSPORT_TCP
@@ -732,7 +733,8 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
     connp->version = version;
     Feature_init(connp);
     connp->start = main_loops;
-    connp->magic = /*randomMT() +*/ my_port + sock.fd + team + main_loops;
+    connp->magic = /*randomMT() +*/ my_port + team + main_loops
+	+ free_conn_index;
     connp->id = NO_ID;
     connp->timeout = LISTEN_TIMEOUT;
     connp->last_key_change = 0;
@@ -770,22 +772,29 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
 	return -1;
     }
 
-    install_input(Handle_input, sock.fd, connp);
+    handler_slot = install_input(Handle_input, sock.fd, connp);
+    if (handler_slot == SOCK_IS_ERROR) {
+	Destroy_connection(connp, "scheduler capacity");
+	return -1;
+    }
+    if (recorded_handler_slot != NULL)
+	*recorded_handler_slot = handler_slot;
 
     return my_port;
 }
 
 static int Accept_client_connection(connection_t *connp)
 {
-    int listener_fd = connp->w.sock.fd;
+    socket_handle_t listener_fd = connp->w.sock.fd;
     sock_t accepted;
     char *peer_addr;
 
     errno = 0;
     if (sock_accept(&connp->w.sock, &accepted) == SOCK_IS_ERROR) {
-	if (errno == EWOULDBLOCK || errno == EAGAIN)
+	if (sock_error_is_temporary(&accepted))
 	    return 0;
-	error("Cannot accept TCP gameplay connection (%d)", errno);
+	error("Cannot accept TCP gameplay connection (%d)",
+	      accepted.error.error);
 	return -1;
     }
 
@@ -811,20 +820,13 @@ static int Accept_client_connection(connection_t *connp)
 				  SERVER_SEND_SIZE + 256) == SOCK_IS_ERROR)
 	error("Cannot set send buffer size to %d", SERVER_SEND_SIZE + 256);
 
-    /* The recording scheduler identifies handlers by descriptor offset.
-     * Keep the listener descriptor so recorded and live handler indices stay
-     * identical after accept().  dup2() atomically closes the listener. */
-    if (accepted.fd != listener_fd) {
-	int accepted_fd = accepted.fd;
-
-	if (dup2(accepted_fd, listener_fd) == -1) {
-	    error("Cannot preserve TCP gameplay descriptor");
-	    sock_close(&accepted);
-	    return -1;
-	}
-	close(accepted_fd);
-	accepted.fd = listener_fd;
+    if (replace_input(listener_fd, accepted.fd) == SOCK_IS_ERROR) {
+	error("Cannot replace TCP gameplay listener in scheduler");
+	sock_close(&accepted);
+	return -1;
     }
+    if (sock_close(&connp->w.sock) == SOCK_IS_ERROR)
+	warn("Cannot close accepted TCP gameplay listener");
 
     connp->w.sock = accepted;
     connp->r.sock = accepted;
@@ -832,7 +834,6 @@ static int Accept_client_connection(connection_t *connp)
 	     showtime(), connp->my_port);
     return 1;
 }
-
 /*
  * Handle a connection that is in the listening state.
  */
@@ -984,7 +985,7 @@ static int Handle_setup(connection_t *connp)
     else if (connp->setup < S->setup_size) {
 	if (connp->c.len > 0) {
 	    /* If there is still unacked reliable data test for acks. */
-	    Handle_input(-1, connp);
+	    Handle_input(SOCK_FD_INVALID, connp);
 	    if (connp->state == CONN_FREE)
 		return -1;
 	}
@@ -1361,7 +1362,7 @@ static int bytes[256];
 static int bytes2;
 int recSpecial;
 
-static void Handle_input(int fd, void *arg)
+static void Handle_input(socket_handle_t fd, void *arg)
 {
     connection_t *connp = (connection_t *)arg;
     int type, result, (**receive_tbl)(connection_t *);

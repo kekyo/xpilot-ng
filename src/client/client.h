@@ -573,7 +573,7 @@ extern int	clientPortStart;	/* First network port for clients */
 extern int	clientPortEnd;		/* Last one (these are for firewalls) */
 extern int	baseWarningType;	/* Which type of base warning you prefer */
 extern int	maxCharsInNames;
-extern byte	lose_item;		/* flag and index to drop item */
+extern u_byte	lose_item;		/* flag and index to drop item */
 extern int	lose_item_active;	/* one of the lose keys is pressed */
 
 /* mapdata accessible to outside world */
