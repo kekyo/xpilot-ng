@@ -71,11 +71,10 @@
  * two-byte payload length.  UDP contact and discovery remain separate from
  * the selected gameplay transport.
  *
- * Because some data is considered crucial, like the names of
- * new players and so on, there also had to be a mechanism which
- * enabled reliable data transmission.  Here this is done by creating
- * a data stream which is piggybacked on top of the unreliable data
- * packets.  The client acknowledges this reliable data by sending
+ * Because some data is considered crucial, like the names of new players,
+ * the application-level reliable stream remains in both transport modes.
+ * It repairs UDP loss and preserves the existing packet semantics over TCP.
+ * The client acknowledges this reliable data by sending
  * its byte position in the reliable data stream.  So if the client gets
  * a new reliable data packet and it has not had this data before and
  * there is also no data packet missing inbetween, then it advances

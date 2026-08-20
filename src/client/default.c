@@ -625,7 +625,7 @@ xp_option_t default_options[] = {
 	&connectParam.contact_port,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Set the port number of the server.\n"
+	"Set the UDP contact port number of the server.\n"
 	"Almost all servers use the default port, which is the recommended\n"
 	"policy.  You can find out about which port is used by a server by\n"
 	"querying the XPilot Meta server.\n"),
@@ -638,7 +638,8 @@ xp_option_t default_options[] = {
 	&clientPortStart,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Use UDP ports clientPortStart - clientPortEnd (for firewalls).\n"
+	"Restrict contact and gameplay sockets to clientPortStart - "
+	"clientPortEnd (for firewalls).\n"
 	/* TODO: describe what value 0 means */),
 
     XP_INT_OPTION(
@@ -649,7 +650,8 @@ xp_option_t default_options[] = {
 	&clientPortEnd,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Use UDP ports clientPortStart - clientPortEnd (for firewalls).\n"),
+	"Restrict contact and gameplay sockets to clientPortStart - "
+	"clientPortEnd (for firewalls).\n"),
 
     XP_DOUBLE_OPTION(
 	"power",
@@ -921,7 +923,8 @@ xp_option_t default_options[] = {
 	NULL, 0,
 	Set_gameTransport, NULL, Get_gameTransport,
 	XP_OPTFLAG_KEEP,
-	"Gameplay transport to use when joining servers: udp or tcp.\n"),
+	"Gameplay transport to use when joining servers: udp or tcp.\n"
+	"This value must match the server; there is no automatic fallback.\n"),
 
     XP_BOOL_OPTION(
 	"outlineWorld",

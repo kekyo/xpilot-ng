@@ -24,6 +24,7 @@ xpilots \- XPilot multiplayer gravity war game server
 [\fB-password\fP \fIpassword\fP]
 [\fB-serverHost\fP \fIhostname\fP]
 [\fB-reportMeta\fP]
+[\fB-gameTransport\fP \fIudp|tcp\fP]
 [\fB-clientPortStart\fP \fIport-number\fP]
 [\fB-clientPortEnd\fP \fIport-number\fP]
 
@@ -128,7 +129,14 @@ directory (default is @XP_DATADIR@/maps/).
 
 .TP 15
 .B -contactPort or port \fIinteger\fP
-The server contact port number.
+The UDP server contact port number.
+
+.TP 15
+.B -gameTransport \fIudp|tcp\fP
+Selects the transport for player gameplay connections.  The default is UDP.
+Every connecting client must select the same value; neither endpoint falls
+back automatically.  Contact, LAN discovery, metaserver, and lobby traffic
+remain unchanged and continue to use their existing protocols.
 
 .TP 15
 .B -serverHost \fIstring\fP
@@ -204,25 +212,24 @@ is to set the password in the password file and protect the mapfile with
 
 .TP 15
 .B -clientPortStart \fIinteger\fP
-Use UDP ports clientPortStart - clientPortEnd (for firewalls)
+Restrict selected gameplay transport ports to clientPortStart - clientPortEnd
+(for firewalls).
 
 When the xpilots server is behind an IP masquerading or NAT firewall,
-the UDP ports used for client connections (as distinct from the contact
-port, which by default is 15345/udp) must be defined by the server, and
-the firewall must be configured to forward the defined port range to the
-xpilots server host.  Use this switch with \fB-clientPortEnd\fP to
-define the range.  For example, start the server with \fBxpilots
--clientPortStart 40000 -clientPortEnd 40009\fP and on the firewall
-redirect ports 40000/udp through 40009/udp to the host that xpilots is
-running on.  One port must be reserved for each client, so reserve the
-same number of ports as there are bases on the map.
+the gameplay ports used for client connections (as distinct from the UDP
+contact port, which defaults to 15345) must be defined by the server.  The
+firewall must forward the range as UDP for \fB-gameTransport udp\fP or TCP
+for \fB-gameTransport tcp\fP.  Use this switch with \fB-clientPortEnd\fP
+to define the range.  One port must be reserved for each client, so reserve
+the same number of ports as there are bases on the map.
 
 .TP 15
 .B -clientPortEnd \fIinteger\fP
-Use UDP ports clientPortStart - clientPortEnd (for firewalls)
+Restrict selected gameplay transport ports to clientPortStart - clientPortEnd
+(for firewalls).
 
-Used with \fB-clientPortStart\fR to reserve a range of UDP ports for
-client connections.
+Used with \fB-clientPortStart\fR to reserve a range of gameplay ports for
+client connections using the selected transport.
 
 .SS Map file options
 

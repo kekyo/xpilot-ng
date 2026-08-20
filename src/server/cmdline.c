@@ -601,7 +601,7 @@ static option_desc opts[] = {
 	&options.contactPort,
 	valInt,
 	tuner_none,
-	"The server contact port number.\n",
+	"The UDP server contact port number.\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
@@ -611,7 +611,9 @@ static option_desc opts[] = {
 	&options.gameTransport,
 	valString,
 	tuner_dummy,
-	"Gameplay transport for player connections: udp or tcp.\n",
+	"Gameplay transport for player connections: udp or tcp.\n"
+	"This value must match every client; there is no automatic fallback.\n"
+	"The contact and discovery protocols remain UDP.\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
@@ -3553,7 +3555,8 @@ static option_desc opts[] = {
 	&options.clientPortStart,
 	valInt,
 	tuner_dummy,
-	"Use UDP ports clientPortStart - clientPortEnd (for firewalls)\n",
+	"Restrict selected gameplay transport ports to clientPortStart - "
+	"clientPortEnd (for firewalls)\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
@@ -3563,7 +3566,8 @@ static option_desc opts[] = {
 	&options.clientPortEnd,
 	valInt,
 	tuner_dummy,
-	"Use UDP ports clientPortStart - clientPortEnd (for firewalls)\n",
+	"Restrict selected gameplay transport ports to clientPortStart - "
+	"clientPortEnd (for firewalls)\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
@@ -3629,7 +3633,8 @@ static option_desc opts[] = {
 	"in the file specified by recordFileName. If set to 2 at startup,\n"
 	"the server replays the recorded game. Joining players are\n"
 	"spectators who can watch the recorded game from anyone's\n"
-	"viewpoint. Can be set to 0 in the middle of a game to stop"
+	"viewpoint. Playback must use the same gameTransport value as the\n"
+	"recording. Can be set to 0 in the middle of a game to stop "
 	"recording.\n",
 	OPT_COMMAND | OPT_DEFAULTS
     },

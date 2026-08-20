@@ -67,7 +67,7 @@ The default value is: 65535.
 .HP
 \fB\-port\fR <value>
 .IP
-Set the port number of the server.
+Set the UDP contact port number of the server.
 Almost all servers use the default port, which is the recommended
 policy.  You can find out about which port is used by a server by
 querying the XPilot Meta server.
@@ -75,12 +75,14 @@ The default value is: 15345.
 .HP
 \fB\-clientPortStart\fR <value>
 .IP
-Use UDP ports clientPortStart \- clientPortEnd (for firewalls).
+Restrict contact and gameplay sockets to clientPortStart \- clientPortEnd
+(for firewalls).
 The default value is: 0.
 .HP
 \fB\-clientPortEnd\fR <value>
 .IP
-Use UDP ports clientPortStart \- clientPortEnd (for firewalls).
+Restrict contact and gameplay sockets to clientPortStart \- clientPortEnd
+(for firewalls).
 The default value is: 0.
 .HP
 \fB\-power\fR <value>
@@ -237,10 +239,11 @@ Allows drawing polygon bitmaps specified by the (new\-style) map.
 Be warned that this needs a reasonably fast graphics system.
 The default value is: yes.
 .HP
-\fB\-protocolVersion\fR <value>
+\fB\-gameTransport\fR <value>
 .IP
-Which protocol version to prefer when joining servers.
-There is no default value for this option.
+Gameplay transport to use when joining servers: udp or tcp.
+This value must match the server; there is no automatic fallback.
+The default value is: udp.
 .HP
 \fB\-outlineWorld\fR <value>
 .IP
