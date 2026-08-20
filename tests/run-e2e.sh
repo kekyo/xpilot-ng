@@ -264,6 +264,30 @@ find_game_window()
     return 1
 }
 
+quit_game_client()
+{
+    quit_case=$1
+    quit_deadline=$(($(date +%s) + 20))
+    quit_attempted=false
+    while kill -0 "$client_pid" 2>/dev/null \
+	&& test "$(date +%s)" -lt "$quit_deadline"; do
+	if find_game_window; then
+	    quit_attempted=true
+	    # Keep Escape and its confirmation far enough apart for SDL to
+	    # process the confirmation state, then retry if X11 drops an event.
+	    xdotool key --clearmodifiers --delay 150 \
+		--window "$window_id" Escape y >/dev/null 2>&1 \
+		|| true
+	fi
+	sleep 0.25
+    done
+    $quit_attempted \
+	|| fail "could not request a graceful client quit for $quit_case"
+    if kill -0 "$client_pid" 2>/dev/null; then
+	fail "$quit_case client did not stop after graceful quit requests"
+    fi
+}
+
 process_window_absent()
 {
     absent_pid=$1
@@ -472,15 +496,7 @@ run_gameplay_case()
 	capture_window game
     fi
 
-    # xdotool may report BadWindow after the final key event because SDL tears
-    # down the window before XSync completes.  That is a successful quit, not
-    # an input failure; only reject the command while the client is still live.
-    if ! xdotool key --clearmodifiers --window "$window_id" Escape y \
-	>/dev/null 2>&1 && kill -0 "$client_pid" 2>/dev/null; then
-	fail "could not request a graceful client quit for $game_case"
-    fi
-    wait_until "$game_case graceful client shutdown" 15 process_stopped \
-	"$client_pid"
+    quit_game_client "$game_case"
     finished_client_pid=$client_pid
     set +e
     wait "$client_pid"

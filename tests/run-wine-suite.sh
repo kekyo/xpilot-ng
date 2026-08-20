@@ -259,6 +259,28 @@ find_game_window()
     test -n "$window_id"
 }
 
+quit_game_client()
+{
+    quit_case=$1
+    quit_deadline=$(($(date +%s) + 30))
+    quit_attempted=false
+    while kill -0 "$client_pid" 2>/dev/null \
+        && test "$(date +%s)" -lt "$quit_deadline"; do
+        if find_game_window; then
+            quit_attempted=true
+            xdotool key --clearmodifiers --delay 150 \
+                --window "$window_id" Escape y >/dev/null 2>&1 \
+                || true
+        fi
+        sleep 0.25
+    done
+    $quit_attempted \
+        || fail "could not request a graceful $quit_case client quit"
+    if kill -0 "$client_pid" 2>/dev/null; then
+        fail "$quit_case client did not stop after graceful quit requests"
+    fi
+}
+
 client_departed()
 {
     grep -q "Goodbye .*$client_name" "$server_log" 2>/dev/null
@@ -422,11 +444,7 @@ run_gameplay_case()
         grep -q '^Font text renderers ready: game=renderer map=renderer' \
             "$client_log"
 
-    xdotool key --clearmodifiers --window "$window_id" Escape y \
-        >/dev/null 2>&1 \
-        || fail "could not request a graceful $transport_case client quit"
-    wait_until "$transport_case client shutdown" 20 \
-        process_stopped "$client_pid"
+    quit_game_client "$transport_case"
     set +e
     wait "$client_pid"
     client_status=$?
