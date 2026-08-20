@@ -24,6 +24,7 @@ xpilots \- XPilot multiplayer gravity war game server
 [\fB-password\fP \fIpassword\fP]
 [\fB-serverHost\fP \fIhostname\fP]
 [\fB-reportMeta\fP]
+[\fB-contactTransport\fP \fIudp|tcp\fP]
 [\fB-gameTransport\fP \fIudp|tcp\fP]
 [\fB-clientPortStart\fP \fIport-number\fP]
 [\fB-clientPortEnd\fP \fIport-number\fP]
@@ -129,14 +130,20 @@ directory (default is @XP_DATADIR@/maps/).
 
 .TP 15
 .B -contactPort or port \fIinteger\fP
-The UDP server contact port number.
+The numeric server contact port, using the selected contact transport.
+
+.TP 15
+.B -contactTransport \fIudp|tcp\fP
+Selects the transport for direct contact and pre-game lobby requests.  The
+default is UDP.  Every direct client must select the same value; neither
+endpoint falls back automatically.  TCP contact accepts explicit-address and
+metaserver-selected connections but cannot provide LAN broadcast discovery.
 
 .TP 15
 .B -gameTransport \fIudp|tcp\fP
-Selects the transport for player gameplay connections.  The default is UDP.
-Every connecting client must select the same value; neither endpoint falls
-back automatically.  Contact, LAN discovery, metaserver, and lobby traffic
-remain unchanged and continue to use their existing protocols.
+Selects the transport for player gameplay connections independently from the
+contact transport.  The default is UDP.  Every connecting client must select
+the same value; neither endpoint falls back automatically.
 
 .TP 15
 .B -serverHost \fIstring\fP
@@ -155,6 +162,11 @@ domain name) and report that to the meta servers.
 .TP 15
 .B -/+reportToMetaServer or reportMeta
 Keep the meta server informed about our game?
+
+Advertisements include the selected contact and gameplay transports.  Current
+clients apply these values automatically when a listed server is selected;
+legacy advertisements without transport metadata are treated as UDP for both.
+The metaserver query and reporting protocols themselves are unchanged.
 
 The default for xpilots is \fB-reportMeta\fP.  Specify \fB+reportMeta\fB
 to suppress reporting the xpilots server to the xpilot meta server so
@@ -216,12 +228,13 @@ Restrict selected gameplay transport ports to clientPortStart - clientPortEnd
 (for firewalls).
 
 When the xpilots server is behind an IP masquerading or NAT firewall,
-the gameplay ports used for client connections (as distinct from the UDP
-contact port, which defaults to 15345) must be defined by the server.  The
-firewall must forward the range as UDP for \fB-gameTransport udp\fP or TCP
-for \fB-gameTransport tcp\fP.  Use this switch with \fB-clientPortEnd\fP
-to define the range.  One port must be reserved for each client, so reserve
-the same number of ports as there are bases on the map.
+the gameplay ports used for client connections (as distinct from the
+numeric contact port, which defaults to 15345) must be defined by the server.
+The firewall must forward the range as UDP for \fB-gameTransport udp\fP or
+TCP for \fB-gameTransport tcp\fP, and forward the contact port according to
+\fB-contactTransport\fP.  Use this switch with \fB-clientPortEnd\fP to
+define the range.  One port must be reserved for each client, so reserve the
+same number of ports as there are bases on the map.
 
 .TP 15
 .B -clientPortEnd \fIinteger\fP

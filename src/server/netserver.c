@@ -68,8 +68,8 @@
  *
  * Gameplay communication can use either UDP datagrams or TCP streams.  TCP
  * keeps each former datagram payload as a logical packet prefixed with a
- * two-byte payload length.  UDP contact and discovery remain separate from
- * the selected gameplay transport.
+ * two-byte payload length.  Contact/lobby transport is selected separately;
+ * LAN broadcast discovery remains UDP-only.
  *
  * Because some data is considered crucial, like the names of new players,
  * the application-level reliable stream remains in both transport modes.

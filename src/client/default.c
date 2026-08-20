@@ -941,7 +941,8 @@ xp_option_t default_options[] = {
 	Set_contactTransport, NULL, Get_contactTransport,
 	XP_OPTFLAG_KEEP,
 	"Contact and lobby transport for direct server connections: udp or tcp.\n"
-	"This value must match the server; there is no automatic fallback.\n"),
+	"Direct connections must match the server; metaserver selections apply "
+	"the advertised value.\n"),
 
     XP_STRING_OPTION(
 	"gameTransport",
@@ -950,7 +951,8 @@ xp_option_t default_options[] = {
 	Set_gameTransport, NULL, Get_gameTransport,
 	XP_OPTFLAG_KEEP,
 	"Gameplay transport to use when joining servers: udp or tcp.\n"
-	"This value must match the server; there is no automatic fallback.\n"),
+	"Direct connections must match the server; metaserver selections apply "
+	"the advertised value.\n"),
 
     XP_BOOL_OPTION(
 	"outlineWorld",

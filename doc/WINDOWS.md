@@ -48,10 +48,12 @@ build/windows/x86_64/package/
 
 The packages contain `xpilot-ng-server.exe`, `xpilot-ng-sdl.exe`, the game
 data, and the license.  The Wine suite verifies the PE architecture, runs the
-portable networking and SDL dependency tests, and starts the packaged server
-and SDL client for both UDP and TCP gameplay connections.  A software OpenGL
-renderer is selected so the graphical checks do not depend on host GPU
-drivers.
+portable networking and SDL dependency tests, validates a TCP-contact server's
+metaserver advertisement, and starts the packaged server and SDL client for
+all four UDP/TCP contact and gameplay combinations.  Every session must join,
+create an OpenGL context, initialize its text renderers, and quit cleanly.  A
+software OpenGL renderer is selected so the graphical checks do not depend on
+host GPU drivers.
 
 The Wine prefixes are persistent under the selected build root.  Build and
 test output never needs to be written into the source tree.

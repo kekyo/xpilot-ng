@@ -241,14 +241,20 @@ Block map topology.
 .HP
 \fB\-contactPort\fR or port <integer>
 .IP
-The UDP server contact port number.
+The server contact port number.
+[ Flags: command, defaults ]
+.HP
+\fB\-contactTransport\fR <string>
+.IP
+Contact and lobby transport for direct connections: udp or tcp.
+This value must match the client; there is no automatic fallback.
+LAN broadcast discovery is available only in udp mode.
 [ Flags: command, defaults ]
 .HP
 \fB\-gameTransport\fR <string>
 .IP
 Gameplay transport for player connections: udp or tcp.
 This value must match every client; there is no automatic fallback.
-The contact and discovery protocols remain UDP.
 [ Flags: command, defaults ]
 .HP
 \fB\-serverHost\fR <string>
@@ -412,6 +418,7 @@ when the player bounces against a wall.
 \-/+reportToMetaServer or reportMeta
 .IP
 Keep the meta server informed about our game?
+Advertisements include the selected contact and gameplay transports.
 [ Flags: command, defaults ]
 .HP
 \fB\-metaUpdateMaxSize\fR <integer>

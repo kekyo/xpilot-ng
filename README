@@ -16,19 +16,32 @@ For further reading, see the manuals in the doc/man directory.
 
 
 
-GAMEPLAY TRANSPORT
+NETWORK TRANSPORT
 
-Gameplay connections use UDP by default.  To use TCP, start both endpoints
-with `-gameTransport tcp`, for example:
+Contact/lobby and gameplay connections use UDP by default and can be selected
+independently.  To use TCP for both, start both endpoints with matching
+options, for example:
 
-        xpilot-ng-server -gameTransport tcp [other options]
-        xpilot-ng-sdl -gameTransport tcp -join server.example
+        xpilot-ng-server -contactTransport tcp -gameTransport tcp [options]
+        xpilot-ng-sdl -contactTransport tcp -gameTransport tcp \
+            -join server.example
 
-The client and server must select the same value (`udp` or `tcp`); there is no
-automatic fallback.  The `-port` option continues to identify the UDP contact
-port.  LAN discovery, metaserver, and lobby paths are unchanged.  The
-`clientPortStart` and `clientPortEnd` range applies to the selected gameplay
-protocol on the server and to the client's contact and gameplay sockets.
+For direct connections, the client and server must select the same value
+(`udp` or `tcp`) for each transport; there is no automatic fallback.  The
+`-port` option identifies the numeric contact port using the selected contact
+transport.  TCP contact connections require an explicit server address or a
+metaserver entry because LAN broadcast discovery is available only with UDP.
+
+Metaserver advertisements include both transport selections.  The SDL and X11
+clients apply the advertised values automatically when a server is selected;
+legacy advertisements without transport metadata are treated as UDP contact
+and UDP gameplay servers.  Metaserver query and reporting traffic continues to
+use its existing protocols.
+
+The server's `clientPortStart` and `clientPortEnd` range applies to the
+selected gameplay protocol.  On clients it also applies to gameplay and the
+traditional UDP contact socket; TCP contact connections use an ephemeral
+local port.
 
 TCP gameplay records contain a two-byte network-order payload length followed
 by an unchanged XPilot packet payload.  Server recordings must be replayed

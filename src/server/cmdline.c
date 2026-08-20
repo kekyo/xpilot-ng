@@ -612,7 +612,8 @@ static option_desc opts[] = {
 	valString,
 	tuner_dummy,
 	"Contact and lobby transport for direct connections: udp or tcp.\n"
-	"This value must match the client; there is no automatic fallback.\n",
+	"This value must match the client; there is no automatic fallback.\n"
+	"LAN broadcast discovery is available only in udp mode.\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
@@ -973,7 +974,8 @@ static option_desc opts[] = {
 	&options.reportToMetaServer,
 	valBool,
 	tuner_none,
-	"Keep the meta server informed about our game?\n",
+	"Keep the meta server informed about our game?\n"
+	"Advertisements include the selected contact and gameplay transports.\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
