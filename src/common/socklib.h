@@ -123,6 +123,19 @@ int sock_open_tcp_listener(sock_t *sock, char *dotaddr, int port, int backlog);
  */
 int sock_accept(sock_t *listener, sock_t *accepted);
 int sock_open_tcp_connected_non_blocking(sock_t *sock, char *host, int port);
+/**
+ * Connect an open TCP socket without exceeding a fixed deadline.
+ *
+ * The socket remains non-blocking after a successful connection.
+ *
+ * @param sock Open, optionally bound TCP socket.
+ * @param host Numeric IPv4 address or hostname.
+ * @param port Remote TCP port.
+ * @param timeout_seconds Positive connection timeout in seconds.
+ * @return SOCK_IS_OK on success or SOCK_IS_ERROR on failure.
+ */
+int sock_connect_with_timeout(sock_t *sock, char *host, int port,
+                              int timeout_seconds);
 int sock_open_udp(sock_t *sock, char *dotaddr, int port);
 int sock_connect(sock_t *sock, char *host, int port);
 int sock_get_last_port(sock_t *sock);

@@ -504,6 +504,23 @@ static bool Set_dirPrediction(xp_option_t *opt, bool val)
 }
 
 game_transport_t gameTransport = GAME_TRANSPORT_UDP;
+game_transport_t contactTransport = GAME_TRANSPORT_UDP;
+
+static bool Set_contactTransport(xp_option_t *opt, const char *value)
+{
+    UNUSED_PARAM(opt);
+    if (!Game_transport_parse(value, &contactTransport)) {
+	warn("Invalid contactTransport '%s'; expected 'udp' or 'tcp'", value);
+	return false;
+    }
+    return true;
+}
+
+static const char *Get_contactTransport(xp_option_t *opt)
+{
+    UNUSED_PARAM(opt);
+    return Game_transport_name(contactTransport);
+}
 
 static bool Set_gameTransport(xp_option_t *opt, const char *value)
 {
@@ -625,7 +642,7 @@ xp_option_t default_options[] = {
 	&connectParam.contact_port,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Set the UDP contact port number of the server.\n"
+	"Set the contact port number of the server.\n"
 	"Almost all servers use the default port, which is the recommended\n"
 	"policy.  You can find out about which port is used by a server by\n"
 	"querying the XPilot Meta server.\n"),
@@ -916,6 +933,15 @@ xp_option_t default_options[] = {
 	XP_OPTFLAG_CONFIG_DEFAULT,
 	"Allows drawing polygon bitmaps specified by the (new-style) map.\n"
 	"Be warned that this needs a reasonably fast graphics system.\n"),
+
+    XP_STRING_OPTION(
+	"contactTransport",
+	"udp",
+	NULL, 0,
+	Set_contactTransport, NULL, Get_contactTransport,
+	XP_OPTFLAG_KEEP,
+	"Contact and lobby transport for direct server connections: udp or tcp.\n"
+	"This value must match the server; there is no automatic fallback.\n"),
 
     XP_STRING_OPTION(
 	"gameTransport",

@@ -48,8 +48,46 @@ static int test_nonblocking_accept_and_stream_io(void)
     return 0;
 }
 
+static int test_tcp_connect_with_timeout(void)
+{
+    sock_t listener;
+    sock_t accepted;
+    sock_t client;
+    int port;
+
+    TEST_CHECK(sock_startup() == SOCK_IS_OK);
+    TEST_CHECK(sock_open_tcp_listener(&listener, "127.0.0.1", 0, 1)
+	       == SOCK_IS_OK);
+    port = sock_get_port(&listener);
+    TEST_CHECK(port > 0);
+    TEST_CHECK(sock_open_tcp_bound(&client, "127.0.0.1", 0) == SOCK_IS_OK);
+    TEST_CHECK(sock_connect_with_timeout(&client, "127.0.0.1", port, 2)
+	       == SOCK_IS_OK);
+    TEST_CHECK(sock_accept(&listener, &accepted) == SOCK_IS_OK);
+    TEST_CHECK(sock_close(&accepted) == SOCK_IS_OK);
+    TEST_CHECK(sock_close(&client) == SOCK_IS_OK);
+    TEST_CHECK(sock_close(&listener) == SOCK_IS_OK);
+
+    TEST_CHECK(sock_open_tcp_bound(&client, "127.0.0.1", 0) == SOCK_IS_OK);
+    errno = 0;
+    TEST_CHECK(sock_connect_with_timeout(&client, "127.0.0.1", port, 2)
+	       == SOCK_IS_ERROR);
+    TEST_CHECK(errno == ECONNREFUSED || errno == ETIMEDOUT);
+    TEST_CHECK(sock_close(&client) == SOCK_IS_OK);
+
+    TEST_CHECK(sock_open_tcp_bound(&client, "127.0.0.1", 0) == SOCK_IS_OK);
+    errno = 0;
+    TEST_CHECK(sock_connect_with_timeout(&client, "127.0.0.1", port, 0)
+	       == SOCK_IS_ERROR);
+    TEST_CHECK(errno == EINVAL);
+    TEST_CHECK(sock_close(&client) == SOCK_IS_OK);
+    sock_cleanup();
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(test_nonblocking_accept_and_stream_io() == 0);
+    TEST_CHECK(test_tcp_connect_with_timeout() == 0);
     return 0;
 }

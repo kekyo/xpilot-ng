@@ -512,6 +512,102 @@ int sock_open_tcp_connected_non_blocking(sock_t *sock, char *host, int port)
     return SOCK_IS_OK;
 }
 
+static int sock_set_connect_result_error(sock_t *sock, int error_code,
+                                         int line)
+{
+#ifdef _WINDOWS
+    errno = sock_windows_error_to_errno(error_code);
+    sock->error.error = error_code;
+    sock->error.call = SOCK_CALL_CONNECT;
+    sock->error.line = line;
+    return SOCK_IS_ERROR;
+#else
+    return sock_set_error(sock, error_code, SOCK_CALL_CONNECT, line);
+#endif
+}
+
+int sock_connect_with_timeout(sock_t *sock, char *host, int port,
+                              int timeout_seconds)
+{
+    struct sockaddr_in destination;
+    struct hostent *host_entry;
+    struct timeval timeout;
+    fd_set write_fds;
+    fd_set error_fds;
+    int socket_error = 0;
+    socklen_t error_size = sizeof(socket_error);
+    int status;
+
+    if (sock == NULL || sock->fd == SOCK_FD_INVALID || host == NULL
+        || port <= 0 || port > 65535 || timeout_seconds <= 0) {
+        if (sock != NULL)
+            return sock_set_error(sock, EINVAL, SOCK_CALL_CONNECT, __LINE__);
+        errno = EINVAL;
+        return SOCK_IS_ERROR;
+    }
+    if (sock_set_non_blocking(sock, 1) == SOCK_IS_ERROR)
+        return SOCK_IS_ERROR;
+
+    memset(&destination, 0, sizeof(destination));
+    destination.sin_family = AF_INET;
+    destination.sin_port = htons((unsigned short)port);
+    destination.sin_addr.s_addr = inet_addr(host);
+    if ((destination.sin_addr.s_addr & 0xFFFFFFFF) == 0xFFFFFFFF) {
+        errno = 0;
+        host_entry = sock_get_host_by_name(host);
+        if (host_entry == NULL)
+            return sock_set_error(sock, errno != 0 ? errno : EHOSTUNREACH,
+                                  SOCK_CALL_GETHOSTBYNAME, __LINE__);
+        destination.sin_addr.s_addr =
+            ((struct in_addr *)host_entry->h_addr_list[0])->s_addr;
+    }
+
+    status = connect(sock->fd, (struct sockaddr *)&destination,
+                     sizeof(destination));
+    if (status == SOCK_IS_ERROR) {
+        sock_set_native_error(sock, SOCK_CALL_CONNECT, __LINE__);
+        if (!sock_error_is_temporary(sock))
+            return SOCK_IS_ERROR;
+
+        FD_ZERO(&write_fds);
+        FD_ZERO(&error_fds);
+        FD_SET(sock->fd, &write_fds);
+        FD_SET(sock->fd, &error_fds);
+        timeout.tv_sec = timeout_seconds;
+        timeout.tv_usec = 0;
+#ifdef _WINDOWS
+        status = select(0, NULL, &write_fds, &error_fds, &timeout);
+#else
+        status = select(sock->fd + 1, NULL, &write_fds, &error_fds,
+                        &timeout);
+#endif
+        if (status == 0)
+            return sock_set_error(sock, ETIMEDOUT, SOCK_CALL_CONNECT,
+                                  __LINE__);
+        if (status == SOCK_IS_ERROR)
+            return sock_set_native_error(sock, SOCK_CALL_SELECT, __LINE__);
+
+        if (getsockopt(sock->fd, SOL_SOCKET, SO_ERROR,
+#ifdef _WINDOWS
+                       (char *)&socket_error,
+#else
+                       (void *)&socket_error,
+#endif
+                       &error_size) == SOCK_IS_ERROR)
+            return sock_set_native_error(sock, SOCK_CALL_GETSOCKOPT,
+                                         __LINE__);
+        if (socket_error != 0)
+            return sock_set_connect_result_error(sock, socket_error,
+                                                 __LINE__);
+    }
+
+    if (sock_alloc_lastaddr(sock) == SOCK_IS_ERROR)
+        return SOCK_IS_ERROR;
+    memcpy(sock->lastaddr, &destination, sizeof(destination));
+    sock_flags_add(sock, SOCK_FLAG_CONNECT);
+    return SOCK_IS_OK;
+}
+
 int sock_open_udp(sock_t *sock, char *dotaddr, int port)
 {
     struct sockaddr_in	addr;

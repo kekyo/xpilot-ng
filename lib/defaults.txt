@@ -40,6 +40,10 @@ gameSpeed:		12.5
 # to use length-framed TCP gameplay sessions instead.
 gameTransport:		udp
 
+# Server discovery and the pre-game lobby use UDP by default.  Direct
+# connections can select length-framed TCP on both server and client.
+contactTransport:	udp
+
 # Define a group of settings which make the world bouncy for players.
 define: SoftWalls \override: \multiline: EndSoftWalls
 EndSoftWalls

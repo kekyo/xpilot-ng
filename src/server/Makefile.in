@@ -105,7 +105,7 @@ PROGRAMS = $(bin_PROGRAMS)
 am_xpilot_ng_server_OBJECTS = alliance.$(OBJEXT) asteroid.$(OBJEXT) \
 	cannon.$(OBJEXT) cell.$(OBJEXT) cmdline.$(OBJEXT) \
 	collision.$(OBJEXT) command.$(OBJEXT) contact.$(OBJEXT) \
-	event.$(OBJEXT) fileparser.$(OBJEXT) frame.$(OBJEXT) \
+	contact_stream.$(OBJEXT) event.$(OBJEXT) fileparser.$(OBJEXT) frame.$(OBJEXT) \
 	gravity.$(OBJEXT) id.$(OBJEXT) item.$(OBJEXT) laser.$(OBJEXT) \
 	map.$(OBJEXT) metaserver.$(OBJEXT) modifiers.$(OBJEXT) \
 	netserver.$(OBJEXT) object.$(OBJEXT) objpos.$(OBJEXT) \
@@ -141,7 +141,7 @@ am__depfiles_remade = ./$(DEPDIR)/alliance.Po ./$(DEPDIR)/asteroid.Po \
 	./$(DEPDIR)/cannon.Po ./$(DEPDIR)/cell.Po \
 	./$(DEPDIR)/cmdline.Po ./$(DEPDIR)/collision.Po \
 	./$(DEPDIR)/command.Po ./$(DEPDIR)/contact.Po \
-	./$(DEPDIR)/event.Po ./$(DEPDIR)/fileparser.Po \
+	./$(DEPDIR)/contact_stream.Po ./$(DEPDIR)/event.Po ./$(DEPDIR)/fileparser.Po \
 	./$(DEPDIR)/frame.Po ./$(DEPDIR)/gravity.Po ./$(DEPDIR)/id.Po \
 	./$(DEPDIR)/item.Po ./$(DEPDIR)/laser.Po ./$(DEPDIR)/map.Po \
 	./$(DEPDIR)/metaserver.Po ./$(DEPDIR)/modifiers.Po \
@@ -334,7 +334,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 xpilot_ng_server_SOURCES = \
 	alliance.c asteroid.c asteroid.h \
 	cannon.c cannon.h cell.c cmdline.c collision.c \
-	command.c connection.h contact.c \
+	command.c connection.h contact.c contact_stream.c contact_stream.h \
 	defaults.h \
 	event.c \
 	fileparser.c frame.c gravity.c \
@@ -449,6 +449,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/collision.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/command.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/contact.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/contact_stream.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/event.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fileparser.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/frame.Po@am__quote@ # am--include-marker
@@ -646,6 +647,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/collision.Po
 	-rm -f ./$(DEPDIR)/command.Po
 	-rm -f ./$(DEPDIR)/contact.Po
+	-rm -f ./$(DEPDIR)/contact_stream.Po
 	-rm -f ./$(DEPDIR)/event.Po
 	-rm -f ./$(DEPDIR)/fileparser.Po
 	-rm -f ./$(DEPDIR)/frame.Po
@@ -741,6 +743,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/collision.Po
 	-rm -f ./$(DEPDIR)/command.Po
 	-rm -f ./$(DEPDIR)/contact.Po
+	-rm -f ./$(DEPDIR)/contact_stream.Po
 	-rm -f ./$(DEPDIR)/event.Po
 	-rm -f ./$(DEPDIR)/fileparser.Po
 	-rm -f ./$(DEPDIR)/frame.Po

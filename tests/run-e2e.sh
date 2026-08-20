@@ -348,6 +348,7 @@ run_gameplay_case()
     game_case=$1
     game_transport=$2
     game_capture=$3
+    contact_transport=$4
     port=$(reserve_contact_port)
     game_recording="$runtime_dir/server-$game_case.xpr"
     game_server_log="$runtime_dir/server-$game_case.log"
@@ -355,6 +356,12 @@ run_gameplay_case()
     case "$game_case" in
     tcp)
 	game_client_name=SDL3TCP
+	;;
+    tcp-contact)
+	game_client_name=SDL3TCPContact
+	;;
+    tcp-contact-udp-game)
+	game_client_name=SDL3TCPUDP
 	;;
     udp-default)
 	game_client_name=SDL3UDPDefault
@@ -364,25 +371,38 @@ run_gameplay_case()
 	;;
     esac
 
-    if test "$game_transport" = default; then
+    if test "$game_transport" = default \
+	&& test "$contact_transport" = default; then
 	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -recordFileName "$game_recording" -recordMode 1 \
+	    >"$game_server_log" 2>&1 &
+    elif test "$contact_transport" = default; then
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -gameTransport "$game_transport" \
 	    -recordFileName "$game_recording" -recordMode 1 \
 	    >"$game_server_log" 2>&1 &
     else
 	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
 	    -gameTransport "$game_transport" \
+	    -contactTransport "$contact_transport" \
 	    -recordFileName "$game_recording" -recordMode 1 \
 	    >"$game_server_log" 2>&1 &
     fi
     server_pid=$!
     wait_until "$game_case server readiness" 20 server_ready
 
-    if test "$game_transport" = default; then
+    if test "$game_transport" = default \
+	&& test "$contact_transport" = default; then
 	"$client" -geometry 800x600 -join -port "$port" \
 	    -name "$game_client_name" 127.0.0.1 >"$game_client_log" 2>&1 &
+    elif test "$contact_transport" = default; then
+	"$client" -geometry 800x600 -join -port "$port" \
+	    -name "$game_client_name" -gameTransport "$game_transport" \
+	    127.0.0.1 >"$game_client_log" 2>&1 &
     else
 	"$client" -geometry 800x600 -join -port "$port" \
 	    -name "$game_client_name" -gameTransport "$game_transport" \
+	    -contactTransport "$contact_transport" \
 	    127.0.0.1 >"$game_client_log" 2>&1 &
     fi
     client_pid=$!
@@ -592,9 +612,11 @@ fi
 wait_until "metaserver window teardown" 5 process_window_absent \
     "$finished_meta_pid"
 
-run_gameplay_case tcp tcp no
-run_gameplay_case udp-default default yes
-run_gameplay_case udp-explicit udp no
+run_gameplay_case tcp tcp no default
+run_gameplay_case udp-default default yes default
+run_gameplay_case udp-explicit udp no default
+run_gameplay_case tcp-contact tcp no tcp
+run_gameplay_case tcp-contact-udp-game udp no tcp
 run_transport_mismatch udp tcp
 run_transport_mismatch tcp udp
 

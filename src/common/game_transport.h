@@ -34,6 +34,9 @@ typedef enum {
 /** Gameplay transport selected by the current client or server process. */
 extern game_transport_t gameTransport;
 
+/** Contact and lobby transport selected by the current process. */
+extern game_transport_t contactTransport;
+
 /**
  * Parse a gameplay transport option value.
  *
