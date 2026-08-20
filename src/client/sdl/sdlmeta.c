@@ -42,7 +42,7 @@
 #define ROW_BG2 0x000070ff
 #define HEADER_FG 0xffff00ff
 #define HEADER_BG 0xff0000ff
-#define STATUS_ROWS 7
+#define STATUS_ROWS 8
 #define STATUS_COLS 4
 #define STATUS_FIELD_FG 0xffff00ff
 #define STATUS_FIELD_BG 0xff0000ff
@@ -410,7 +410,7 @@ static void SetBounds_StatusWidget(GLWidget *widget, SDL_Rect *wb)
     }
 }
 
-static void add_status_entry(const char *name, char *value, GLWidget *parent)
+static void add_status_entry(const char *name, const char *value, GLWidget *parent)
 {
     GLWidget *name_label, *value_label;
     StatusWidget *info;
@@ -461,6 +461,10 @@ static GLWidget *Init_StatusWidget(server_info_t *sip)
     add_status_entry(" Server", sip->hostname, tmp);
     add_status_entry(" Address", info->address_str, tmp);
     add_status_entry(" Version", sip->version, tmp);
+    add_status_entry(" Contact", Game_transport_name(sip->contact_transport),
+		     tmp);
+    add_status_entry(" Gameplay", Game_transport_name(sip->game_transport),
+		     tmp);
     add_status_entry(" Map name", sip->mapname, tmp);
     add_status_entry(" Map size", sip->mapsize, tmp);
     add_status_entry(" Map author", sip->author, tmp);
@@ -1012,6 +1016,8 @@ static GLWidget *Init_MetaWidget(SdlRenderer *sdl_renderer,
 static bool join_server(Connect_param_t *conpar, server_info_t *sip)
 {
     char *server_addr_ptr = conpar->server_addr;
+
+    Meta_select_server_transports(sip);
     strlcpy(conpar->server_name, sip->hostname,
             sizeof(conpar->server_name));
     strlcpy(conpar->server_addr, sip->ip_str, sizeof(conpar->server_addr));

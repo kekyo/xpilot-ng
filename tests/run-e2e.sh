@@ -46,6 +46,7 @@ done
 runtime_dir=$(mktemp -d "${TMPDIR:-/tmp}/xpilot-sdl3-e2e.XXXXXX")
 meta_pid=
 meta_fixture_pid=
+meta_report_fixture_pid=
 server_pid=
 client_pid=
 window_id=
@@ -75,7 +76,7 @@ cleanup()
 {
     cleanup_deadline=$(($(date +%s) + 5))
     for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
-        "$server_pid"; do
+        "$meta_report_fixture_pid" "$server_pid"; do
         if test -n "$process_id" && kill -0 "$process_id" 2>/dev/null; then
             kill -TERM "$process_id" 2>/dev/null || true
         fi
@@ -83,7 +84,7 @@ cleanup()
     while :; do
         cleanup_running=0
         for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
-            "$server_pid"; do
+            "$meta_report_fixture_pid" "$server_pid"; do
             if test -n "$process_id" \
                 && kill -0 "$process_id" 2>/dev/null; then
                 cleanup_running=1
@@ -94,7 +95,8 @@ cleanup()
         fi
         if test "$(date +%s)" -ge "$cleanup_deadline"; then
             for process_id in "$client_pid" "$meta_pid" \
-                "$meta_fixture_pid" "$server_pid"; do
+                "$meta_fixture_pid" "$meta_report_fixture_pid" \
+                "$server_pid"; do
                 if test -n "$process_id" \
                     && kill -0 "$process_id" 2>/dev/null; then
                     kill -KILL "$process_id" 2>/dev/null || true
@@ -105,7 +107,7 @@ cleanup()
         sleep 0.1
     done
     for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
-        "$server_pid"; do
+        "$meta_report_fixture_pid" "$server_pid"; do
         if test -n "$process_id"; then
             wait "$process_id" 2>/dev/null || true
         fi
@@ -190,6 +192,23 @@ meta_fixture_ready()
 meta_fixture_served()
 {
     test -s "$runtime_dir/meta-fixture.served"
+}
+
+meta_report_fixture_ready()
+{
+    if ! kill -0 "$meta_report_fixture_pid" 2>/dev/null; then
+        fail "local metaserver report fixture stopped before listening"
+    fi
+    test -s "$runtime_dir/meta-report-fixture.port"
+}
+
+meta_tcp_transport_reported()
+{
+    test -s "$runtime_dir/meta-report-fixture.received" \
+        && grep -q "^source-port $meta_report_contact_port$" \
+            "$runtime_dir/meta-report-fixture.received" \
+        && grep -q '^add version 4.7.3ng+ct=tcp+gt=udp$' \
+            "$runtime_dir/meta-report-fixture.received"
 }
 
 server_ready()
@@ -517,6 +536,53 @@ printf 'xpilot.texturePath: %s:%s\n' \
     "$runtime_dir/textures" "$XPILOT_TEST_PKGDATADIR/textures" \
     >"$runtime_dir/xpilotrc"
 export XPILOTRC="$runtime_dir/xpilotrc"
+
+node -e '
+const dgram = require("node:dgram");
+const fs = require("fs");
+const portFile = process.argv[1];
+const receivedFile = process.argv[2];
+const socket = dgram.createSocket("udp4");
+socket.on("error", (error) => {
+  process.stderr.write(`${error.stack}\n`);
+  socket.close(() => process.exit(1));
+});
+socket.on("message", (message, remote) => {
+  const payload = message.toString("utf8").replace(/\0+$/, "");
+  fs.appendFileSync(
+    receivedFile,
+    `source-port ${remote.port}\n${payload}\n---\n`,
+  );
+});
+socket.bind(0, "127.0.0.1", () => {
+  fs.writeFileSync(portFile, String(socket.address().port));
+});
+const stop = () => socket.close(() => process.exit(0));
+process.on("SIGTERM", stop);
+process.on("SIGINT", stop);
+' "$runtime_dir/meta-report-fixture.port" \
+    "$runtime_dir/meta-report-fixture.received" \
+    >"$runtime_dir/meta-report-fixture.log" 2>&1 &
+meta_report_fixture_pid=$!
+wait_until "local metaserver report fixture" 10 meta_report_fixture_ready
+
+meta_report_contact_port=$(reserve_contact_port)
+game_server_log="$runtime_dir/server-meta-tcp-contact.log"
+XPILOT_META_REPORT_HOST=127.0.0.1 \
+XPILOT_META_REPORT_HOST_TWO=127.0.0.1 \
+XPILOT_META_REPORT_PORT=$(sed -n '1p' \
+    "$runtime_dir/meta-report-fixture.port") \
+    "$server" -map "$map" -port "$meta_report_contact_port" -noQuit \
+    -reportMeta -contactTransport tcp -gameTransport udp \
+    >"$game_server_log" 2>&1 &
+server_pid=$!
+wait_until "TCP-contact metaserver report startup" 20 server_ready
+wait_until "TCP-contact metaserver transport advertisement" 15 \
+    meta_tcp_transport_reported
+stop_local_server
+kill -TERM "$meta_report_fixture_pid" 2>/dev/null || true
+wait "$meta_report_fixture_pid" 2>/dev/null || true
+meta_report_fixture_pid=
 
 node -e '
 const fs = require("fs");

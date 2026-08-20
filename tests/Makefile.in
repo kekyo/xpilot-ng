@@ -213,6 +213,9 @@ test_images_DEPENDENCIES =
 am_test_meta_environment_OBJECTS =  \
 	test_meta_environment-test_meta_environment.$(OBJEXT) \
 	test_meta_environment-meta.$(OBJEXT) \
+	test_meta_environment-game_transport.$(OBJEXT) \
+	test_meta_environment-list.$(OBJEXT) \
+	test_meta_environment-strdup.$(OBJEXT) \
 	test_meta_environment-strlcpy.$(OBJEXT)
 test_meta_environment_OBJECTS = $(am_test_meta_environment_OBJECTS)
 test_meta_environment_LDADD = $(LDADD)
@@ -483,7 +486,10 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_images-images.Po \
 	./$(DEPDIR)/test_images-strdup.Po \
 	./$(DEPDIR)/test_images-test_images.Po \
+	./$(DEPDIR)/test_meta_environment-game_transport.Po \
+	./$(DEPDIR)/test_meta_environment-list.Po \
 	./$(DEPDIR)/test_meta_environment-meta.Po \
+	./$(DEPDIR)/test_meta_environment-strdup.Po \
 	./$(DEPDIR)/test_meta_environment-strlcpy.Po \
 	./$(DEPDIR)/test_meta_environment-test_meta_environment.Po \
 	./$(DEPDIR)/test_native_socket_handle.Po \
@@ -1016,6 +1022,9 @@ test_native_socket_handle_SOURCES = test_native_socket_handle.c
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
 	$(top_srcdir)/src/client/meta_test_support.h \
+	$(top_srcdir)/src/common/game_transport.c \
+	$(top_srcdir)/src/common/list.c \
+	$(top_srcdir)/src/common/strdup.c \
 	$(top_srcdir)/src/common/strlcpy.c
 
 test_meta_environment_CPPFLAGS = $(AM_CPPFLAGS) -DXPILOT_META_TEST_HOOKS
@@ -1693,7 +1702,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-images.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-strdup.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-test_images.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-game_transport.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-list.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-meta.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-strdup.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-strlcpy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-test_meta_environment.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_native_socket_handle.Po@am__quote@ # am--include-marker
@@ -2063,6 +2075,48 @@ test_meta_environment-meta.obj: $(top_srcdir)/src/client/meta.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/meta.c' object='test_meta_environment-meta.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-meta.obj `if test -f '$(top_srcdir)/src/client/meta.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/meta.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/meta.c'; fi`
+
+test_meta_environment-game_transport.o: $(top_srcdir)/src/common/game_transport.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-game_transport.o -MD -MP -MF $(DEPDIR)/test_meta_environment-game_transport.Tpo -c -o test_meta_environment-game_transport.o `test -f '$(top_srcdir)/src/common/game_transport.c' || echo '$(srcdir)/'`$(top_srcdir)/src/common/game_transport.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_meta_environment-game_transport.Tpo $(DEPDIR)/test_meta_environment-game_transport.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/common/game_transport.c' object='test_meta_environment-game_transport.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-game_transport.o `test -f '$(top_srcdir)/src/common/game_transport.c' || echo '$(srcdir)/'`$(top_srcdir)/src/common/game_transport.c
+
+test_meta_environment-game_transport.obj: $(top_srcdir)/src/common/game_transport.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-game_transport.obj -MD -MP -MF $(DEPDIR)/test_meta_environment-game_transport.Tpo -c -o test_meta_environment-game_transport.obj `if test -f '$(top_srcdir)/src/common/game_transport.c'; then $(CYGPATH_W) '$(top_srcdir)/src/common/game_transport.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/common/game_transport.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_meta_environment-game_transport.Tpo $(DEPDIR)/test_meta_environment-game_transport.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/common/game_transport.c' object='test_meta_environment-game_transport.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-game_transport.obj `if test -f '$(top_srcdir)/src/common/game_transport.c'; then $(CYGPATH_W) '$(top_srcdir)/src/common/game_transport.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/common/game_transport.c'; fi`
+
+test_meta_environment-list.o: $(top_srcdir)/src/common/list.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-list.o -MD -MP -MF $(DEPDIR)/test_meta_environment-list.Tpo -c -o test_meta_environment-list.o `test -f '$(top_srcdir)/src/common/list.c' || echo '$(srcdir)/'`$(top_srcdir)/src/common/list.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_meta_environment-list.Tpo $(DEPDIR)/test_meta_environment-list.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/common/list.c' object='test_meta_environment-list.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-list.o `test -f '$(top_srcdir)/src/common/list.c' || echo '$(srcdir)/'`$(top_srcdir)/src/common/list.c
+
+test_meta_environment-list.obj: $(top_srcdir)/src/common/list.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-list.obj -MD -MP -MF $(DEPDIR)/test_meta_environment-list.Tpo -c -o test_meta_environment-list.obj `if test -f '$(top_srcdir)/src/common/list.c'; then $(CYGPATH_W) '$(top_srcdir)/src/common/list.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/common/list.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_meta_environment-list.Tpo $(DEPDIR)/test_meta_environment-list.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/common/list.c' object='test_meta_environment-list.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-list.obj `if test -f '$(top_srcdir)/src/common/list.c'; then $(CYGPATH_W) '$(top_srcdir)/src/common/list.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/common/list.c'; fi`
+
+test_meta_environment-strdup.o: $(top_srcdir)/src/common/strdup.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-strdup.o -MD -MP -MF $(DEPDIR)/test_meta_environment-strdup.Tpo -c -o test_meta_environment-strdup.o `test -f '$(top_srcdir)/src/common/strdup.c' || echo '$(srcdir)/'`$(top_srcdir)/src/common/strdup.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_meta_environment-strdup.Tpo $(DEPDIR)/test_meta_environment-strdup.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/common/strdup.c' object='test_meta_environment-strdup.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-strdup.o `test -f '$(top_srcdir)/src/common/strdup.c' || echo '$(srcdir)/'`$(top_srcdir)/src/common/strdup.c
+
+test_meta_environment-strdup.obj: $(top_srcdir)/src/common/strdup.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-strdup.obj -MD -MP -MF $(DEPDIR)/test_meta_environment-strdup.Tpo -c -o test_meta_environment-strdup.obj `if test -f '$(top_srcdir)/src/common/strdup.c'; then $(CYGPATH_W) '$(top_srcdir)/src/common/strdup.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/common/strdup.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_meta_environment-strdup.Tpo $(DEPDIR)/test_meta_environment-strdup.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/common/strdup.c' object='test_meta_environment-strdup.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-strdup.obj `if test -f '$(top_srcdir)/src/common/strdup.c'; then $(CYGPATH_W) '$(top_srcdir)/src/common/strdup.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/common/strdup.c'; fi`
 
 test_meta_environment-strlcpy.o: $(top_srcdir)/src/common/strlcpy.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-strlcpy.o -MD -MP -MF $(DEPDIR)/test_meta_environment-strlcpy.Tpo -c -o test_meta_environment-strlcpy.o `test -f '$(top_srcdir)/src/common/strlcpy.c' || echo '$(srcdir)/'`$(top_srcdir)/src/common/strlcpy.c
@@ -3532,7 +3586,10 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_images-images.Po
 	-rm -f ./$(DEPDIR)/test_images-strdup.Po
 	-rm -f ./$(DEPDIR)/test_images-test_images.Po
+	-rm -f ./$(DEPDIR)/test_meta_environment-game_transport.Po
+	-rm -f ./$(DEPDIR)/test_meta_environment-list.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-meta.Po
+	-rm -f ./$(DEPDIR)/test_meta_environment-strdup.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-strlcpy.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-test_meta_environment.Po
 	-rm -f ./$(DEPDIR)/test_native_socket_handle.Po
@@ -3683,7 +3740,10 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_images-images.Po
 	-rm -f ./$(DEPDIR)/test_images-strdup.Po
 	-rm -f ./$(DEPDIR)/test_images-test_images.Po
+	-rm -f ./$(DEPDIR)/test_meta_environment-game_transport.Po
+	-rm -f ./$(DEPDIR)/test_meta_environment-list.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-meta.Po
+	-rm -f ./$(DEPDIR)/test_meta_environment-strdup.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-strlcpy.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-test_meta_environment.Po
 	-rm -f ./$(DEPDIR)/test_native_socket_handle.Po

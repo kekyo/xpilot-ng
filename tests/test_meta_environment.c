@@ -13,6 +13,9 @@
 
 static int tcp_connect_attempts;
 
+game_transport_t gameTransport = GAME_TRANSPORT_UDP;
+game_transport_t contactTransport = GAME_TRANSPORT_UDP;
+
 int sock_close(sock_t *sock)
 {
     sock->fd = SOCK_FD_INVALID;
@@ -165,6 +168,46 @@ static int check_invalid_query_is_rejected(void)
     return 0;
 }
 
+static int add_transport_line(const char *version)
+{
+    char line[512];
+
+    snprintf(line, sizeof(line),
+             "%s:fixture.local:15345:0:test-map:100x100:test-author:ok:"
+             "10:20:-:no:100:0:0:127.0.0.1:10:0",
+             version);
+    Add_meta_line(line);
+    TEST_CHECK(server_list != NULL);
+    TEST_CHECK(List_size(server_list) == 1);
+    return 0;
+}
+
+static int check_transport_metadata_is_applied(void)
+{
+    server_info_t *server;
+
+    Delete_server_list();
+    TEST_CHECK(add_transport_line("4.7.3ng+ct=tcp+gt=udp") == 0);
+    server = (server_info_t *)List_front(server_list);
+    TEST_CHECK(strcmp(server->version, "4.7.3ng") == 0);
+    TEST_CHECK(server->contact_transport == GAME_TRANSPORT_TCP);
+    TEST_CHECK(server->game_transport == GAME_TRANSPORT_UDP);
+
+    contactTransport = GAME_TRANSPORT_UDP;
+    gameTransport = GAME_TRANSPORT_TCP;
+    Meta_select_server_transports(server);
+    TEST_CHECK(contactTransport == GAME_TRANSPORT_TCP);
+    TEST_CHECK(gameTransport == GAME_TRANSPORT_UDP);
+
+    Delete_server_list();
+    TEST_CHECK(add_transport_line("4.7.3ng") == 0);
+    server = (server_info_t *)List_front(server_list);
+    TEST_CHECK(server->contact_transport == GAME_TRANSPORT_UDP);
+    TEST_CHECK(server->game_transport == GAME_TRANSPORT_UDP);
+    Delete_server_list();
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(check_defaults_are_stable() == 0);
@@ -173,5 +216,6 @@ int main(void)
     TEST_CHECK(check_private_hosts_fail_closed() == 0);
     TEST_CHECK(check_unresolved_private_hosts_are_not_connected() == 0);
     TEST_CHECK(check_invalid_query_is_rejected() == 0);
+    TEST_CHECK(check_transport_metadata_is_applied() == 0);
     return 0;
 }

@@ -75,6 +75,7 @@ struct ServerInfo {
 	*timing, *ip_str, *freebases, *queue_str, *domain, pingtime_str[5];
     unsigned port,
 	ip, users, bases, fps, uptime, teambases, queue, pingtime;
+    game_transport_t contact_transport, game_transport;
     struct timeval start;
     unsigned char serial;
 };
@@ -119,6 +120,12 @@ int   Welcome_sort_server_list(void);
 int   Add_server_info(server_info_t * sip);
 char *my_strtok(char *buf, const char *sep);
 void  Add_meta_line(char *meta_line);
+/**
+ * Apply a listed server's advertised transports before contacting it.
+ *
+ * @param server Selected metaserver entry.
+ */
+void  Meta_select_server_transports(const server_info_t *server);
 void  Meta_connect(int *connections_ptr, int *maxfd_ptr);
 void  Meta_dns_lookup(void);
 void  Ping_servers(void);

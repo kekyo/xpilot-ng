@@ -13,6 +13,7 @@
 #define GAME_TRANSPORT_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 /** UDP gameplay protocol version for polygon maps. */
 #define GAME_PROTOCOL_UDP_POLYGON_VERSION 0x4F15
@@ -76,5 +77,38 @@ unsigned Game_transport_protocol_version(game_transport_t transport,
  */
 bool Game_transport_from_protocol_version(unsigned version,
                                           game_transport_t *transport);
+
+/**
+ * Append contact and gameplay transport metadata to a version string.
+ *
+ * The resulting value is safe to pass through the existing metaserver
+ * version field and has the form `VERSION+ct=udp+gt=tcp`.
+ *
+ * @param output Destination buffer.
+ * @param output_size Size of the destination buffer.
+ * @param version Display version without transport metadata.
+ * @param contact Contact and lobby transport to advertise.
+ * @param gameplay Gameplay transport to advertise.
+ * @return `true` when the complete value fits and both transports are valid.
+ */
+bool Game_transport_format_meta_version(char *output, size_t output_size,
+                                        const char *version,
+                                        game_transport_t contact,
+                                        game_transport_t gameplay);
+
+/**
+ * Parse transport metadata embedded in a metaserver version field.
+ *
+ * @param version Version value containing `+ct=...+gt=...` metadata.
+ * @param contact Receives the advertised contact transport.
+ * @param gameplay Receives the advertised gameplay transport.
+ * @param base_length Receives the length of the display version before the
+ * metadata marker.
+ * @return `true` only when a complete, valid metadata suffix is present.
+ */
+bool Game_transport_parse_meta_version(const char *version,
+                                       game_transport_t *contact,
+                                       game_transport_t *gameplay,
+                                       size_t *base_length);
 
 #endif /* GAME_TRANSPORT_H */

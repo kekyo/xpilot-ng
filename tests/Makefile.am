@@ -66,6 +66,9 @@ test_native_socket_handle_SOURCES = test_native_socket_handle.c
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
 	$(top_srcdir)/src/client/meta_test_support.h \
+	$(top_srcdir)/src/common/game_transport.c \
+	$(top_srcdir)/src/common/list.c \
+	$(top_srcdir)/src/common/strdup.c \
 	$(top_srcdir)/src/common/strlcpy.c
 test_meta_environment_CPPFLAGS = $(AM_CPPFLAGS) -DXPILOT_META_TEST_HOOKS
 test_meta_environment_CFLAGS = $(AM_CFLAGS) \

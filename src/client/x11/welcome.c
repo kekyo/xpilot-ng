@@ -54,6 +54,8 @@ struct Label labels[] = {
 	{"Server", 0, 0, 0},
 	{"IP:Port", 0, 0, 0},
 	{"Version", 0, 0, 0},
+	{"Contact", 0, 0, 0},
+	{"Gameplay", 0, 0, 0},
 	{"Users", 0, 0, 0},
 	{"Map name", 0, 0, 0},
 	{"Map size", 0, 0, 0},
@@ -430,6 +432,7 @@ static int Internet_server_join_cb(int widget, void *user_data,
 
     /* structure copy */
     *conpar = *global_conpar;
+    Meta_select_server_transports(sip);
     strlcpy(conpar->server_name, sip->hostname,
 	    sizeof(conpar->server_name));
     strlcpy(conpar->server_addr, sip->ip_str, sizeof(conpar->server_addr));
@@ -600,6 +603,22 @@ static int Internet_server_show_cb(int widget, void *user_data,
 			data_label_width, labels[i].height, true,
 			label_border,  BLACK, WHITE,sip->version);
 
+    i++;
+
+    /* Contact and gameplay transport labels */
+
+    (void) Widget_create_colored_label(subform_widget,
+			label_x + label_width, labels[i].yoff,
+			data_label_width, labels[i].height, true,
+			label_border, BLACK, WHITE,
+			Game_transport_name(sip->contact_transport));
+    i++;
+
+    (void) Widget_create_colored_label(subform_widget,
+			label_x + label_width, labels[i].yoff,
+			data_label_width, labels[i].height, true,
+			label_border, BLACK, WHITE,
+			Game_transport_name(sip->game_transport));
     i++;
 
     /* Number of users label */
