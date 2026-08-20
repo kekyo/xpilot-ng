@@ -503,21 +503,22 @@ static bool Set_dirPrediction(xp_option_t *opt, bool val)
     return true;
 }
 
-int protocolVersion = POLYGON_VERSION;
-static char protocolVersionStr[32];
+game_transport_t gameTransport = GAME_TRANSPORT_UDP;
 
-static bool Set_protocolVersion(xp_option_t *opt, const char *value)
+static bool Set_gameTransport(xp_option_t *opt, const char *value)
 {
-    if (sscanf(value, "%x", &protocolVersion) <= 0)
+    UNUSED_PARAM(opt);
+    if (!Game_transport_parse(value, &gameTransport)) {
+	warn("Invalid gameTransport '%s'; expected 'udp' or 'tcp'", value);
 	return false;
+    }
     return true;
 }
 
-static const char *Get_protocolVersion(xp_option_t *opt)
+static const char *Get_gameTransport(xp_option_t *opt)
 {
-    snprintf(protocolVersionStr, sizeof protocolVersionStr, "%04x",
-	     protocolVersion);
-    return protocolVersionStr;
+    UNUSED_PARAM(opt);
+    return Game_transport_name(gameTransport);
 }
 
 void defaultCleanup(void)
@@ -915,12 +916,12 @@ xp_option_t default_options[] = {
 	"Be warned that this needs a reasonably fast graphics system.\n"),
 
     XP_STRING_OPTION(
-	"protocolVersion",
-	"",
+	"gameTransport",
+	"udp",
 	NULL, 0,
-	Set_protocolVersion, NULL, Get_protocolVersion,
+	Set_gameTransport, NULL, Get_gameTransport,
 	XP_OPTFLAG_KEEP,
-	"Which protocol version to prefer when joining servers.\n"),
+	"Gameplay transport to use when joining servers: udp or tcp.\n"),
 
     XP_BOOL_OPTION(
 	"outlineWorld",

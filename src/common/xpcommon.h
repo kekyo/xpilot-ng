@@ -272,6 +272,7 @@ typedef int socklen_t;
 #include "commonproto.h"
 #include "const.h"
 #include "error.h"
+#include "game_transport.h"
 #include "item.h"
 #include "list.h"
 #include "metaserver.h"

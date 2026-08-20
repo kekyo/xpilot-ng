@@ -49,6 +49,7 @@ bool			is_server = true;	/* used in common code */
 static bool		NoPlayersEnteredYet = true;
 bool			game_lock = false;
 bool			mute_baseless = false;
+game_transport_t	gameTransport = GAME_TRANSPORT_UDP;
 
 time_t			gameOverTime = 0;
 time_t			serverStartTime = 0;
@@ -112,6 +113,12 @@ int main(int argc, char **argv)
 
     if (!Parser(argc, argv))
 	exit(1);
+
+    if (!Game_transport_parse(options.gameTransport, &gameTransport)) {
+	warn("Invalid gameTransport '%s'; expected 'udp' or 'tcp'",
+	     options.gameTransport);
+	return 1;
+    }
 
     Init_recording();
     /* Lock the server into memory */

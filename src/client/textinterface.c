@@ -118,8 +118,19 @@ static int Get_contact_message(sockbuf_t *sbuf,
 	else if ((magic & 0xFFFF) != (MAGIC & 0xFFFF))
 	    warn("Bad magic on contact message (0x%x).", magic);
 	else {
+	    game_transport_t server_transport = (game_transport_t)-1;
+
 	    server_version = MAGIC2VERSION(magic);
-	    if (!((server_version >= MIN_SERVER_VERSION &&
+	    if (!Game_transport_from_protocol_version(server_version,
+						 &server_transport)
+		|| server_transport != gameTransport) {
+		warn("Gameplay transport mismatch with server %s.",
+		     conpar->server_name);
+		warn("Client requested %s, while server requires %s.",
+		     Game_transport_name(gameTransport),
+		     Game_transport_name(server_transport));
+		readable = 0;
+	    } else if (!((server_version >= MIN_SERVER_VERSION &&
 		   server_version <= MAX_SERVER_VERSION) ||
 		  (server_version >= MIN_OLD_SERVER_VERSION &&
 		   server_version <= MAX_OLD_SERVER_VERSION))) {

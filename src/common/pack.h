@@ -112,14 +112,12 @@
  * 4.F.1.5: Possibility to change polygon styles.
  */
 #define MAGIC_WORD		0xF4ED
-#define POLYGON_VERSION		0x4F15
-#define OLD_VERSION		0x4501
 #ifdef SERVER
-#define	MAGIC (is_polygon_map \
-               ? VERSION2MAGIC(POLYGON_VERSION) \
-               : VERSION2MAGIC(OLD_VERSION))
+#define MAGIC VERSION2MAGIC( \
+    Game_transport_protocol_version(gameTransport, is_polygon_map))
 #else
-#define	MAGIC (VERSION2MAGIC(protocolVersion))
+#define MAGIC VERSION2MAGIC( \
+    Game_transport_protocol_version(gameTransport, true))
 #endif
 
 #define MAGIC2VERSION(M)	(((M) >> 16) & 0xFFFF)
@@ -146,9 +144,11 @@
  * there is a separate "old" range of allowed servers.
  */
 #define MIN_OLD_SERVER_VERSION  0x4203
-#define MAX_OLD_SERVER_VERSION  0x4501
+#define MAX_OLD_SERVER_VERSION \
+    Game_transport_protocol_version(gameTransport, false)
 /* Which old-style (non-polygon) protocol version we support. */
-#define COMPATIBILITY_MAGIC 0x4501F4ED
+#define COMPATIBILITY_MAGIC VERSION2MAGIC( \
+    Game_transport_protocol_version(gameTransport, false))
 
 #define	MAX_STR_LEN		4096
 #define	MAX_DISP_LEN		80

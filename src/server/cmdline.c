@@ -605,6 +605,16 @@ static option_desc opts[] = {
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
+	"gameTransport",
+	"gameTransport",
+	"udp",
+	&options.gameTransport,
+	valString,
+	tuner_dummy,
+	"Gameplay transport for player connections: udp or tcp.\n",
+	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
+    },
+    {
 	"serverHost",
 	"serverHost",
 	NULL,

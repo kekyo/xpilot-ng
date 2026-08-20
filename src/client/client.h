@@ -649,7 +649,6 @@ extern long		time_left;
 
 extern bool roundend;
 extern bool played_this_round;
-extern int protocolVersion;
 
 /*
  * somewhere

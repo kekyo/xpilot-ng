@@ -7,7 +7,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	@SDL3_CFLAGS@ @SDL3_IMAGE_CFLAGS@ @SDL3_TTF_CFLAGS@ \
 	@GL_CFLAGS@
 
-check_PROGRAMS = test-meta-environment test-sdl-versions \
+check_PROGRAMS = test-game-transport test-meta-environment test-sdl-versions \
 	test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-gl-core-resources \
@@ -24,7 +24,7 @@ check_PROGRAMS = test-meta-environment test-sdl-versions \
 	test-sdlgui-polygons test-sdlgui-sparks test-sdlgui-ships \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
-TESTS = test-meta-environment test-sdl-versions \
+TESTS = test-game-transport test-meta-environment test-sdl-versions \
 	test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
@@ -45,6 +45,9 @@ TESTS = test-meta-environment test-sdl-versions \
 	test-text-cache-adapter \
 	run-renderer-gl-core.sh run-sdl-renderer-core-context.sh \
 	run-vendored-zlib.sh run-e2e.sh
+
+test_game_transport_SOURCES = test_game_transport.c
+test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
 
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \

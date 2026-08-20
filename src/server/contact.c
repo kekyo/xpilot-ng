@@ -249,7 +249,11 @@ static int Check_names(char *nick_name, char *user_name, char *host_name)
  */
 static unsigned Version_to_magic(unsigned version)
 {
-    if (version >= 0x4203  && version <= MY_VERSION)
+    game_transport_t requested_transport;
+
+    if (Game_transport_from_protocol_version(version, &requested_transport)
+	&& requested_transport == gameTransport
+	&& version >= 0x4203 && version <= MY_VERSION)
 	return VERSION2MAGIC(version);
     return MAGIC;
 }
@@ -318,6 +322,23 @@ void Contact(int fd, void *arg)
      * care about version incompatibilities, so that the client
      * can decide if it wants to conform to our version or not.
      */
+    if (version != 0
+	&& (reply_to == ENTER_GAME_pack || reply_to == ENTER_QUEUE_pack)) {
+	game_transport_t requested_transport;
+
+	if (!Game_transport_from_protocol_version(version,
+					      &requested_transport)
+	    || requested_transport != gameTransport) {
+	    D(error("Gameplay transport mismatch with %s@%s (%s,%04x)",
+		    user_name, host_addr,
+		    Game_transport_name(gameTransport), version));
+	    Sockbuf_clear(&ibuf);
+	    Packet_printf(&ibuf, "%u%c%c", MAGIC, reply_to, E_VERSION);
+	    Reply(host_addr, port);
+	    return;
+	}
+    }
+
     if (version < MIN_CLIENT_VERSION
 	|| (version > MAX_CLIENT_VERSION
 	    && reply_to != CONTACT_pack)) {
