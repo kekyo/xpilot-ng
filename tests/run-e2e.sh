@@ -433,8 +433,13 @@ run_gameplay_case()
 	capture_window game
     fi
 
-    xdotool key --window "$window_id" Escape y >/dev/null 2>&1 \
-	|| fail "could not request a graceful client quit for $game_case"
+    # xdotool may report BadWindow after the final key event because SDL tears
+    # down the window before XSync completes.  That is a successful quit, not
+    # an input failure; only reject the command while the client is still live.
+    if ! xdotool key --clearmodifiers --window "$window_id" Escape y \
+	>/dev/null 2>&1 && kill -0 "$client_pid" 2>/dev/null; then
+	fail "could not request a graceful client quit for $game_case"
+    fi
     wait_until "$game_case graceful client shutdown" 15 process_stopped \
 	"$client_pid"
     finished_client_pid=$client_pid
