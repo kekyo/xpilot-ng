@@ -88,12 +88,13 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-check_PROGRAMS = test-game-transport$(EXEEXT) \
-	test-meta-environment$(EXEEXT) test-sdl-versions$(EXEEXT) \
-	test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
-	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
-	test-sdl-window$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
-	test-sdl-event$(EXEEXT) test-gl-core-resources$(EXEEXT) \
+check_PROGRAMS = test-framed-stream$(EXEEXT) \
+	test-game-transport$(EXEEXT) test-meta-environment$(EXEEXT) \
+	test-sdl-versions$(EXEEXT) test-sdl-keys$(EXEEXT) \
+	test-sdl-console$(EXEEXT) test-sdl-surface$(EXEEXT) \
+	test-surface-rgba8$(EXEEXT) test-sdl-window$(EXEEXT) \
+	test-sdl-clipboard$(EXEEXT) test-sdl-event$(EXEEXT) \
+	test-gl-core-resources$(EXEEXT) \
 	test-renderer-commands$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) test-renderer-gl-core$(EXEEXT) \
 	test-paint-transform$(EXEEXT) test-image-geometry$(EXEEXT) \
@@ -115,12 +116,12 @@ check_PROGRAMS = test-game-transport$(EXEEXT) \
 	test-text-geometry$(EXEEXT) test-text-atlas$(EXEEXT) \
 	test-text-ttf-atlas$(EXEEXT) test-text-renderer$(EXEEXT) \
 	test-text-cache-adapter$(EXEEXT)
-TESTS = test-game-transport$(EXEEXT) test-meta-environment$(EXEEXT) \
-	test-sdl-versions$(EXEEXT) test-sdl-keys$(EXEEXT) \
-	test-sdl-console$(EXEEXT) test-sdl-surface$(EXEEXT) \
-	test-surface-rgba8$(EXEEXT) test-sdl-window$(EXEEXT) \
-	test-sdl-clipboard$(EXEEXT) test-sdl-event$(EXEEXT) \
-	test-renderer-commands$(EXEEXT) \
+TESTS = test-framed-stream$(EXEEXT) test-game-transport$(EXEEXT) \
+	test-meta-environment$(EXEEXT) test-sdl-versions$(EXEEXT) \
+	test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
+	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
+	test-sdl-window$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
+	test-sdl-event$(EXEEXT) test-renderer-commands$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) test-paint-transform$(EXEEXT) \
 	run-gl-core-resources.sh test-image-geometry$(EXEEXT) \
 	test-polygon-geometry$(EXEEXT) test-gfx2d-picture$(EXEEXT) \
@@ -153,6 +154,10 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+am_test_framed_stream_OBJECTS = test_framed_stream.$(OBJEXT)
+test_framed_stream_OBJECTS = $(am_test_framed_stream_OBJECTS)
+test_framed_stream_DEPENDENCIES =  \
+	$(top_builddir)/src/common/libxpcommon.a
 am_test_game_transport_OBJECTS = test_game_transport.$(OBJEXT)
 test_game_transport_OBJECTS = $(am_test_game_transport_OBJECTS)
 test_game_transport_DEPENDENCIES =  \
@@ -447,6 +452,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/sdlgameframe.Po ./$(DEPDIR)/sdlkeys.Po \
 	./$(DEPDIR)/sdlmetaframe.Po ./$(DEPDIR)/sdlrenderer.Po \
 	./$(DEPDIR)/sdlwindow.Po ./$(DEPDIR)/surface_rgba8.Po \
+	./$(DEPDIR)/test_framed_stream.Po \
 	./$(DEPDIR)/test_game_transport.Po \
 	./$(DEPDIR)/test_gfx2d_picture.Po \
 	./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po \
@@ -549,7 +555,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
-SOURCES = $(test_game_transport_SOURCES) $(test_gfx2d_picture_SOURCES) \
+SOURCES = $(test_framed_stream_SOURCES) $(test_game_transport_SOURCES) \
+	$(test_gfx2d_picture_SOURCES) \
 	$(test_gl_core_resources_SOURCES) \
 	$(test_glwidgets_primitives_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
@@ -580,8 +587,8 @@ SOURCES = $(test_game_transport_SOURCES) $(test_gfx2d_picture_SOURCES) \
 	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES)
-DIST_SOURCES = $(test_game_transport_SOURCES) \
-	$(test_gfx2d_picture_SOURCES) \
+DIST_SOURCES = $(test_framed_stream_SOURCES) \
+	$(test_game_transport_SOURCES) $(test_gfx2d_picture_SOURCES) \
 	$(test_gl_core_resources_SOURCES) \
 	$(test_glwidgets_primitives_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
@@ -980,6 +987,8 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
+test_framed_stream_SOURCES = test_framed_stream.c
+test_framed_stream_LDADD = $(top_builddir)/src/common/libxpcommon.a
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
 	$(top_srcdir)/src/client/meta_test_support.h \
@@ -1435,6 +1444,10 @@ $(am__aclocal_m4_deps):
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
 
+test-framed-stream$(EXEEXT): $(test_framed_stream_OBJECTS) $(test_framed_stream_DEPENDENCIES) $(EXTRA_test_framed_stream_DEPENDENCIES)
+	@rm -f test-framed-stream$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_framed_stream_OBJECTS) $(test_framed_stream_LDADD) $(LIBS)
+
 test-game-transport$(EXEEXT): $(test_game_transport_OBJECTS) $(test_game_transport_DEPENDENCIES) $(EXTRA_test_game_transport_DEPENDENCIES)
 	@rm -f test-game-transport$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_game_transport_OBJECTS) $(test_game_transport_LDADD) $(LIBS)
@@ -1625,6 +1638,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlrenderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlwindow.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/surface_rgba8.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_framed_stream.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_game_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gfx2d_picture.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po@am__quote@ # am--include-marker
@@ -3060,6 +3074,13 @@ recheck: all $(check_PROGRAMS)
 	        am__force_recheck=am--force-recheck \
 	        TEST_LOGS="$$log_list"; \
 	exit $$?
+test-framed-stream.log: test-framed-stream$(EXEEXT)
+	@p='test-framed-stream$(EXEEXT)'; \
+	b='test-framed-stream'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-game-transport.log: test-game-transport$(EXEEXT)
 	@p='test-game-transport$(EXEEXT)'; \
 	b='test-game-transport'; \
@@ -3440,6 +3461,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/sdlwindow.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
+	-rm -f ./$(DEPDIR)/test_framed_stream.Po
 	-rm -f ./$(DEPDIR)/test_game_transport.Po
 	-rm -f ./$(DEPDIR)/test_gfx2d_picture.Po
 	-rm -f ./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po
@@ -3588,6 +3610,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/sdlwindow.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
+	-rm -f ./$(DEPDIR)/test_framed_stream.Po
 	-rm -f ./$(DEPDIR)/test_game_transport.Po
 	-rm -f ./$(DEPDIR)/test_gfx2d_picture.Po
 	-rm -f ./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po

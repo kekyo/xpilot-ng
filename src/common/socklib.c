@@ -221,6 +221,81 @@ int sock_open_tcp(sock_t *sock)
     return SOCK_IS_OK;
 }
 
+static int sock_bind_tcp(sock_t *sock, char *dotaddr, int port)
+{
+    struct sockaddr_in addr;
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons((unsigned short)port);
+    addr.sin_addr.s_addr = dotaddr != NULL ? inet_addr(dotaddr) : INADDR_ANY;
+    if (bind(sock->fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+	return sock_set_error(sock, errno, SOCK_CALL_BIND, __LINE__);
+    return SOCK_IS_OK;
+}
+
+int sock_open_tcp_bound(sock_t *sock, char *dotaddr, int port)
+{
+    if (sock_open_tcp(sock) == SOCK_IS_ERROR)
+	return SOCK_IS_ERROR;
+    if (sock_bind_tcp(sock, dotaddr, port) == SOCK_IS_ERROR) {
+	sock_close(sock);
+	return SOCK_IS_ERROR;
+    }
+    return SOCK_IS_OK;
+}
+
+int sock_open_tcp_listener(sock_t *sock, char *dotaddr, int port, int backlog)
+{
+    int flag = 1;
+
+    if (backlog <= 0) {
+	sock_init(sock);
+	errno = EINVAL;
+	return sock_set_error(sock, errno, SOCK_CALL_LISTEN, __LINE__);
+    }
+
+    if (sock_open_tcp(sock) == SOCK_IS_ERROR)
+	return SOCK_IS_ERROR;
+    if (setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR,
+		   (void *)&flag, sizeof(flag)) < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_SETSOCKOPT, __LINE__);
+	sock_close(sock);
+	return SOCK_IS_ERROR;
+    }
+    if (sock_bind_tcp(sock, dotaddr, port) == SOCK_IS_ERROR) {
+	sock_close(sock);
+	return SOCK_IS_ERROR;
+    }
+    if (listen(sock->fd, backlog) < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_LISTEN, __LINE__);
+	sock_close(sock);
+	return SOCK_IS_ERROR;
+    }
+    return SOCK_IS_OK;
+}
+
+int sock_accept(sock_t *listener, sock_t *accepted)
+{
+    socklen_t addrlen;
+
+    if (sock_init(accepted) == SOCK_IS_ERROR)
+	return SOCK_IS_ERROR;
+    if (sock_alloc_lastaddr(accepted) == SOCK_IS_ERROR)
+	return SOCK_IS_ERROR;
+
+    addrlen = sizeof(struct sockaddr_in);
+    accepted->fd = accept(listener->fd,
+			  (struct sockaddr *)accepted->lastaddr, &addrlen);
+    if (accepted->fd < 0) {
+	sock_set_error(accepted, errno, SOCK_CALL_ACCEPT, __LINE__);
+	sock_free_lastaddr(accepted);
+	return SOCK_IS_ERROR;
+    }
+    sock_flags_add(accepted, SOCK_FLAG_TCP | SOCK_FLAG_CONNECT);
+    return SOCK_IS_OK;
+}
+
 int sock_set_non_blocking(sock_t *sock, int flag)
 {
 /*
@@ -706,6 +781,16 @@ int sock_set_send_buffer_size(sock_t *sock, int size)
     return SOCK_IS_OK;
 }
 
+int sock_set_tcp_nodelay(sock_t *sock, int flag)
+{
+    if (setsockopt(sock->fd, IPPROTO_TCP, TCP_NODELAY,
+		   (void *)&flag, sizeof(flag)) < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_SETSOCKOPT, __LINE__);
+	return SOCK_IS_ERROR;
+    }
+    return SOCK_IS_OK;
+}
+
 int sock_set_timeout(sock_t *sock, int seconds, int useconds)
 {
     sock->timeout.seconds = seconds;
@@ -836,4 +921,3 @@ static struct hostent *sock_get_host_by_addr(const char *addr,
 
 #endif
 }
-
