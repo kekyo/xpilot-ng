@@ -451,7 +451,7 @@ int Net_verify(char *user_name, char *nick_name, char *disp)
 }
 
 /*
- * Open the datagram socket and allocate the network data
+ * Open the selected gameplay socket and allocate the network data
  * structures like buffers.
  * Currently there are three different buffers used:
  * 1) wbuf is used only for sending packets (write/printf).
@@ -462,6 +462,7 @@ int Net_verify(char *user_name, char *nick_name, char *disp)
 int Net_init(char *server, int port)
 {
     int			i;
+    int			transport_state;
     size_t		size;
     sock_t		sock;
 
@@ -477,16 +478,27 @@ int Net_init(char *server, int port)
     server_display.num_spark_colors = 0;
 
     Receive_init();
+    transport_state = gameTransport == GAME_TRANSPORT_TCP
+	? SOCKBUF_FRAMED : SOCKBUF_DGRAM;
     if (!clientPortStart || !clientPortEnd ||
 	(clientPortStart > clientPortEnd)) {
-	if (sock_open_udp(&sock, NULL, 0) == SOCK_IS_ERROR) {
-	    error("Cannot create datagram socket (%d)", sock.error.error);
+	int status = gameTransport == GAME_TRANSPORT_TCP
+	    ? sock_open_tcp_bound(&sock, NULL, 0)
+	    : sock_open_udp(&sock, NULL, 0);
+
+	if (status == SOCK_IS_ERROR) {
+	    error("Cannot create %s gameplay socket (%d)",
+		  Game_transport_name(gameTransport), sock.error.error);
 	    return -1;
 	}
     } else {
 	int found_socket = 0;
 	for (i = clientPortStart; i <= clientPortEnd; i++) {
-	    if (sock_open_udp(&sock, NULL, i) != SOCK_IS_ERROR) {
+	    int status = gameTransport == GAME_TRANSPORT_TCP
+		? sock_open_tcp_bound(&sock, NULL, i)
+		: sock_open_udp(&sock, NULL, i);
+
+	    if (status != SOCK_IS_ERROR) {
 		found_socket = 1;
 		break;
 	    }
@@ -499,6 +511,12 @@ int Net_init(char *server, int port)
 
     if (sock_connect(&sock, server, port) == -1) {
 	error("Can't connect to server %s on port %d", server, port);
+	sock_close(&sock);
+	return -1;
+    }
+    if (gameTransport == GAME_TRANSPORT_TCP
+	&& sock_set_tcp_nodelay(&sock, 1) == SOCK_IS_ERROR) {
+	error("Can't disable TCP write coalescing");
 	sock_close(&sock);
 	return -1;
     }
@@ -521,7 +539,7 @@ int Net_init(char *server, int port)
     for (i = 0; i < receive_window_size; i++) {
 	Frames[i].loops = 0;
 	if (Sockbuf_init(&Frames[i].sbuf, &sock, CLIENT_RECV_SIZE,
-			 SOCKBUF_READ | SOCKBUF_DGRAM) == -1) {
+			 SOCKBUF_READ | transport_state) == -1) {
 	    error("No memory for read buffer (%u)", CLIENT_RECV_SIZE);
 	    return -1;
 	}
@@ -536,7 +554,7 @@ int Net_init(char *server, int port)
 
     /* write buffer */
     if (Sockbuf_init(&wbuf, &sock, CLIENT_SEND_SIZE,
-		     SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
+		     SOCKBUF_WRITE | transport_state) == -1) {
 	error("No memory for write buffer (%u)", CLIENT_SEND_SIZE);
 	return -1;
     }
@@ -555,24 +573,29 @@ int Net_init(char *server, int port)
 }
 
 /*
- * Cleanup all the network buffers and close the datagram socket.
- * Also try to send the server a quit packet if possible.
- * Because this quit packet may get lost we send one at the
- * beginning and one at the end.
+ * Cleanup all network buffers and close the gameplay socket.  TCP sends one
+ * framed quit packet; UDP retains the repeated best-effort quit packets.
  */
 void Net_cleanup(void)
 {
     int i;
     sock_t sock = wbuf.sock;
     char ch;
+    bool tcp_transport = BIT(wbuf.state, SOCKBUF_FRAMED) != 0;
 
     if (sock.fd > 2) {
-	ch = PKT_QUIT;
-	if (sock_write(&sock, &ch, 1) != 1) {
-	    sock_get_error(&sock);
-	    sock_write(&sock, &ch, 1);
+	if (tcp_transport) {
+	    Sockbuf_clear(&wbuf);
+	    if (Packet_printf(&wbuf, "%c", PKT_QUIT) > 0)
+		Sockbuf_flush(&wbuf);
+	} else {
+	    ch = PKT_QUIT;
+	    if (sock_write(&sock, &ch, 1) != 1) {
+		sock_get_error(&sock);
+		sock_write(&sock, &ch, 1);
+	    }
+	    micro_delay((unsigned)50*1000);
 	}
-	micro_delay((unsigned)50*1000);
     }
     if (Frames != NULL) {
 	for (i = 0; i < receive_window_size; i++) {
@@ -587,15 +610,17 @@ void Net_cleanup(void)
     Sockbuf_cleanup(&wbuf);
     XFREE(Setup);
     if (sock.fd > 2) {
-	ch = PKT_QUIT;
-	if (sock_write(&sock, &ch, 1) != 1) {
-	    sock_get_error(&sock);
-	    sock_write(&sock, &ch, 1);
-	}
-	micro_delay((unsigned)50*1000);
-	if (sock_write(&sock, &ch, 1) != 1) {
-	    sock_get_error(&sock);
-	    sock_write(&sock, &ch, 1);
+	if (!tcp_transport) {
+	    ch = PKT_QUIT;
+	    if (sock_write(&sock, &ch, 1) != 1) {
+		sock_get_error(&sock);
+		sock_write(&sock, &ch, 1);
+	    }
+	    micro_delay((unsigned)50*1000);
+	    if (sock_write(&sock, &ch, 1) != 1) {
+		sock_get_error(&sock);
+		sock_write(&sock, &ch, 1);
+	    }
 	}
 	sock_close(&sock);
     }
@@ -619,7 +644,15 @@ int Net_flush(void)
 {
     if (wbuf.len == 0) {
 	wbuf.ptr = wbuf.buf;
-	return 0;
+	if (BIT(wbuf.state, SOCKBUF_FRAMED) == 0
+	    || wbuf.frame_output_offset >= wbuf.frame_output_len)
+	    return 0;
+	if (Sockbuf_flush(&wbuf) == -1)
+	    return -1;
+	if (wbuf.frame_output_offset < wbuf.frame_output_len)
+	    return 0;
+	last_send_anything = time(NULL);
+	return 1;
     }
     if (last_keyboard_ack != last_keyboard_change &&
 	last_keyboard_update != last_loops)

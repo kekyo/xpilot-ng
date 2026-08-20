@@ -139,8 +139,8 @@ int sock_writeRec(sock_t *sock, char *wbuf, int size)
 	 *(playback_ints++) = i;
 	 */
     }
-    if (record && i < size)
-	error("Warning: DgramWrite failed, recording doesn't handle this");
+    if (record && BIT(sock->flags, SOCK_FLAG_UDP) != 0 && i < size)
+	error("Warning: datagram write failed, recording doesn't handle this");
     return i;
 }
 
@@ -178,6 +178,8 @@ int Sockbuf_flushRec(sockbuf_t *sbuf)
 	warn("No flush on locked socket buffer (0x%02x)", sbuf->state);
 	return -1;
     }
+    if (BIT(sbuf->state, SOCKBUF_FRAMED) != 0)
+	return Sockbuf_flush_framed(sbuf, sock_writeRec);
     if (sbuf->len <= 0) {
 	if (sbuf->len < 0) {
 	    warn("Write socket buffer length negative");
@@ -255,6 +257,8 @@ int Sockbuf_readRec(sockbuf_t *sbuf)
     if (BIT(sbuf->state, SOCKBUF_LOCK) != 0) {
 	return 0;
     }
+    if (BIT(sbuf->state, SOCKBUF_FRAMED) != 0)
+	return Sockbuf_read_framed(sbuf, sock_readRec);
     if (sbuf->ptr > sbuf->buf) {
 	Sockbuf_advance(sbuf, sbuf->ptr - sbuf->buf);
     }
@@ -331,7 +335,8 @@ int Sockbuf_writeRec(sockbuf_t *sbuf, char *buf, int len)
 	return -1;
     }
     if (sbuf->size - sbuf->len < len) {
-	if (BIT(sbuf->state, SOCKBUF_LOCK | SOCKBUF_DGRAM) != 0) {
+	if (BIT(sbuf->state,
+		SOCKBUF_LOCK | SOCKBUF_DGRAM | SOCKBUF_FRAMED) != 0) {
 	    warn("No write to locked socket buffer (%d,%d,%d,%d)",
 		  sbuf->state, sbuf->size, sbuf->len, len);
 	    return -1;
