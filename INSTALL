@@ -66,6 +66,18 @@ also allows a container build to initialize or materialize the submodules
 beforehand, mount the source read-only, and build without network access.
 See vendor/sdl3/README.md for the pinned versions and build contract.
 
+WINDOWS CROSS-BUILDS
+
+Windows builds are produced on Linux with MinGW-w64.  Build both 32-bit x86
+and 64-bit x86_64 packages and test them with Wine by running:
+
+    git submodule update --init --recursive
+    ./build.sh --target windows --arch all --test
+
+The output packages are placed below build/windows/x86/package and
+build/windows/x86_64/package.  See doc/WINDOWS.md for prerequisites, output
+layout, single-architecture commands, and the Wine test contract.
+
 X11 is required when building the X11 client, replay program, or map editor,
 but the SDL client itself does not depend on X11.
 	
