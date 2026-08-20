@@ -28,6 +28,17 @@ Initialize them before entering a network-isolated build environment:
     git submodule update --init vendor/sdl3/SDL \
         vendor/sdl3/SDL_image vendor/sdl3/SDL_ttf
 
+For a normal native build, the root wrapper performs both the dependency and
+XPilot NG builds in one command:
+
+    ./build.sh
+
+By default, all output is placed under `build/`; XPilot NG itself is built in
+`build/xpilot-ng`.  Run `./build.sh --help` to select another build root,
+change the parallel job count or CMake build type, pass a cross-compilation
+toolchain, or forward additional options to configure.  The wrapper builds
+but does not install XPilot NG.
+
 The dependency build and the XPilot NG build use separate out-of-tree
 directories and installation prefixes.  From the source directory, run:
 
