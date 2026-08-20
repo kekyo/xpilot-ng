@@ -208,6 +208,11 @@ client_accepted()
     grep -q "Welcome .*$game_client_name" "$game_server_log" 2>/dev/null
 }
 
+client_departed()
+{
+    grep -q "Goodbye .*$game_client_name" "$game_server_log" 2>/dev/null
+}
+
 game_frame_ready()
 {
     if ! kill -0 "$client_pid" 2>/dev/null; then
@@ -308,12 +313,43 @@ stop_local_server()
     server_pid=
 }
 
+run_recording_playback()
+{
+    playback_case=$1
+    playback_transport=$2
+    playback_recording=$3
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-$playback_case-playback.log"
+
+    test -s "$playback_recording" \
+	|| fail "$playback_case recording was not written"
+    if test "$playback_transport" = default; then
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -recordFileName "$playback_recording" -recordMode 2 \
+	    >"$game_server_log" 2>&1 &
+    else
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -gameTransport "$playback_transport" \
+	    -recordFileName "$playback_recording" -recordMode 2 \
+	    >"$game_server_log" 2>&1 &
+    fi
+    server_pid=$!
+    wait_until "$playback_case playback startup" 20 \
+	grep -q "Server runs at" "$game_server_log"
+    wait_until "$playback_case recorded join" 20 \
+	grep -q "Welcome .*$game_client_name" "$game_server_log"
+    wait_until "$playback_case recorded quit" 20 \
+	grep -q "Goodbye .*$game_client_name" "$game_server_log"
+    stop_local_server
+}
+
 run_gameplay_case()
 {
     game_case=$1
     game_transport=$2
     game_capture=$3
     port=$(reserve_contact_port)
+    game_recording="$runtime_dir/server-$game_case.xpr"
     game_server_log="$runtime_dir/server-$game_case.log"
     game_client_log="$runtime_dir/client-$game_case.log"
     case "$game_case" in
@@ -330,10 +366,13 @@ run_gameplay_case()
 
     if test "$game_transport" = default; then
 	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -recordFileName "$game_recording" -recordMode 1 \
 	    >"$game_server_log" 2>&1 &
     else
 	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
-	    -gameTransport "$game_transport" >"$game_server_log" 2>&1 &
+	    -gameTransport "$game_transport" \
+	    -recordFileName "$game_recording" -recordMode 1 \
+	    >"$game_server_log" 2>&1 &
     fi
     server_pid=$!
     wait_until "$game_case server readiness" 20 server_ready
@@ -410,7 +449,9 @@ run_gameplay_case()
     fi
     wait_until "$game_case game window teardown" 5 process_window_absent \
 	"$finished_client_pid"
+    wait_until "$game_case server-side client departure" 5 client_departed
     stop_local_server
+    run_recording_playback "$game_case" "$game_transport" "$game_recording"
 }
 
 run_transport_mismatch()
