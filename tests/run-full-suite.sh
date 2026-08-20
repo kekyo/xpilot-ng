@@ -69,6 +69,17 @@ echo "===== build: vendored SDL3 dependencies ====="
     --prefix "$vendor_prefix" \
     --jobs "$test_jobs"
 
+system_pkg_config_path="$vendor_prefix/lib/pkgconfig"
+if test -n "${PKG_CONFIG_PATH:-}"; then
+    system_pkg_config_path="$system_pkg_config_path:$PKG_CONFIG_PATH"
+fi
+system_sdl3_libs=$(PKG_CONFIG_PATH="$system_pkg_config_path" \
+    pkg-config --static --libs sdl3)
+system_sdl3_image_libs=$(PKG_CONFIG_PATH="$system_pkg_config_path" \
+    pkg-config --static --libs sdl3-image)
+system_sdl3_ttf_libs=$(PKG_CONFIG_PATH="$system_pkg_config_path" \
+    pkg-config --static --libs sdl3-ttf)
+
 run_configuration()
 {
     configuration_name=$1
@@ -97,8 +108,14 @@ run_configuration()
 # Every test is run through make check; the runner never selects an individual
 # test binary.  Separate build and install trees also catch source-tree leaks.
 # Both dependency modes exercise the complete target set and the SDL-only set.
-run_configuration system-default --with-sdl3=system
-run_configuration system-sdl-only --with-sdl3=system \
+PKG_CONFIG_PATH="$system_pkg_config_path" SDL3_LIBS="$system_sdl3_libs" \
+    SDL3_IMAGE_LIBS="$system_sdl3_image_libs" \
+    SDL3_TTF_LIBS="$system_sdl3_ttf_libs" \
+    run_configuration system-default --with-sdl3=system
+PKG_CONFIG_PATH="$system_pkg_config_path" SDL3_LIBS="$system_sdl3_libs" \
+    SDL3_IMAGE_LIBS="$system_sdl3_image_libs" \
+    SDL3_TTF_LIBS="$system_sdl3_ttf_libs" \
+    run_configuration system-sdl-only --with-sdl3=system \
     --enable-sdl-client --disable-x11-client --disable-replay \
     --disable-xp-mapedit
 run_configuration vendored-default \
