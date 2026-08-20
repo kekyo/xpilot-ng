@@ -671,9 +671,9 @@ int Net_flush(void)
 }
 
 /*
- * Return the socket filedescriptor for use in a select(2) call.
+ * Return the native socket handle for use in a select(2) call.
  */
-int Net_fd(void)
+socket_handle_t Net_fd(void)
 {
     return rbuf.sock.fd;
 }

@@ -2918,6 +2918,7 @@ static int Receive_motd(connection_t *connp)
  * then on the next access the MOTD file is checked for changes.
  */
 #ifdef _WINDOWS
+#undef close
 #define	close(__a)	_close(__a)
 #endif
 static int Get_motd(char *buf, int offset, int maxlen, int *size_ptr)

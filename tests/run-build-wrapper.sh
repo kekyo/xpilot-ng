@@ -37,10 +37,19 @@ fixture_log="$wrapper_test_dir/invocations.log"
 fixture_toolchain="$wrapper_test_dir/toolchain.cmake"
 fixture_install="$wrapper_test_dir/install"
 
-mkdir -p "$fixture_source/vendor/sdl3" "$fixture_tools"
+mkdir -p "$fixture_source/vendor/sdl3/SDL/build-scripts" \
+    "$fixture_source/vendor/mingw" "$fixture_source/tests" \
+    "$fixture_source/lib/maps" "$fixture_tools"
 cp "$XPILOT_BUILD_WRAPPER" "$fixture_source/build.sh"
 chmod +x "$fixture_source/build.sh"
 : > "$fixture_toolchain"
+: > "$fixture_source/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-i686.cmake"
+: > "$fixture_source/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-x86_64.cmake"
+for data_file in defaults.txt password.txt robots.txt shipshapes.txt; do
+    printf 'fixture data\n' > "$fixture_source/lib/$data_file"
+done
+printf 'fixture map\n' > "$fixture_source/lib/maps/ndh.xp2"
+printf 'fixture license\n' > "$fixture_source/COPYING"
 
 cat > "$fixture_source/vendor/sdl3/build.sh" <<'EOF'
 #!/bin/sh
@@ -69,11 +78,53 @@ done
 mkdir -p "$vendor_build_dir" "$vendor_prefix/lib/pkgconfig"
 EOF
 
+cat > "$fixture_source/vendor/mingw/build.sh" <<'EOF'
+#!/bin/sh
+set -eu
+
+vendor_build_dir=
+vendor_prefix=
+for argument do
+    printf 'mingw.arg=%s\n' "$argument" >> "$XPILOT_BUILD_TEST_LOG"
+done
+while test "$#" -gt 0; do
+    case "$1" in
+        --build-dir)
+            vendor_build_dir=$2
+            shift 2
+            ;;
+        --prefix)
+            vendor_prefix=$2
+            shift 2
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+mkdir -p "$vendor_build_dir" "$vendor_prefix/include" \
+    "$vendor_prefix/lib/pkgconfig"
+: > "$vendor_prefix/lib/libz.a"
+: > "$vendor_prefix/lib/libexpat.a"
+: > "$vendor_prefix/lib/pkgconfig/sdl3.pc"
+: > "$vendor_prefix/lib/pkgconfig/sdl3-image.pc"
+: > "$vendor_prefix/lib/pkgconfig/sdl3-ttf.pc"
+EOF
+
 cat > "$fixture_source/configure" <<'EOF'
 #!/bin/sh
 set -eu
 
 printf 'configure.cwd=%s\n' "$(pwd)" >> "$XPILOT_BUILD_TEST_LOG"
+printf 'configure.cc=%s\n' "${CC:-}" >> "$XPILOT_BUILD_TEST_LOG"
+printf 'configure.cppflags=%s\n' "${CPPFLAGS:-}" >> "$XPILOT_BUILD_TEST_LOG"
+printf 'configure.ldflags=%s\n' "${LDFLAGS:-}" >> "$XPILOT_BUILD_TEST_LOG"
+printf 'configure.pkg_config_libdir=%s\n' "${PKG_CONFIG_LIBDIR:-}" \
+    >> "$XPILOT_BUILD_TEST_LOG"
+printf 'configure.gl_cflags=%s\n' "${GL_CFLAGS:-}" \
+    >> "$XPILOT_BUILD_TEST_LOG"
+printf 'configure.gl_libs=%s\n' "${GL_LIBS:-}" \
+    >> "$XPILOT_BUILD_TEST_LOG"
 for argument do
     printf 'configure.arg=%s\n' "$argument" >> "$XPILOT_BUILD_TEST_LOG"
 done
@@ -87,9 +138,31 @@ printf 'make.cwd=%s\n' "$(pwd)" >> "$XPILOT_BUILD_TEST_LOG"
 for argument do
     printf 'make.arg=%s\n' "$argument" >> "$XPILOT_BUILD_TEST_LOG"
 done
+case "$(pwd)" in
+    */output/windows/*/xpilot-ng)
+        mkdir -p src/server src/client/sdl tests
+        : > src/server/xpilot-ng-server.exe
+        : > src/client/sdl/xpilot-ng-sdl.exe
+        : > tests/test-framed-stream.exe
+        : > tests/test-game-transport.exe
+        : > tests/test-socket-io.exe
+        : > tests/test-sdl-versions.exe
+        ;;
+esac
+EOF
+
+cat > "$fixture_source/tests/run-wine-suite.sh" <<'EOF'
+#!/bin/sh
+set -eu
+
+for argument do
+    printf 'wine.arg=%s\n' "$argument" >> "$XPILOT_BUILD_TEST_LOG"
+done
 EOF
 
 chmod +x "$fixture_source/vendor/sdl3/build.sh" \
+    "$fixture_source/vendor/mingw/build.sh" \
+    "$fixture_source/tests/run-wine-suite.sh" \
     "$fixture_source/configure" "$fixture_tools/make"
 
 XPILOT_BUILD_TEST_LOG=$fixture_log \
@@ -135,6 +208,73 @@ grep -Fx "make.cwd=$fixture_output/xpilot-ng" "$fixture_log" >/dev/null \
     || fail "XPilot NG was not built out of tree"
 grep -Fx "make.arg=-j3" "$fixture_log" >/dev/null \
     || fail "parallel build count was not passed to make"
+
+: > "$fixture_log"
+XPILOT_BUILD_TEST_LOG=$fixture_log \
+PATH="$fixture_tools:$PATH" \
+    "$fixture_source/build.sh" \
+    --target windows \
+    --arch all \
+    --test \
+    --build-root "$fixture_output" \
+    --jobs 2
+
+for architecture in x86 x86_64; do
+    case "$architecture" in
+        x86)
+            triplet=i686-w64-mingw32
+            toolchain=cmake-toolchain-mingw64-i686.cmake
+            ;;
+        x86_64)
+            triplet=x86_64-w64-mingw32
+            toolchain=cmake-toolchain-mingw64-x86_64.cmake
+            ;;
+    esac
+    architecture_root="$fixture_output/windows/$architecture"
+    vendor_prefix="$architecture_root/vendor-prefix"
+
+    grep -Fx "mingw.arg=$triplet" "$fixture_log" >/dev/null \
+        || fail "$architecture dependency triplet was not passed"
+    grep -Fx "mingw.arg=$fixture_source/vendor/sdl3/SDL/build-scripts/$toolchain" \
+        "$fixture_log" >/dev/null \
+        || fail "$architecture toolchain was not passed"
+    grep -Fx "configure.cwd=$architecture_root/xpilot-ng" \
+        "$fixture_log" >/dev/null \
+        || fail "$architecture build was not configured out of tree"
+    grep -Fx "configure.cc=$triplet-gcc" "$fixture_log" >/dev/null \
+        || fail "$architecture C compiler was not selected"
+    grep -Fx "configure.cppflags=-I$vendor_prefix/include" \
+        "$fixture_log" >/dev/null \
+        || fail "$architecture dependency include path was not selected"
+    grep -Fx "configure.ldflags=-L$vendor_prefix/lib" \
+        "$fixture_log" >/dev/null \
+        || fail "$architecture dependency library path was not selected"
+    grep -Fx "configure.pkg_config_libdir=$vendor_prefix/lib/pkgconfig" \
+        "$fixture_log" >/dev/null \
+        || fail "$architecture pkg-config directory was not isolated"
+    grep -Fx "configure.gl_cflags=-DWIN32" "$fixture_log" >/dev/null \
+        || fail "$architecture OpenGL declarations were not selected"
+    grep -Fx "configure.gl_libs=-lopengl32" "$fixture_log" >/dev/null \
+        || fail "$architecture OpenGL library was not selected"
+    grep -Fx "configure.arg=--host=$triplet" "$fixture_log" >/dev/null \
+        || fail "$architecture host triplet was not configured"
+    grep -Fx "configure.arg=--with-sdl3-prefix=$vendor_prefix" \
+        "$fixture_log" >/dev/null \
+        || fail "$architecture SDL3 prefix was not configured"
+
+    test -f "$architecture_root/package/xpilot-ng-server.exe" \
+        || fail "$architecture server was not packaged"
+    test -f "$architecture_root/package/xpilot-ng-sdl.exe" \
+        || fail "$architecture SDL client was not packaged"
+    test -f "$architecture_root/package/lib/maps/ndh.xp2" \
+        || fail "$architecture game data was not packaged"
+    grep -Fx "wine.arg=--arch" "$fixture_log" >/dev/null \
+        || fail "$architecture Wine test architecture option was not passed"
+    grep -Fx "wine.arg=$architecture" "$fixture_log" >/dev/null \
+        || fail "$architecture Wine tests were not requested"
+    grep -Fx "wine.arg=$architecture_root/package" "$fixture_log" >/dev/null \
+        || fail "$architecture package was not passed to Wine tests"
+done
 
 if "$fixture_source/build.sh" --jobs 0 \
     --build-root "$wrapper_test_dir/invalid" >/dev/null 2>&1; then

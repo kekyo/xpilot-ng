@@ -8,6 +8,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	@GL_CFLAGS@
 
 check_PROGRAMS = test-framed-stream test-game-transport test-socket-io \
+	test-native-socket-handle \
 	test-meta-environment test-sdl-versions \
 	test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
@@ -26,6 +27,7 @@ check_PROGRAMS = test-framed-stream test-game-transport test-socket-io \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
 TESTS = test-framed-stream test-game-transport test-socket-io \
+	test-native-socket-handle \
 	test-meta-environment test-sdl-versions \
 	test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
@@ -58,6 +60,8 @@ test_framed_stream_LDADD = $(top_builddir)/src/common/libxpcommon.a \
 test_socket_io_SOURCES = test_socket_io.c
 test_socket_io_LDADD = $(top_builddir)/src/common/libxpcommon.a \
 	@W32_LIBS@
+
+test_native_socket_handle_SOURCES = test_native_socket_handle.c
 
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
@@ -436,7 +440,7 @@ EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
 	run-gl-core-resources.sh \
 	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
 	run-sdl-renderer-core-context.sh run-vendored-zlib.sh \
-	test_helpers.h
+	run-wine-suite.sh test_helpers.h
 
 run-sdl-core-boundary.log: \
 	$(top_builddir)/src/client/sdl/xpilot-ng-sdl

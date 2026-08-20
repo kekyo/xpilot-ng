@@ -90,12 +90,12 @@ host_triplet = @host@
 target_triplet = @target@
 check_PROGRAMS = test-framed-stream$(EXEEXT) \
 	test-game-transport$(EXEEXT) test-socket-io$(EXEEXT) \
-	test-meta-environment$(EXEEXT) \
-	test-sdl-versions$(EXEEXT) test-sdl-keys$(EXEEXT) \
-	test-sdl-console$(EXEEXT) test-sdl-surface$(EXEEXT) \
-	test-surface-rgba8$(EXEEXT) test-sdl-window$(EXEEXT) \
-	test-sdl-clipboard$(EXEEXT) test-sdl-event$(EXEEXT) \
-	test-gl-core-resources$(EXEEXT) \
+	test-native-socket-handle$(EXEEXT) \
+	test-meta-environment$(EXEEXT) test-sdl-versions$(EXEEXT) \
+	test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
+	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
+	test-sdl-window$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
+	test-sdl-event$(EXEEXT) test-gl-core-resources$(EXEEXT) \
 	test-renderer-commands$(EXEEXT) \
 	test-renderer-geometry$(EXEEXT) test-renderer-gl-core$(EXEEXT) \
 	test-paint-transform$(EXEEXT) test-image-geometry$(EXEEXT) \
@@ -118,8 +118,8 @@ check_PROGRAMS = test-framed-stream$(EXEEXT) \
 	test-text-ttf-atlas$(EXEEXT) test-text-renderer$(EXEEXT) \
 	test-text-cache-adapter$(EXEEXT)
 TESTS = test-framed-stream$(EXEEXT) test-game-transport$(EXEEXT) \
-	test-socket-io$(EXEEXT) test-meta-environment$(EXEEXT) \
-	test-sdl-versions$(EXEEXT) \
+	test-socket-io$(EXEEXT) test-native-socket-handle$(EXEEXT) \
+	test-meta-environment$(EXEEXT) test-sdl-versions$(EXEEXT) \
 	test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
 	test-sdl-window$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
@@ -218,6 +218,11 @@ test_meta_environment_OBJECTS = $(am_test_meta_environment_OBJECTS)
 test_meta_environment_LDADD = $(LDADD)
 test_meta_environment_LINK = $(CCLD) $(test_meta_environment_CFLAGS) \
 	$(CFLAGS) $(test_meta_environment_LDFLAGS) $(LDFLAGS) -o $@
+am_test_native_socket_handle_OBJECTS =  \
+	test_native_socket_handle.$(OBJEXT)
+test_native_socket_handle_OBJECTS =  \
+	$(am_test_native_socket_handle_OBJECTS)
+test_native_socket_handle_LDADD = $(LDADD)
 am_test_paint_transform_OBJECTS = test_paint_transform.$(OBJEXT) \
 	paint_transform.$(OBJEXT)
 test_paint_transform_OBJECTS = $(am_test_paint_transform_OBJECTS)
@@ -481,6 +486,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_meta_environment-meta.Po \
 	./$(DEPDIR)/test_meta_environment-strlcpy.Po \
 	./$(DEPDIR)/test_meta_environment-test_meta_environment.Po \
+	./$(DEPDIR)/test_native_socket_handle.Po \
 	./$(DEPDIR)/test_paint_transform.Po \
 	./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po \
 	./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po \
@@ -569,6 +575,7 @@ SOURCES = $(test_framed_stream_SOURCES) $(test_game_transport_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
 	$(test_meta_environment_SOURCES) \
+	$(test_native_socket_handle_SOURCES) \
 	$(test_paint_transform_SOURCES) \
 	$(test_paintmap_vdecor_SOURCES) \
 	$(test_polygon_geometry_SOURCES) \
@@ -591,8 +598,8 @@ SOURCES = $(test_framed_stream_SOURCES) $(test_game_transport_SOURCES) \
 	$(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlmeta_primitives_SOURCES) \
 	$(test_sdlpaint_stage_SOURCES) $(test_socket_io_SOURCES) \
-	$(test_surface_rgba8_SOURCES) \
-	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
+	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
+	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES)
 DIST_SOURCES = $(test_framed_stream_SOURCES) \
@@ -602,6 +609,7 @@ DIST_SOURCES = $(test_framed_stream_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
 	$(test_meta_environment_SOURCES) \
+	$(test_native_socket_handle_SOURCES) \
 	$(test_paint_transform_SOURCES) \
 	$(test_paintmap_vdecor_SOURCES) \
 	$(test_polygon_geometry_SOURCES) \
@@ -624,8 +632,8 @@ DIST_SOURCES = $(test_framed_stream_SOURCES) \
 	$(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlmeta_primitives_SOURCES) \
 	$(test_sdlpaint_stage_SOURCES) $(test_socket_io_SOURCES) \
-	$(test_surface_rgba8_SOURCES) \
-	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
+	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
+	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES)
 am__can_run_installinfo = \
@@ -999,9 +1007,12 @@ test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
 test_framed_stream_SOURCES = test_framed_stream.c
 test_framed_stream_LDADD = $(top_builddir)/src/common/libxpcommon.a \
 	@W32_LIBS@
+
 test_socket_io_SOURCES = test_socket_io.c
 test_socket_io_LDADD = $(top_builddir)/src/common/libxpcommon.a \
 	@W32_LIBS@
+
+test_native_socket_handle_SOURCES = test_native_socket_handle.c
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
 	$(top_srcdir)/src/client/meta_test_support.h \
@@ -1421,7 +1432,7 @@ EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
 	run-gl-core-resources.sh \
 	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
 	run-sdl-renderer-core-context.sh run-vendored-zlib.sh \
-	test_helpers.h
+	run-wine-suite.sh test_helpers.h
 
 all: all-am
 
@@ -1495,6 +1506,10 @@ test-images$(EXEEXT): $(test_images_OBJECTS) $(test_images_DEPENDENCIES) $(EXTRA
 test-meta-environment$(EXEEXT): $(test_meta_environment_OBJECTS) $(test_meta_environment_DEPENDENCIES) $(EXTRA_test_meta_environment_DEPENDENCIES)
 	@rm -f test-meta-environment$(EXEEXT)
 	$(AM_V_CCLD)$(test_meta_environment_LINK) $(test_meta_environment_OBJECTS) $(test_meta_environment_LDADD) $(LIBS)
+
+test-native-socket-handle$(EXEEXT): $(test_native_socket_handle_OBJECTS) $(test_native_socket_handle_DEPENDENCIES) $(EXTRA_test_native_socket_handle_DEPENDENCIES)
+	@rm -f test-native-socket-handle$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_native_socket_handle_OBJECTS) $(test_native_socket_handle_LDADD) $(LIBS)
 
 test-paint-transform$(EXEEXT): $(test_paint_transform_OBJECTS) $(test_paint_transform_DEPENDENCIES) $(EXTRA_test_paint_transform_DEPENDENCIES)
 	@rm -f test-paint-transform$(EXEEXT)
@@ -1681,6 +1696,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-meta.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-strlcpy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-test_meta_environment.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_native_socket_handle.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paint_transform.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po@am__quote@ # am--include-marker
@@ -3116,6 +3132,13 @@ test-socket-io.log: test-socket-io$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-native-socket-handle.log: test-native-socket-handle$(EXEEXT)
+	@p='test-native-socket-handle$(EXEEXT)'; \
+	b='test-native-socket-handle'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-meta-environment.log: test-meta-environment$(EXEEXT)
 	@p='test-meta-environment$(EXEEXT)'; \
 	b='test-meta-environment'; \
@@ -3512,6 +3535,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_meta_environment-meta.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-strlcpy.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-test_meta_environment.Po
+	-rm -f ./$(DEPDIR)/test_native_socket_handle.Po
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po
@@ -3662,6 +3686,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_meta_environment-meta.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-strlcpy.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-test_meta_environment.Po
+	-rm -f ./$(DEPDIR)/test_native_socket_handle.Po
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po

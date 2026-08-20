@@ -67,7 +67,13 @@ int Net_init(char *server, int port);
 void Net_cleanup(void);
 void Net_key_change(void);
 int Net_flush(void);
-int Net_fd(void);
+/**
+ * Return the native gameplay socket handle.
+ *
+ * @return A POSIX descriptor or Winsock SOCKET, or SOCK_FD_INVALID when the
+ *         gameplay socket is unavailable.
+ */
+socket_handle_t Net_fd(void);
 int Net_start(void);
 void Net_init_measurement(void);
 void Net_init_lag_measurement(void);

@@ -39,7 +39,7 @@ extern "C" {
 
     extern void xpilotShutdown();
     extern int main(int argc, char **argv);
-    extern int Net_fd(void);
+    extern socket_handle_t Net_fd(void);
     extern int Net_input(void);
     extern void Paint_frame(void);
     extern void PaintWinClient();

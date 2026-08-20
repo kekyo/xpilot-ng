@@ -44,5 +44,5 @@ void _Trace(char *fmt, ...)
     va_end(ap);
 }
 
-void Progress(char *fmt, ...) {}
+void Progress(const char *fmt, ...) {}
 void MarkPlayersForRedraw(void) {}

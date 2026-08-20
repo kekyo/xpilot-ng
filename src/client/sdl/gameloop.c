@@ -36,7 +36,8 @@ static int Poll_input(void)
 void Game_loop(void)
 {
     fd_set rfds;
-    int n, netfd, result;
+    socket_handle_t netfd;
+    int n, result;
     struct timeval tv;
 
     if ((result = Net_input()) == -1) {
@@ -49,7 +50,7 @@ void Game_loop(void)
     if (Net_flush() == -1)
 	return;
 
-    if ((netfd = Net_fd()) == -1) {
+    if ((netfd = Net_fd()) == SOCK_FD_INVALID) {
 	error("Bad socket filedescriptor");
 	return;
     }
@@ -64,9 +65,18 @@ void Game_loop(void)
 	if (maxMouseTurnsPS > 0)
 	    Client_check_pointer_move_interval();
 
+/* Winsock retains nfds only for Berkeley compatibility and ignores it. */
+#ifdef _WINDOWS
+        n = select(0, &rfds, NULL, NULL, &tv);
+#else
         n = select(netfd + 1, &rfds, NULL, NULL, &tv);
-	if (n == -1) {
+#endif
+	if (n == SOCK_IS_ERROR) {
+#ifdef _WINDOWS
+	    if (WSAGetLastError() == WSAEINTR)
+#else
 	    if (errno == EINTR)
+#endif
 		continue;
 	    error("Select failed");
 	    return;

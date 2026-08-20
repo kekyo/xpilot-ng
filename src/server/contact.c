@@ -366,8 +366,8 @@ void Contact(socket_handle_t fd, void *arg)
 
 	if (!credentials) {
 	    credentials = (time(NULL) * (time_t)Get_process_id());
-	    credentials ^= (long)Contact;
-	    credentials	+= (long)key + (long)&key;
+	    credentials ^= (long)(uintptr_t)Contact;
+	    credentials	+= (long)key + (long)(uintptr_t)&key;
 	    credentials ^= (long)randomMT() << 1;
 	    credentials &= 0xFFFFFFFF;
 	}
