@@ -45,6 +45,15 @@ such as credentials, paths, queries, fragments, and percent encoding are not
 supported.  TCP contact requires an explicit target or a metaserver entry
 because LAN broadcast discovery is available only with UDP.
 
+If every explicit target fails to return a valid contact response after its
+retries, the SDL client writes a final summary containing the last endpoint
+and both selected transports to standard error.  A normal graphical invocation
+also displays the summary in one modal error dialog and exits unsuccessfully
+after it is acknowledged.  An explicit `-text` or `-list` invocation reports
+through the terminal without opening that dialog.  A server response used to
+complete `-list`, or a later target that responds successfully, is not reported
+as a connection failure.
+
 Metaserver advertisements include both transport selections.  The SDL and X11
 clients apply the advertised values automatically when a server is selected;
 legacy advertisements without transport metadata are treated as UDP contact

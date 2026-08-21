@@ -8,6 +8,13 @@ xpilot-ng-sdl \- an SDL/OpenGL XPilot client.
 .SH DESCRIPTION
 Server targets: HOST, tcp://HOST[:PORT], or udp://HOST[:PORT]
 .PP
+If every explicit target fails to return a valid contact response, a final
+summary identifies the last endpoint and both selected transports.  Normal
+graphical use displays one modal error dialog and exits unsuccessfully after
+acknowledgement; \fB\-text\fR and \fB\-list\fR report through the terminal
+without opening the dialog.  A responding fallback target or a completed
+server listing is not treated as a connection failure.
+.PP
 Where options include:
 .HP
 \fB\-newbie\fR <value>
