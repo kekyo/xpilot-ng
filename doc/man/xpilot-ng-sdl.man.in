@@ -29,7 +29,7 @@ xpilot \- XPilot multiplayer gravity war game client
 .B [-gameTransport \fIudp|tcp\fC]
 .B [-text]
 .B [\fIconfiguration-options]\fC
-.B [\fIserver-host ...\fC]
+.B [\fIserver-target ...\fC]
 
 
 .SH OVERVIEW
@@ -80,14 +80,14 @@ Prints version information.
 .TP 15
 .B -join
 Automatically joins the first server you get response from.
-If no \fIserver-host\fP is specified, UDP contact performs a
+If no \fIserver-target\fP is specified, UDP contact performs a
 \fIbroadcast query\fP on the local network.  TCP contact requires an
-explicit server host.
+explicit server target.
 .TP 15
 .B -list
 With UDP contact, a \fIbroadcast query\fP is performed on the local network
 and status information is displayed from all servers found.  TCP contact
-requires one or more explicit server hosts.
+requires one or more explicit server targets.
 .TP 15
 .B -shutdown [\fImessage\fP]
 Sends a shutdown to the server, the message part is optional.
@@ -102,24 +102,27 @@ Specifies your wanted team number.
 Specifies which X server to contact.
 .TP 15
 .B -port \fInumber\fP
-Specifies the numeric contact port using the selected contact transport.
+Specifies the default numeric contact port for bare targets and qualified
+targets without an explicit port.
 .TP 15
 .B -contactTransport \fIudp|tcp\fP
-Selects the transport for direct contact and pre-game lobby requests.  The
-default is UDP.  Direct connections must match the server and do not fall
-back automatically.  LAN broadcast discovery is available only with UDP.
-A server selected from the metaserver list applies its advertised value.
+Selects the default transport for direct contact and pre-game lobby requests
+to bare targets.  The default is UDP.  A \fBtcp://\fP or \fBudp://\fP
+target overrides both transport defaults for that target.  LAN broadcast
+discovery is available only with UDP.  A server selected from the metaserver
+list applies its advertised value.
 .TP 15
 .B -gameTransport \fIudp|tcp\fP
-Selects the gameplay transport.  The default is UDP.  Direct connections
-must match the server and do not fall back automatically.  A server selected
-from the metaserver list applies its advertised value.
+Selects the default gameplay transport for bare targets.  The default is UDP.
+A \fBtcp://\fP or \fBudp://\fP target overrides both transport defaults for
+that target.  A server selected from the metaserver list applies its
+advertised value.
 .TP 15
 .B -text
 Invokes the old text-based \fBcommand prompt\fP interface instead
-of the new \fBWelcome Window\fP.  If no \fIserver-host\fP is specified,
+of the new \fBWelcome Window\fP.  If no \fIserver-target\fP is specified,
 UDP contact performs a \fIbroadcast query\fP on the local network; TCP
-contact requires an explicit server host.  If a \fIserver-host\fP is
+contact requires an explicit server target.  If a \fIserver-target\fP is
 specified, \fB-text\fP is implied.
 .TP 15
 .B \fIconfiguration-options\fP
@@ -127,12 +130,20 @@ All the X resource values can be configured separately from the command
 line.  For example to change the ecm key to just `z' use;
 .B -keyEcm z
 .TP 15
-.B \fIserver-host\fP
-Tries to connect to server at host \fIserver-host\fP.  If successful
-and \fB-join\fP is not specified, you are presented with the
-\fBcommand prompt\fP.
+.B \fIserver-target\fP
+A direct target is \fIHOST\fP, \fItcp://HOST[:PORT]\fP, or
+\fIudp://HOST[:PORT]\fP.  A qualified target selects that transport for
+both contact/lobby and gameplay, and its optional port overrides
+\fB-port\fP.  A bare host uses the transport and port option defaults.
+Multiple targets are tried in command-line order without automatically
+probing another protocol for the same target.
 
-If neither \fIserver-host\fP nor \fB-join\fP are specified, the
+Target hosts are DNS names or IPv4 addresses.  IPv6 literals, credentials,
+paths, queries, fragments, and percent encoding are not supported.  If a
+connection succeeds and \fB-join\fP is not specified, you are presented
+with the \fBcommand prompt\fP.
+
+If neither \fIserver-target\fP nor \fB-join\fP are specified, the
 \fBWelcome Window\fP is displayed and a server may be selected from
 there.
 

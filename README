@@ -20,17 +20,25 @@ NETWORK TRANSPORT
 
 Contact/lobby and gameplay connections use UDP by default and can be selected
 independently.  To use TCP for both, start both endpoints with matching
-options, for example:
+settings, for example:
 
         xpilot-ng-server -contactTransport tcp -gameTransport tcp [options]
-        xpilot-ng-sdl -contactTransport tcp -gameTransport tcp \
-            -join server.example
+        xpilot-ng-sdl -join tcp://server.example
 
-For direct connections, the client and server must select the same value
-(`udp` or `tcp`) for each transport; there is no automatic fallback.  The
-`-port` option identifies the numeric contact port using the selected contact
-transport.  TCP contact connections require an explicit server address or a
-metaserver entry because LAN broadcast discovery is available only with UDP.
+Direct client targets accept `HOST`, `tcp://HOST[:PORT]`, or
+`udp://HOST[:PORT]`.  A qualified target selects that transport for both
+contact/lobby and gameplay, while a bare host uses the `contactTransport`,
+`gameTransport`, and `port` option defaults.  An explicit target port overrides
+`-port`.  Split transport combinations remain available through the long
+options or metaserver advertisements.
+
+Multiple targets are tried in command-line order, for example
+`tcp://server1 udp://server2`.  This is explicit fallback between targets;
+the client does not automatically probe both protocols for one target.  Target
+hosts are DNS names or IPv4 addresses.  IPv6 literals and general URI features
+such as credentials, paths, queries, fragments, and percent encoding are not
+supported.  TCP contact requires an explicit target or a metaserver entry
+because LAN broadcast discovery is available only with UDP.
 
 Metaserver advertisements include both transport selections.  The SDL and X11
 clients apply the advertised values automatically when a server is selected;

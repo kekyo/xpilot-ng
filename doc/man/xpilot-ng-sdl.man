@@ -4,8 +4,10 @@
 xpilot-ng-sdl \- an SDL/OpenGL XPilot client.
 .SH SYNOPSIS
 .B xpilot-ng-sdl
-[\fI-options \fR...] [\fIserver\fR]
+[\fI-options \fR...] [\fIserver-target \fR...]
 .SH DESCRIPTION
+Server targets: HOST, tcp://HOST[:PORT], or udp://HOST[:PORT]
+.PP
 Where options include:
 .HP
 \fB\-newbie\fR <value>
@@ -62,7 +64,8 @@ The default value is: 65535.
 .HP
 \fB\-port\fR <value>
 .IP
-Set the contact port number of the server.
+Set the default contact port number for direct server targets.
+A port in tcp://HOST:PORT or udp://HOST:PORT overrides this value.
 Almost all servers use the default port, which is the recommended
 policy.  You can find out about which port is used by a server by
 querying the XPilot Meta server.
@@ -236,14 +239,16 @@ The default value is: yes.
 .HP
 \fB\-contactTransport\fR <value>
 .IP
-Contact and lobby transport for direct server connections: udp or tcp.
+Default contact and lobby transport for bare server targets: udp or tcp.
+A tcp:// or udp:// target selects both transports for that target.
 Direct connections must match the server; metaserver selections apply the
 advertised value.
 The default value is: udp.
 .HP
 \fB\-gameTransport\fR <value>
 .IP
-Gameplay transport to use when joining servers: udp or tcp.
+Default gameplay transport for bare server targets: udp or tcp.
+A tcp:// or udp:// target selects both transports for that target.
 Direct connections must match the server; metaserver selections apply the
 advertised value.
 The default value is: udp.
