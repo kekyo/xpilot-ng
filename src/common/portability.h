@@ -85,12 +85,6 @@ extern int xpprintf(const char* fmt, ...);
  */
 extern bool is_this_windows(void);
 
-#ifdef _MSC_VER
-typedef unsigned short uint16_t; /* e.g. in client.c */
-typedef unsigned int uint32_t;
-typedef int int32_t;
-#endif
-
 #ifdef _WINDOWS
 /*
  * Defines gettimeofday
@@ -117,15 +111,18 @@ typedef int int32_t;
 #    define EPOCHFILETIME (116444736000000000LL)
 #  endif
 
+#  ifndef _TIMEZONE_DEFINED
+#    define _TIMEZONE_DEFINED
 struct timezone {
     int tz_minuteswest; /* minutes W of Greenwich */
     int tz_dsttime;     /* type of dst correction */
 };
+#  endif
 
 
 #  ifndef HAVE_GETTIMEOFDAY
 #define NEED_GETTIMEOFDAY
-extern gettimeofday(struct timeval *tv, struct timezone *tz);
+extern int gettimeofday(struct timeval *tv, struct timezone *tz);
 
 #  define HAVE_GETTIMEOFDAY 1
 

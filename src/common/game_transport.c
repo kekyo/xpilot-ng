@@ -12,6 +12,8 @@
 #include "game_transport.h"
 
 #include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
 static char ascii_lower(char ch)
 {
@@ -80,7 +82,9 @@ bool Game_transport_from_protocol_version(unsigned version,
         return false;
 
     if (version == GAME_PROTOCOL_TCP_POLYGON_VERSION
-        || version == GAME_PROTOCOL_TCP_LEGACY_VERSION) {
+        || version == GAME_PROTOCOL_TCP_LEGACY_VERSION
+        || version == GAME_PROTOCOL_TCP_POLYGON_PRE_RECONNECT_VERSION
+        || version == GAME_PROTOCOL_TCP_LEGACY_PRE_RECONNECT_VERSION) {
         *transport = GAME_TRANSPORT_TCP;
         return true;
     }
@@ -90,4 +94,75 @@ bool Game_transport_from_protocol_version(unsigned version,
         return true;
     }
     return false;
+}
+
+bool Game_transport_protocol_supports_reconnect(unsigned version)
+{
+    return version == GAME_PROTOCOL_TCP_POLYGON_VERSION
+        || version == GAME_PROTOCOL_TCP_LEGACY_VERSION;
+}
+
+bool Game_transport_format_meta_version(char *output, size_t output_size,
+                                        const char *version,
+                                        game_transport_t contact,
+                                        game_transport_t gameplay)
+{
+    const char *contact_name;
+    const char *gameplay_name;
+    int length;
+
+    if (output == NULL || output_size == 0 || version == NULL)
+        return false;
+    contact_name = Game_transport_name(contact);
+    gameplay_name = Game_transport_name(gameplay);
+    if (strcmp(contact_name, "unknown") == 0
+        || strcmp(gameplay_name, "unknown") == 0)
+        return false;
+
+    length = snprintf(output, output_size, "%s+ct=%s+gt=%s",
+                      version, contact_name, gameplay_name);
+    return length >= 0 && (size_t)length < output_size;
+}
+
+bool Game_transport_parse_meta_version(const char *version,
+                                       game_transport_t *contact,
+                                       game_transport_t *gameplay,
+                                       size_t *base_length)
+{
+    static const char contact_marker[] = "+ct=";
+    static const char gameplay_marker[] = "+gt=";
+    const char *contact_tag;
+    const char *contact_value;
+    const char *gameplay_tag;
+    char contact_text[4];
+    game_transport_t parsed_contact;
+    game_transport_t parsed_gameplay;
+    size_t contact_length;
+
+    if (version == NULL || contact == NULL || gameplay == NULL
+        || base_length == NULL)
+        return false;
+    contact_tag = strstr(version, contact_marker);
+    if (contact_tag == NULL || contact_tag == version)
+        return false;
+    contact_value = contact_tag + strlen(contact_marker);
+    gameplay_tag = strstr(contact_value,
+                          gameplay_marker);
+    if (gameplay_tag == NULL)
+        return false;
+
+    contact_length = (size_t)(gameplay_tag - contact_value);
+    if (contact_length != sizeof(contact_text) - 1)
+        return false;
+    memcpy(contact_text, contact_value, contact_length);
+    contact_text[contact_length] = '\0';
+    if (!Game_transport_parse(contact_text, &parsed_contact)
+        || !Game_transport_parse(gameplay_tag + strlen(gameplay_marker),
+                                 &parsed_gameplay))
+        return false;
+
+    *contact = parsed_contact;
+    *gameplay = parsed_gameplay;
+    *base_length = (size_t)(contact_tag - version);
+    return true;
 }

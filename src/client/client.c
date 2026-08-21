@@ -30,6 +30,7 @@ client_data_t	clData = { 0, };
 char	*geometry;
 xp_args_t xpArgs;
 Connect_param_t connectParam;
+Connect_defaults_t connectDefaults;
 
 bool	newbie;
 int	baseWarningType;	/* Which type of base warning you prefer */
@@ -154,7 +155,7 @@ int	cumulativeMouseMovement = 0;
 int	clientPortStart = 0;	/* First network port for clients */
 int	clientPortEnd = 0;	/* Last one (these are for firewalls) */
 
-byte	lose_item;		/* index for dropping owned item */
+u_byte	lose_item;		/* index for dropping owned item */
 int	lose_item_active;	/* one of the lose keys is pressed */
 
 static double       teamscores[MAX_TEAMS];

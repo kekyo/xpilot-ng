@@ -28,132 +28,192 @@
 
 #include "xpserver.h"
 
-/* Windows incorrectly uses u_int in FD_CLR */
-#ifdef _WINDOWS
-typedef	u_int	FDTYPE;
-#else
-typedef	int	FDTYPE;
-#endif
-
-#ifndef _WINDOWS
-#define NUM_SELECT_FD		((int)sizeof(int) * 8)
-#else
-/*
-    Windoze:
-    The first call to socket() returns 560ish.  Successive calls keep bumping
-    up the SOCKET returned until about 880 when it wraps back to 8.
-    (It seems to increment by 8 with each connect - but that's not important)
-    I can't find a manifest constant to tell me what the upper limit will be
-    *sigh*
-
-    --- Now, the Windoze gurus tell me that SOCKET is an opaque data type.
-    So i need to make a lookup array for the lookup array :(
-*/
-#define	NUM_SELECT_FD		2000
-#endif
+/* Recording uses one byte for a scheduler slot, with 127 reserved. */
+#define NUM_INPUT_HANDLERS 126
 
 struct io_handler {
-    int			fd;
-    void		(*func)(int, void *);
+    socket_handle_t	fd;
+    sched_input_fn	func;
     void		*arg;
+    bool		active;
 };
 
-static struct io_handler	input_handlers[NUM_SELECT_FD];
-static struct io_handler	record_handlers[NUM_SELECT_FD];
-static fd_set			input_mask;
-int				max_fd, min_fd;
-static int			input_inited = false;
-
-#if !defined(_WINDOWS)
+static struct io_handler input_handlers[NUM_INPUT_HANDLERS];
+static struct io_handler record_handlers[NUM_INPUT_HANDLERS];
+static fd_set input_mask;
+static socket_handle_t max_fd = SOCK_FD_INVALID;
+static bool input_inited = false;
 static volatile bool sched_running = false;
 
 void stop_sched(void)
 {
-	sched_running = false;
+    sched_running = false;
 }
-#endif
 
-static void io_dummy(int fd, void *arg)
+static void io_dummy(socket_handle_t fd, void *arg)
 {
-    xpprintf("io_dummy called!  (%d, %p)\n", fd, arg);
+    UNUSED_PARAM(fd);
+    xpprintf("io_dummy called!  (%p)\n", arg);
 }
 
-void install_input(void (*func)(int, void *), int fd, void *arg)
+static void clear_handler(struct io_handler *handler)
+{
+    handler->fd = SOCK_FD_INVALID;
+    handler->func = io_dummy;
+    handler->arg = NULL;
+    handler->active = false;
+}
+
+static void init_input_handlers(void)
 {
     int i;
-    static struct io_handler *handlers;
 
-    if (playback) {
-	handlers = record_handlers;
-	fd += min_fd;
-    }
-    else
-	handlers = input_handlers;
-
-    if (input_inited == false) {
-	input_inited = true;
-	FD_ZERO(&input_mask);
-#ifndef _WINDOWS
-	min_fd = fd;
-#else
-	min_fd = 0;
-#endif
-	max_fd = fd;
-	for (i = 0; i < NELEM(input_handlers); i++) {
-	    input_handlers[i].fd = -1;
-	    input_handlers[i].func = io_dummy;
-	    input_handlers[i].arg = 0;
-	}
-    }
-    /* IFWINDOWS(xpprintf("install_input: fd %d min_fd=%d\n", fd, min_fd)); */
-    if (!playback && (fd < min_fd || fd >= min_fd + NUM_SELECT_FD)) {
-	error("install illegal input handler fd %d (%d)", fd, min_fd);
-	exit(1);
-    }
-    if (!playback && FD_ISSET(fd, &input_mask)) {
-	error("input handler %d busy", fd);
-	exit(1);
-    }
-    handlers[fd - min_fd].fd = fd;
-    handlers[fd - min_fd].func = func;
-    handlers[fd - min_fd].arg = arg;
-    if (playback)
+    if (input_inited)
 	return;
-    FD_SET(fd, &input_mask);
-    if (fd > max_fd) {
-	max_fd = fd;
+    input_inited = true;
+    FD_ZERO(&input_mask);
+    for (i = 0; i < NUM_INPUT_HANDLERS; i++) {
+	clear_handler(&input_handlers[i]);
+	clear_handler(&record_handlers[i]);
     }
 }
 
-void remove_input(int fd)
+static int find_input_slot(struct io_handler *handlers, socket_handle_t fd)
 {
+    int i;
+
+    for (i = 0; i < NUM_INPUT_HANDLERS; i++) {
+	if (handlers[i].active && handlers[i].fd == fd)
+	    return i;
+    }
+    return SOCK_IS_ERROR;
+}
+
+static int find_free_input_slot(struct io_handler *handlers)
+{
+    int i;
+
+    for (i = 0; i < NUM_INPUT_HANDLERS; i++) {
+	if (!handlers[i].active)
+	    return i;
+    }
+    return SOCK_IS_ERROR;
+}
+
+static void update_max_fd(void)
+{
+    int i;
+
+    max_fd = SOCK_FD_INVALID;
+    for (i = 0; i < NUM_INPUT_HANDLERS; i++) {
+	if (!input_handlers[i].active)
+	    continue;
+	if (max_fd == SOCK_FD_INVALID || input_handlers[i].fd > max_fd)
+	    max_fd = input_handlers[i].fd;
+    }
+}
+
+int install_input(sched_input_fn func, socket_handle_t fd, void *arg)
+{
+    struct io_handler *handlers;
+    int slot;
+
+    init_input_handlers();
+    handlers = playback ? record_handlers : input_handlers;
+    if (playback) {
+	slot = (int)fd;
+	if (slot < 0 || slot >= NUM_INPUT_HANDLERS)
+	    return SOCK_IS_ERROR;
+    } else {
+#ifndef _WINDOWS
+	if (fd < 0 || fd >= FD_SETSIZE) {
+	    error("socket descriptor is outside fd_set capacity: %d", fd);
+	    return SOCK_IS_ERROR;
+	}
+#endif
+	if (find_input_slot(input_handlers, fd) != SOCK_IS_ERROR) {
+	    error("input handler already registered");
+	    return SOCK_IS_ERROR;
+	}
+	slot = find_free_input_slot(input_handlers);
+	if (slot == SOCK_IS_ERROR) {
+	    error("no free input handler slots");
+	    return SOCK_IS_ERROR;
+	}
+    }
+    if (handlers[slot].active)
+	return SOCK_IS_ERROR;
+
+    handlers[slot].fd = fd;
+    handlers[slot].func = func;
+    handlers[slot].arg = arg;
+    handlers[slot].active = true;
     if (!playback) {
-	if (fd < min_fd || fd >= min_fd + NUM_SELECT_FD) {
-	    error("remove illegal input handler fd %d (%d)", fd, min_fd);
-	    exit(1);
-	}
-	if (FD_ISSET(fd, &input_mask) || playback) {
-	    input_handlers[fd - min_fd].fd = -1;
-	    input_handlers[fd - min_fd].func = io_dummy;
-	    input_handlers[fd - min_fd].arg = 0;
-	    FD_CLR((FDTYPE)fd, &input_mask);
-	    if (fd == max_fd) {
-		int i = fd;
-		max_fd = -1;
-		while (--i >= min_fd) {
-		    if (FD_ISSET(i, &input_mask)) {
-			max_fd = i;
-			break;
-		    }
-		}
-	    }
-	}
+	FD_SET(fd, &input_mask);
+	update_max_fd();
     }
-    else {
-	record_handlers[fd].fd = -1;
-	record_handlers[fd].func = io_dummy;
-	record_handlers[fd].arg = 0;
-    }
+    return slot;
+}
+
+int replace_input(socket_handle_t old_fd, socket_handle_t new_fd)
+{
+    int slot;
+
+    if (playback)
+	return SOCK_IS_ERROR;
+    init_input_handlers();
+    slot = find_input_slot(input_handlers, old_fd);
+    if (slot == SOCK_IS_ERROR
+	|| find_input_slot(input_handlers, new_fd) != SOCK_IS_ERROR)
+	return SOCK_IS_ERROR;
+#ifndef _WINDOWS
+    if (new_fd < 0 || new_fd >= FD_SETSIZE)
+	return SOCK_IS_ERROR;
+#endif
+
+    FD_CLR(old_fd, &input_mask);
+    input_handlers[slot].fd = new_fd;
+    FD_SET(new_fd, &input_mask);
+    update_max_fd();
+    return slot;
+}
+
+void remove_input(socket_handle_t fd)
+{
+    struct io_handler *handlers;
+    int slot;
+
+    init_input_handlers();
+    handlers = playback ? record_handlers : input_handlers;
+    slot = playback ? (int)fd : find_input_slot(input_handlers, fd);
+    if (slot < 0 || slot >= NUM_INPUT_HANDLERS || !handlers[slot].active)
+	return;
+
+    if (!playback)
+	FD_CLR(fd, &input_mask);
+    clear_handler(&handlers[slot]);
+    if (!playback)
+	update_max_fd();
+}
+
+static int sched_select_wait(fd_set *readmask, struct timeval *timeout)
+{
+#ifdef _WINDOWS
+    return select(0, readmask, NULL, NULL, timeout);
+#else
+    int nfds = max_fd == SOCK_FD_INVALID ? 0 : max_fd + 1;
+
+    return select(nfds, readmask, NULL, NULL, timeout);
+#endif
+}
+
+static int sched_select_interrupted(void)
+{
+#ifdef _WINDOWS
+    return WSAGetLastError() == WSAEINTR;
+#else
+    return errno == EINTR;
+#endif
 }
 
 static void sched_select_error(void)
@@ -260,10 +320,10 @@ void sched(void)
 	/* RECORDING STUFF END */
 
 	wait_tv = seconds_to_timeval(t_wait);
-	n = select(max_fd + 1, &readmask, NULL, NULL, &wait_tv);
+	n = sched_select_wait(&readmask, &wait_tv);
 
 	if (n <= 0) {
-	    if (n == -1 && errno != EINTR)
+	    if (n == SOCK_IS_ERROR && !sched_select_interrupted())
 		sched_select_error();
 
 	    /* RECORDING STUFF */
@@ -296,33 +356,29 @@ void sched(void)
 #endif
 	}
 	else {
-	    for (i = max_fd; i >= min_fd; i--) {
-		if (FD_ISSET(i, &readmask)) {
-		    struct io_handler *ioh;
+	    for (i = NUM_INPUT_HANDLERS - 1; i >= 0; i--) {
+		struct io_handler *ioh = &input_handlers[i];
 
-		    /* RECORDING STUFF */
-		    record = playback = 0;
-		    if (rrecord && (i - min_fd > 0)) {
-			if (i - min_fd + 1 > 126) { /* 127 reserved */
-			    warn("recording: this shouldn't happen");
-			    exit(1);
-			}
-			*playback_sched++ = i - min_fd + 1;
-			record = 1;
-		    }
-		    /* RECORDING STUFF END */
+		if (!ioh->active || !FD_ISSET(ioh->fd, &readmask))
+		    continue;
 
-		    ioh = &input_handlers[i - min_fd];
-		    (*(ioh->func))(ioh->fd, ioh->arg);
-
-		    /* RECORDING STUFF */
-		    record = rrecord;
-		    playback = rplayback;
-		    /* RECORDING STUFF END */
-
-		    if (--n == 0)
-			break;
+		/* RECORDING STUFF */
+		record = playback = 0;
+		if (rrecord && i > 0) {
+		    *playback_sched++ = i + 1;
+		    record = 1;
 		}
+		/* RECORDING STUFF END */
+
+		(*(ioh->func))(ioh->fd, ioh->arg);
+
+		/* RECORDING STUFF */
+		record = rrecord;
+		playback = rplayback;
+		/* RECORDING STUFF END */
+
+		if (--n == 0)
+		    break;
 	    }
 	}
     }
@@ -672,33 +728,28 @@ void sched(void)
 	    fd_set readmask;
 	    readmask = input_mask;
 	    Handle_recording_buffers();
-	    n = select(max_fd + 1, &readmask, 0, 0, tvp);
+	    n = sched_select_wait(&readmask, tvp);
 	    if (n <= 0) {
-		if (n == -1 && errno != EINTR)
+		if (n == SOCK_IS_ERROR && !sched_select_interrupted())
 		    sched_select_error();
 		io_todo = 0;
 	    }
 	    else {
-		for (i = max_fd; i >= min_fd; i--) {
-		    if (FD_ISSET(i, &readmask)) {
-			struct io_handler *ioh;
+		for (i = NUM_INPUT_HANDLERS - 1; i >= 0; i--) {
+		    struct io_handler *ioh = &input_handlers[i];
 
-			record = playback = 0;
-			if (rrecord && (i - min_fd > 0)) {
-			    if (i - min_fd + 1 > 126) { /* 127 reserved */
-				warn("recording: this shouldn't happen");
-				exit(1);
-			    }
-			    *playback_sched++ = i - min_fd + 1;
-			    record = 1;
-			}
-			ioh = &input_handlers[i - min_fd];
-			(*(ioh->func))(ioh->fd, ioh->arg);
-			record = rrecord;
-			playback = rplayback;
-			if (--n == 0)
-			    break;
+		    if (!ioh->active || !FD_ISSET(ioh->fd, &readmask))
+			continue;
+		    record = playback = 0;
+		    if (rrecord && i > 0) {
+			*playback_sched++ = i + 1;
+			record = 1;
 		    }
+		    (*(ioh->func))(ioh->fd, ioh->arg);
+		    record = rrecord;
+		    playback = rplayback;
+		    if (--n == 0)
+			break;
 		}
 		if (io_todo > 0)
 		    io_todo--;
@@ -748,23 +799,22 @@ void sched(void)
     else {
 	fd_set readmask;
 	readmask = input_mask;
-	n = select(max_fd + 1, &readmask, 0, 0, tvp);
+	n = sched_select_wait(&readmask, tvp);
 	if (n <= 0) {
-	    if (n == -1 && errno != EINTR) {
+	    if (n == SOCK_IS_ERROR && !sched_select_interrupted()) {
 		sched_select_error();
 	    }
 	    io_todo = 0;
 	}
 	else {
-	    for (i = max_fd; i >= min_fd; i--) {
-		if (FD_ISSET(i, &readmask)) {
-		    struct io_handler *ioh;
-		    ioh = &input_handlers[i - min_fd];
-		    (*(ioh->func))(ioh->fd, ioh->arg);
-		    if (--n == 0) {
-			break;
-		    }
-		}
+	    for (i = NUM_INPUT_HANDLERS - 1; i >= 0; i--) {
+		struct io_handler *ioh = &input_handlers[i];
+
+		if (!ioh->active || !FD_ISSET(ioh->fd, &readmask))
+		    continue;
+		(*(ioh->func))(ioh->fd, ioh->arg);
+		if (--n == 0)
+		    break;
 	    }
 	    if (io_todo > 0) {
 		io_todo--;

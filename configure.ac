@@ -9,6 +9,22 @@ AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
+windows_target=no
+mingw_arch=
+case "$host" in
+	i686-w64-mingw32)
+		windows_target=yes
+		mingw_arch=x86
+		;;
+	x86_64-w64-mingw32)
+		windows_target=yes
+		mingw_arch=x86_64
+		;;
+	*-*-mingw32*)
+		AC_MSG_ERROR([unsupported MinGW host: $host])
+		;;
+esac
+
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
 AM_CONFIG_HEADER(config.h)
@@ -94,10 +110,38 @@ if test x$enable_sdl_client = xyes; then
 	AC_DEFINE([SDL_CLIENT], 1, [enable sdl client])
 fi
 
+AC_ARG_ENABLE(mingw_vendored_deps,
+	AC_HELP_STRING([--disable-mingw-vendored-deps],
+			[use externally prepared dependencies for MinGW]),
+[], [
+	if test x$windows_target = xyes; then
+		enable_mingw_vendored_deps=yes
+	else
+		enable_mingw_vendored_deps=no
+	fi
+])
+case "$enable_mingw_vendored_deps" in
+	yes|no)
+		;;
+	*)
+		AC_MSG_ERROR([--enable-mingw-vendored-deps accepts yes or no])
+		;;
+esac
+if test x$windows_target != xyes \
+	&& test x$enable_mingw_vendored_deps = xyes; then
+	AC_MSG_ERROR([--enable-mingw-vendored-deps requires a MinGW host])
+fi
+
 AC_ARG_WITH(sdl3,
 	AC_HELP_STRING([--with-sdl3=PROVIDER],
-			[use system or vendored SDL3 dependencies @<:@system@:>@]),
-[], [with_sdl3=system])
+			[use system or vendored SDL3 dependencies]),
+[], [
+	if test x$enable_mingw_vendored_deps = xyes; then
+		with_sdl3=vendored
+	else
+		with_sdl3=system
+	fi
+])
 case "$with_sdl3" in
 	system|vendored)
 		;;
@@ -110,6 +154,86 @@ AC_ARG_WITH(sdl3_prefix,
 	AC_HELP_STRING([--with-sdl3-prefix=PATH],
 			[private SDL3 prefix built by vendor/sdl3/build.sh]),
 [], [with_sdl3_prefix=])
+
+AC_ARG_WITH(mingw_toolchain_file,
+	AC_HELP_STRING([--with-mingw-toolchain-file=PATH],
+			[CMake toolchain file for MinGW vendored dependencies]),
+[], [with_mingw_toolchain_file=])
+
+AC_ARG_WITH(mingw_deps_build_type,
+	AC_HELP_STRING([--with-mingw-deps-build-type=TYPE],
+			[CMake build type for MinGW dependencies @<:@Release@:>@]),
+[], [with_mingw_deps_build_type=Release])
+test -n "$with_mingw_deps_build_type" \
+	|| AC_MSG_ERROR([--with-mingw-deps-build-type requires a value])
+
+mingw_vendored_deps=no
+MINGW_ARCH=
+MINGW_DEPS_BUILD_DIR=
+MINGW_DEPS_PREFIX=
+MINGW_DEPS_MAKEFILE=
+MINGW_DEPS_BUILD_TYPE=
+MINGW_TOOLCHAIN_FILE=
+MINGW_PACKAGE_DIR=
+MINGW_WINE_PREFIX=
+if test x$windows_target = xyes; then
+	MINGW_ARCH=$mingw_arch
+	MINGW_PACKAGE_DIR="$ac_pwd/package"
+	MINGW_WINE_PREFIX="$ac_pwd/wine-prefix"
+fi
+if test x$windows_target = xyes \
+	&& test x$enable_mingw_vendored_deps = xyes; then
+	mingw_vendored_deps=yes
+	if test x$with_sdl3 != xvendored; then
+		AC_MSG_ERROR([MinGW vendored dependencies require --with-sdl3=vendored])
+	fi
+	if test -z "$with_sdl3_prefix"; then
+		with_sdl3_prefix="$ac_pwd/mingw-vendor-prefix"
+	fi
+	case "$with_sdl3_prefix" in
+		/*)
+			;;
+		*)
+			AC_MSG_ERROR([--with-sdl3-prefix must be an absolute path])
+			;;
+	esac
+
+	xpilot_abs_srcdir=`cd "$srcdir" && pwd`
+	if test -z "$with_mingw_toolchain_file"; then
+		case "$mingw_arch" in
+			x86)
+				with_mingw_toolchain_file="$xpilot_abs_srcdir/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-i686.cmake"
+				;;
+			x86_64)
+				with_mingw_toolchain_file="$xpilot_abs_srcdir/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-x86_64.cmake"
+				;;
+		esac
+	fi
+	case "$with_mingw_toolchain_file" in
+		/*)
+			;;
+		*)
+			AC_MSG_ERROR([--with-mingw-toolchain-file must be an absolute path])
+			;;
+	esac
+	test -f "$with_mingw_toolchain_file" \
+		|| AC_MSG_ERROR([MinGW toolchain file not found: $with_mingw_toolchain_file])
+
+	MINGW_DEPS_BUILD_DIR="$ac_pwd/mingw-vendor-build"
+	MINGW_DEPS_PREFIX=$with_sdl3_prefix
+	MINGW_DEPS_MAKEFILE="$ac_pwd/mingw-deps.mk"
+	MINGW_DEPS_BUILD_TYPE=$with_mingw_deps_build_type
+	MINGW_TOOLCHAIN_FILE=$with_mingw_toolchain_file
+fi
+
+AC_SUBST([MINGW_ARCH])
+AC_SUBST([MINGW_DEPS_BUILD_DIR])
+AC_SUBST([MINGW_DEPS_PREFIX])
+AC_SUBST([MINGW_DEPS_MAKEFILE])
+AC_SUBST([MINGW_DEPS_BUILD_TYPE])
+AC_SUBST([MINGW_TOOLCHAIN_FILE])
+AC_SUBST([MINGW_PACKAGE_DIR])
+AC_SUBST([MINGW_WINE_PREFIX])
 
 AC_ARG_ENABLE(sound,
 	AC_HELP_STRING([--enable-sound],
@@ -130,31 +254,42 @@ AC_PROG_RANLIB
 AC_PROG_INSTALL
 PKG_PROG_PKG_CONFIG
 
+if test x$mingw_vendored_deps = xyes; then
+	AC_PATH_PROG([CMAKE], [cmake])
+	test -n "$CMAKE" \
+		|| AC_MSG_ERROR([cmake is required for MinGW vendored dependencies])
+	test -n "$PKG_CONFIG" \
+		|| AC_MSG_ERROR([pkg-config is required for MinGW vendored dependencies])
+fi
+
 dnl  Checks for libraries.
 dnl kps - these should be cleaned up and not use the autoconf internal
 dnl shell variables.
-AC_CHECK_LIB(m, cos)
-if test x$ac_cv_lib_m_cos != xyes; then
-	AC_MSG_ERROR([*** Math library not found!])
-fi
-AC_CHECK_LIB(z, gzopen)
-if test x$ac_cv_lib_z_gzopen != xyes; then
-	AC_MSG_ERROR([*** Required library zlib not found!])
-fi
-AC_CHECK_LIB(expat, XML_ParserCreate)
-if test x$ac_cv_lib_expat_XML_ParserCreate != xyes; then
-	AC_MSG_ERROR([*** Required library Expat not found!])
+if test x$mingw_vendored_deps = xyes; then
+	AC_DEFINE([HAVE_LIBM], 1,
+		[Define to 1 if you have the `m' library (-lm).])
+	AC_DEFINE([HAVE_LIBZ], 1,
+		[Define to 1 if you have the `z' library (-lz).])
+	AC_DEFINE([HAVE_LIBEXPAT], 1,
+		[Define to 1 if you have the `expat' library (-lexpat).])
+else
+	AC_CHECK_LIB(m, cos)
+	if test x$ac_cv_lib_m_cos != xyes; then
+		AC_MSG_ERROR([*** Math library not found!])
+	fi
+	AC_CHECK_LIB(z, gzopen)
+	if test x$ac_cv_lib_z_gzopen != xyes; then
+		AC_MSG_ERROR([*** Required library zlib not found!])
+	fi
+	AC_CHECK_LIB(expat, XML_ParserCreate)
+	if test x$ac_cv_lib_expat_XML_ParserCreate != xyes; then
+		AC_MSG_ERROR([*** Required library Expat not found!])
+	fi
 fi
 
-case "$target" in
-    *-*-mingw32*)
-	windows_target=yes
-	;;
-esac
-
+W32_LIBS=
 if test x$windows_target = xyes; then
-	W32_LIBS="-lmingw32 -lwsock32"
-	AC_SUBST(W32_LIBS)
+	W32_LIBS="-lmingw32 -lws2_32"
 	AC_DEFINE([_WINDOWS], 1, [compiling for windows target])
 
 	enable_select_sched=yes
@@ -163,6 +298,7 @@ if test x$windows_target = xyes; then
 	enable_x11_client=no
 	need_x=no
 fi
+AC_SUBST([W32_LIBS])
 
 AC_PATH_X
 if test x$need_x = xyes; then
@@ -218,73 +354,93 @@ fi
 
 dnl Libraries needed by the SDL client.
 if test x$enable_sdl_client = xyes; then
-	if test x$with_sdl3 = xvendored; then
-		if test -z "$with_sdl3_prefix"; then
-			AC_MSG_ERROR([--with-sdl3=vendored requires --with-sdl3-prefix=PATH])
-		fi
-		case "$with_sdl3_prefix" in
-			/*)
-				;;
-			*)
-				AC_MSG_ERROR([--with-sdl3-prefix must be an absolute path])
-				;;
-		esac
-		if test ! -d "$with_sdl3_prefix/lib/pkgconfig"; then
-			AC_MSG_ERROR([vendored SDL3 pkg-config directory not found: $with_sdl3_prefix/lib/pkgconfig])
-		fi
-		for sdl3_pc_file in sdl3.pc sdl3-image.pc sdl3-ttf.pc; do
-			if test ! -f "$with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file"; then
-				AC_MSG_ERROR([vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file])
+	if test x$mingw_vendored_deps = xyes; then
+		SDL3_CFLAGS=
+		SDL3_LIBS=
+		SDL3_IMAGE_CFLAGS=
+		SDL3_IMAGE_LIBS=
+		SDL3_TTF_CFLAGS=
+		SDL3_TTF_LIBS=
+		GL_CFLAGS=-DWIN32
+		GL_LIBS=-lopengl32
+	else
+		if test x$with_sdl3 = xvendored; then
+			if test -z "$with_sdl3_prefix"; then
+				AC_MSG_ERROR([--with-sdl3=vendored requires --with-sdl3-prefix=PATH])
 			fi
-		done
+			case "$with_sdl3_prefix" in
+				/*)
+					;;
+				*)
+					AC_MSG_ERROR([--with-sdl3-prefix must be an absolute path])
+					;;
+			esac
+			if test ! -d "$with_sdl3_prefix/lib/pkgconfig"; then
+				AC_MSG_ERROR([vendored SDL3 pkg-config directory not found: $with_sdl3_prefix/lib/pkgconfig])
+			fi
+			for sdl3_pc_file in sdl3.pc sdl3-image.pc sdl3-ttf.pc; do
+				if test ! -f "$with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file"; then
+					AC_MSG_ERROR([vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file])
+				fi
+			done
 
-		if test "${PKG_CONFIG_PATH+set}" = set; then
-			saved_sdl3_pkg_config_path=$PKG_CONFIG_PATH
-			sdl3_pkg_config_path_was_set=yes
-			PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig:$PKG_CONFIG_PATH"
-		else
-			sdl3_pkg_config_path_was_set=no
-			PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig"
-		fi
-		export PKG_CONFIG_PATH
-	fi
-
-	PKG_CHECK_MODULES([SDL3], [sdl3 >= 3.2.0])
-	PKG_CHECK_MODULES([SDL3_IMAGE], [sdl3-image >= 3.2.0])
-	PKG_CHECK_MODULES([SDL3_TTF], [sdl3-ttf >= 3.2.0])
-
-	if test x$with_sdl3 = xvendored; then
-		AC_MSG_CHECKING([for static vendored SDL3 linker flags])
-		SDL3_LIBS=`$PKG_CONFIG --static --libs sdl3`
-		if test $? -ne 0; then
-			AC_MSG_ERROR([could not resolve static SDL3 linker flags])
-		fi
-		SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
-		if test $? -ne 0; then
-			AC_MSG_ERROR([could not resolve static SDL3_image linker flags])
-		fi
-		SDL3_TTF_LIBS=`$PKG_CONFIG --static --libs sdl3-ttf`
-		if test $? -ne 0; then
-			AC_MSG_ERROR([could not resolve static SDL3_ttf linker flags])
-		fi
-		AC_MSG_RESULT([yes])
-
-		if test x$sdl3_pkg_config_path_was_set = xyes; then
-			PKG_CONFIG_PATH=$saved_sdl3_pkg_config_path
+			if test "${PKG_CONFIG_PATH+set}" = set; then
+				saved_sdl3_pkg_config_path=$PKG_CONFIG_PATH
+				sdl3_pkg_config_path_was_set=yes
+				PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig:$PKG_CONFIG_PATH"
+			else
+				sdl3_pkg_config_path_was_set=no
+				PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig"
+			fi
 			export PKG_CONFIG_PATH
-		else
-			unset PKG_CONFIG_PATH
 		fi
-	fi
 
+		PKG_CHECK_MODULES([SDL3], [sdl3 >= 3.2.0])
+		PKG_CHECK_MODULES([SDL3_IMAGE], [sdl3-image >= 3.2.0])
+		PKG_CHECK_MODULES([SDL3_TTF], [sdl3-ttf >= 3.2.0])
+
+		if test x$with_sdl3 = xvendored; then
+			AC_MSG_CHECKING([for static vendored SDL3 linker flags])
+			SDL3_LIBS=`$PKG_CONFIG --static --libs sdl3`
+			if test $? -ne 0; then
+				AC_MSG_ERROR([could not resolve static SDL3 linker flags])
+			fi
+			SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
+			if test $? -ne 0; then
+				AC_MSG_ERROR([could not resolve static SDL3_image linker flags])
+			fi
+			SDL3_TTF_LIBS=`$PKG_CONFIG --static --libs sdl3-ttf`
+			if test $? -ne 0; then
+				AC_MSG_ERROR([could not resolve static SDL3_ttf linker flags])
+			fi
+			AC_MSG_RESULT([yes])
+
+			if test x$sdl3_pkg_config_path_was_set = xyes; then
+				PKG_CONFIG_PATH=$saved_sdl3_pkg_config_path
+				export PKG_CONFIG_PATH
+			else
+				unset PKG_CONFIG_PATH
+			fi
+		fi
+		PKG_CHECK_MODULES([GL], [gl])
+	fi
 	AC_MSG_NOTICE([SDL3 dependency provider: $with_sdl3])
-	PKG_CHECK_MODULES([GL], [gl])
 	AC_DEFINE([HAVE_SDL_IMAGE], 1,
 		  [Define to 1 if you have the SDL_image library.])
 fi
 
+AC_SUBST([SDL3_CFLAGS])
+AC_SUBST([SDL3_LIBS])
+AC_SUBST([SDL3_IMAGE_CFLAGS])
+AC_SUBST([SDL3_IMAGE_LIBS])
+AC_SUBST([SDL3_TTF_CFLAGS])
+AC_SUBST([SDL3_TTF_LIBS])
+AC_SUBST([GL_CFLAGS])
+AC_SUBST([GL_LIBS])
+
 AM_CONDITIONAL([COND_CLIENT], [test x$need_libxpclient = xyes])
 AM_CONDITIONAL([COND_WINDOWS], [test x$windows_target = xyes])
+AM_CONDITIONAL([COND_MINGW_VENDORED], [test x$mingw_vendored_deps = xyes])
 AM_CONDITIONAL([COND_REPLAY], [test x$enable_replay = xyes])
 AM_CONDITIONAL([COND_XP_MAPEDIT], [test x$enable_xp_mapedit = xyes])
 AM_CONDITIONAL([COND_X11_CLIENT], [test x$enable_x11_client = xyes])
@@ -378,27 +534,32 @@ AC_TYPE_SIZE_T
 AC_STRUCT_TM
 
 dnl Check for socklen_t (in Unix98)
-AC_MSG_CHECKING(for socklen_t)
-AC_TRY_COMPILE([
-	#include <sys/types.h>
-	#include <sys/socket.h>
-	socklen_t x;
-], [],
-[
-	AC_MSG_RESULT(yes)
-], [
+if test x$windows_target = xyes; then
+	AC_MSG_CHECKING(for socklen_t)
+	AC_MSG_RESULT([provided by Winsock2])
+else
+	AC_MSG_CHECKING(for socklen_t)
 	AC_TRY_COMPILE([
 		#include <sys/types.h>
 		#include <sys/socket.h>
-		int accept(int, struct sockaddr *, size_t *);
-	], [], [
-		AC_MSG_RESULT(size_t)
-		AC_DEFINE(socklen_t, size_t, [socklen_t size])
+		socklen_t x;
+	], [],
+	[
+		AC_MSG_RESULT(yes)
 	], [
-		AC_MSG_RESULT(int)
-		AC_DEFINE(socklen_t, int, [socklen_t size])
+		AC_TRY_COMPILE([
+			#include <sys/types.h>
+			#include <sys/socket.h>
+			int accept(int, struct sockaddr *, size_t *);
+		], [], [
+			AC_MSG_RESULT(size_t)
+			AC_DEFINE(socklen_t, size_t, [socklen_t size])
+		], [
+			AC_MSG_RESULT(int)
+			AC_DEFINE(socklen_t, int, [socklen_t size])
+		])
 	])
-])
+fi
 
 dnl  Checks for library functions.
 
@@ -447,6 +608,14 @@ AC_CHECK_FUNCS([ \
 	strtoul \
 	])
 
+dnl MinGW vendored libraries are built by make, after configure has finished.
+dnl Add their final locations only after configure's compile and link probes.
+if test x$mingw_vendored_deps = xyes; then
+	CPPFLAGS="-I$MINGW_DEPS_PREFIX/include $CPPFLAGS"
+	LDFLAGS="-L$MINGW_DEPS_PREFIX/lib $LDFLAGS"
+	LIBS="-lexpat -lz -lm $LIBS"
+fi
+
 AC_CONFIG_FILES([ \
 	Makefile \
 	README \
@@ -462,18 +631,15 @@ AC_CONFIG_FILES([ \
 	src/Makefile \
 	src/common/Makefile \
 	src/common/version.h \
-	src/common/NT/Makefile \
-	src/common/NT/bindist/Makefile \
 	src/client/Makefile \
 	src/client/items/Makefile \
 	src/client/sdl/Makefile \
 	src/client/x11/Makefile \
-	src/client/NT/Makefile \
-	src/client/NT/res/Makefile \
 	src/server/Makefile \
 	src/replay/Makefile \
 	src/replay/tools/Makefile \
 	src/mapedit/Makefile \
 	tests/Makefile \
+	vendor/mingw/Makefile \
 	])
 AC_OUTPUT

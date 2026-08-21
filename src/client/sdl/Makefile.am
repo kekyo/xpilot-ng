@@ -1,6 +1,23 @@
 
 AUTOMAKE_OPTIONS = subdir-objects
 
+if COND_MINGW_VENDORED
+-include $(top_builddir)/mingw-deps.mk
+XP_SDL3_CFLAGS = $(MINGW_SDL3_CFLAGS)
+XP_SDL3_LIBS = $(MINGW_SDL3_LIBS)
+XP_SDL3_IMAGE_CFLAGS = $(MINGW_SDL3_IMAGE_CFLAGS)
+XP_SDL3_IMAGE_LIBS = $(MINGW_SDL3_IMAGE_LIBS)
+XP_SDL3_TTF_CFLAGS = $(MINGW_SDL3_TTF_CFLAGS)
+XP_SDL3_TTF_LIBS = $(MINGW_SDL3_TTF_LIBS)
+else
+XP_SDL3_CFLAGS = @SDL3_CFLAGS@
+XP_SDL3_LIBS = @SDL3_LIBS@
+XP_SDL3_IMAGE_CFLAGS = @SDL3_IMAGE_CFLAGS@
+XP_SDL3_IMAGE_LIBS = @SDL3_IMAGE_LIBS@
+XP_SDL3_TTF_CFLAGS = @SDL3_TTF_CFLAGS@
+XP_SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
+endif
+
 bin_PROGRAMS = xpilot-ng-sdl
 noinst_LIBRARIES = libxp_libtess2.a
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
@@ -8,7 +25,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
-	@SDL3_CFLAGS@ @SDL3_IMAGE_CFLAGS@ @SDL3_TTF_CFLAGS@ \
+	$(XP_SDL3_CFLAGS) $(XP_SDL3_IMAGE_CFLAGS) $(XP_SDL3_TTF_CFLAGS) \
 	@GL_CFLAGS@
 libxp_libtess2_a_SOURCES = \
 	third_party/libtess2/Include/tesselator.h \
@@ -52,14 +69,13 @@ xpilot_ng_sdl_SOURCES = \
 xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	libxp_libtess2.a \
-	@SDL3_IMAGE_LIBS@ @SDL3_TTF_LIBS@ @SDL3_LIBS@ \
+	$(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) \
 	@GL_LIBS@ @SOUND_LIBS@ @W32_LIBS@
 
 if COND_WINDOWS
   xpilot_ng_sdl_SOURCES += win32hacks.c
 endif
 
-EXTRA_DIST = xpilot.rc xpilot_sdl.dsp xpilot_sdl.dsw \
-	third_party/libtess2/LICENSE.txt \
+EXTRA_DIST = third_party/libtess2/LICENSE.txt \
 	third_party/libtess2/README.md \
 	third_party/libtess2/UPSTREAM.md

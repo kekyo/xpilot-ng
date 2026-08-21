@@ -185,7 +185,7 @@ am__define_uniq_tagged_files = \
   unique=`for i in $$list; do \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
-DIST_SUBDIRS = src lib doc contrib tests
+DIST_SUBDIRS = src lib doc contrib tests vendor/mingw
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/README.in \
 	$(srcdir)/config.h.in $(top_srcdir)/config/compile \
 	$(top_srcdir)/config/config.guess \
@@ -249,6 +249,7 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CMAKE = @CMAKE@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CSCOPE = @CSCOPE@
@@ -274,6 +275,14 @@ LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
+MINGW_ARCH = @MINGW_ARCH@
+MINGW_DEPS_BUILD_DIR = @MINGW_DEPS_BUILD_DIR@
+MINGW_DEPS_BUILD_TYPE = @MINGW_DEPS_BUILD_TYPE@
+MINGW_DEPS_MAKEFILE = @MINGW_DEPS_MAKEFILE@
+MINGW_DEPS_PREFIX = @MINGW_DEPS_PREFIX@
+MINGW_PACKAGE_DIR = @MINGW_PACKAGE_DIR@
+MINGW_TOOLCHAIN_FILE = @MINGW_TOOLCHAIN_FILE@
+MINGW_WINE_PREFIX = @MINGW_WINE_PREFIX@
 MKDIR_P = @MKDIR_P@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
@@ -367,9 +376,13 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-SUBDIRS = src lib doc contrib $(am__append_1)
+@COND_MINGW_VENDORED_FALSE@SUBDIRS = src lib doc contrib \
+@COND_MINGW_VENDORED_FALSE@	$(am__append_1)
+@COND_MINGW_VENDORED_TRUE@SUBDIRS = vendor/mingw src lib doc contrib \
+@COND_MINGW_VENDORED_TRUE@	$(am__append_1)
 dist_pkgdata_DATA = mapconvert.py
-EXTRA_DIST = XPilot.dsw
+EXTRA_DIST = build.sh config/package-windows.sh
+@COND_WINDOWS_TRUE@MINGW_TEST_JOBS =
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -748,7 +761,9 @@ distcleancheck: distclean
 	  || { echo "ERROR: files left in build directory after distclean:" ; \
 	       $(distcleancheck_listfiles) ; \
 	       exit 1; } >&2
+@COND_WINDOWS_FALSE@check-local:
 check-am: all-am
+	$(MAKE) $(AM_MAKEFLAGS) check-local
 check: check-recursive
 all-am: Makefile $(DATA) config.h
 installdirs: installdirs-recursive
@@ -855,27 +870,47 @@ ps-am:
 
 uninstall-am: uninstall-dist_pkgdataDATA
 
-.MAKE: $(am__recursive_targets) all install-am install-strip
+.MAKE: $(am__recursive_targets) all check-am install-am install-strip
 
 .PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am \
-	am--refresh check check-am clean clean-cscope clean-generic \
-	cscope cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
-	dist-gzip dist-lzip dist-shar dist-tarZ dist-xz dist-zip \
-	dist-zstd distcheck distclean distclean-generic distclean-hdr \
-	distclean-tags distcleancheck distdir distuninstallcheck dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-data install-data-am install-dist_pkgdataDATA \
-	install-dvi install-dvi-am install-exec install-exec-am \
-	install-html install-html-am install-info install-info-am \
-	install-man install-pdf install-pdf-am install-ps \
-	install-ps-am install-strip installcheck installcheck-am \
-	installdirs installdirs-am maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-generic pdf \
-	pdf-am ps ps-am tags tags-am uninstall uninstall-am \
-	uninstall-dist_pkgdataDATA
+	am--refresh check check-am check-local clean clean-cscope \
+	clean-generic cscope cscopelist-am ctags ctags-am dist \
+	dist-all dist-bzip2 dist-gzip dist-lzip dist-shar dist-tarZ \
+	dist-xz dist-zip dist-zstd distcheck distclean \
+	distclean-generic distclean-hdr distclean-tags distcleancheck \
+	distdir distuninstallcheck dvi dvi-am html html-am info \
+	info-am install install-am install-data install-data-am \
+	install-dist_pkgdataDATA install-dvi install-dvi-am \
+	install-exec install-exec-am install-html install-html-am \
+	install-info install-info-am install-man install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs installdirs-am \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
+	uninstall-am uninstall-dist_pkgdataDATA
 
 .PRECIOUS: Makefile
 
+
+@COND_WINDOWS_TRUE@.PHONY: windows-package windows-check mingw-deps-clean
+@COND_WINDOWS_TRUE@windows-package: all
+@COND_WINDOWS_TRUE@	$(SHELL) $(top_srcdir)/config/package-windows.sh \
+@COND_WINDOWS_TRUE@		--source-dir '$(abs_top_srcdir)' \
+@COND_WINDOWS_TRUE@		--build-dir '$(abs_top_builddir)' \
+@COND_WINDOWS_TRUE@		--output '@MINGW_PACKAGE_DIR@'
+
+@COND_WINDOWS_TRUE@windows-check: windows-package
+@COND_WINDOWS_TRUE@	$(SHELL) $(top_srcdir)/tests/run-wine-suite.sh \
+@COND_WINDOWS_TRUE@		--build-dir '$(abs_top_builddir)' \
+@COND_WINDOWS_TRUE@		--package-dir '@MINGW_PACKAGE_DIR@' \
+@COND_WINDOWS_TRUE@		--wine-prefix '@MINGW_WINE_PREFIX@' \
+@COND_WINDOWS_TRUE@		--arch '@MINGW_ARCH@' \
+@COND_WINDOWS_TRUE@		--jobs '$(MINGW_TEST_JOBS)'
+
+@COND_WINDOWS_TRUE@check-local: windows-check
+
+@COND_WINDOWS_TRUE@mingw-deps-clean:
+@COND_WINDOWS_TRUE@	$(MAKE) -C vendor/mingw mingw-deps-clean
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

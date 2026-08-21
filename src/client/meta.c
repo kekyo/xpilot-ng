@@ -323,6 +323,7 @@ void Add_meta_line(char *meta_line)
     unsigned ip0, ip1, ip2, ip3 = 0;
     char *text = xp_strdup(meta_line);
     server_info_t *sip;
+    size_t version_length;
 
     if (!text) {
         error("Not enough memory\n");
@@ -353,6 +354,8 @@ void Add_meta_line(char *meta_line)
     }
     memset(sip, 0, sizeof(*sip));
     sip->pingtime = PING_UNKNOWN;
+    sip->contact_transport = GAME_TRANSPORT_UDP;
+    sip->game_transport = GAME_TRANSPORT_UDP;
     sip->version = fields[0];
     sip->hostname = fields[1];
     sip->users_str = fields[3];
@@ -369,6 +372,18 @@ void Add_meta_line(char *meta_line)
     sip->ip_str = fields[15];
     sip->freebases = fields[16];
     sip->queue_str = fields[17];
+    if (Game_transport_parse_meta_version(
+	    sip->version, &sip->contact_transport,
+	    &sip->game_transport, &version_length)) {
+	sip->version[version_length] = '\0';
+    }
+    if (!Transport_display_pair(sip->transport_pair,
+				sizeof(sip->transport_pair),
+				sip->contact_transport,
+				sip->game_transport)) {
+	strlcpy(sip->transport_pair, "UNKNOWN",
+		sizeof(sip->transport_pair));
+    }
     if (sscanf(fields[i = 2], "%u", &sip->port) != 1 ||
 	sscanf(fields[i = 3], "%u", &sip->users) != 1 ||
 	sscanf(fields[i = 8], "%u", &sip->bases) != 1 ||
@@ -390,6 +405,16 @@ void Add_meta_line(char *meta_line)
 	    return;
 	}
     }
+}
+
+bool Meta_server_to_connect_target(const server_info_t *server,
+                                   Connect_target_t *target)
+{
+    if (server == NULL || server->port > 65535)
+	return false;
+    return Connect_target_init(target, server->ip_str, (int)server->port,
+			       server->contact_transport,
+			       server->game_transport);
 }
 
 /*
@@ -514,7 +539,7 @@ void Ping_servers(void)
 		 */
 		Sockbuf_clear(&sbuf);
 		Packet_printf(&sbuf, "%u%s%hu%c",
-			      MAGIC & 0xffff, "p",
+			      MAGIC_WORD, "p",
 			      sock_get_port(&sock), serial);
 
 		/*

@@ -25,6 +25,8 @@
 
 #include "xpserver.h"
 
+#include "contact_stream.h"
+
 /*
  * Global variables
  */
@@ -35,44 +37,88 @@ int			NumPseudoPlayers = 0;
 sock_t			contactSocket;
 
 static sockbuf_t	ibuf;
+static bool		contact_initialized;
 
 static bool Owner(int request, char *user_name, char *host_addr,
 		  int host_port, int pass);
 static int Queue_player(char *real, char *nick, char *disp, int team,
 			char *addr, char *host, unsigned version, int port,
-			int *qpos);
+			game_transport_t transport, int *qpos,
+			int *login_port);
 static int Check_address(char *addr);
+static void Contact_process(sockbuf_t *request, sockbuf_t *reply,
+			    const char *peer_address, int peer_port,
+			    bool stream);
+static int Contact_stream_request(sockbuf_t *request, sockbuf_t *reply,
+			  const char *peer_address, int peer_port);
 
 void Contact_cleanup(void)
 {
-    sock_close(&contactSocket);
+    if (!contact_initialized)
+	return;
+    if (contactTransport == GAME_TRANSPORT_TCP)
+	Contact_stream_cleanup();
+    else {
+	remove_input(contactSocket.fd);
+	sock_close(&contactSocket);
+    }
+    Sockbuf_cleanup(&ibuf);
+    contact_initialized = false;
 }
 
 int Contact_init(void)
 {
     int status;
 
-    /*
-     * Create a socket which we can listen on.
-     */
-    if ((status = sock_open_udp(&contactSocket, serverAddr,
-			        options.contactPort)) == -1) {
-	error("Could not create Dgram contactSocket");
-	error("Perhaps %s is already running?", APPNAME);
-	return false;
+    sock_init(&contactSocket);
+    if (contactTransport == GAME_TRANSPORT_TCP) {
+	if (Sockbuf_init(&ibuf, NULL, SERVER_SEND_SIZE,
+			 SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_LOCK) == -1) {
+	    error("No memory for contact buffer");
+	    return false;
+	}
+	status = Contact_stream_init(&contactSocket, serverAddr,
+				     options.contactPort,
+				     Contact_stream_request);
+	if (status == SOCK_IS_ERROR) {
+	    error("Could not create TCP contact listener");
+	    error("Perhaps %s is already running?", APPNAME);
+	    Sockbuf_cleanup(&ibuf);
+	    return false;
+	}
     }
-    sock_set_timeout(&contactSocket, 0, 0);
-    if (sock_set_non_blocking(&contactSocket, 1) == -1) {
-	error("Can't make contact socket non-blocking");
-	return false;
+    else {
+	/* Create the datagram socket used by the traditional contact path. */
+	status = sock_open_udp(&contactSocket, serverAddr,
+			       options.contactPort);
+	if (status == SOCK_IS_ERROR) {
+	    error("Could not create UDP contact socket");
+	    error("Perhaps %s is already running?", APPNAME);
+	    return false;
+	}
+	sock_set_timeout(&contactSocket, 0, 0);
+	if (sock_set_non_blocking(&contactSocket, 1) == SOCK_IS_ERROR) {
+	    error("Can't make contact socket non-blocking");
+	    sock_close(&contactSocket);
+	    return false;
+	}
+	if (Sockbuf_init(&ibuf, &contactSocket, SERVER_SEND_SIZE,
+			 SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
+	    error("No memory for contact buffer");
+	    sock_close(&contactSocket);
+	    return false;
+	}
+	if (install_input(Contact, contactSocket.fd, (void *)&contactSocket)
+	    == SOCK_IS_ERROR) {
+	    error("Cannot register contact socket with scheduler");
+	    Sockbuf_cleanup(&ibuf);
+	    sock_close(&contactSocket);
+	    return false;
+	}
     }
-    if (Sockbuf_init(&ibuf, &contactSocket, SERVER_SEND_SIZE,
-		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
-	error("No memory for contact buffer");
-	return false;
-    }
-
-    install_input(Contact, contactSocket.fd, (void *) &contactSocket);
+    contact_initialized = true;
+    xpprintf("Contact transport: %s on port %d.\n",
+	     Game_transport_name(contactTransport), options.contactPort);
     return true;
 }
 
@@ -187,15 +233,19 @@ static int Kick_paused_players(int team)
 }
 
 
-static int Reply(char *host_addr, int port)
+static int Reply(sockbuf_t *reply, char *host_addr, int port, bool stream)
 {
     int i, result = -1;
     const int max_send_retries = 3;
 
+    if (stream)
+	return reply->len;
+
     for (i = 0; i < max_send_retries; i++) {
-	if ((result = sock_send_dest(&ibuf.sock, host_addr, port,
-				     ibuf.buf, ibuf.len)) == -1)
-	    sock_get_error(&ibuf.sock);
+	result = sock_send_dest(&contactSocket, host_addr, port,
+			        reply->buf, reply->len);
+	if (result == SOCK_IS_ERROR)
+	    sock_get_error(&contactSocket);
 	else
 	    break;
     }
@@ -258,44 +308,54 @@ static unsigned Version_to_magic(unsigned version)
     return MAGIC;
 }
 
-void Contact(int fd, void *arg)
+void Contact(socket_handle_t fd, void *arg)
 {
-    int i, team, bytes, delay, qpos, status;
-    char reply_to, ch;
-    unsigned magic, version, my_magic;
-    uint16_t port;
-    char user_name[MAX_CHARS], disp_name[MAX_CHARS], nick_name[MAX_CHARS];
-    char host_name[MAX_CHARS], host_addr[24], str[MSG_LEN];
+    int bytes;
 
-    UNUSED_PARAM(fd); UNUSED_PARAM(arg);
-    /*
-     * Someone connected to us, now try and decipher the message :)
-     */
+    UNUSED_PARAM(fd);
+    UNUSED_PARAM(arg);
     Sockbuf_clear(&ibuf);
-    if ((bytes = sock_receive_any(&contactSocket, ibuf.buf, ibuf.size)) <= 8) {
-	if (bytes < 0
-	    && errno != EWOULDBLOCK
-	    && errno != EAGAIN
+    bytes = sock_receive_any(&contactSocket, ibuf.buf, ibuf.size);
+    if (bytes <= 8) {
+	if (bytes < 0 && errno != EWOULDBLOCK && errno != EAGAIN
 	    && errno != EINTR)
-	    /*
-	     * Clear the error condition for the contact socket.
-	     */
 	    sock_get_error(&contactSocket);
 	return;
     }
     ibuf.len = bytes;
+    Contact_process(&ibuf, &ibuf, sock_get_last_addr(&contactSocket),
+		    sock_get_last_port(&contactSocket), false);
+}
 
-    strlcpy(host_addr, sock_get_last_addr(&contactSocket), sizeof(host_addr));
-    xpprintf("%s Checking Address:(%s)\n",showtime(),host_addr);
+static int Contact_stream_request(sockbuf_t *request, sockbuf_t *reply,
+			  const char *peer_address, int peer_port)
+{
+    Contact_process(request, reply, peer_address, peer_port, true);
+    return reply->len;
+}
+
+static void Contact_process(sockbuf_t *request, sockbuf_t *reply,
+			    const char *peer_address, int peer_port,
+			    bool stream)
+{
+    int i, team, delay, qpos, status, login_port;
+    char reply_to, ch;
+    unsigned magic, version, my_magic;
+    uint16_t port;
+    char user_name[MAX_CHARS], disp_name[MAX_CHARS], nick_name[MAX_CHARS];
+    char host_name[MAX_CHARS], host_addr[SOCK_HOSTNAME_LENGTH], str[MSG_LEN];
+
+    strlcpy(host_addr, peer_address, sizeof(host_addr));
+    xpprintf("%s Checking Address:(%s)\n", showtime(), host_addr);
     if (Check_address(host_addr)) {
-	xpprintf("%s Host blocked!:(%s)\n",showtime(),host_addr);
+	xpprintf("%s Host blocked!:(%s)\n", showtime(), host_addr);
 	return;
     }
-    
+
     /*
      * Determine if we can talk with this client.
      */
-    if (Packet_scanf(&ibuf, "%u", &magic) <= 0
+    if (Packet_scanf(request, "%u", &magic) <= 0
 	|| (magic & 0xFFFF) != (MAGIC & 0xFFFF)) {
 	D(printf("Incompatible packet from %s (0x%08x)", host_addr, magic));
 	return;
@@ -305,15 +365,15 @@ void Contact(int fd, void *arg)
     /*
      * Read core of packet.
      */
-    if (Packet_scanf(&ibuf, "%s%hu%c", user_name, &port, &ch) <= 0) {
+    if (Packet_scanf(request, "%s%hu%c", user_name, &port, &ch) <= 0) {
 	D(printf("Incomplete packet from %s", host_addr));
 	return;
     }
     Fix_user_name(user_name);
     reply_to = (ch & 0xFF);	/* no sign extension. */
 
-    /* ignore port for termified clients. */
-    port = sock_get_last_port(&contactSocket);
+    /* Ignore the advertised port; replies target the observed peer port. */
+    port = (uint16_t)peer_port;
 
     /*
      * Now see if we have the same (or a compatible) version.
@@ -332,9 +392,9 @@ void Contact(int fd, void *arg)
 	    D(error("Gameplay transport mismatch with %s@%s (%s,%04x)",
 		    user_name, host_addr,
 		    Game_transport_name(gameTransport), version));
-	    Sockbuf_clear(&ibuf);
-	    Packet_printf(&ibuf, "%u%c%c", MAGIC, reply_to, E_VERSION);
-	    Reply(host_addr, port);
+	    Sockbuf_clear(reply);
+	    Packet_printf(reply, "%u%c%c", MAGIC, reply_to, E_VERSION);
+	    Reply(reply, host_addr, port, stream);
 	    return;
 	}
     }
@@ -344,9 +404,9 @@ void Contact(int fd, void *arg)
 	    && reply_to != CONTACT_pack)) {
 	D(error("Incompatible version with %s@%s (%04x,%04x)",
 		user_name, host_addr, MY_VERSION, version));
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", MAGIC, reply_to, E_VERSION);
-	Reply(host_addr, port);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", MAGIC, reply_to, E_VERSION);
+	Reply(reply, host_addr, port, stream);
 	return;
     }
 
@@ -360,26 +420,26 @@ void Contact(int fd, void *arg)
 
 	if (!credentials) {
 	    credentials = (time(NULL) * (time_t)Get_process_id());
-	    credentials ^= (long)Contact;
-	    credentials	+= (long)key + (long)&key;
+	    credentials ^= (long)(uintptr_t)Contact;
+	    credentials	+= (long)key + (long)(uintptr_t)&key;
 	    credentials ^= (long)randomMT() << 1;
 	    credentials &= 0xFFFFFFFF;
 	}
-	if (Packet_scanf(&ibuf, "%ld", &key) <= 0)
+	if (Packet_scanf(request, "%ld", &key) <= 0)
 	    return;
 
 	if (!Owner((int)reply_to, user_name, host_addr, port,
 		   key == credentials)) {
-	    Sockbuf_clear(&ibuf);
-	    Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, E_NOT_OWNER);
-	    Reply(host_addr, port);
+	    Sockbuf_clear(reply);
+	    Packet_printf(reply, "%u%c%c", my_magic, reply_to, E_NOT_OWNER);
+	    Reply(reply, host_addr, port, stream);
 	    return;
 	}
 	if (reply_to == CREDENTIALS_pack) {
-	    Sockbuf_clear(&ibuf);
-	    Packet_printf(&ibuf, "%u%c%c%ld", my_magic, reply_to, SUCCESS,
+	    Sockbuf_clear(reply);
+	    Packet_printf(reply, "%u%c%c%ld", my_magic, reply_to, SUCCESS,
 			  credentials);
-	    Reply(host_addr, port);
+	    Reply(reply, host_addr, port, stream);
 	    return;
 	}
     }
@@ -394,7 +454,7 @@ void Contact(int fd, void *arg)
 	/*
 	 * Someone wants to be put on the player waiting queue.
 	 */
-	if (Packet_scanf(&ibuf, "%s%s%s%d", nick_name, disp_name, host_name,
+	if (Packet_scanf(request, "%s%s%s%d", nick_name, disp_name, host_name,
 			 &team) <= 0) {
 	    D(printf("Incomplete enter queue from %s@%s",
 		     user_name, host_addr));
@@ -410,12 +470,19 @@ void Contact(int fd, void *arg)
 			      disp_name, team,
 			      host_addr, host_name,
 			      version, port,
-			      &qpos);
+			      stream ? GAME_TRANSPORT_TCP
+			             : GAME_TRANSPORT_UDP,
+			      &qpos, &login_port);
 	if (status < 0)
 	    return;
 
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c%hu", my_magic, reply_to, status, qpos);
+	Sockbuf_clear(reply);
+	if (status == SUCCESS && login_port > 0)
+	    Packet_printf(reply, "%u%c%c%hu", my_magic, ENTER_GAME_pack,
+			  status, login_port);
+	else
+	    Packet_printf(reply, "%u%c%c%hu", my_magic, reply_to,
+			  status, qpos);
     }
     break;
 
@@ -428,12 +495,12 @@ void Contact(int fd, void *arg)
 
 	xpprintf("%s %s@%s asked for info about current game.\n",
 		 showtime(), user_name, host_addr);
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, SUCCESS);
-	assert(ibuf.size - ibuf.len >= 0);
-	Server_info(ibuf.buf + ibuf.len, (size_t)(ibuf.size - ibuf.len));
-	ibuf.buf[ibuf.size - 1] = '\0';
-	ibuf.len += strlen(ibuf.buf + ibuf.len) + 1;
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, SUCCESS);
+	assert(reply->size - reply->len >= 0);
+	Server_info(reply->buf + reply->len, (size_t)(reply->size - reply->len));
+	reply->buf[reply->size - 1] = '\0';
+	reply->len += strlen(reply->buf + reply->len) + 1;
     }
     break;
 
@@ -444,13 +511,13 @@ void Contact(int fd, void *arg)
 	 * Someone wants to transmit a message to the server.
 	 */
 
-	if (Packet_scanf(&ibuf, "%s", str) <= 0)
+	if (Packet_scanf(request, "%s", str) <= 0)
 	    status = E_INVAL;
 	else
 	    Set_message_f("%s [%s SPEAKING FROM ABOVE]", str, user_name);
 
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
     }
     break;
 
@@ -462,8 +529,8 @@ void Contact(int fd, void *arg)
 	 */
 
 	game_lock = game_lock ? false : true;
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
     }
     break;
 
@@ -475,8 +542,8 @@ void Contact(int fd, void *arg)
 	 */
 
 	D(printf("Got CONTACT from %s.\n", host_addr));
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
     }
     break;
 
@@ -488,13 +555,13 @@ void Contact(int fd, void *arg)
 	 * Shutdown the entire server.
 	 */
 
-	if (Packet_scanf(&ibuf, "%d%s", &delay, reason) <= 0)
+	if (Packet_scanf(request, "%d%s", &delay, reason) <= 0)
 	    status = E_INVAL;
 	else
 	    Server_shutdown(user_name, delay, reason);
 
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
     }
     break;
 
@@ -504,7 +571,7 @@ void Contact(int fd, void *arg)
 	/*
 	 * Kick someone from the game.
 	 */
-	if (Packet_scanf(&ibuf, "%s", str) <= 0)
+	if (Packet_scanf(request, "%s", str) <= 0)
 	    status = E_INVAL;
 	else {
 	    player_t *pl_found = Get_player_by_name(str, NULL, NULL);
@@ -522,8 +589,8 @@ void Contact(int fd, void *arg)
 	    }
 	}
 
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
     }
     break;
 
@@ -539,7 +606,7 @@ void Contact(int fd, void *arg)
 
 	char *opt, *val;
 
-	if (Packet_scanf(&ibuf, "%S", str) <= 0
+	if (Packet_scanf(request, "%S", str) <= 0
 		 || (opt = strtok(str, ":")) == NULL
 		 || (val = strtok(NULL, "")) == NULL)
 	    status = E_INVAL;
@@ -564,8 +631,8 @@ void Contact(int fd, void *arg)
 	    else
 		status = E_INVAL;
 	}
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
     }
     break;
 
@@ -580,8 +647,8 @@ void Contact(int fd, void *arg)
 		 showtime(), user_name, host_addr);
 	i = 0;
 	do {
-	    Sockbuf_clear(&ibuf);
-	    Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	    Sockbuf_clear(reply);
+	    Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
 
 	    for (change = false, full = false; !full && !bad; ) {
 		switch (Parser_list_option(&i, str)) {
@@ -592,7 +659,7 @@ void Contact(int fd, void *arg)
 		    i++;
 		    break;
 		default:
-		    switch (Packet_printf(&ibuf, "%s", str)) {
+		    switch (Packet_printf(reply, "%s", str)) {
 		    case 0:
 			full = true;
 			bad = (change) ? false : true;
@@ -608,7 +675,9 @@ void Contact(int fd, void *arg)
 		    break;
 		}
 	    }
-	    if (change && Reply(host_addr, port) == -1)
+	    if (change && Reply(reply, host_addr, port, stream) == -1)
+		bad = true;
+	    if (stream)
 		bad = true;
 
 	} while (!bad);
@@ -622,11 +691,11 @@ void Contact(int fd, void *arg)
 	D(printf("Unknown packet type (%d) from %s@%s.\n",
 		 reply_to, user_name, host_addr));
 
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, E_VERSION);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, E_VERSION);
     }
 
-    Reply(host_addr, port);
+    Reply(reply, host_addr, port, stream);
 }
 
 
@@ -641,6 +710,7 @@ struct queued_player {
     int				team;
     unsigned			version;
     int				login_port;
+    game_transport_t		contact_transport;
     long			last_ack_sent;
     long			last_ack_recv;
 };
@@ -672,10 +742,12 @@ void Queue_kick(const char *nick)
     if (!qp)
 	return;
 
-    magic = Version_to_magic(qp->version);
-    Sockbuf_clear(&ibuf);
-    Packet_printf(&ibuf, "%u%c%c", magic, ENTER_GAME_pack, E_IN_USE);
-    Reply(qp->host_addr, qp->port);
+    if (qp->contact_transport == GAME_TRANSPORT_UDP) {
+	magic = Version_to_magic(qp->version);
+	Sockbuf_clear(&ibuf);
+	Packet_printf(&ibuf, "%u%c%c", magic, ENTER_GAME_pack, E_IN_USE);
+	Reply(&ibuf, qp->host_addr, qp->port, false);
+    }
     Queue_remove(qp, prev);
 
     return;
@@ -685,6 +757,10 @@ static void Queue_ack(struct queued_player *qp, int qpos)
 {
     unsigned my_magic = Version_to_magic(qp->version);
 
+    if (qp->contact_transport == GAME_TRANSPORT_TCP) {
+	qp->last_ack_sent = main_loops;
+	return;
+    }
     Sockbuf_clear(&ibuf);
     if (qp->login_port == -1)
 	Packet_printf(&ibuf, "%u%c%c%hu",
@@ -692,7 +768,7 @@ static void Queue_ack(struct queued_player *qp, int qpos)
     else
 	Packet_printf(&ibuf, "%u%c%c%hu",
 		      my_magic, ENTER_GAME_pack, SUCCESS, qp->login_port);
-    Reply(qp->host_addr, qp->port);
+    Reply(&ibuf, qp->host_addr, qp->port, false);
     qp->last_ack_sent = main_loops;
 }
 
@@ -701,6 +777,9 @@ void Queue_loop(void)
     struct queued_player *qp, *prev = 0, *next = 0;
     int qpos = 0, login_port;
     static long last_unqueued_loops;
+
+    if (contactTransport == GAME_TRANSPORT_TCP)
+	Contact_stream_poll();
 
     for (qp = qp_list; qp && qp->login_port > 0; ) {
 	next = qp->next;
@@ -819,12 +898,14 @@ void Queue_loop(void)
 
 static int Queue_player(char *user, char *nick, char *disp, int team,
 			char *addr, char *host, unsigned version, int port,
-			int *qpos)
+			game_transport_t transport, int *qpos,
+			int *login_port)
 {
     int status = SUCCESS, num_queued = 0, num_same_hosts = 0;
     struct queued_player *qp, *prev = 0;
 
     *qpos = 0;
+    *login_port = -1;
     if ((status = Check_names(nick, user, host)) != SUCCESS)
 	return status;
 
@@ -843,11 +924,10 @@ static int Queue_player(char *user, char *nick, char *disp, int team,
 		qp->port = port;
 		qp->version = version;
 		qp->team = team;
-		/*
-		 * Still on the queue, so don't send an ack
-		 * since it will get one soon from Queue_loop().
-		 */
-		return -1;
+		qp->contact_transport = transport;
+		*login_port = qp->login_port;
+		/* UDP clients receive asynchronous queue acknowledgements. */
+		return transport == GAME_TRANSPORT_TCP ? SUCCESS : -1;
 	    }
 	    return E_IN_USE;
 	}
@@ -880,6 +960,7 @@ static int Queue_player(char *user, char *nick, char *disp, int team,
     qp->team = team;
     qp->version = version;
     qp->login_port = -1;
+    qp->contact_transport = transport;
     qp->last_ack_sent = main_loops;
     qp->last_ack_recv = main_loops;
 

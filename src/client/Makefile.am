@@ -6,7 +6,7 @@ noinst_LIBRARIES = libxpclient.a
 libxpclient_a_SOURCES = \
 	client.c client.h \
 	clientcommand.c clientcommand.h clientrank.c clientrank.h \
-	configure.h connectparam.h \
+	configure.h connectparam.h connect_target.c connect_target.h \
 	datagram.c datagram.h default.c \
 	event.c \
 	gfx2d.c gfx2d.h \
@@ -16,7 +16,7 @@ libxpclient_a_SOURCES = \
 	paint.c paint.h paintmap.c paintobjects.c \
 	option.c option.h \
 	query.c \
-	recordfmt.h \
+	recordfmt.h transport_display.c transport_display.h \
 	talk.h talkmacros.c textinterface.c \
 	usleep.c \
 	xpclient.h
@@ -41,4 +41,4 @@ endif
 
 # kps - . in SUBDIRS is needed to make sure libxpclient.a is compiled before
 # SDL client
-SUBDIRS = . items $(MAYBE_X11) $(MAYBE_SDL) NT
+SUBDIRS = . items $(MAYBE_X11) $(MAYBE_SDL)

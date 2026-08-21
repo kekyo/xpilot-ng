@@ -20,9 +20,7 @@
 
 #include "xpserver.h"
 
-/* RECORDING WON'T WORK PROPERLY ON WINDOWS BECAUSE OF
- * errno = WSAGetLastError();
- */
+/* Recording is disabled for Windows targets by configure. */
 
 int sock_closeRec(sock_t *sock)
 {
@@ -277,9 +275,6 @@ int Sockbuf_readRec(sockbuf_t *sbuf)
 	    if (len == 0) {
 		return 0;
 	    }
-#ifdef _WINDOWS
-	    errno = WSAGetLastError();
-#endif
 	    if (errno == EINTR) {
 		errno = 0;
 		continue;

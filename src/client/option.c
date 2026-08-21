@@ -114,7 +114,8 @@ void Usage(void)
 {
     int i;
 
-    printf("Usage: %s [-options ...] [server]\n"
+    printf("Usage: %s [-options ...] [server-target ...]\n"
+	   "Server targets: HOST, tcp://HOST[:PORT], or udp://HOST[:PORT]\n"
 	   "Where options include:\n" "\n", Program_name());
     for (i = 0; i < num_options; i++) {
 	xp_option_t *opt = Option_by_index(i);

@@ -1107,6 +1107,8 @@ void Frame_update(void)
 	conn = pl->conn;
 	if (conn == NULL)
 	    continue;
+	if (conn->state == CONN_RECONNECT)
+	    continue;
 	playback = (pl->rectype == 1);
 	player_fps = FPS;
 	if ((Player_is_paused(pl)

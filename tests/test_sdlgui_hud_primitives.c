@@ -261,7 +261,7 @@ u_byte numItems[NUM_ITEMS];
 u_byte lastNumItems[NUM_ITEMS];
 int numItemsTime[NUM_ITEMS];
 double showItemsTime;
-byte lose_item;
+u_byte lose_item;
 int lose_item_active;
 double fuelTime;
 double fuelCritical;

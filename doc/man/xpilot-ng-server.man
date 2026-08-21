@@ -28,6 +28,19 @@ requested from the server by an operator.
 .PP
 The possible options include:
 .HP
+\fB\-tcp\fR
+.IP
+Select TCP for both contact/lobby and gameplay.
+.HP
+\fB\-udp\fR
+.IP
+Select UDP for both contact/lobby and gameplay.  This is the default.
+.HP
+\fB\-transport\fR <udp|tcp>
+.IP
+Select one transport for both contact/lobby and gameplay.
+Transport options are applied from left to right.
+.HP
 \fB\-help\fR
 .IP
 Print out this help message.
@@ -241,14 +254,20 @@ Block map topology.
 .HP
 \fB\-contactPort\fR or port <integer>
 .IP
-The UDP server contact port number.
+The server contact port number.
+[ Flags: command, defaults ]
+.HP
+\fB\-contactTransport\fR <string>
+.IP
+Contact and lobby transport for direct connections: udp or tcp.
+This value must match the client; there is no automatic fallback.
+LAN broadcast discovery is available only in udp mode.
 [ Flags: command, defaults ]
 .HP
 \fB\-gameTransport\fR <string>
 .IP
 Gameplay transport for player connections: udp or tcp.
 This value must match every client; there is no automatic fallback.
-The contact and discovery protocols remain UDP.
 [ Flags: command, defaults ]
 .HP
 \fB\-serverHost\fR <string>
@@ -412,6 +431,7 @@ when the player bounces against a wall.
 \-/+reportToMetaServer or reportMeta
 .IP
 Keep the meta server informed about our game?
+Advertisements include the selected contact and gameplay transports.
 [ Flags: command, defaults ]
 .HP
 \fB\-metaUpdateMaxSize\fR <integer>

@@ -202,9 +202,11 @@ int Sockbuf_flush_framed(sockbuf_t *sbuf, sockbuf_io_fn writer)
 	return Sockbuf_set_frame_error(sbuf, EMSGSIZE);
 
     if (status == 0) {
-	/* Match datagram backpressure: discard this transient update rather
-	 * than merging it into another logical record or growing a queue. */
-	Sockbuf_clear(sbuf);
+	if (BIT(sbuf->state, SOCKBUF_ORDERED) == 0) {
+	    /* Match datagram backpressure: discard this transient update rather
+	     * than merging it into another logical record or growing a queue. */
+	    Sockbuf_clear(sbuf);
+	}
 	errno = EAGAIN;
 	return 0;
     }
@@ -465,9 +467,6 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	       <= 0) {
 	    if (len == 0)
 		return 0;
-#ifdef _WINDOWS
-	    errno = WSAGetLastError();
-#endif
 	    if (errno == EINTR) {
 		errno = 0;
 		continue;

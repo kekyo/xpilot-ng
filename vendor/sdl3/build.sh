@@ -16,10 +16,13 @@ Options:
   --jobs NUMBER             Parallel build jobs (default: detected CPU count)
   --build-type TYPE         CMake build type (default: Release)
   --toolchain-file PATH     CMake toolchain file for cross-compilation
+  --vendored-font-deps      Build SDL_ttf's FreeType and HarfBuzz submodules
+  --disable-libusb          Disable SDL's optional libusb HIDAPI backend
   --help                    Show this help
 
-The build uses system codec, FreeType, and HarfBuzz development packages.
-It never downloads dependencies; initialize the git submodules first.
+The native build uses system codec, FreeType, and HarfBuzz development
+packages.  Cross-builds can select SDL_ttf's pinned dependencies.  The script
+never downloads dependencies; initialize the git submodules first.
 EOF
 }
 
@@ -35,6 +38,8 @@ install_prefix=
 jobs=
 build_type=Release
 toolchain_file=
+vendored_font_deps=false
+sdl_hidapi_libusb=ON
 
 while test "$#" -gt 0; do
     case "$1" in
@@ -81,6 +86,14 @@ while test "$#" -gt 0; do
             ;;
         --toolchain-file=*)
             toolchain_file=${1#*=}
+            shift
+            ;;
+        --vendored-font-deps)
+            vendored_font_deps=true
+            shift
+            ;;
+        --disable-libusb)
+            sdl_hidapi_libusb=OFF
             shift
             ;;
         --help)
@@ -175,7 +188,8 @@ configure_project SDL \
     -DSDL_EXAMPLES=OFF \
     -DSDL_INSTALL=ON \
     -DSDL_INSTALL_DOCS=OFF \
-    -DSDL_RPATH=OFF
+    -DSDL_RPATH=OFF \
+    "-DSDL_HIDAPI_LIBUSB=$sdl_hidapi_libusb"
 
 vendor_pkg_config_path="$install_prefix/lib/pkgconfig"
 if test -n "${PKG_CONFIG_PATH:-}"; then
@@ -200,7 +214,7 @@ configure_project SDL_ttf \
     -DBUILD_SHARED_LIBS=OFF \
     -DSDLTTF_INSTALL=ON \
     -DSDLTTF_INSTALL_MAN=OFF \
-    -DSDLTTF_VENDORED=OFF \
+    "-DSDLTTF_VENDORED=$vendored_font_deps" \
     -DSDLTTF_SAMPLES=OFF \
     -DSDLTTF_HARFBUZZ=ON \
     -DSDLTTF_PLUTOSVG=OFF

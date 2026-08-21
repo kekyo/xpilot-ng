@@ -16,19 +16,54 @@ For further reading, see the manuals in the doc/man directory.
 
 
 
-GAMEPLAY TRANSPORT
+NETWORK TRANSPORT
 
-Gameplay connections use UDP by default.  To use TCP, start both endpoints
-with `-gameTransport tcp`, for example:
+Contact/lobby and gameplay connections use UDP by default and can be selected
+independently.  To use TCP for both, start both endpoints with matching
+settings, for example:
 
-        xpilot-ng-server -gameTransport tcp [other options]
-        xpilot-ng-sdl -gameTransport tcp -join server.example
+        xpilot-ng-server -transport tcp [options]
+        xpilot-ng-sdl -join tcp://server.example
 
-The client and server must select the same value (`udp` or `tcp`); there is no
-automatic fallback.  The `-port` option continues to identify the UDP contact
-port.  LAN discovery, metaserver, and lobby paths are unchanged.  The
-`clientPortStart` and `clientPortEnd` range applies to the selected gameplay
-protocol on the server and to the client's contact and gameplay sockets.
+The server shortcuts `-tcp`, `-udp`, and `-transport udp|tcp` select one
+transport for both contact/lobby and gameplay.  Command-line transport options
+are applied from left to right, so a later `contactTransport` or
+`gameTransport` option can still create a split configuration.
+
+Direct client targets accept `HOST`, `tcp://HOST[:PORT]`, or
+`udp://HOST[:PORT]`.  A qualified target selects that transport for both
+contact/lobby and gameplay, while a bare host uses the `contactTransport`,
+`gameTransport`, and `port` option defaults.  An explicit target port overrides
+`-port`.  Split transport combinations remain available through the long
+options or metaserver advertisements.
+
+Multiple targets are tried in command-line order, for example
+`tcp://server1 udp://server2`.  This is explicit fallback between targets;
+the client does not automatically probe both protocols for one target.  Target
+hosts are DNS names or IPv4 addresses.  IPv6 literals and general URI features
+such as credentials, paths, queries, fragments, and percent encoding are not
+supported.  TCP contact requires an explicit target or a metaserver entry
+because LAN broadcast discovery is available only with UDP.
+
+If every explicit target fails to return a valid contact response after its
+retries, the SDL client writes a final summary containing the last endpoint
+and both selected transports to standard error.  A normal graphical invocation
+also displays the summary in one modal error dialog and exits unsuccessfully
+after it is acknowledged.  An explicit `-text` or `-list` invocation reports
+through the terminal without opening that dialog.  A server response used to
+complete `-list`, or a later target that responds successfully, is not reported
+as a connection failure.
+
+Metaserver advertisements include both transport selections.  The SDL and X11
+clients apply the advertised values automatically when a server is selected;
+legacy advertisements without transport metadata are treated as UDP contact
+and UDP gameplay servers.  Metaserver query and reporting traffic continues to
+use its existing protocols.
+
+The server's `clientPortStart` and `clientPortEnd` range applies to the
+selected gameplay protocol.  On clients it also applies to gameplay and the
+traditional UDP contact socket; TCP contact connections use an ephemeral
+local port.
 
 TCP gameplay records contain a two-byte network-order payload length followed
 by an unchanged XPilot packet payload.  Server recordings must be replayed

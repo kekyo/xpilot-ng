@@ -18,31 +18,5 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <windows.h>
-#include <stdio.h>
-#include <stdarg.h>
-
-/* needed by some server specific function in socklib.c */
-HWND notifyWnd;
-
-/* these are not used by the SDL client */
-/* but they are referred by the common windows code */
-int ThreadedDraw;
-BOOL drawPending;
-int RadarDivisor;
-struct {
-	HANDLE eventNotDrawing;
-} dinfo;
-
-
-/* SDL client does not use MFC crap */
-void _Trace(char *fmt, ...)
-{
-	va_list ap;
-	va_start(ap, fmt);
-    vprintf(fmt, ap);
-    va_end(ap);
-}
-
-void Progress(char *fmt, ...) {}
+void Progress(const char *fmt, ...) {}
 void MarkPlayersForRedraw(void) {}

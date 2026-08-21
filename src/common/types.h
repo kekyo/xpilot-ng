@@ -44,8 +44,12 @@ typedef struct { int bx, by; }		blkvec_t;
 typedef blkvec_t			blkpos_t;
 
 #ifdef _WINDOWS
-# define strncasecmp(__s, __t, __l)	strnicmp(__s, __t, __l)
-# define strcasecmp(__s, __t)	stricmp(__s, __t)
+# ifndef strncasecmp
+#  define strncasecmp(__s, __t, __l)	_strnicmp(__s, __t, __l)
+# endif
+# ifndef strcasecmp
+#  define strcasecmp(__s, __t)	_stricmp(__s, __t)
+# endif
 #endif
 
 #endif

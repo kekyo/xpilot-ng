@@ -115,14 +115,13 @@
 #ifdef SERVER
 #define MAGIC VERSION2MAGIC( \
     Game_transport_protocol_version(gameTransport, is_polygon_map))
-#else
-#define MAGIC VERSION2MAGIC( \
-    Game_transport_protocol_version(gameTransport, true))
 #endif
 
 #define MAGIC2VERSION(M)	(((M) >> 16) & 0xFFFF)
 #define VERSION2MAGIC(V)	((((V) & 0xFFFF) << 16) | MAGIC_WORD)
+#ifdef SERVER
 #define MY_VERSION		MAGIC2VERSION(MAGIC)
+#endif
 
 /*
  * Which client versions can join this server.
@@ -136,7 +135,6 @@
  * Which server versions can this client join.
  */
 #define MIN_SERVER_VERSION	0x4F09
-#define MAX_SERVER_VERSION	MY_VERSION
 
 /*
  * We want to keep support for servers using the old map format in the client,
@@ -144,11 +142,6 @@
  * there is a separate "old" range of allowed servers.
  */
 #define MIN_OLD_SERVER_VERSION  0x4203
-#define MAX_OLD_SERVER_VERSION \
-    Game_transport_protocol_version(gameTransport, false)
-/* Which old-style (non-polygon) protocol version we support. */
-#define COMPATIBILITY_MAGIC VERSION2MAGIC( \
-    Game_transport_protocol_version(gameTransport, false))
 
 #define	MAX_STR_LEN		4096
 #define	MAX_DISP_LEN		80

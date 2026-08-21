@@ -4,8 +4,17 @@
 xpilot-ng-sdl \- an SDL/OpenGL XPilot client.
 .SH SYNOPSIS
 .B xpilot-ng-sdl
-[\fI-options \fR...] [\fIserver\fR]
+[\fI-options \fR...] [\fIserver-target \fR...]
 .SH DESCRIPTION
+Server targets: HOST, tcp://HOST[:PORT], or udp://HOST[:PORT]
+.PP
+If every explicit target fails to return a valid contact response, a final
+summary identifies the last endpoint and both selected transports.  Normal
+graphical use displays one modal error dialog and exits unsuccessfully after
+acknowledgement; \fB\-text\fR and \fB\-list\fR report through the terminal
+without opening the dialog.  A responding fallback target or a completed
+server listing is not treated as a connection failure.
+.PP
 Where options include:
 .HP
 \fB\-newbie\fR <value>
@@ -62,7 +71,8 @@ The default value is: 65535.
 .HP
 \fB\-port\fR <value>
 .IP
-Set the UDP contact port number of the server.
+Set the default contact port number for direct server targets.
+A port in tcp://HOST:PORT or udp://HOST:PORT overrides this value.
 Almost all servers use the default port, which is the recommended
 policy.  You can find out about which port is used by a server by
 querying the XPilot Meta server.
@@ -234,10 +244,20 @@ Allows drawing polygon bitmaps specified by the (new\-style) map.
 Be warned that this needs a reasonably fast graphics system.
 The default value is: yes.
 .HP
+\fB\-contactTransport\fR <value>
+.IP
+Default contact and lobby transport for bare server targets: udp or tcp.
+A tcp:// or udp:// target selects both transports for that target.
+Direct connections must match the server; metaserver selections apply the
+advertised value.
+The default value is: udp.
+.HP
 \fB\-gameTransport\fR <value>
 .IP
-Gameplay transport to use when joining servers: udp or tcp.
-This value must match the server; there is no automatic fallback.
+Default gameplay transport for bare server targets: udp or tcp.
+A tcp:// or udp:// target selects both transports for that target.
+Direct connections must match the server; metaserver selections apply the
+advertised value.
 The default value is: udp.
 .HP
 \fB\-outlineWorld\fR <value>

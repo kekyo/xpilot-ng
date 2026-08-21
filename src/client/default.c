@@ -503,12 +503,26 @@ static bool Set_dirPrediction(xp_option_t *opt, bool val)
     return true;
 }
 
-game_transport_t gameTransport = GAME_TRANSPORT_UDP;
+static bool Set_contactTransport(xp_option_t *opt, const char *value)
+{
+    UNUSED_PARAM(opt);
+    if (!Game_transport_parse(value, &connectDefaults.contact_transport)) {
+	warn("Invalid contactTransport '%s'; expected 'udp' or 'tcp'", value);
+	return false;
+    }
+    return true;
+}
+
+static const char *Get_contactTransport(xp_option_t *opt)
+{
+    UNUSED_PARAM(opt);
+    return Game_transport_name(connectDefaults.contact_transport);
+}
 
 static bool Set_gameTransport(xp_option_t *opt, const char *value)
 {
     UNUSED_PARAM(opt);
-    if (!Game_transport_parse(value, &gameTransport)) {
+    if (!Game_transport_parse(value, &connectDefaults.game_transport)) {
 	warn("Invalid gameTransport '%s'; expected 'udp' or 'tcp'", value);
 	return false;
     }
@@ -518,7 +532,7 @@ static bool Set_gameTransport(xp_option_t *opt, const char *value)
 static const char *Get_gameTransport(xp_option_t *opt)
 {
     UNUSED_PARAM(opt);
-    return Game_transport_name(gameTransport);
+    return Game_transport_name(connectDefaults.game_transport);
 }
 
 void defaultCleanup(void)
@@ -622,10 +636,11 @@ xp_option_t default_options[] = {
 	SERVER_PORT,
 	0,
 	65535,
-	&connectParam.contact_port,
+	&connectDefaults.contact_port,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Set the UDP contact port number of the server.\n"
+	"Set the default contact port number for direct server targets.\n"
+	"A port in tcp://HOST:PORT or udp://HOST:PORT overrides this value.\n"
 	"Almost all servers use the default port, which is the recommended\n"
 	"policy.  You can find out about which port is used by a server by\n"
 	"querying the XPilot Meta server.\n"),
@@ -918,13 +933,26 @@ xp_option_t default_options[] = {
 	"Be warned that this needs a reasonably fast graphics system.\n"),
 
     XP_STRING_OPTION(
+	"contactTransport",
+	"udp",
+	NULL, 0,
+	Set_contactTransport, NULL, Get_contactTransport,
+	XP_OPTFLAG_KEEP,
+	"Default contact and lobby transport for bare server targets: udp or tcp.\n"
+	"A tcp:// or udp:// target selects both transports for that target.\n"
+	"Direct connections must match the server; metaserver selections apply "
+	"the advertised value.\n"),
+
+    XP_STRING_OPTION(
 	"gameTransport",
 	"udp",
 	NULL, 0,
 	Set_gameTransport, NULL, Get_gameTransport,
 	XP_OPTFLAG_KEEP,
-	"Gameplay transport to use when joining servers: udp or tcp.\n"
-	"This value must match the server; there is no automatic fallback.\n"),
+	"Default gameplay transport for bare server targets: udp or tcp.\n"
+	"A tcp:// or udp:// target selects both transports for that target.\n"
+	"Direct connections must match the server; metaserver selections apply "
+	"the advertised value.\n"),
 
     XP_BOOL_OPTION(
 	"outlineWorld",

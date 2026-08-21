@@ -665,6 +665,8 @@ COND_XP_MAPEDIT_FALSE
 COND_XP_MAPEDIT_TRUE
 COND_REPLAY_FALSE
 COND_REPLAY_TRUE
+COND_MINGW_VENDORED_FALSE
+COND_MINGW_VENDORED_TRUE
 COND_WINDOWS_FALSE
 COND_WINDOWS_TRUE
 COND_CLIENT_FALSE
@@ -685,6 +687,7 @@ X_CFLAGS
 CPP
 XMKMF
 W32_LIBS
+CMAKE
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
@@ -705,6 +708,14 @@ CPPFLAGS
 LDFLAGS
 CFLAGS
 CC
+MINGW_WINE_PREFIX
+MINGW_PACKAGE_DIR
+MINGW_TOOLCHAIN_FILE
+MINGW_DEPS_BUILD_TYPE
+MINGW_DEPS_MAKEFILE
+MINGW_DEPS_PREFIX
+MINGW_DEPS_BUILD_DIR
+MINGW_ARCH
 XP_DATADIR
 XP_RELEASEDATE
 XP_COPYRIGHT
@@ -809,8 +820,11 @@ enable_replay
 enable_xp_mapedit
 enable_x11_client
 enable_sdl_client
+enable_mingw_vendored_deps
 with_sdl3
 with_sdl3_prefix
+with_mingw_toolchain_file
+with_mingw_deps_build_type
 enable_sound
 enable_dependency_tracking
 with_x
@@ -1483,6 +1497,8 @@ Optional Features:
   --disable-xp-mapedit    disable building of xp-mapedit program
   --disable-x11-client    disable X11 client
   --disable-sdl-client    disable SDL/OpenGL client
+  --disable-mingw-vendored-deps
+                          use externally prepared dependencies for MinGW
   --enable-sound          enable OpenAL sound
   --enable-dependency-tracking
                           do not reject slow dependency extractors
@@ -1492,8 +1508,12 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-sdl3=PROVIDER    use system or vendored SDL3 dependencies [system]
+  --with-sdl3=PROVIDER    use system or vendored SDL3 dependencies
   --with-sdl3-prefix=PATH private SDL3 prefix built by vendor/sdl3/build.sh
+  --with-mingw-toolchain-file=PATH
+                          CMake toolchain file for MinGW vendored dependencies
+  --with-mingw-deps-build-type=TYPE
+                          CMake build type for MinGW dependencies [Release]
   --with-x                use the X Window System
 
 Some influential environment variables:
@@ -2826,6 +2846,22 @@ test -n "$target_alias" &&
     NONENONEs,x,x, &&
   program_prefix=${target_alias}-
 
+windows_target=no
+mingw_arch=
+case "$host" in
+	i686-w64-mingw32)
+		windows_target=yes
+		mingw_arch=x86
+		;;
+	x86_64-w64-mingw32)
+		windows_target=yes
+		mingw_arch=x86_64
+		;;
+	*-*-mingw32*)
+		as_fn_error $? "unsupported MinGW host: $host" "$LINENO" 5
+		;;
+esac
+
 am__api_version='1.16'
 
 
@@ -3586,13 +3622,45 @@ printf "%s\n" "#define SDL_CLIENT 1" >>confdefs.h
 
 fi
 
+# Check whether --enable-mingw_vendored_deps was given.
+if test ${enable_mingw_vendored_deps+y}
+then :
+  enableval=$enable_mingw_vendored_deps;
+else $as_nop
+
+	if test x$windows_target = xyes; then
+		enable_mingw_vendored_deps=yes
+	else
+		enable_mingw_vendored_deps=no
+	fi
+
+fi
+
+case "$enable_mingw_vendored_deps" in
+	yes|no)
+		;;
+	*)
+		as_fn_error $? "--enable-mingw-vendored-deps accepts yes or no" "$LINENO" 5
+		;;
+esac
+if test x$windows_target != xyes \
+	&& test x$enable_mingw_vendored_deps = xyes; then
+	as_fn_error $? "--enable-mingw-vendored-deps requires a MinGW host" "$LINENO" 5
+fi
+
 
 # Check whether --with-sdl3 was given.
 if test ${with_sdl3+y}
 then :
   withval=$with_sdl3;
 else $as_nop
-  with_sdl3=system
+
+	if test x$enable_mingw_vendored_deps = xyes; then
+		with_sdl3=vendored
+	else
+		with_sdl3=system
+	fi
+
 fi
 
 case "$with_sdl3" in
@@ -3611,6 +3679,96 @@ then :
 else $as_nop
   with_sdl3_prefix=
 fi
+
+
+
+# Check whether --with-mingw_toolchain_file was given.
+if test ${with_mingw_toolchain_file+y}
+then :
+  withval=$with_mingw_toolchain_file;
+else $as_nop
+  with_mingw_toolchain_file=
+fi
+
+
+
+# Check whether --with-mingw_deps_build_type was given.
+if test ${with_mingw_deps_build_type+y}
+then :
+  withval=$with_mingw_deps_build_type;
+else $as_nop
+  with_mingw_deps_build_type=Release
+fi
+
+test -n "$with_mingw_deps_build_type" \
+	|| as_fn_error $? "--with-mingw-deps-build-type requires a value" "$LINENO" 5
+
+mingw_vendored_deps=no
+MINGW_ARCH=
+MINGW_DEPS_BUILD_DIR=
+MINGW_DEPS_PREFIX=
+MINGW_DEPS_MAKEFILE=
+MINGW_DEPS_BUILD_TYPE=
+MINGW_TOOLCHAIN_FILE=
+MINGW_PACKAGE_DIR=
+MINGW_WINE_PREFIX=
+if test x$windows_target = xyes; then
+	MINGW_ARCH=$mingw_arch
+	MINGW_PACKAGE_DIR="$ac_pwd/package"
+	MINGW_WINE_PREFIX="$ac_pwd/wine-prefix"
+fi
+if test x$windows_target = xyes \
+	&& test x$enable_mingw_vendored_deps = xyes; then
+	mingw_vendored_deps=yes
+	if test x$with_sdl3 != xvendored; then
+		as_fn_error $? "MinGW vendored dependencies require --with-sdl3=vendored" "$LINENO" 5
+	fi
+	if test -z "$with_sdl3_prefix"; then
+		with_sdl3_prefix="$ac_pwd/mingw-vendor-prefix"
+	fi
+	case "$with_sdl3_prefix" in
+		/*)
+			;;
+		*)
+			as_fn_error $? "--with-sdl3-prefix must be an absolute path" "$LINENO" 5
+			;;
+	esac
+
+	xpilot_abs_srcdir=`cd "$srcdir" && pwd`
+	if test -z "$with_mingw_toolchain_file"; then
+		case "$mingw_arch" in
+			x86)
+				with_mingw_toolchain_file="$xpilot_abs_srcdir/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-i686.cmake"
+				;;
+			x86_64)
+				with_mingw_toolchain_file="$xpilot_abs_srcdir/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-x86_64.cmake"
+				;;
+		esac
+	fi
+	case "$with_mingw_toolchain_file" in
+		/*)
+			;;
+		*)
+			as_fn_error $? "--with-mingw-toolchain-file must be an absolute path" "$LINENO" 5
+			;;
+	esac
+	test -f "$with_mingw_toolchain_file" \
+		|| as_fn_error $? "MinGW toolchain file not found: $with_mingw_toolchain_file" "$LINENO" 5
+
+	MINGW_DEPS_BUILD_DIR="$ac_pwd/mingw-vendor-build"
+	MINGW_DEPS_PREFIX=$with_sdl3_prefix
+	MINGW_DEPS_MAKEFILE="$ac_pwd/mingw-deps.mk"
+	MINGW_DEPS_BUILD_TYPE=$with_mingw_deps_build_type
+	MINGW_TOOLCHAIN_FILE=$with_mingw_toolchain_file
+fi
+
+
+
+
+
+
+
+
 
 
 # Check whether --enable-sound was given.
@@ -5137,6 +5295,69 @@ printf "%s\n" "no" >&6; }
 	fi
 fi
 
+if test x$mingw_vendored_deps = xyes; then
+	# Extract the first word of "cmake", so it can be a program name with args.
+set dummy cmake; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_CMAKE+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $CMAKE in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_CMAKE="$CMAKE" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_CMAKE="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+CMAKE=$ac_cv_path_CMAKE
+if test -n "$CMAKE"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $CMAKE" >&5
+printf "%s\n" "$CMAKE" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+
+	test -n "$CMAKE" \
+		|| as_fn_error $? "cmake is required for MinGW vendored dependencies" "$LINENO" 5
+	test -n "$PKG_CONFIG" \
+		|| as_fn_error $? "pkg-config is required for MinGW vendored dependencies" "$LINENO" 5
+fi
+
+if test x$mingw_vendored_deps = xyes; then
+
+printf "%s\n" "#define HAVE_LIBM 1" >>confdefs.h
+
+
+printf "%s\n" "#define HAVE_LIBZ 1" >>confdefs.h
+
+
+printf "%s\n" "#define HAVE_LIBEXPAT 1" >>confdefs.h
+
+else
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for cos in -lm" >&5
 printf %s "checking for cos in -lm... " >&6; }
@@ -5181,10 +5402,10 @@ then :
 
 fi
 
-if test x$ac_cv_lib_m_cos != xyes; then
-	as_fn_error $? "*** Math library not found!" "$LINENO" 5
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gzopen in -lz" >&5
+	if test x$ac_cv_lib_m_cos != xyes; then
+		as_fn_error $? "*** Math library not found!" "$LINENO" 5
+	fi
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gzopen in -lz" >&5
 printf %s "checking for gzopen in -lz... " >&6; }
 if test ${ac_cv_lib_z_gzopen+y}
 then :
@@ -5227,10 +5448,10 @@ then :
 
 fi
 
-if test x$ac_cv_lib_z_gzopen != xyes; then
-	as_fn_error $? "*** Required library zlib not found!" "$LINENO" 5
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for XML_ParserCreate in -lexpat" >&5
+	if test x$ac_cv_lib_z_gzopen != xyes; then
+		as_fn_error $? "*** Required library zlib not found!" "$LINENO" 5
+	fi
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for XML_ParserCreate in -lexpat" >&5
 printf %s "checking for XML_ParserCreate in -lexpat... " >&6; }
 if test ${ac_cv_lib_expat_XML_ParserCreate+y}
 then :
@@ -5273,19 +5494,14 @@ then :
 
 fi
 
-if test x$ac_cv_lib_expat_XML_ParserCreate != xyes; then
-	as_fn_error $? "*** Required library Expat not found!" "$LINENO" 5
+	if test x$ac_cv_lib_expat_XML_ParserCreate != xyes; then
+		as_fn_error $? "*** Required library Expat not found!" "$LINENO" 5
+	fi
 fi
 
-case "$target" in
-    *-*-mingw32*)
-	windows_target=yes
-	;;
-esac
-
+W32_LIBS=
 if test x$windows_target = xyes; then
-	W32_LIBS="-lmingw32 -lwsock32"
-
+	W32_LIBS="-lmingw32 -lws2_32"
 
 printf "%s\n" "#define _WINDOWS 1" >>confdefs.h
 
@@ -5296,6 +5512,7 @@ printf "%s\n" "#define _WINDOWS 1" >>confdefs.h
 	enable_x11_client=no
 	need_x=no
 fi
+
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -6224,36 +6441,46 @@ printf "%s\n" "#define XP_MAPEDIT 1" >>confdefs.h
 fi
 
 if test x$enable_sdl_client = xyes; then
-	if test x$with_sdl3 = xvendored; then
-		if test -z "$with_sdl3_prefix"; then
-			as_fn_error $? "--with-sdl3=vendored requires --with-sdl3-prefix=PATH" "$LINENO" 5
-		fi
-		case "$with_sdl3_prefix" in
-			/*)
-				;;
-			*)
-				as_fn_error $? "--with-sdl3-prefix must be an absolute path" "$LINENO" 5
-				;;
-		esac
-		if test ! -d "$with_sdl3_prefix/lib/pkgconfig"; then
-			as_fn_error $? "vendored SDL3 pkg-config directory not found: $with_sdl3_prefix/lib/pkgconfig" "$LINENO" 5
-		fi
-		for sdl3_pc_file in sdl3.pc sdl3-image.pc sdl3-ttf.pc; do
-			if test ! -f "$with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file"; then
-				as_fn_error $? "vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file" "$LINENO" 5
+	if test x$mingw_vendored_deps = xyes; then
+		SDL3_CFLAGS=
+		SDL3_LIBS=
+		SDL3_IMAGE_CFLAGS=
+		SDL3_IMAGE_LIBS=
+		SDL3_TTF_CFLAGS=
+		SDL3_TTF_LIBS=
+		GL_CFLAGS=-DWIN32
+		GL_LIBS=-lopengl32
+	else
+		if test x$with_sdl3 = xvendored; then
+			if test -z "$with_sdl3_prefix"; then
+				as_fn_error $? "--with-sdl3=vendored requires --with-sdl3-prefix=PATH" "$LINENO" 5
 			fi
-		done
+			case "$with_sdl3_prefix" in
+				/*)
+					;;
+				*)
+					as_fn_error $? "--with-sdl3-prefix must be an absolute path" "$LINENO" 5
+					;;
+			esac
+			if test ! -d "$with_sdl3_prefix/lib/pkgconfig"; then
+				as_fn_error $? "vendored SDL3 pkg-config directory not found: $with_sdl3_prefix/lib/pkgconfig" "$LINENO" 5
+			fi
+			for sdl3_pc_file in sdl3.pc sdl3-image.pc sdl3-ttf.pc; do
+				if test ! -f "$with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file"; then
+					as_fn_error $? "vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file" "$LINENO" 5
+				fi
+			done
 
-		if test "${PKG_CONFIG_PATH+set}" = set; then
-			saved_sdl3_pkg_config_path=$PKG_CONFIG_PATH
-			sdl3_pkg_config_path_was_set=yes
-			PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig:$PKG_CONFIG_PATH"
-		else
-			sdl3_pkg_config_path_was_set=no
-			PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig"
+			if test "${PKG_CONFIG_PATH+set}" = set; then
+				saved_sdl3_pkg_config_path=$PKG_CONFIG_PATH
+				sdl3_pkg_config_path_was_set=yes
+				PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig:$PKG_CONFIG_PATH"
+			else
+				sdl3_pkg_config_path_was_set=no
+				PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig"
+			fi
+			export PKG_CONFIG_PATH
 		fi
-		export PKG_CONFIG_PATH
-	fi
 
 
 pkg_failed=no
@@ -6529,34 +6756,31 @@ printf "%s\n" "yes" >&6; }
 
 fi
 
-	if test x$with_sdl3 = xvendored; then
-		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static vendored SDL3 linker flags" >&5
+		if test x$with_sdl3 = xvendored; then
+			{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static vendored SDL3 linker flags" >&5
 printf %s "checking for static vendored SDL3 linker flags... " >&6; }
-		SDL3_LIBS=`$PKG_CONFIG --static --libs sdl3`
-		if test $? -ne 0; then
-			as_fn_error $? "could not resolve static SDL3 linker flags" "$LINENO" 5
-		fi
-		SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
-		if test $? -ne 0; then
-			as_fn_error $? "could not resolve static SDL3_image linker flags" "$LINENO" 5
-		fi
-		SDL3_TTF_LIBS=`$PKG_CONFIG --static --libs sdl3-ttf`
-		if test $? -ne 0; then
-			as_fn_error $? "could not resolve static SDL3_ttf linker flags" "$LINENO" 5
-		fi
-		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+			SDL3_LIBS=`$PKG_CONFIG --static --libs sdl3`
+			if test $? -ne 0; then
+				as_fn_error $? "could not resolve static SDL3 linker flags" "$LINENO" 5
+			fi
+			SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
+			if test $? -ne 0; then
+				as_fn_error $? "could not resolve static SDL3_image linker flags" "$LINENO" 5
+			fi
+			SDL3_TTF_LIBS=`$PKG_CONFIG --static --libs sdl3-ttf`
+			if test $? -ne 0; then
+				as_fn_error $? "could not resolve static SDL3_ttf linker flags" "$LINENO" 5
+			fi
+			{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
 
-		if test x$sdl3_pkg_config_path_was_set = xyes; then
-			PKG_CONFIG_PATH=$saved_sdl3_pkg_config_path
-			export PKG_CONFIG_PATH
-		else
-			unset PKG_CONFIG_PATH
+			if test x$sdl3_pkg_config_path_was_set = xyes; then
+				PKG_CONFIG_PATH=$saved_sdl3_pkg_config_path
+				export PKG_CONFIG_PATH
+			else
+				unset PKG_CONFIG_PATH
+			fi
 		fi
-	fi
-
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: SDL3 dependency provider: $with_sdl3" >&5
-printf "%s\n" "$as_me: SDL3 dependency provider: $with_sdl3" >&6;}
 
 pkg_failed=no
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gl" >&5
@@ -6648,10 +6872,22 @@ else
 printf "%s\n" "yes" >&6; }
 
 fi
+	fi
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: SDL3 dependency provider: $with_sdl3" >&5
+printf "%s\n" "$as_me: SDL3 dependency provider: $with_sdl3" >&6;}
 
 printf "%s\n" "#define HAVE_SDL_IMAGE 1" >>confdefs.h
 
 fi
+
+
+
+
+
+
+
+
+
 
  if test x$need_libxpclient = xyes; then
   COND_CLIENT_TRUE=
@@ -6667,6 +6903,14 @@ fi
 else
   COND_WINDOWS_TRUE='#'
   COND_WINDOWS_FALSE=
+fi
+
+ if test x$mingw_vendored_deps = xyes; then
+  COND_MINGW_VENDORED_TRUE=
+  COND_MINGW_VENDORED_FALSE='#'
+else
+  COND_MINGW_VENDORED_TRUE='#'
+  COND_MINGW_VENDORED_FALSE=
 fi
 
  if test x$enable_replay = xyes; then
@@ -7333,37 +7577,20 @@ printf "%s\n" "#define TM_IN_SYS_TIME 1" >>confdefs.h
 fi
 
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for socklen_t" >&5
+if test x$windows_target = xyes; then
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for socklen_t" >&5
 printf %s "checking for socklen_t... " >&6; }
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-	#include <sys/types.h>
-	#include <sys/socket.h>
-	socklen_t x;
-
-int
-main (void)
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
-
-else $as_nop
-
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: provided by Winsock2" >&5
+printf "%s\n" "provided by Winsock2" >&6; }
+else
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for socklen_t" >&5
+printf %s "checking for socklen_t... " >&6; }
 	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
 		#include <sys/types.h>
 		#include <sys/socket.h>
-		int accept(int, struct sockaddr *, size_t *);
+		socklen_t x;
 
 int
 main (void)
@@ -7376,7 +7603,30 @@ _ACEOF
 if ac_fn_c_try_compile "$LINENO"
 then :
 
-		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: size_t" >&5
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+else $as_nop
+
+		cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+			#include <sys/types.h>
+			#include <sys/socket.h>
+			int accept(int, struct sockaddr *, size_t *);
+
+int
+main (void)
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+			{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: size_t" >&5
 printf "%s\n" "size_t" >&6; }
 
 printf "%s\n" "#define socklen_t size_t" >>confdefs.h
@@ -7384,7 +7634,7 @@ printf "%s\n" "#define socklen_t size_t" >>confdefs.h
 
 else $as_nop
 
-		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: int" >&5
+			{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: int" >&5
 printf "%s\n" "int" >&6; }
 
 printf "%s\n" "#define socklen_t int" >>confdefs.h
@@ -7395,6 +7645,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
 
 
 
@@ -8025,7 +8276,13 @@ then :
 fi
 
 
-ac_config_files="$ac_config_files Makefile README contrib/Makefile contrib/xpngcc/Makefile doc/Makefile doc/man/Makefile lib/Makefile lib/fonts/Makefile lib/maps/Makefile lib/textures/Makefile lib/sound/Makefile src/Makefile src/common/Makefile src/common/version.h src/common/NT/Makefile src/common/NT/bindist/Makefile src/client/Makefile src/client/items/Makefile src/client/sdl/Makefile src/client/x11/Makefile src/client/NT/Makefile src/client/NT/res/Makefile src/server/Makefile src/replay/Makefile src/replay/tools/Makefile src/mapedit/Makefile tests/Makefile"
+if test x$mingw_vendored_deps = xyes; then
+	CPPFLAGS="-I$MINGW_DEPS_PREFIX/include $CPPFLAGS"
+	LDFLAGS="-L$MINGW_DEPS_PREFIX/lib $LDFLAGS"
+	LIBS="-lexpat -lz -lm $LIBS"
+fi
+
+ac_config_files="$ac_config_files Makefile README contrib/Makefile contrib/xpngcc/Makefile doc/Makefile doc/man/Makefile lib/Makefile lib/fonts/Makefile lib/maps/Makefile lib/textures/Makefile lib/sound/Makefile src/Makefile src/common/Makefile src/common/version.h src/client/Makefile src/client/items/Makefile src/client/sdl/Makefile src/client/x11/Makefile src/server/Makefile src/replay/Makefile src/replay/tools/Makefile src/mapedit/Makefile tests/Makefile vendor/mingw/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -8169,6 +8426,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${COND_WINDOWS_TRUE}" && test -z "${COND_WINDOWS_FALSE}"; then
   as_fn_error $? "conditional \"COND_WINDOWS\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${COND_MINGW_VENDORED_TRUE}" && test -z "${COND_MINGW_VENDORED_FALSE}"; then
+  as_fn_error $? "conditional \"COND_MINGW_VENDORED\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${COND_REPLAY_TRUE}" && test -z "${COND_REPLAY_FALSE}"; then
@@ -8794,19 +9055,16 @@ do
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "src/common/Makefile") CONFIG_FILES="$CONFIG_FILES src/common/Makefile" ;;
     "src/common/version.h") CONFIG_FILES="$CONFIG_FILES src/common/version.h" ;;
-    "src/common/NT/Makefile") CONFIG_FILES="$CONFIG_FILES src/common/NT/Makefile" ;;
-    "src/common/NT/bindist/Makefile") CONFIG_FILES="$CONFIG_FILES src/common/NT/bindist/Makefile" ;;
     "src/client/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/Makefile" ;;
     "src/client/items/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/items/Makefile" ;;
     "src/client/sdl/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/sdl/Makefile" ;;
     "src/client/x11/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/x11/Makefile" ;;
-    "src/client/NT/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/NT/Makefile" ;;
-    "src/client/NT/res/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/NT/res/Makefile" ;;
     "src/server/Makefile") CONFIG_FILES="$CONFIG_FILES src/server/Makefile" ;;
     "src/replay/Makefile") CONFIG_FILES="$CONFIG_FILES src/replay/Makefile" ;;
     "src/replay/tools/Makefile") CONFIG_FILES="$CONFIG_FILES src/replay/tools/Makefile" ;;
     "src/mapedit/Makefile") CONFIG_FILES="$CONFIG_FILES src/mapedit/Makefile" ;;
     "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
+    "vendor/mingw/Makefile") CONFIG_FILES="$CONFIG_FILES vendor/mingw/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
@@ -9535,5 +9793,3 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 printf "%s\n" "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
-
-

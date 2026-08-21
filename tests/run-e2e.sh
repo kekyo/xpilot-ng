@@ -33,10 +33,12 @@ if test "${1:-}" != --inside-xvfb; then
 fi
 
 client="${XPILOT_TEST_BINDIR:?XPILOT_TEST_BINDIR is required}/xpilot-ng-sdl"
+x11_client="${XPILOT_TEST_BINDIR}/xpilot-ng-x11"
 server="${XPILOT_TEST_BINDIR}/xpilot-ng-server"
 map="${XPILOT_TEST_PKGDATADIR:?XPILOT_TEST_PKGDATADIR is required}/maps/ndh.xp2"
+contact_target_probe="${XPILOT_CONTACT_TARGET_PROBE:?XPILOT_CONTACT_TARGET_PROBE is required}"
 
-for required_file in "$client" "$server" "$map"; do
+for required_file in "$client" "$server" "$map" "$contact_target_probe"; do
     if test ! -r "$required_file"; then
         echo "Installed E2E input is missing: $required_file" >&2
         exit 1
@@ -46,8 +48,10 @@ done
 runtime_dir=$(mktemp -d "${TMPDIR:-/tmp}/xpilot-sdl3-e2e.XXXXXX")
 meta_pid=
 meta_fixture_pid=
+meta_report_fixture_pid=
 server_pid=
 client_pid=
+tcp_proxy_pid=
 window_id=
 window_owner_pid=
 game_server_log=
@@ -74,16 +78,16 @@ capture_window()
 cleanup()
 {
     cleanup_deadline=$(($(date +%s) + 5))
-    for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
-        "$server_pid"; do
+    for process_id in "$client_pid" "$tcp_proxy_pid" "$meta_pid" "$meta_fixture_pid" \
+        "$meta_report_fixture_pid" "$server_pid"; do
         if test -n "$process_id" && kill -0 "$process_id" 2>/dev/null; then
             kill -TERM "$process_id" 2>/dev/null || true
         fi
     done
     while :; do
         cleanup_running=0
-        for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
-            "$server_pid"; do
+        for process_id in "$client_pid" "$tcp_proxy_pid" "$meta_pid" "$meta_fixture_pid" \
+            "$meta_report_fixture_pid" "$server_pid"; do
             if test -n "$process_id" \
                 && kill -0 "$process_id" 2>/dev/null; then
                 cleanup_running=1
@@ -93,8 +97,9 @@ cleanup()
             break
         fi
         if test "$(date +%s)" -ge "$cleanup_deadline"; then
-            for process_id in "$client_pid" "$meta_pid" \
-                "$meta_fixture_pid" "$server_pid"; do
+            for process_id in "$client_pid" "$tcp_proxy_pid" "$meta_pid" \
+                "$meta_fixture_pid" "$meta_report_fixture_pid" \
+                "$server_pid"; do
                 if test -n "$process_id" \
                     && kill -0 "$process_id" 2>/dev/null; then
                     kill -KILL "$process_id" 2>/dev/null || true
@@ -104,8 +109,8 @@ cleanup()
         fi
         sleep 0.1
     done
-    for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
-        "$server_pid"; do
+    for process_id in "$client_pid" "$tcp_proxy_pid" "$meta_pid" "$meta_fixture_pid" \
+        "$meta_report_fixture_pid" "$server_pid"; do
         if test -n "$process_id"; then
             wait "$process_id" 2>/dev/null || true
         fi
@@ -192,6 +197,23 @@ meta_fixture_served()
     test -s "$runtime_dir/meta-fixture.served"
 }
 
+meta_report_fixture_ready()
+{
+    if ! kill -0 "$meta_report_fixture_pid" 2>/dev/null; then
+        fail "local metaserver report fixture stopped before listening"
+    fi
+    test -s "$runtime_dir/meta-report-fixture.port"
+}
+
+meta_tcp_transport_reported()
+{
+    test -s "$runtime_dir/meta-report-fixture.received" \
+        && grep -q "^source-port $meta_report_contact_port$" \
+            "$runtime_dir/meta-report-fixture.received" \
+        && grep -q '^add version 4.7.3ng+ct=tcp+gt=udp$' \
+            "$runtime_dir/meta-report-fixture.received"
+}
+
 server_ready()
 {
     if ! kill -0 "$server_pid" 2>/dev/null; then
@@ -206,6 +228,13 @@ client_accepted()
 	fail "client stopped before joining the server"
     fi
     grep -q "Welcome .*$game_client_name" "$game_server_log" 2>/dev/null
+}
+
+client_transport_banner_reported()
+{
+    grep -Fq "*** Connected to 127.0.0.1 "\
+"[Contact/Lobby: $expected_contact_transport, "\
+"Gameplay: $expected_gameplay_transport]" "$game_client_log" 2>/dev/null
 }
 
 client_departed()
@@ -243,6 +272,73 @@ find_game_window()
         fi
     done
     return 1
+}
+
+find_connection_failure_window()
+{
+    # SDL's X11 message box runs in a short-lived child process, so its
+    # _NET_WM_PID intentionally differs from the waiting client process.
+    window_id=$(xdotool search --onlyvisible \
+	--name '^XPilot NG - Connection failed$' 2>/dev/null \
+	| tail -n 1 || true)
+    test -n "$window_id"
+}
+
+connection_failure_window_visible()
+{
+    if ! kill -0 "$client_pid" 2>/dev/null; then
+	fail "client stopped before showing the connection failure"
+    fi
+    find_connection_failure_window
+}
+
+find_x11_game_window()
+{
+    if ! kill -0 "$client_pid" 2>/dev/null; then
+	fail "X11 client stopped before its game window became visible"
+    fi
+    window_id=$(xdotool search --onlyvisible --name '^XPilot NG ' \
+	2>/dev/null | tail -n 1 || true)
+    test -n "$window_id"
+}
+
+game_window_transport_visible()
+{
+    game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
+	|| true)
+    test "$game_window_title" = \
+	"XPilot NG 4.7.3 - 127.0.0.1 "\
+"[Gameplay: $expected_gameplay_transport]"
+}
+
+quit_game_client()
+{
+    quit_case=$1
+    window_finder=${2:-find_game_window}
+    quit_deadline=$(($(date +%s) + 20))
+    quit_attempted=false
+    while kill -0 "$client_pid" 2>/dev/null \
+	&& test "$(date +%s)" -lt "$quit_deadline"; do
+	if "$window_finder"; then
+	    quit_attempted=true
+	    # Keep Escape and its confirmation far enough apart for SDL to
+	    # process the confirmation state, then retry if X11 drops an event.
+	    xdotool key --clearmodifiers --delay 150 \
+		--window "$window_id" Escape y >/dev/null 2>&1 \
+		|| true
+	fi
+	sleep 0.25
+    done
+    $quit_attempted \
+	|| fail "could not request a graceful client quit for $quit_case"
+    if kill -0 "$client_pid" 2>/dev/null; then
+	fail "$quit_case client did not stop after graceful quit requests"
+    fi
+}
+
+x11_game_window_absent()
+{
+    ! xdotool search --name '^XPilot NG ' >/dev/null 2>&1
 }
 
 process_window_absent()
@@ -313,6 +409,132 @@ stop_local_server()
     server_pid=
 }
 
+run_invalid_target_rejection()
+{
+    invalid_target_log="$runtime_dir/client-invalid-target.log"
+
+    if "$client" -join 'tls://invalid.example' \
+	>"$invalid_target_log" 2>&1; then
+	fail "unsupported target scheme was accepted"
+    fi
+    grep -Fq "Invalid server target 'tls://invalid.example'" \
+	"$invalid_target_log" \
+	|| fail "invalid target diagnostic did not identify the input"
+    grep -Fq 'unsupported scheme; expected tcp:// or udp://' \
+	"$invalid_target_log" \
+	|| fail "invalid target diagnostic did not explain the scheme"
+}
+
+run_server_transport_option_help()
+{
+    transport_help_log="$runtime_dir/server-transport-help.log"
+
+    "$server" -help >"$transport_help_log" 2>&1 || true
+    grep -Fq -- '-tcp' "$transport_help_log" \
+	|| fail "server help did not list -tcp"
+    grep -Fq -- '-udp' "$transport_help_log" \
+	|| fail "server help did not list -udp"
+    grep -Fq -- '-transport <udp|tcp>' "$transport_help_log" \
+	|| fail "server help did not list -transport"
+}
+
+run_contact_target_failover()
+{
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-contact-target-failover.log"
+    probe_log="$runtime_dir/contact-target-failover.log"
+    list_log="$runtime_dir/client-contact-target-list.log"
+
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	-contactTransport tcp -gameTransport tcp -udp \
+	>"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "contact target failover server readiness" 20 server_ready
+
+    "$contact_target_probe" "tcp://127.0.0.1:$port" \
+	"udp://127.0.0.1:$port" >"$probe_log" 2>&1 \
+	|| fail "TCP target failure did not continue to the UDP target"
+    test "$(grep -Fc 'Contacting server 127.0.0.1.' "$probe_log")" -ge 2 \
+	|| fail "contact target probe did not attempt the endpoints"
+    grep -Fq '[Contact/Lobby: UDP, Gameplay: UDP]' "$probe_log" \
+	|| fail "contact target probe did not establish the UDP endpoint"
+
+    "$client" -list "tcp://127.0.0.1:$port" \
+	"udp://127.0.0.1:$port" >"$list_log" 2>&1 \
+	|| fail "server listing did not preserve a contacted fallback result"
+    grep -Fq 'TRANSPORTS.......: UDP -> UDP' "$list_log" \
+	|| fail "server listing did not report the responding UDP endpoint"
+    if grep -Fq 'ERROR: Connection failed:' "$list_log"; then
+	fail "server listing response was reported as a connection failure"
+    fi
+    if xdotool search --onlyvisible \
+	--name '^XPilot NG - Connection failed$' >/dev/null 2>&1; then
+	fail "server listing displayed a connection failure dialog"
+    fi
+    stop_local_server
+}
+
+run_connection_failure_notification()
+{
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-connection-failure.log"
+    game_client_log="$runtime_dir/client-connection-failure.log"
+
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	-transport udp >"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "UDP-only failure fixture readiness" 20 server_ready
+
+    text_failure_log="$runtime_dir/client-text-connection-failure.log"
+    if "$client" -text "tcp://127.0.0.1:$port" \
+	>"$text_failure_log" 2>&1; then
+	fail "text-mode connection failure returned a successful exit status"
+    fi
+    grep -Fq "Could not contact 127.0.0.1:$port." "$text_failure_log" \
+	|| fail "text-mode failure did not identify the endpoint"
+    if xdotool search --onlyvisible \
+	--name '^XPilot NG - Connection failed$' >/dev/null 2>&1; then
+	fail "text-mode connection failure displayed a dialog"
+    fi
+
+    "$client" "tcp://127.0.0.1:$port" >"$game_client_log" 2>&1 &
+    client_pid=$!
+    window_owner_pid=$client_pid
+    wait_until "connection failure dialog" 30 \
+	connection_failure_window_visible
+
+    kill -0 "$client_pid" 2>/dev/null \
+	|| fail "client exited while the connection failure dialog was visible"
+    grep -Fq "Could not contact 127.0.0.1:$port." "$game_client_log" \
+	|| fail "final connection failure did not identify the endpoint"
+    grep -Fq 'Contact/Lobby: TCP' "$game_client_log" \
+	|| fail "final connection failure omitted the contact transport"
+    grep -Fq 'Gameplay: TCP' "$game_client_log" \
+	|| fail "final connection failure omitted the gameplay transport"
+
+    failure_window_count=$(xdotool search --onlyvisible \
+	--name '^XPilot NG - Connection failed$' 2>/dev/null \
+	| wc -l)
+    test "$failure_window_count" -eq 1 \
+	|| fail "expected one final connection failure dialog"
+
+    xdotool key --clearmodifiers --window "$window_id" Return \
+	>/dev/null 2>&1 \
+	|| fail "could not dismiss the connection failure dialog"
+    wait_until "client exit after failure acknowledgement" 10 \
+	process_stopped "$client_pid"
+    set +e
+    wait "$client_pid"
+    client_status=$?
+    set -e
+    client_pid=
+    test "$client_status" -ne 0 \
+	|| fail "connection failure returned a successful exit status"
+
+    window_id=
+    stop_local_server
+}
+
 run_recording_playback()
 {
     playback_case=$1
@@ -348,6 +570,16 @@ run_gameplay_case()
     game_case=$1
     game_transport=$2
     game_capture=$3
+    contact_transport=$4
+
+    case "$game_transport" in
+    default|udp) expected_gameplay_transport=UDP ;;
+    tcp) expected_gameplay_transport=TCP ;;
+    esac
+    case "$contact_transport" in
+    default|udp) expected_contact_transport=UDP ;;
+    tcp) expected_contact_transport=TCP ;;
+    esac
     port=$(reserve_contact_port)
     game_recording="$runtime_dir/server-$game_case.xpr"
     game_server_log="$runtime_dir/server-$game_case.log"
@@ -355,6 +587,12 @@ run_gameplay_case()
     case "$game_case" in
     tcp)
 	game_client_name=SDL3TCP
+	;;
+    tcp-contact)
+	game_client_name=SDL3TCPContact
+	;;
+    tcp-contact-udp-game)
+	game_client_name=SDL3TCPUDP
 	;;
     udp-default)
 	game_client_name=SDL3UDPDefault
@@ -364,31 +602,72 @@ run_gameplay_case()
 	;;
     esac
 
-    if test "$game_transport" = default; then
+    if test "$game_case" = udp-explicit; then
 	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -contactTransport tcp -gameTransport tcp -transport udp \
+	    -recordFileName "$game_recording" -recordMode 1 \
+	    >"$game_server_log" 2>&1 &
+    elif test "$game_case" = tcp-contact; then
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -transport tcp \
+	    -recordFileName "$game_recording" -recordMode 1 \
+	    >"$game_server_log" 2>&1 &
+    elif test "$game_case" = tcp-contact-udp-game; then
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -tcp -gameTransport udp \
+	    -recordFileName "$game_recording" -recordMode 1 \
+	    >"$game_server_log" 2>&1 &
+    elif test "$game_transport" = default \
+	&& test "$contact_transport" = default; then
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -recordFileName "$game_recording" -recordMode 1 \
+	    >"$game_server_log" 2>&1 &
+    elif test "$contact_transport" = default; then
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -gameTransport "$game_transport" \
 	    -recordFileName "$game_recording" -recordMode 1 \
 	    >"$game_server_log" 2>&1 &
     else
 	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
 	    -gameTransport "$game_transport" \
+	    -contactTransport "$contact_transport" \
 	    -recordFileName "$game_recording" -recordMode 1 \
 	    >"$game_server_log" 2>&1 &
     fi
     server_pid=$!
     wait_until "$game_case server readiness" 20 server_ready
 
-    if test "$game_transport" = default; then
+    if test "$game_case" = udp-explicit; then
+	"$client" -geometry 800x600 -join \
+	    -name "$game_client_name" \
+	    -contactTransport tcp -gameTransport tcp \
+	    "udp://127.0.0.1:$port" >"$game_client_log" 2>&1 &
+    elif test "$game_case" = tcp-contact; then
+	"$client" -geometry 800x600 -join \
+	    -name "$game_client_name" \
+	    "tcp://127.0.0.1:$port" >"$game_client_log" 2>&1 &
+    elif test "$game_transport" = default \
+	&& test "$contact_transport" = default; then
 	"$client" -geometry 800x600 -join -port "$port" \
 	    -name "$game_client_name" 127.0.0.1 >"$game_client_log" 2>&1 &
+    elif test "$contact_transport" = default; then
+	"$client" -geometry 800x600 -join -port "$port" \
+	    -name "$game_client_name" -gameTransport "$game_transport" \
+	    127.0.0.1 >"$game_client_log" 2>&1 &
     else
 	"$client" -geometry 800x600 -join -port "$port" \
 	    -name "$game_client_name" -gameTransport "$game_transport" \
+	    -contactTransport "$contact_transport" \
 	    127.0.0.1 >"$game_client_log" 2>&1 &
     fi
     client_pid=$!
     window_owner_pid=$client_pid
     wait_until "$game_case SDL game window" 20 find_game_window
+    wait_until "$game_case gameplay transport window title" 10 \
+	game_window_transport_visible
     wait_until "$game_case local client acceptance" 20 client_accepted
+    wait_until "$game_case connection transport banner" 10 \
+	client_transport_banner_reported
     if test "$game_transport" = tcp; then
 	game_socket_protocol=tcp
     else
@@ -433,10 +712,7 @@ run_gameplay_case()
 	capture_window game
     fi
 
-    xdotool key --window "$window_id" Escape y >/dev/null 2>&1 \
-	|| fail "could not request a graceful client quit for $game_case"
-    wait_until "$game_case graceful client shutdown" 15 process_stopped \
-	"$client_pid"
+    quit_game_client "$game_case"
     finished_client_pid=$client_pid
     set +e
     wait "$client_pid"
@@ -452,6 +728,123 @@ run_gameplay_case()
     wait_until "$game_case server-side client departure" 5 client_departed
     stop_local_server
     run_recording_playback "$game_case" "$game_transport" "$game_recording"
+}
+
+run_tcp_reconnection_case()
+{
+    game_case=tcp-reconnect
+    port=$(reserve_contact_port)
+    proxy_host=127.0.0.2
+    proxy_state="$runtime_dir/tcp-reconnect-proxy.state"
+    proxy_trigger="$runtime_dir/tcp-reconnect.trigger"
+    game_server_log="$runtime_dir/server-$game_case.log"
+    game_client_log="$runtime_dir/client-$game_case.log"
+    game_client_name=SDL3TCPResume
+
+    "$server" -map "$map" -port "$port" +reportMeta \
+	-serverHost 127.0.0.1 -transport tcp \
+	>"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "$game_case server readiness" 20 server_ready
+
+    node "$(dirname "$0")/tcp-reconnect-proxy.mjs" \
+	127.0.0.1 "$proxy_host" "$port" "$proxy_trigger" "$proxy_state" \
+	>"$runtime_dir/tcp-reconnect-proxy.log" 2>&1 &
+    tcp_proxy_pid=$!
+    wait_until "$game_case proxy readiness" 10 \
+	grep -q '^contact-ready$' "$proxy_state"
+
+    "$client" -geometry 800x600 -join -name "$game_client_name" \
+	"tcp://$proxy_host:$port" >"$game_client_log" 2>&1 &
+    client_pid=$!
+    window_owner_pid=$client_pid
+    wait_until "$game_case SDL game window" 20 find_game_window
+    wait_until "$game_case local client acceptance" 20 client_accepted
+    wait_until "$game_case semantic game frame presentation" 20 \
+	game_frame_ready
+
+    touch "$proxy_trigger"
+    wait_until "$game_case forced transport loss" 10 \
+	grep -q '^dropped$' "$proxy_state"
+    sleep 1
+    kill -0 "$server_pid" 2>/dev/null \
+	|| fail "$game_case server exited during the reconnection grace period"
+    kill -0 "$client_pid" 2>/dev/null \
+	|| fail "$game_case client exited instead of reconnecting"
+
+    wait_until "$game_case replacement TCP stream" 15 \
+	grep -q '^resumed$' "$proxy_state"
+    wait_until "$game_case server session resumption" 15 \
+	grep -q "TCP gameplay connection resumed.*$game_client_name" \
+	    "$game_server_log"
+    test "$(grep -c "Welcome .*$game_client_name" "$game_server_log")" -eq 1 \
+	|| fail "$game_case created a second player session"
+    if grep -q "Goodbye .*$game_client_name" "$game_server_log"; then
+	fail "$game_case removed the player before graceful quit"
+    fi
+
+    quit_game_client "$game_case"
+    set +e
+    wait "$client_pid"
+    client_status=$?
+    set -e
+    client_pid=
+    window_id=
+    test "$client_status" -eq 0 \
+	|| fail "$game_case client returned status $client_status"
+    wait_until "$game_case graceful server shutdown" 10 \
+	process_stopped "$server_pid"
+    wait "$server_pid" 2>/dev/null || true
+    server_pid=
+    grep -q "Goodbye .*$game_client_name.*client quit" "$game_server_log" \
+	|| fail "$game_case graceful quit was not handled immediately"
+
+    kill -TERM "$tcp_proxy_pid" 2>/dev/null || true
+    wait "$tcp_proxy_pid" 2>/dev/null || true
+    tcp_proxy_pid=
+}
+
+run_x11_gameplay_title_case()
+{
+    game_case=x11-tcp
+    expected_contact_transport=TCP
+    expected_gameplay_transport=TCP
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-$game_case.log"
+    game_client_log="$runtime_dir/client-$game_case.log"
+    game_client_name=X11TCP
+
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta -tcp \
+	>"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "$game_case server readiness" 20 server_ready
+
+    "$x11_client" -geometry 800x600 -join \
+	-name "$game_client_name" \
+	"tcp://127.0.0.1:$port" >"$game_client_log" 2>&1 &
+    client_pid=$!
+    window_owner_pid=$client_pid
+    wait_until "$game_case game window" 20 find_x11_game_window
+    wait_until "$game_case gameplay transport window title" 10 \
+	game_window_transport_visible
+    wait_until "$game_case local client acceptance" 20 client_accepted
+
+    quit_game_client "$game_case" find_x11_game_window
+    finished_client_pid=$client_pid
+    set +e
+    wait "$client_pid"
+    client_status=$?
+    set -e
+    client_pid=
+    window_id=
+    if test "$client_status" -ne 0; then
+	fail "$game_case client returned status $client_status"
+    fi
+    client_transport_banner_reported \
+	|| fail "$game_case did not report the connection transports"
+    wait_until "$game_case game window teardown" 5 x11_game_window_absent
+    wait_until "$game_case server-side client departure" 5 client_departed
+    stop_local_server
 }
 
 run_transport_mismatch()
@@ -494,12 +887,61 @@ printf 'xpilot.texturePath: %s:%s\n' \
 export XPILOTRC="$runtime_dir/xpilotrc"
 
 node -e '
+const dgram = require("node:dgram");
+const fs = require("fs");
+const portFile = process.argv[1];
+const receivedFile = process.argv[2];
+const socket = dgram.createSocket("udp4");
+socket.on("error", (error) => {
+  process.stderr.write(`${error.stack}\n`);
+  socket.close(() => process.exit(1));
+});
+socket.on("message", (message, remote) => {
+  const payload = message.toString("utf8").replace(/\0+$/, "");
+  fs.appendFileSync(
+    receivedFile,
+    `source-port ${remote.port}\n${payload}\n---\n`,
+  );
+});
+socket.bind(0, "127.0.0.1", () => {
+  fs.writeFileSync(portFile, String(socket.address().port));
+});
+const stop = () => socket.close(() => process.exit(0));
+process.on("SIGTERM", stop);
+process.on("SIGINT", stop);
+' "$runtime_dir/meta-report-fixture.port" \
+    "$runtime_dir/meta-report-fixture.received" \
+    >"$runtime_dir/meta-report-fixture.log" 2>&1 &
+meta_report_fixture_pid=$!
+wait_until "local metaserver report fixture" 10 meta_report_fixture_ready
+
+meta_report_contact_port=$(reserve_contact_port)
+game_server_log="$runtime_dir/server-meta-tcp-contact.log"
+XPILOT_META_REPORT_HOST=127.0.0.1 \
+XPILOT_META_REPORT_HOST_TWO=127.0.0.1 \
+XPILOT_META_REPORT_PORT=$(sed -n '1p' \
+    "$runtime_dir/meta-report-fixture.port") \
+    "$server" -map "$map" -port "$meta_report_contact_port" -noQuit \
+    -reportMeta -contactTransport tcp -gameTransport udp \
+    >"$game_server_log" 2>&1 &
+server_pid=$!
+wait_until "TCP-contact metaserver report startup" 20 server_ready
+wait_until "TCP-contact metaserver transport advertisement" 15 \
+    meta_tcp_transport_reported
+stop_local_server
+kill -TERM "$meta_report_fixture_pid" 2>/dev/null || true
+wait "$meta_report_fixture_pid" 2>/dev/null || true
+meta_report_fixture_pid=
+
+node -e '
 const fs = require("fs");
 const net = require("net");
 const portFile = process.argv[1];
 const servedFile = process.argv[2];
 const response = Array.from({ length: 12 }, (_, index) => [
-  "4.7.3",
+  index % 2 === 0
+    ? "4.7.3+ct=tcp+gt=udp"
+    : "4.7.3+ct=udp+gt=tcp",
   `fixture${index}.local`,
   String(15000 + index),
   String(index),
@@ -587,9 +1029,19 @@ fi
 wait_until "metaserver window teardown" 5 process_window_absent \
     "$finished_meta_pid"
 
-run_gameplay_case tcp tcp no
-run_gameplay_case udp-default default yes
-run_gameplay_case udp-explicit udp no
+run_invalid_target_rejection
+run_server_transport_option_help
+run_contact_target_failover
+run_connection_failure_notification
+run_gameplay_case tcp tcp no default
+run_tcp_reconnection_case
+run_gameplay_case udp-default default yes default
+run_gameplay_case udp-explicit udp no default
+run_gameplay_case tcp-contact tcp no tcp
+run_gameplay_case tcp-contact-udp-game udp no tcp
+if test -x "$x11_client"; then
+    run_x11_gameplay_title_case
+fi
 run_transport_mismatch udp tcp
 run_transport_mismatch tcp udp
 

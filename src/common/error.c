@@ -157,88 +157,54 @@ void dumpcore(const char *fmt, ...)
 #endif /* _WINDOWS */
 
 #ifdef _WINDOWS
-static void Win_show_error(char *s)
+static void Win_write_message(const char *level, const char *fmt, va_list ap)
 {
-    static int inerror = FALSE;
-    Trace("Error: %s\n", s);
-    if (inerror) return;
-    inerror = TRUE;
-    {
-#ifdef   _XPILOTNTSERVER_
-	/* putting up a message box on the server is a bad thing.
-	   It kinda halts the server, which is a bad thing to do for
-	   the simple info messages (nick in use) that call this routine
-	*/
-	xpprintf("%s %s\n", showtime(), s);
-#else
-	/*
-	if (MessageBox(NULL, s, "Error", MB_OKCANCEL | MB_TASKMODAL)
-	    == IDCANCEL) {
-# ifdef   _XPMON_
-	    xpmemShutdown();
-# endif
-	    ExitProcess(1);
-	}
-	*/
-#endif
-    }
-    /* kps - moved out from ifdef block, seems to be a better idea. */
-    inerror = FALSE;
+    size_t len;
+
+    if (progname[0] != '\0')
+	fprintf(stderr, "%s: %s: ", progname, level);
+
+    vfprintf(stderr, fmt, ap);
+
+    len = strlen(fmt);
+    if (len == 0 || fmt[len - 1] != '\n')
+	fputc('\n', stderr);
+    fflush(stderr);
 }
 
 void xpinfo(const char *fmt, ...)
 {
     va_list ap;
-    char s[512];
 
     va_start(ap, fmt);
-
-    vsprintf(s, fmt, ap);
-
-    Win_show_error(s);
-
+    Win_write_message("INFO", fmt, ap);
     va_end(ap);
 }
 
 void error(const char *fmt, ...)
 {
     va_list ap;
-    char s[512];
 
     va_start(ap, fmt);
-
-    vsprintf(s, fmt, ap);
-
-    Win_show_error(s);
-
+    Win_write_message("ERROR", fmt, ap);
     va_end(ap);
 }
 
 void warn(const char *fmt, ...)
 {
     va_list ap;
-    char s[512];
 
     va_start(ap, fmt);
-
-    vsprintf(s, fmt, ap);
-
-    Win_show_error(s);
-
+    Win_write_message("WARNING", fmt, ap);
     va_end(ap);
 }
 
 void fatal(const char *fmt, ...)
 {
     va_list ap;
-    char s[512];
 
     va_start(ap, fmt);
-
-    vsprintf(s, fmt, ap);
-
-    Win_show_error(s);
-
+    Win_write_message("FATAL", fmt, ap);
     va_end(ap);
 
     exit(1);
@@ -247,14 +213,9 @@ void fatal(const char *fmt, ...)
 void dumpcore(const char *fmt, ...)
 {
     va_list ap;
-    char s[512];
 
     va_start(ap, fmt);
-
-    vsprintf(s, fmt, ap);
-
-    Win_show_error(s);
-
+    Win_write_message("ABORT", fmt, ap);
     va_end(ap);
 
     exit(1);

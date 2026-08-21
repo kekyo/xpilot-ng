@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -26,6 +26,7 @@
  */
 
 #include "xpclient.h"
+#include "transport_display.h"
 
 
 #define MAX_LINE	MSG_LEN	/* should not be smaller than MSG_LEN */
@@ -71,29 +72,137 @@ static void Clean_string(char *buf)
 }
 
 
-static int Get_contact_message(sockbuf_t *sbuf,
-			       const char *contact_server,
-			       Connect_param_t *conpar)
+#define CONTACT_CONNECT_TIMEOUT 3
+
+static unsigned Client_protocol_version(game_transport_t transport,
+					bool compatibility)
 {
+    return Game_transport_protocol_version(transport, !compatibility);
+}
+
+static unsigned Client_contact_magic(game_transport_t transport,
+				     bool compatibility)
+{
+    return VERSION2MAGIC(Client_protocol_version(transport, compatibility));
+}
+
+static bool Client_supports_server_version(unsigned server_version,
+					   game_transport_t transport)
+{
+    unsigned current_version = Client_protocol_version(transport, false);
+    unsigned legacy_version = Client_protocol_version(transport, true);
+
+    return (server_version >= MIN_SERVER_VERSION
+	    && server_version <= current_version)
+	|| (server_version >= MIN_OLD_SERVER_VERSION
+	    && server_version <= legacy_version);
+}
+
+static void Close_contact_socket(sockbuf_t *sbuf)
+{
+    if (sbuf->sock.fd == SOCK_FD_INVALID)
+	return;
+    if (BIT(sbuf->state, SOCKBUF_FRAMED) != 0)
+	sock_close(&sbuf->sock);
+    else
+	close_dgram_socket(&sbuf->sock);
+    sbuf->sock.fd = SOCK_FD_INVALID;
+}
+
+static void Attach_contact_socket(sockbuf_t *sbuf, const sock_t *sock)
+{
+    sbuf->sock = *sock;
+    sbuf->state &= ~SOCKBUF_ERROR;
+    Sockbuf_clear(sbuf);
+    sbuf->frame_header[0] = sbuf->frame_header[1] = 0;
+    sbuf->frame_header_len = 0;
+    sbuf->frame_length = -1;
+    sbuf->frame_received = 0;
+    sbuf->frame_output_len = 0;
+    sbuf->frame_output_offset = 0;
+}
+
+static int Open_contact_stream(sockbuf_t *sbuf, char *local_address,
+			       char *server_address, int server_port)
+{
+    sock_t sock;
+
+    if (sock_open_tcp_bound(&sock, local_address, 0) == SOCK_IS_ERROR)
+	return SOCK_IS_ERROR;
+    if (sock_connect_with_timeout(&sock, server_address, server_port,
+				  CONTACT_CONNECT_TIMEOUT) == SOCK_IS_ERROR
+	|| sock_set_tcp_nodelay(&sock, 1) == SOCK_IS_ERROR
+	|| sock_set_non_blocking(&sock, 0) == SOCK_IS_ERROR) {
+	sock_close(&sock);
+	return SOCK_IS_ERROR;
+    }
+    Attach_contact_socket(sbuf, &sock);
+    return SOCK_IS_OK;
+}
+
+static int Init_contact_buffer(sockbuf_t *sbuf,
+			       game_transport_t contact_transport)
+{
+    sock_t sock;
+    int status;
+
+    if (contact_transport == GAME_TRANSPORT_TCP) {
+	return Sockbuf_init(sbuf, NULL, MAX_SOCKBUF_SIZE,
+			    SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_FRAMED
+			    | SOCKBUF_ORDERED);
+    }
+
+    status = create_dgram_socket(&sock, 0);
+    if (status == SOCK_IS_ERROR)
+	return -1;
+    status = Sockbuf_init(sbuf, &sock, CLIENT_RECV_SIZE,
+			  SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM);
+    if (status == -1)
+	close_dgram_socket(&sock);
+    return status;
+}
+
+static int Read_contact_payload(sockbuf_t *sbuf)
+{
+    int len;
+
+    Sockbuf_clear(sbuf);
+    if (BIT(sbuf->state, SOCKBUF_FRAMED) != 0)
+	return Sockbuf_read(sbuf);
+
+    len = sock_receive_any(&sbuf->sock, sbuf->buf, sbuf->size);
+    if (len > 0)
+	sbuf->len = len;
+    return len;
+}
+
+
+typedef struct Contact_message_result {
+    bool responded;
+    int status;
+} Contact_message_result_t;
+
+static Contact_message_result_t Get_contact_message(
+    sockbuf_t *sbuf, const char *contact_server,
+    const Connect_target_t *target, Connect_param_t *conpar)
+{
+    Contact_message_result_t result = { false, 0 };
     int			len;
     int			server_version;
     unsigned		magic;
     unsigned char	reply_to, status;
-    int			readable = 0;
 
     sock_set_timeout(&sbuf->sock, 2, 0);
-    while (readable == false && sock_readable(&sbuf->sock) > 0) {
+    while (result.status == 0 && sock_readable(&sbuf->sock) > 0) {
 
-	Sockbuf_clear(sbuf);
-	len = sock_receive_any(&sbuf->sock, sbuf->buf, sbuf->size);
+	len = Read_contact_payload(sbuf);
 	if (len <= 0) {
 	    if (len == 0)
 		continue;
-	    xpprintf("Error from sock_receive_any, contact message failed.\n");
+	    xpprintf("Error while reading contact message.\n");
 	    /* exit(1);  no good since meta gui. */
-	    return 0;
+	    return result;
 	}
-	sbuf->len = len;
 
 	/*
 	 * Get server's host and port.
@@ -115,44 +224,48 @@ static int Get_contact_message(sockbuf_t *sbuf,
 
 	if (Packet_scanf(sbuf, "%u%c%c", &magic, &reply_to, &status) <= 0)
 	    warn("Incomplete contact reply message (%d)", len);
-	else if ((magic & 0xFFFF) != (MAGIC & 0xFFFF))
+	else if ((magic & 0xFFFF) != MAGIC_WORD)
 	    warn("Bad magic on contact message (0x%x).", magic);
 	else {
 	    game_transport_t server_transport = (game_transport_t)-1;
 
+	    result.responded = true;
 	    server_version = MAGIC2VERSION(magic);
 	    if (!Game_transport_from_protocol_version(server_version,
 						 &server_transport)
-		|| server_transport != gameTransport) {
+		|| server_transport != target->game_transport) {
 		warn("Gameplay transport mismatch with server %s.",
 		     conpar->server_name);
 		warn("Client requested %s, while server requires %s.",
-		     Game_transport_name(gameTransport),
+		     Game_transport_name(target->game_transport),
 		     Game_transport_name(server_transport));
-		readable = 0;
-	    } else if (!((server_version >= MIN_SERVER_VERSION &&
-		   server_version <= MAX_SERVER_VERSION) ||
-		  (server_version >= MIN_OLD_SERVER_VERSION &&
-		   server_version <= MAX_OLD_SERVER_VERSION))) {
+	    } else if (!Client_supports_server_version(
+			   (unsigned)server_version, target->game_transport)) {
+		unsigned client_version = Client_protocol_version(
+		    target->game_transport, false);
+
 		warn("Incompatible version with server %s.",
 		     conpar->server_name);
 		warn("We run version %04x, while server is running %04x.",
-		     MY_VERSION, server_version);
-		if ((MY_VERSION >> 4) < (server_version >> 4))
+		     client_version, server_version);
+		if ((client_version >> 4) < ((unsigned)server_version >> 4))
 		    warn("Time for us to upgrade?");
-		readable = 2;
+		result.status = 2;
 	    } else {
 		/*
 		 * Found one which we can talk to.
 		 */
 		xpinfo("Using protocol version 0x%04x.", server_version);
 		conpar->server_version = server_version;
-		readable = 1;
+		conpar->contact_port = target->contact_port;
+		conpar->contact_transport = target->contact_transport;
+		conpar->game_transport = server_transport;
+		result.status = 1;
 	    }
 	}
     }
 
-    return readable;
+    return result;
 }
 
 
@@ -165,29 +278,30 @@ static int Get_reply_message(sockbuf_t *ibuf,
 
 
     if (sock_readable(&ibuf->sock)) {
-	Sockbuf_clear(ibuf);
-	if ((len = sock_read(&ibuf->sock, ibuf->buf, ibuf->size)) == -1) {
+	len = Read_contact_payload(ibuf);
+	if (len == -1) {
 	    error("Can't read reply message from %s/%d",
 		  conpar->server_addr, conpar->server_port);
-	    exit(1);
+	    return 0;
 	}
-
-	ibuf->len = len;
 	if (Packet_scanf(ibuf, "%u", &magic) <= 0) {
 	    warn("Incomplete reply packet (%d)", len);
 	    return 0;
 	}
 
-	if ((magic & 0xFFFF) != (MAGIC & 0xFFFF)) {
+	if ((magic & 0xFFFF) != MAGIC_WORD) {
 	    warn("Wrong MAGIC in reply pack (0x%x).", magic);
 	    return 0;
 	}
 
 	if (MAGIC2VERSION(magic) != conpar->server_version) {
+	    unsigned client_version = Client_protocol_version(
+		conpar->game_transport, false);
+
 	    printf("Incompatible version with server on %s.\n",
 		    conpar->server_name);
 	    printf("We run version %04x, while server is running %04x.\n",
-		   MY_VERSION, MAGIC2VERSION(magic));
+		   client_version, MAGIC2VERSION(magic));
 	    return 0;
 	}
 
@@ -232,8 +346,9 @@ static bool Process_commands(sockbuf_t *ibuf,
 			     int auto_shutdown, char *shutdown_reason,
 			     Connect_param_t *conpar)
 {
-    int i, len, retries, delay, success, cmd_credentials = 0, max_replies;
+    int i, len, retries, delay, success, repeat_command = 0, max_replies;
     char c, status, reply_to, linebuf[MAX_LINE];
+    sock_t local_test;
     unsigned short port, qpos;
     bool has_credentials = false, privileged_cmd;
     long key = 0;
@@ -245,8 +360,13 @@ static bool Process_commands(sockbuf_t *ibuf,
     auto_shutdown = FALSE;
 #endif
 
-    if (auto_connect && !list_servers && !auto_shutdown)
-	xpprintf("*** Connected to %s\n", conpar->server_name);
+    if (auto_connect && !list_servers && !auto_shutdown) {
+	xpprintf("*** Connected to %s "
+		 "[Contact/Lobby: %s, Gameplay: %s]\n",
+		 conpar->server_name,
+		 Transport_display_name(conpar->contact_transport),
+		 Transport_display_name(conpar->game_transport));
+    }
 
     for (;;) {
 
@@ -255,9 +375,9 @@ static bool Process_commands(sockbuf_t *ibuf,
 	/*
 	 * Now, what do you want from the server?
 	 */
-	if (cmd_credentials) {
-	    c = cmd_credentials;
-	    cmd_credentials = 0;
+	if (repeat_command) {
+	    c = repeat_command;
+	    repeat_command = 0;
 	}
 	else if (!auto_connect) {
 	    printf("*** Server on %s. Enter command> ", conpar->server_name);
@@ -283,17 +403,39 @@ static bool Process_commands(sockbuf_t *ibuf,
 	}
 
 	/*
-	 * For each command to the server create a new socket and bind
-	 * the socket to the server's address and destination port.
-	 * This assures us that we only get replies to the last command sent.
+	 * Each request uses a fresh socket so stale replies cannot cross command
+	 * boundaries.  TCP contact requests are one framed exchange per stream.
 	 */
-	if (ibuf->sock.fd != SOCK_FD_INVALID) {
-	    close_dgram_socket(&ibuf->sock);
-	    ibuf->sock.fd = SOCK_FD_INVALID;
-	}
+	Close_contact_socket(ibuf);
 
 	privileged_cmd = (strchr("DKLMO", c) != NULL) ? true : false;
-	if (privileged_cmd) {
+	if (conpar->contact_transport == GAME_TRANSPORT_TCP) {
+	    if (privileged_cmd) {
+		if (!has_credentials) {
+		    if (sock_open_tcp_bound(&local_test,
+				    conpar->server_addr, 0) == SOCK_IS_ERROR) {
+			printf("Server %s is not local, "
+			       "privileged command not possible.\n",
+			       conpar->server_addr);
+			continue;
+		    }
+		    sock_close(&local_test);
+		}
+		if (Open_contact_stream(ibuf, localhost, localhost,
+				conpar->server_port) == SOCK_IS_ERROR) {
+		    error("Can't connect to local server %s on port %d\n",
+			  localhost, conpar->server_port);
+		    return false;
+		}
+	    }
+	    else if (Open_contact_stream(ibuf, NULL, conpar->server_addr,
+				     conpar->server_port) == SOCK_IS_ERROR) {
+		error("Can't connect to server %s on port %d\n",
+		      conpar->server_addr, conpar->server_port);
+		return false;
+	    }
+	}
+	else if (privileged_cmd) {
 	    if (!has_credentials) {
 		success = create_dgram_addr_socket(
 		    &ibuf->sock, conpar->server_addr, 0);
@@ -316,7 +458,8 @@ static bool Process_commands(sockbuf_t *ibuf,
 		      localhost, conpar->server_port);
 		return false;
 	    }
-	} else {
+	}
+	else {
 	    if ((success = create_dgram_socket(&ibuf->sock, 0))
 		== SOCK_IS_ERROR) {
 		error("Could not create socket");
@@ -494,16 +637,26 @@ static bool Process_commands(sockbuf_t *ibuf,
 	    }
 	}
 
-	retries = (c == 'J' || c == 'S') ? 2 : 0;
-	for (i = 0; i <= retries; i++) {
-	    if (i > 0) {
-		sock_set_timeout(&ibuf->sock, 1, 0);
-		if (sock_readable(&ibuf->sock))
-		    break;
-	    }
-	    if (sock_write(&ibuf->sock, ibuf->buf, ibuf->len) != ibuf->len) {
+	if (BIT(ibuf->state, SOCKBUF_FRAMED) != 0) {
+	    len = ibuf->len;
+	    if (Sockbuf_flush(ibuf) != len) {
 		error("Couldn't send request to server.");
-		exit(1);
+		return false;
+	    }
+	}
+	else {
+	    retries = (c == 'J' || c == 'S') ? 2 : 0;
+	    for (i = 0; i <= retries; i++) {
+		if (i > 0) {
+		    sock_set_timeout(&ibuf->sock, 1, 0);
+		    if (sock_readable(&ibuf->sock))
+			break;
+		}
+		if (sock_write(&ibuf->sock, ibuf->buf, ibuf->len)
+		    != ibuf->len) {
+		    error("Couldn't send request to server.");
+		    exit(1);
+		}
 	    }
 	}
 
@@ -550,6 +703,13 @@ static bool Process_commands(sockbuf_t *ibuf,
 			if (list_servers)
 			    printf("SERVER HOST......: %s\n",
 				   conpar->server_name);
+			if (list_servers)
+			    printf("TRANSPORTS.......: %s -> %s "
+				   "(Contact/Lobby -> Gameplay)\n",
+				   Transport_display_name(
+				       conpar->contact_transport),
+				   Transport_display_name(
+				       conpar->game_transport));
 			if (*ibuf->ptr != '\0') {
 			    if (ibuf->len < ibuf->size)
 				ibuf->buf[ibuf->len] = '\0';
@@ -587,28 +747,37 @@ static bool Process_commands(sockbuf_t *ibuf,
 			printf("... queued at position %2d\n", qpos);
 			IFWINDOWS(Progress("Queued at position %2d\n", qpos));
 		    }
-		    /*
-		     * Acknowledge each 10 seconds that we are still
-		     * interested to be on the waiting queue.
-		     */
-		    if (qsent + 10 <= time(NULL)) {
-			Sockbuf_clear(ibuf);
-			Packet_printf(ibuf, "%u%s%hu",
-				      VERSION2MAGIC(conpar->server_version),
-				      conpar->user_name,
-				      sock_get_port(&ibuf->sock));
-			Packet_printf(ibuf, "%c%s%s%s%d", ENTER_QUEUE_pack,
-				      conpar->nick_name, conpar->disp_name,
-				      conpar->host_name, conpar->team);
-			if (sock_write(&ibuf->sock, ibuf->buf, ibuf->len)
-			    != ibuf->len) {
-			    error("Couldn't send request to server.");
-			    exit(1);
-			}
-			time(&qsent);
+		    if (BIT(ibuf->state, SOCKBUF_FRAMED) != 0) {
+			/* TCP has no asynchronous reply path; poll with a new
+			 * request until the server assigns a gameplay port. */
+			repeat_command = 'J';
+			micro_delay((unsigned)500 * 1000);
+			max_replies = 1;
 		    }
-		    sock_set_timeout(&ibuf->sock, 12, 0);
-		    max_replies = 2;
+		    else {
+			/*
+			 * Acknowledge each 10 seconds that we are still
+			 * interested to be on the waiting queue.
+			 */
+			if (qsent + 10 <= time(NULL)) {
+			    Sockbuf_clear(ibuf);
+			    Packet_printf(ibuf, "%u%s%hu",
+					  VERSION2MAGIC(conpar->server_version),
+					  conpar->user_name,
+					  sock_get_port(&ibuf->sock));
+			    Packet_printf(ibuf, "%c%s%s%s%d", ENTER_QUEUE_pack,
+					  conpar->nick_name, conpar->disp_name,
+					  conpar->host_name, conpar->team);
+			    if (sock_write(&ibuf->sock, ibuf->buf, ibuf->len)
+				!= ibuf->len) {
+				error("Couldn't send request to server.");
+				exit(1);
+			    }
+			    time(&qsent);
+			}
+			sock_set_timeout(&ibuf->sock, 12, 0);
+			max_replies = 2;
+		    }
 		    break;
 
 		case CREDENTIALS_pack:
@@ -616,7 +785,7 @@ static bool Process_commands(sockbuf_t *ibuf,
 			warn("Incomplete credentials reply from server");
 		    else {
 			has_credentials = true;
-			cmd_credentials = c;
+			repeat_command = c;
 			continue;
 		    }
 		    break;
@@ -716,10 +885,21 @@ int Connect_to_server(int auto_connect, int list_servers,
 		      Connect_param_t *conpar)
 {
     sockbuf_t		ibuf;			/* info buffer */
+    int			buffer_size;
+    int			buffer_state;
     int			result;
 
-    if (Sockbuf_init(&ibuf, NULL, CLIENT_RECV_SIZE,
-		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
+    if (conpar->contact_transport == GAME_TRANSPORT_TCP) {
+	buffer_size = MAX_SOCKBUF_SIZE;
+	buffer_state = SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_FRAMED
+	    | SOCKBUF_ORDERED;
+    }
+    else {
+	buffer_size = CLIENT_RECV_SIZE;
+	buffer_state = SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM;
+    }
+    if (Sockbuf_init(&ibuf, NULL, (size_t)buffer_size,
+		     buffer_state) == -1) {
 	error("No memory for info buffer");
 	exit(1);
     }
@@ -727,150 +907,251 @@ int Connect_to_server(int auto_connect, int list_servers,
 			     auto_connect, list_servers,
 			     auto_shutdown, shutdown_reason,
 			     conpar);
-    if (ibuf.sock.fd != SOCK_FD_INVALID) {
-	close_dgram_socket(&ibuf.sock);
-	ibuf.sock.fd = SOCK_FD_INVALID;
-    }
+    Close_contact_socket(&ibuf);
     Sockbuf_cleanup(&ibuf);
 
     return result;
 }
 
 
-int Contact_servers(int count, char **servers,
+/* Keep all attempt-specific state local so a failed endpoint cannot alter the
+ * defaults or the established connection selected by the caller. */
+static Contact_servers_result_t Contact_target(
+    const Connect_target_t *target,
+    int auto_connect, int list_servers,
+    int auto_shutdown, char *shutdown_reason,
+    Connect_param_t *conpar)
+{
+    const int max_retries = 2;
+    Connect_param_t attempt = *conpar;
+    Contact_servers_result_t result = { false, false };
+    Contact_message_result_t message_result;
+    bool compat_mode = false;
+    bool request_sent;
+    bool retry_compat;
+    int request_length;
+    int retries = 0;
+    int ret;
+    sockbuf_t sbuf;
+
+    attempt.contact_port = target->contact_port;
+    attempt.contact_transport = target->contact_transport;
+    attempt.game_transport = target->game_transport;
+
+    if (Init_contact_buffer(&sbuf, target->contact_transport) == -1) {
+	error("Could not initialize contact socket");
+	exit(1);
+    }
+
+    do {
+	retry_compat = false;
+	printf("Contacting server %s.\n", target->address);
+	IFWINDOWS( Progress("Contacting server %s", target->address) );
+	request_sent = true;
+	if (target->contact_transport == GAME_TRANSPORT_TCP) {
+	    Close_contact_socket(&sbuf);
+	    if (Open_contact_stream(&sbuf, NULL,
+				    (char *)target->address,
+				    target->contact_port) == SOCK_IS_ERROR) {
+		error("Can't contact %s on port %d",
+		      target->address, target->contact_port);
+		request_sent = false;
+	    }
+	}
+	if (request_sent) {
+	    Sockbuf_clear(&sbuf);
+	    Packet_printf(&sbuf, "%u%s%hu%c",
+			  Client_contact_magic(target->game_transport,
+					       compat_mode),
+			  attempt.user_name, sock_get_port(&sbuf.sock),
+			  CONTACT_pack);
+	    if (target->contact_transport == GAME_TRANSPORT_TCP) {
+		request_length = sbuf.len;
+		if (Sockbuf_flush(&sbuf) != request_length) {
+		    error("Can't contact %s on port %d",
+			  target->address, target->contact_port);
+		    request_sent = false;
+		}
+	    }
+	    else if (sock_send_dest(&sbuf.sock, (char *)target->address,
+				    target->contact_port,
+				    sbuf.buf, sbuf.len) == -1) {
+		if (sbuf.sock.error.call == SOCK_CALL_GETHOSTBYNAME) {
+		    printf("Can't find the server '%s'.\n", target->address);
+		    IFWINDOWS( Progress("Can't find the server '%s'.",
+					target->address) );
+		    break;
+		}
+		error("Can't contact %s on port %d",
+		      target->address, target->contact_port);
+		request_sent = false;
+	    }
+	}
+	if (retries) {
+	    printf("Retrying %s...\n", target->address);
+	    IFWINDOWS( Progress("Retrying %s...", target->address) );
+	}
+	if (request_sent) {
+	    message_result = Get_contact_message(
+		&sbuf, target->address, target, &attempt);
+	} else {
+	    message_result.responded = false;
+	    message_result.status = 0;
+	}
+	result.contacted = result.contacted || message_result.responded;
+	ret = message_result.status;
+	if (ret == 2 && !compat_mode) {
+	    printf("Trying compatibility version %04x\n",
+		   Client_protocol_version(target->game_transport, true));
+	    compat_mode = true;
+	    retries--;	/* cancels the loop increment for this extra attempt */
+	    retry_compat = true;
+	    continue;
+	}
+	if (ret == 1) {
+	    result.contacted = true;
+	    IFWINDOWS( Progress("Contacted %s", target->address) );
+	    result.connected = Connect_to_server(
+		auto_connect, list_servers, auto_shutdown, shutdown_reason,
+		&attempt);
+	}
+    } while ((retry_compat || !result.contacted)
+	     && retries++ < max_retries);
+
+    Close_contact_socket(&sbuf);
+    Sockbuf_cleanup(&sbuf);
+    if (result.connected)
+	*conpar = attempt;
+    return result;
+}
+
+Contact_servers_result_t Contact_servers_detailed(
+    int count, const Connect_target_t *targets,
+    int auto_connect, int list_servers,
+    int auto_shutdown, char *shutdown_reason,
+    Connect_param_t *conpar)
+{
+    Contact_servers_result_t result = { false, false };
+    Contact_servers_result_t target_result;
+    int index;
+
+    if (count <= 0 || targets == NULL || conpar == NULL)
+	return result;
+    for (index = 0; index < count && !result.connected; index++) {
+	target_result = Contact_target(
+	    &targets[index], auto_connect, list_servers, auto_shutdown,
+	    shutdown_reason, conpar);
+	result.contacted = result.contacted || target_result.contacted;
+	result.connected = target_result.connected;
+    }
+    return result;
+}
+
+int Contact_servers(int count, const Connect_target_t *targets,
 		    int auto_connect, int list_servers,
 		    int auto_shutdown, char *shutdown_reason,
-		    int find_max, int *num_found,
-		    char **server_addresses, char **server_names,
-		    unsigned *server_versions,
 		    Connect_param_t *conpar)
 {
-    int			connected = false;
-    const int		max_retries = 2;
-    int			i, ret;
-    int			status;
-    sock_t		sock;
-    int			retries;
-    int			contacted;
-    bool		compat_mode = false;
-    sockbuf_t		sbuf;			/* contact buffer */
+    Contact_servers_result_t result = Contact_servers_detailed(
+	count, targets, auto_connect, list_servers, auto_shutdown,
+	shutdown_reason, conpar);
 
+    return result.connected;
+}
 
-    if ((status = create_dgram_socket(&sock, 0)) == SOCK_IS_ERROR) {
-	error("Could not create connection socket");
+int Contact_local_servers(const Connect_defaults_t *defaults,
+			  int auto_connect, int list_servers,
+			  int auto_shutdown, char *shutdown_reason,
+			  int find_max, int *num_found,
+			  char **server_addresses, char **server_names,
+			  unsigned *server_versions,
+			  Connect_param_t *conpar)
+{
+    const int max_retries = 2;
+    Connect_target_t target;
+    int connected = false;
+    int contacted = 0;
+    int found_count = 0;
+    int retries = 0;
+    sockbuf_t sbuf;
+
+    if (num_found != NULL)
+	*num_found = 0;
+    if (defaults == NULL || conpar == NULL)
+	return false;
+    if (defaults->contact_transport == GAME_TRANSPORT_TCP) {
+	warn("TCP contact transport cannot broadcast on the local network");
+	warn("Specify a server address or select one from the metaserver");
+	return false;
+    }
+
+    memset(&target, 0, sizeof(target));
+    target.contact_port = defaults->contact_port;
+    target.contact_transport = GAME_TRANSPORT_UDP;
+    target.game_transport = defaults->game_transport;
+
+    if (Init_contact_buffer(&sbuf, GAME_TRANSPORT_UDP) == -1) {
+	error("Could not initialize contact socket");
 	exit(1);
     }
-    if (Sockbuf_init(&sbuf, &sock, CLIENT_RECV_SIZE,
-		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
-	error("No memory for contact buffer");
-	exit(1);
-    }
-    if (!count) {
-	retries = 0;
-	contacted = 0;
-	compat_mode = false;
-	do {
-	    Sockbuf_clear(&sbuf);
-	    Packet_printf(&sbuf, "%u%s%hu%c", MAGIC, conpar->user_name,
-			  sock_get_port(&sbuf.sock), CONTACT_pack);
-	    assert(sbuf.len >= 0);
-	    if (Query_all(&sbuf.sock, conpar->contact_port,
-			  sbuf.buf, (size_t)sbuf.len) == -1) {
-		error("Couldn't send contact requests");
-		exit(1);
-	    }
-	    if (retries == 0) {
-		printf("Searching for an XPilot "
-		       "server on the local net...\n");
-		IFWINDOWS( Progress("Searching for an XPilot "
-				    "server on the local net...") );
-	    } else {
-		printf("Searching once more...\n");
-		IFWINDOWS( Progress("Searching once more...") );
-	    }
-	    while (Get_contact_message(&sbuf, "", conpar)) {
-		contacted++;
-		if (list_servers == 2) {
-		    if (count < find_max) {
-			if (server_names) {
-			    strlcpy(server_names[count],
-				    conpar->server_name,
-				    MAX_HOST_LEN);
-			}
-			if (server_addresses) {
-			    strlcpy(server_addresses[count],
-				    conpar->server_addr,
-				    MAX_HOST_LEN);
-			}
-			if (server_versions)
-			    server_versions[count] = conpar->server_version;
-			count++;
-		    }
-		    if (num_found)
-			*num_found = count;
-		} else {
-		    connected = Connect_to_server(auto_connect,
-						  list_servers,
-						  auto_shutdown,
-						  shutdown_reason,
-						  conpar);
-		    if (connected)
-			break;
-		}
-	    }
-	} while (!contacted && retries++ < max_retries);
-    }
-    else {
-	for (i = 0; i < count && !connected; i++) {
-	    retries = 0;
-	    contacted = 0;
-	    do {
-		printf("Contacting server %s.\n", servers[i]);
-		IFWINDOWS( Progress("Contacting server %s", servers[i]) );
-		Sockbuf_clear(&sbuf);
-		Packet_printf(&sbuf, "%u%s%hu%c",
-			      compat_mode ? COMPATIBILITY_MAGIC : MAGIC,
-			      conpar->user_name, sock_get_port(&sbuf.sock),
-			      CONTACT_pack);
-		if (sock_send_dest(&sbuf.sock, servers[i],
-			      conpar->contact_port,
-			      sbuf.buf, sbuf.len) == -1) {
-		    if (sbuf.sock.error.call == SOCK_CALL_GETHOSTBYNAME) {
-			printf("Can't find the server '%s'.\n", servers[i]);
-			IFWINDOWS( Progress("Can't find the server '%s'.",
-					    servers[i]) );
-			break;
-		    }
-		    error("Can't contact %s on port %d",
-			  servers[i], conpar->contact_port);
-		}
-		if (retries) {
-		    printf("Retrying %s...\n", servers[i]);
-		    IFWINDOWS( Progress("Retrying %s...", servers[i]) );
-		}
-		ret = Get_contact_message(&sbuf, servers[i], conpar);
-		if (ret == 2 && !compat_mode) {
-		    printf("Trying compatibility version %04x\n",
-			   MAGIC2VERSION(COMPATIBILITY_MAGIC));
-		    compat_mode = true;
-		    retries--;	/* a bit ugly, cancels the loop ++ */
-		    continue;
-		}
-		if (ret == 1) {
-		    contacted++;
-		    IFWINDOWS( Progress("Contacted %s", servers[i]) );
-		    connected = Connect_to_server(auto_connect, list_servers,
-						  auto_shutdown,
-						  shutdown_reason,
-						  conpar);
-		    if (connected)
-			break;
-		}
-	    } while (!contacted && retries++ < max_retries);
+
+    do {
+	Sockbuf_clear(&sbuf);
+	Packet_printf(&sbuf, "%u%s%hu%c",
+		      Client_contact_magic(target.game_transport, false),
+		      conpar->user_name, sock_get_port(&sbuf.sock), CONTACT_pack);
+	assert(sbuf.len >= 0);
+	if (Query_all(&sbuf.sock, target.contact_port,
+		      sbuf.buf, (size_t)sbuf.len) == -1) {
+	    error("Couldn't send contact requests");
+	    exit(1);
 	}
-    }
-    Sockbuf_cleanup(&sbuf);
-    close_dgram_socket(&sock);
+	if (retries == 0) {
+	    printf("Searching for an XPilot server on the local net...\n");
+	    IFWINDOWS( Progress("Searching for an XPilot "
+				"server on the local net...") );
+	} else {
+	    printf("Searching once more...\n");
+	    IFWINDOWS( Progress("Searching once more...") );
+	}
+	for (;;) {
+	    Connect_param_t attempt = *conpar;
+	    Contact_message_result_t message_result = Get_contact_message(
+		&sbuf, "", &target, &attempt);
+	    int ret = message_result.status;
 
-    return connected ? true : false;
+	    if (ret == 0)
+		break;
+	    contacted++;
+	    if (list_servers == 2) {
+		if (found_count < find_max) {
+		    if (server_names != NULL) {
+			strlcpy(server_names[found_count], attempt.server_name,
+				MAX_HOST_LEN);
+		    }
+		    if (server_addresses != NULL) {
+			strlcpy(server_addresses[found_count], attempt.server_addr,
+				MAX_HOST_LEN);
+		    }
+		    if (server_versions != NULL)
+			server_versions[found_count] = attempt.server_version;
+		    found_count++;
+		}
+		if (num_found != NULL)
+		    *num_found = found_count;
+	    } else {
+		connected = Connect_to_server(auto_connect, list_servers,
+					      auto_shutdown, shutdown_reason,
+					      &attempt);
+		if (connected) {
+		    *conpar = attempt;
+		    break;
+		}
+	    }
+	}
+    } while (!connected && !contacted && retries++ < max_retries);
+
+    Close_contact_socket(&sbuf);
+    Sockbuf_cleanup(&sbuf);
+    return connected;
 }

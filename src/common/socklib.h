@@ -27,7 +27,15 @@
 #define SOCKLIB_H
 
 #define SOCK_HOSTNAME_LENGTH	256
+#ifdef _WINDOWS
+/** Native socket handle used by Winsock. */
+typedef SOCKET socket_handle_t;
+#define SOCK_FD_INVALID		INVALID_SOCKET
+#else
+/** Native socket descriptor used by POSIX socket APIs. */
+typedef int socket_handle_t;
 #define SOCK_FD_INVALID		(-1)
+#endif
 #define SOCK_IS_ERROR		(-1)
 #define SOCK_IS_OK		(0)
 #define SOCK_TIMEOUT_SECONDS	3
@@ -68,7 +76,7 @@ typedef struct sock_error_s {
 } sock_error_t;
 
 typedef struct sock_s {
-    int			fd;
+    socket_handle_t	fd;
     sock_timeout_t	timeout;
     unsigned		flags;
     sock_error_t	error;
@@ -115,6 +123,19 @@ int sock_open_tcp_listener(sock_t *sock, char *dotaddr, int port, int backlog);
  */
 int sock_accept(sock_t *listener, sock_t *accepted);
 int sock_open_tcp_connected_non_blocking(sock_t *sock, char *host, int port);
+/**
+ * Connect an open TCP socket without exceeding a fixed deadline.
+ *
+ * The socket remains non-blocking after a successful connection.
+ *
+ * @param sock Open, optionally bound TCP socket.
+ * @param host Numeric IPv4 address or hostname.
+ * @param port Remote TCP port.
+ * @param timeout_seconds Positive connection timeout in seconds.
+ * @return SOCK_IS_OK on success or SOCK_IS_ERROR on failure.
+ */
+int sock_connect_with_timeout(sock_t *sock, char *host, int port,
+                              int timeout_seconds);
 int sock_open_udp(sock_t *sock, char *dotaddr, int port);
 int sock_connect(sock_t *sock, char *host, int port);
 int sock_get_last_port(sock_t *sock);
@@ -130,6 +151,13 @@ void sock_get_local_hostname(char *name, unsigned size,
 			     int search_domain_for_xpilot);
 int sock_get_port(sock_t *sock);
 int sock_get_error(sock_t *sock);
+/**
+ * Report whether the last socket failure permits retrying the operation.
+ *
+ * @param sock Socket containing the last native error code.
+ * @return Nonzero for interrupted, in-progress, or would-block failures.
+ */
+int sock_error_is_temporary(const sock_t *sock);
 int sock_set_broadcast(sock_t *sock, int flag);
 int sock_set_receive_buffer_size(sock_t *sock, int size);
 int sock_set_send_buffer_size(sock_t *sock, int size);

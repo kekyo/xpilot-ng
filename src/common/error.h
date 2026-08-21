@@ -41,14 +41,6 @@ extern void error(const char *fmt, ...);
 extern void fatal(const char *fmt, ...);
 extern void dumpcore(const char *fmt, ...);
 
-#ifdef _WINDOWS
-# ifdef	_DEBUG
-#  define	Trace _Trace
-# else
-#  define	Trace
-# endif
-#endif
-
 extern void init_error(const char *prog);
 
 #endif	/* ERROR_H */

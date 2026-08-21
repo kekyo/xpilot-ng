@@ -37,16 +37,13 @@
 #endif
 
 #ifdef _WINDOWS
-#ifdef _MSC_VER
 # include <direct.h>
-# define snprintf _snprintf
-# define printf Trace
-# define X_OK 0
-#endif
 # define F_OK 0
 # define W_OK 2
 # define R_OK 4
 # define mkdir(A,B) _mkdir(A)
+/** Report Windows client startup progress. */
+void Progress(const char *format, ...);
 extern bool threadedDraw; /* default.c */
 #endif
 

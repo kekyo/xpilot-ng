@@ -158,8 +158,11 @@ am_xpilot_ng_sdl_OBJECTS = DT_drawtext.$(OBJEXT) SDL_console.$(OBJEXT) \
 	text_renderer.$(OBJEXT) text_ttf_atlas.$(OBJEXT) \
 	todo.$(OBJEXT) sdlmeta.$(OBJEXT) $(am__objects_1)
 xpilot_ng_sdl_OBJECTS = $(am_xpilot_ng_sdl_OBJECTS)
+am__DEPENDENCIES_1 =
 xpilot_ng_sdl_DEPENDENCIES = $(top_builddir)/src/client/libxpclient.a \
-	$(top_builddir)/src/common/libxpcommon.a libxp_libtess2.a
+	$(top_builddir)/src/common/libxpcommon.a libxp_libtess2.a \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -252,6 +255,7 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CMAKE = @CMAKE@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CSCOPE = @CSCOPE@
@@ -277,6 +281,14 @@ LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
+MINGW_ARCH = @MINGW_ARCH@
+MINGW_DEPS_BUILD_DIR = @MINGW_DEPS_BUILD_DIR@
+MINGW_DEPS_BUILD_TYPE = @MINGW_DEPS_BUILD_TYPE@
+MINGW_DEPS_MAKEFILE = @MINGW_DEPS_MAKEFILE@
+MINGW_DEPS_PREFIX = @MINGW_DEPS_PREFIX@
+MINGW_PACKAGE_DIR = @MINGW_PACKAGE_DIR@
+MINGW_TOOLCHAIN_FILE = @MINGW_TOOLCHAIN_FILE@
+MINGW_WINE_PREFIX = @MINGW_WINE_PREFIX@
 MKDIR_P = @MKDIR_P@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
@@ -371,13 +383,25 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
+@COND_MINGW_VENDORED_FALSE@XP_SDL3_CFLAGS = @SDL3_CFLAGS@
+@COND_MINGW_VENDORED_TRUE@XP_SDL3_CFLAGS = $(MINGW_SDL3_CFLAGS)
+@COND_MINGW_VENDORED_FALSE@XP_SDL3_LIBS = @SDL3_LIBS@
+@COND_MINGW_VENDORED_TRUE@XP_SDL3_LIBS = $(MINGW_SDL3_LIBS)
+@COND_MINGW_VENDORED_FALSE@XP_SDL3_IMAGE_CFLAGS = @SDL3_IMAGE_CFLAGS@
+@COND_MINGW_VENDORED_TRUE@XP_SDL3_IMAGE_CFLAGS = $(MINGW_SDL3_IMAGE_CFLAGS)
+@COND_MINGW_VENDORED_FALSE@XP_SDL3_IMAGE_LIBS = @SDL3_IMAGE_LIBS@
+@COND_MINGW_VENDORED_TRUE@XP_SDL3_IMAGE_LIBS = $(MINGW_SDL3_IMAGE_LIBS)
+@COND_MINGW_VENDORED_FALSE@XP_SDL3_TTF_CFLAGS = @SDL3_TTF_CFLAGS@
+@COND_MINGW_VENDORED_TRUE@XP_SDL3_TTF_CFLAGS = $(MINGW_SDL3_TTF_CFLAGS)
+@COND_MINGW_VENDORED_FALSE@XP_SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
+@COND_MINGW_VENDORED_TRUE@XP_SDL3_TTF_LIBS = $(MINGW_SDL3_TTF_LIBS)
 noinst_LIBRARIES = libxp_libtess2.a
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-DSDL_DISABLE_OLD_NAMES \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
-	@SDL3_CFLAGS@ @SDL3_IMAGE_CFLAGS@ @SDL3_TTF_CFLAGS@ \
+	$(XP_SDL3_CFLAGS) $(XP_SDL3_IMAGE_CFLAGS) $(XP_SDL3_TTF_CFLAGS) \
 	@GL_CFLAGS@
 
 libxp_libtess2_a_SOURCES = \
@@ -418,11 +442,10 @@ xpilot_ng_sdl_SOURCES = asteroid_data.h DT_drawtext.c DT_drawtext.h \
 xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	libxp_libtess2.a \
-	@SDL3_IMAGE_LIBS@ @SDL3_TTF_LIBS@ @SDL3_LIBS@ \
+	$(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) \
 	@GL_LIBS@ @SOUND_LIBS@ @W32_LIBS@
 
-EXTRA_DIST = xpilot.rc xpilot_sdl.dsp xpilot_sdl.dsw \
-	third_party/libtess2/LICENSE.txt \
+EXTRA_DIST = third_party/libtess2/LICENSE.txt \
 	third_party/libtess2/README.md \
 	third_party/libtess2/UPSTREAM.md
 
@@ -909,6 +932,8 @@ uninstall-am: uninstall-binPROGRAMS
 
 .PRECIOUS: Makefile
 
+
+@COND_MINGW_VENDORED_TRUE@-include $(top_builddir)/mingw-deps.mk
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

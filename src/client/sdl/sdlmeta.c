@@ -42,7 +42,7 @@
 #define ROW_BG2 0x000070ff
 #define HEADER_FG 0xffff00ff
 #define HEADER_BG 0xff0000ff
-#define STATUS_ROWS 7
+#define STATUS_ROWS 8
 #define STATUS_COLS 4
 #define STATUS_FIELD_FG 0xffff00ff
 #define STATUS_FIELD_BG 0xff0000ff
@@ -54,6 +54,7 @@
 #define PLIST_ITEM_BG 0x000070ff
 #define ROW_HEIGHT 19
 #define VERSION_WIDTH 100
+#define TRANSPORT_WIDTH 105
 #define COUNT_WIDTH 20
 #define META_WIDTH 837
 #define META_HEIGHT 768
@@ -67,7 +68,7 @@
 #define STATUSWIDGET      104
 #define PLAYERLISTWIDGET  105
 
-static int status_column_widths[] = { 100, 0, 100, 70 };
+static int status_column_widths[] = { 120, 0, 100, 70 };
 
 typedef struct {
     GLWidget   *table;
@@ -410,7 +411,7 @@ static void SetBounds_StatusWidget(GLWidget *widget, SDL_Rect *wb)
     }
 }
 
-static void add_status_entry(const char *name, char *value, GLWidget *parent)
+static void add_status_entry(const char *name, const char *value, GLWidget *parent)
 {
     GLWidget *name_label, *value_label;
     StatusWidget *info;
@@ -461,6 +462,10 @@ static GLWidget *Init_StatusWidget(server_info_t *sip)
     add_status_entry(" Server", sip->hostname, tmp);
     add_status_entry(" Address", info->address_str, tmp);
     add_status_entry(" Version", sip->version, tmp);
+    add_status_entry(" Contact/Lobby",
+		     Transport_display_name(sip->contact_transport), tmp);
+    add_status_entry(" Gameplay",
+		     Transport_display_name(sip->game_transport), tmp);
     add_status_entry(" Map name", sip->mapname, tmp);
     add_status_entry(" Map size", sip->mapsize, tmp);
     add_status_entry(" Map author", sip->author, tmp);
@@ -590,7 +595,8 @@ static void SetBounds_MetaRowWidget(GLWidget *row, SDL_Rect *rb)
     GLWidget *col;
 
     row->bounds = *rb;
-    free_width = MAX(rb->w - (VERSION_WIDTH + COUNT_WIDTH), 0);
+    free_width = MAX(rb->w
+		     - (VERSION_WIDTH + TRANSPORT_WIDTH + COUNT_WIDTH), 0);
 
     if (!(col = row->children)) return;
     cb.x = rb->x; 
@@ -607,6 +613,12 @@ static void SetBounds_MetaRowWidget(GLWidget *row, SDL_Rect *rb)
     cb.x = cb.x + cb.w;
     cb.y = rb->y; cb.h = rb->h;
     cb.w = VERSION_WIDTH;
+    SetBounds_GLWidget(col, &cb);
+
+    if (!(col = col->next)) return;
+    cb.x = cb.x + cb.w;
+    cb.y = rb->y; cb.h = rb->h;
+    cb.w = TRANSPORT_WIDTH;
     SetBounds_GLWidget(col, &cb);
 
     if (!(col = col->next)) return;
@@ -710,6 +722,7 @@ static GLWidget *Init_MetaRowWidget(server_info_t *sip,
     COLUMN(sip->hostname);
     COLUMN(sip->mapname);
     COLUMN(sip->version);
+    COLUMN(sip->transport_pair);
     COLUMN(sip->users_str);
 #undef COLUMN
 
@@ -743,8 +756,9 @@ static GLWidget *Init_MetaHeaderWidget(void)
     HEADER("Server");
     HEADER("Map");
     HEADER("Version");
+    HEADER("C/L -> Game");
     HEADER("Pl");
-#undef COLUMN
+#undef HEADER
 
     return tmp;    
 }
@@ -1011,18 +1025,27 @@ static GLWidget *Init_MetaWidget(SdlRenderer *sdl_renderer,
 
 static bool join_server(Connect_param_t *conpar, server_info_t *sip)
 {
-    char *server_addr_ptr = conpar->server_addr;
-    strlcpy(conpar->server_name, sip->hostname,
-            sizeof(conpar->server_name));
-    strlcpy(conpar->server_addr, sip->ip_str, sizeof(conpar->server_addr));
-    conpar->contact_port = sip->port;
-    if (Contact_servers(1, &server_addr_ptr, 1, 0, 0, NULL,
-			0, NULL, NULL, NULL, NULL, conpar)) {
+    Connect_param_t attempt = *conpar;
+    Contact_servers_result_t result;
+    Connect_target_t target;
+
+    if (!Meta_server_to_connect_target(sip, &target)) {
+	printf("Server %s has an invalid connection endpoint\n",
+	       sip->hostname);
+	return false;
+    }
+    result = Contact_servers_detailed(1, &target, 1, 0, 0, NULL, &attempt);
+    if (result.connected) {
+	*conpar = attempt;
 	return true;
     }
-    printf("Server %s (%s) didn't respond on port %d\n",
-	   conpar->server_name, conpar->server_addr,
-	   conpar->contact_port);
+    if (!result.contacted) {
+	printf("Server %s (%s) didn't respond on port %d\n",
+	       sip->hostname, target.address, target.contact_port);
+    } else {
+	printf("Could not join server %s (%s) on port %d\n",
+	       sip->hostname, target.address, target.contact_port);
+    }
     return false;
 }
 
