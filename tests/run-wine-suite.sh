@@ -267,6 +267,15 @@ find_game_window()
     test -n "$window_id"
 }
 
+game_window_transport_visible()
+{
+    game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
+	|| true)
+    test "$game_window_title" = \
+	"XPilot NG 4.7.3 - 127.0.0.1 "\
+"[Gameplay: $expected_gameplay_transport]"
+}
+
 quit_game_client()
 {
     quit_case=$1
@@ -452,6 +461,8 @@ run_gameplay_case()
     wait_until "$transport_case connection transport banner" 15 \
 	client_transport_banner_reported
     wait_until "$transport_case SDL window" 30 find_game_window
+    wait_until "$transport_case gameplay transport window title" 15 \
+	game_window_transport_visible
     wait_until "$transport_case OpenGL context" 30 \
         grep -q '^OpenGL context:' "$client_log"
     wait_until "$transport_case text renderers" 30 \

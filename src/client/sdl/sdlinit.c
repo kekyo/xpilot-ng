@@ -31,6 +31,7 @@
 #include "gl_diagnostics.h"
 #include "sdlrenderer.h"
 #include "images.h"
+#include "transport_display.h"
 
 /* These are only needed for the polygon tessellation */
 /* I'd like to move them to Paint_init/cleanup but because it */
@@ -58,6 +59,22 @@ int gameFontSize;
 int mapFontSize;
 char *gamefontname;
 
+static void set_gameplay_window_title(void)
+{
+    char title[sizeof(TITLE) + MAX_CHARS + 32];
+
+    if (!Transport_display_gameplay_title(
+	    title, sizeof(title), TITLE, servername,
+	    connectParam.game_transport)) {
+	warn("Could not format the gameplay window title");
+	return;
+    }
+    if (!SDL_SetWindowTitle(main_window, title)) {
+	warn("Could not set the SDL gameplay window title: %s",
+	     SDL_GetError());
+    }
+}
+
 /* ugly kps hack */
 static bool file_exists(const char *path) 
 { 
@@ -84,6 +101,7 @@ int Init_playing_windows(void)
 	error("image preparation failed");
 	return -1;
     }
+    set_gameplay_window_title();
 
     /*
     sdl_init_colors();

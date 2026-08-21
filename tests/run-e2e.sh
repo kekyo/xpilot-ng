@@ -33,6 +33,7 @@ if test "${1:-}" != --inside-xvfb; then
 fi
 
 client="${XPILOT_TEST_BINDIR:?XPILOT_TEST_BINDIR is required}/xpilot-ng-sdl"
+x11_client="${XPILOT_TEST_BINDIR}/xpilot-ng-x11"
 server="${XPILOT_TEST_BINDIR}/xpilot-ng-server"
 map="${XPILOT_TEST_PKGDATADIR:?XPILOT_TEST_PKGDATADIR is required}/maps/ndh.xp2"
 
@@ -271,14 +272,34 @@ find_game_window()
     return 1
 }
 
+find_x11_game_window()
+{
+    if ! kill -0 "$client_pid" 2>/dev/null; then
+	fail "X11 client stopped before its game window became visible"
+    fi
+    window_id=$(xdotool search --onlyvisible --name '^XPilot NG ' \
+	2>/dev/null | tail -n 1 || true)
+    test -n "$window_id"
+}
+
+game_window_transport_visible()
+{
+    game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
+	|| true)
+    test "$game_window_title" = \
+	"XPilot NG 4.7.3 - 127.0.0.1 "\
+"[Gameplay: $expected_gameplay_transport]"
+}
+
 quit_game_client()
 {
     quit_case=$1
+    window_finder=${2:-find_game_window}
     quit_deadline=$(($(date +%s) + 20))
     quit_attempted=false
     while kill -0 "$client_pid" 2>/dev/null \
 	&& test "$(date +%s)" -lt "$quit_deadline"; do
-	if find_game_window; then
+	if "$window_finder"; then
 	    quit_attempted=true
 	    # Keep Escape and its confirmation far enough apart for SDL to
 	    # process the confirmation state, then retry if X11 drops an event.
@@ -293,6 +314,11 @@ quit_game_client()
     if kill -0 "$client_pid" 2>/dev/null; then
 	fail "$quit_case client did not stop after graceful quit requests"
     fi
+}
+
+x11_game_window_absent()
+{
+    ! xdotool search --name '^XPilot NG ' >/dev/null 2>&1
 }
 
 process_window_absent()
@@ -467,6 +493,8 @@ run_gameplay_case()
     client_pid=$!
     window_owner_pid=$client_pid
     wait_until "$game_case SDL game window" 20 find_game_window
+    wait_until "$game_case gameplay transport window title" 10 \
+	game_window_transport_visible
     wait_until "$game_case local client acceptance" 20 client_accepted
     wait_until "$game_case connection transport banner" 10 \
 	client_transport_banner_reported
@@ -530,6 +558,49 @@ run_gameplay_case()
     wait_until "$game_case server-side client departure" 5 client_departed
     stop_local_server
     run_recording_playback "$game_case" "$game_transport" "$game_recording"
+}
+
+run_x11_gameplay_title_case()
+{
+    game_case=x11-tcp
+    expected_contact_transport=UDP
+    expected_gameplay_transport=TCP
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-$game_case.log"
+    game_client_log="$runtime_dir/client-$game_case.log"
+    game_client_name=X11TCP
+
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	-gameTransport tcp >"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "$game_case server readiness" 20 server_ready
+
+    "$x11_client" -geometry 800x600 -join -port "$port" \
+	-name "$game_client_name" -gameTransport tcp \
+	127.0.0.1 >"$game_client_log" 2>&1 &
+    client_pid=$!
+    window_owner_pid=$client_pid
+    wait_until "$game_case game window" 20 find_x11_game_window
+    wait_until "$game_case gameplay transport window title" 10 \
+	game_window_transport_visible
+    wait_until "$game_case local client acceptance" 20 client_accepted
+
+    quit_game_client "$game_case" find_x11_game_window
+    finished_client_pid=$client_pid
+    set +e
+    wait "$client_pid"
+    client_status=$?
+    set -e
+    client_pid=
+    window_id=
+    if test "$client_status" -ne 0; then
+	fail "$game_case client returned status $client_status"
+    fi
+    client_transport_banner_reported \
+	|| fail "$game_case did not report the connection transports"
+    wait_until "$game_case game window teardown" 5 x11_game_window_absent
+    wait_until "$game_case server-side client departure" 5 client_departed
+    stop_local_server
 }
 
 run_transport_mismatch()
@@ -719,6 +790,9 @@ run_gameplay_case udp-default default yes default
 run_gameplay_case udp-explicit udp no default
 run_gameplay_case tcp-contact tcp no tcp
 run_gameplay_case tcp-contact-udp-game udp no tcp
+if test -x "$x11_client"; then
+    run_x11_gameplay_title_case
+fi
 run_transport_mismatch udp tcp
 run_transport_mismatch tcp udp
 
