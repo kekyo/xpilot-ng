@@ -122,6 +122,7 @@ if test "$inside_xvfb" = false; then
     "$make_program" -C "$build_dir/tests" "-j$jobs" \
         test-framed-stream.exe \
         test-game-transport.exe \
+        test-transport-display.exe \
         test-socket-io.exe \
         test-sdl-versions.exe \
         test-native-socket-handle.exe
@@ -250,6 +251,13 @@ client_joined()
     fi
     grep -q '\*\*\* Login allowed\.' "$client_log" 2>/dev/null \
         && grep -q "Welcome .*$client_name" "$server_log" 2>/dev/null
+}
+
+client_transport_banner_reported()
+{
+    grep -Fq "*** Connected to 127.0.0.1 "\
+"[Contact/Lobby: $expected_contact_transport, "\
+"Gameplay: $expected_gameplay_transport]" "$client_log" 2>/dev/null
 }
 
 find_game_window()
@@ -396,6 +404,10 @@ run_gameplay_case()
 {
     contact_transport=$1
     gameplay_transport=$2
+    expected_contact_transport=$(printf '%s' "$contact_transport" \
+	| tr '[:lower:]' '[:upper:]')
+    expected_gameplay_transport=$(printf '%s' "$gameplay_transport" \
+	| tr '[:lower:]' '[:upper:]')
     transport_case="$contact_transport-contact-$gameplay_transport-game"
     contact_port=$(reserve_contact_port)
     server_log="$runtime_dir/server-$transport_case.log"
@@ -437,6 +449,8 @@ run_gameplay_case()
     client_pid=$!
 
     wait_until "$transport_case client login" 30 client_joined
+    wait_until "$transport_case connection transport banner" 15 \
+	client_transport_banner_reported
     wait_until "$transport_case SDL window" 30 find_game_window
     wait_until "$transport_case OpenGL context" 30 \
         grep -q '^OpenGL context:' "$client_log"
@@ -491,8 +505,9 @@ timeout 60s "$wineboot_program" -u >"$runtime_dir/wineboot.log" 2>&1 \
 timeout 30s wineserver -w >>"$runtime_dir/wineboot.log" 2>&1 \
     || fail "Wine prefix initialization did not settle"
 
-for unit_test in test-framed-stream test-game-transport test-socket-io \
-    test-sdl-versions test-native-socket-handle; do
+for unit_test in test-framed-stream test-game-transport \
+    test-transport-display test-socket-io test-sdl-versions \
+    test-native-socket-handle; do
     run_wine_unit_test "$unit_test"
 done
 

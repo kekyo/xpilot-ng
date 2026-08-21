@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -26,6 +26,7 @@
  */
 
 #include "xpclient.h"
+#include "transport_display.h"
 
 
 #define MAX_LINE	MSG_LEN	/* should not be smaller than MSG_LEN */
@@ -204,6 +205,8 @@ static int Get_contact_message(sockbuf_t *sbuf,
 		 */
 		xpinfo("Using protocol version 0x%04x.", server_version);
 		conpar->server_version = server_version;
+		conpar->contact_transport = contactTransport;
+		conpar->game_transport = server_transport;
 		readable = 1;
 	    }
 	}
@@ -301,8 +304,13 @@ static bool Process_commands(sockbuf_t *ibuf,
     auto_shutdown = FALSE;
 #endif
 
-    if (auto_connect && !list_servers && !auto_shutdown)
-	xpprintf("*** Connected to %s\n", conpar->server_name);
+    if (auto_connect && !list_servers && !auto_shutdown) {
+	xpprintf("*** Connected to %s "
+		 "[Contact/Lobby: %s, Gameplay: %s]\n",
+		 conpar->server_name,
+		 Transport_display_name(conpar->contact_transport),
+		 Transport_display_name(conpar->game_transport));
+    }
 
     for (;;) {
 
@@ -639,6 +647,13 @@ static bool Process_commands(sockbuf_t *ibuf,
 			if (list_servers)
 			    printf("SERVER HOST......: %s\n",
 				   conpar->server_name);
+			if (list_servers)
+			    printf("TRANSPORTS.......: %s -> %s "
+				   "(Contact/Lobby -> Gameplay)\n",
+				   Transport_display_name(
+				       conpar->contact_transport),
+				   Transport_display_name(
+				       conpar->game_transport));
 			if (*ibuf->ptr != '\0') {
 			    if (ibuf->len < ibuf->size)
 				ibuf->buf[ibuf->len] = '\0';

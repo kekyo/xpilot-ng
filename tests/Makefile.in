@@ -89,8 +89,8 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 check_PROGRAMS = test-framed-stream$(EXEEXT) \
-	test-game-transport$(EXEEXT) test-socket-io$(EXEEXT) \
-	test-native-socket-handle$(EXEEXT) \
+	test-game-transport$(EXEEXT) test-transport-display$(EXEEXT) \
+	test-socket-io$(EXEEXT) test-native-socket-handle$(EXEEXT) \
 	test-meta-environment$(EXEEXT) test-sdl-versions$(EXEEXT) \
 	test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
@@ -118,7 +118,8 @@ check_PROGRAMS = test-framed-stream$(EXEEXT) \
 	test-text-ttf-atlas$(EXEEXT) test-text-renderer$(EXEEXT) \
 	test-text-cache-adapter$(EXEEXT)
 TESTS = test-framed-stream$(EXEEXT) test-game-transport$(EXEEXT) \
-	test-socket-io$(EXEEXT) test-native-socket-handle$(EXEEXT) \
+	test-transport-display$(EXEEXT) test-socket-io$(EXEEXT) \
+	test-native-socket-handle$(EXEEXT) \
 	test-meta-environment$(EXEEXT) test-sdl-versions$(EXEEXT) \
 	test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
@@ -443,6 +444,10 @@ test_text_ttf_atlas_OBJECTS = $(am_test_text_ttf_atlas_OBJECTS)
 test_text_ttf_atlas_DEPENDENCIES =
 test_text_ttf_atlas_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(test_text_ttf_atlas_LDFLAGS) $(LDFLAGS) -o $@
+am_test_transport_display_OBJECTS = test_transport_display.$(OBJEXT) \
+	transport_display.$(OBJEXT)
+test_transport_display_OBJECTS = $(am_test_transport_display_OBJECTS)
+test_transport_display_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -555,8 +560,9 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_text_ttf_atlas-text_atlas.Po \
 	./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po \
 	./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po \
+	./$(DEPDIR)/test_transport_display.Po \
 	./$(DEPDIR)/text_atlas.Po ./$(DEPDIR)/text_geometry.Po \
-	./$(DEPDIR)/text_renderer.Po
+	./$(DEPDIR)/text_renderer.Po ./$(DEPDIR)/transport_display.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -607,7 +613,8 @@ SOURCES = $(test_framed_stream_SOURCES) $(test_game_transport_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
 	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
-	$(test_text_ttf_atlas_SOURCES)
+	$(test_text_ttf_atlas_SOURCES) \
+	$(test_transport_display_SOURCES)
 DIST_SOURCES = $(test_framed_stream_SOURCES) \
 	$(test_game_transport_SOURCES) $(test_gfx2d_picture_SOURCES) \
 	$(test_gl_core_resources_SOURCES) \
@@ -641,7 +648,8 @@ DIST_SOURCES = $(test_framed_stream_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
 	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
-	$(test_text_ttf_atlas_SOURCES)
+	$(test_text_ttf_atlas_SOURCES) \
+	$(test_transport_display_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -1010,6 +1018,9 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
+test_transport_display_SOURCES = test_transport_display.c \
+	$(top_srcdir)/src/client/transport_display.c
+
 test_framed_stream_SOURCES = test_framed_stream.c
 test_framed_stream_LDADD = $(top_builddir)/src/common/libxpcommon.a \
 	@W32_LIBS@
@@ -1660,6 +1671,10 @@ test-text-ttf-atlas$(EXEEXT): $(test_text_ttf_atlas_OBJECTS) $(test_text_ttf_atl
 	@rm -f test-text-ttf-atlas$(EXEEXT)
 	$(AM_V_CCLD)$(test_text_ttf_atlas_LINK) $(test_text_ttf_atlas_OBJECTS) $(test_text_ttf_atlas_LDADD) $(LIBS)
 
+test-transport-display$(EXEEXT): $(test_transport_display_OBJECTS) $(test_transport_display_DEPENDENCIES) $(EXTRA_test_transport_display_DEPENDENCIES)
+	@rm -f test-transport-display$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_transport_display_OBJECTS) $(test_transport_display_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -1772,9 +1787,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_ttf_atlas-text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_transport_display.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_renderer.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/transport_display.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -2972,6 +2989,20 @@ test_text_ttf_atlas-text_geometry.obj: $(top_srcdir)/src/client/sdl/text_geometr
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_text_ttf_atlas_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_text_ttf_atlas-text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
 
+transport_display.o: $(top_srcdir)/src/client/transport_display.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT transport_display.o -MD -MP -MF $(DEPDIR)/transport_display.Tpo -c -o transport_display.o `test -f '$(top_srcdir)/src/client/transport_display.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/transport_display.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/transport_display.Tpo $(DEPDIR)/transport_display.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/transport_display.c' object='transport_display.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o transport_display.o `test -f '$(top_srcdir)/src/client/transport_display.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/transport_display.c
+
+transport_display.obj: $(top_srcdir)/src/client/transport_display.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT transport_display.obj -MD -MP -MF $(DEPDIR)/transport_display.Tpo -c -o transport_display.obj `if test -f '$(top_srcdir)/src/client/transport_display.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/transport_display.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/transport_display.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/transport_display.Tpo $(DEPDIR)/transport_display.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/transport_display.c' object='transport_display.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o transport_display.obj `if test -f '$(top_srcdir)/src/client/transport_display.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/transport_display.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/transport_display.c'; fi`
+
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
 tags: tags-am
@@ -3175,6 +3206,13 @@ test-framed-stream.log: test-framed-stream$(EXEEXT)
 test-game-transport.log: test-game-transport$(EXEEXT)
 	@p='test-game-transport$(EXEEXT)'; \
 	b='test-game-transport'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-transport-display.log: test-transport-display$(EXEEXT)
+	@p='test-transport-display$(EXEEXT)'; \
+	b='test-transport-display'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -3656,9 +3694,11 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po
+	-rm -f ./$(DEPDIR)/test_transport_display.Po
 	-rm -f ./$(DEPDIR)/text_atlas.Po
 	-rm -f ./$(DEPDIR)/text_geometry.Po
 	-rm -f ./$(DEPDIR)/text_renderer.Po
+	-rm -f ./$(DEPDIR)/transport_display.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -3810,9 +3850,11 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po
+	-rm -f ./$(DEPDIR)/test_transport_display.Po
 	-rm -f ./$(DEPDIR)/text_atlas.Po
 	-rm -f ./$(DEPDIR)/text_geometry.Po
 	-rm -f ./$(DEPDIR)/text_renderer.Po
+	-rm -f ./$(DEPDIR)/transport_display.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

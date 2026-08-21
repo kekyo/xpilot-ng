@@ -227,6 +227,13 @@ client_accepted()
     grep -q "Welcome .*$game_client_name" "$game_server_log" 2>/dev/null
 }
 
+client_transport_banner_reported()
+{
+    grep -Fq "*** Connected to 127.0.0.1 "\
+"[Contact/Lobby: $expected_contact_transport, "\
+"Gameplay: $expected_gameplay_transport]" "$game_client_log" 2>/dev/null
+}
+
 client_departed()
 {
     grep -q "Goodbye .*$game_client_name" "$game_server_log" 2>/dev/null
@@ -392,6 +399,15 @@ run_gameplay_case()
     game_transport=$2
     game_capture=$3
     contact_transport=$4
+
+    case "$game_transport" in
+    default|udp) expected_gameplay_transport=UDP ;;
+    tcp) expected_gameplay_transport=TCP ;;
+    esac
+    case "$contact_transport" in
+    default|udp) expected_contact_transport=UDP ;;
+    tcp) expected_contact_transport=TCP ;;
+    esac
     port=$(reserve_contact_port)
     game_recording="$runtime_dir/server-$game_case.xpr"
     game_server_log="$runtime_dir/server-$game_case.log"
@@ -452,6 +468,8 @@ run_gameplay_case()
     window_owner_pid=$client_pid
     wait_until "$game_case SDL game window" 20 find_game_window
     wait_until "$game_case local client acceptance" 20 client_accepted
+    wait_until "$game_case connection transport banner" 10 \
+	client_transport_banner_reported
     if test "$game_transport" = tcp; then
 	game_socket_protocol=tcp
     else

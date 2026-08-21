@@ -7,7 +7,8 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	@SDL3_CFLAGS@ @SDL3_IMAGE_CFLAGS@ @SDL3_TTF_CFLAGS@ \
 	@GL_CFLAGS@
 
-check_PROGRAMS = test-framed-stream test-game-transport test-socket-io \
+check_PROGRAMS = test-framed-stream test-game-transport \
+	test-transport-display test-socket-io \
 	test-native-socket-handle \
 	test-meta-environment test-sdl-versions \
 	test-sdl-keys test-sdl-console test-sdl-surface \
@@ -26,7 +27,8 @@ check_PROGRAMS = test-framed-stream test-game-transport test-socket-io \
 	test-sdlgui-polygons test-sdlgui-sparks test-sdlgui-ships \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
-TESTS = test-framed-stream test-game-transport test-socket-io \
+TESTS = test-framed-stream test-game-transport test-transport-display \
+	test-socket-io \
 	test-native-socket-handle \
 	test-meta-environment test-sdl-versions \
 	test-sdl-keys test-sdl-console test-sdl-surface \
@@ -52,6 +54,9 @@ TESTS = test-framed-stream test-game-transport test-socket-io \
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
+
+test_transport_display_SOURCES = test_transport_display.c \
+	$(top_srcdir)/src/client/transport_display.c
 
 test_framed_stream_SOURCES = test_framed_stream.c
 test_framed_stream_LDADD = $(top_builddir)/src/common/libxpcommon.a \
