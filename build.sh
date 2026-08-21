@@ -7,8 +7,8 @@ usage()
     cat <<'EOF'
 Usage: ./build.sh [OPTIONS] [-- CONFIGURE_OPTIONS...]
 
-Build XPilot NG and its pinned dependencies in one command.  Build products
-are kept out of the source tree under ./build by default.
+Configure and build XPilot NG and its pinned dependencies in one command.
+Build products are kept out of the source tree under ./build by default.
 
 Options:
   --target TARGET          native or windows (default: native)
@@ -22,8 +22,8 @@ Options:
 
 Arguments after -- are forwarded to XPilot NG's configure script.  Native
 builds use the vendored SDL3 provider.  Windows builds run on Linux with
-MinGW, build x86 and/or x86_64 packages, and can execute their supported test
-suite through isolated Wine prefixes.
+MinGW and delegate dependency builds, packaging, and Wine tests to the
+configured Makefiles for x86 and/or x86_64.
 EOF
 }
 
@@ -218,46 +218,6 @@ build_native()
     echo "XPilot NG build completed in $xpilot_build_dir"
 )
 
-package_windows_build()
-(
-    architecture_root=$1
-    xpilot_build_dir=$2
-    package_dir="$architecture_root/package"
-    package_work_dir="$architecture_root/package.tmp"
-
-    for output_dir in "$package_dir" "$package_work_dir"; do
-        case "$output_dir" in
-            "$architecture_root"/*) rm -rf -- "$output_dir" ;;
-            *) fail "refusing to replace unexpected package path" ;;
-        esac
-    done
-    mkdir -p "$package_work_dir/lib"
-
-    server_executable="$xpilot_build_dir/src/server/xpilot-ng-server.exe"
-    client_executable="$xpilot_build_dir/src/client/sdl/xpilot-ng-sdl.exe"
-    test -f "$server_executable" \
-        || fail "Windows server executable is missing: $server_executable"
-    test -f "$client_executable" \
-        || fail "Windows SDL client executable is missing: $client_executable"
-    cp "$server_executable" "$client_executable" "$package_work_dir/"
-
-    for data_directory in fonts maps textures sound; do
-        if test -d "$source_dir/lib/$data_directory"; then
-            cp -R "$source_dir/lib/$data_directory" \
-                "$package_work_dir/lib/$data_directory"
-        fi
-    done
-    for data_file in defaults.txt password.txt robots.txt shipshapes.txt; do
-        test -f "$source_dir/lib/$data_file" \
-            || fail "required game data is missing: lib/$data_file"
-        cp "$source_dir/lib/$data_file" "$package_work_dir/lib/"
-    done
-    cp "$source_dir/COPYING" "$package_work_dir/"
-
-    mv "$package_work_dir" "$package_dir"
-    echo "Windows package assembled in $package_dir"
-)
-
 build_windows_architecture()
 (
     windows_architecture=$1
@@ -266,85 +226,45 @@ build_windows_architecture()
     case "$windows_architecture" in
         x86)
             triplet=i686-w64-mingw32
-            default_toolchain="$source_dir/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-i686.cmake"
             ;;
         x86_64)
             triplet=x86_64-w64-mingw32
-            default_toolchain="$source_dir/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-x86_64.cmake"
             ;;
         *)
             fail "unsupported Windows architecture: $windows_architecture"
             ;;
     esac
 
-    selected_toolchain=$toolchain_file
-    if test -z "$selected_toolchain"; then
-        selected_toolchain=$default_toolchain
-    fi
-    test -f "$selected_toolchain" \
-        || fail "Windows toolchain file is missing: $selected_toolchain"
-
-    mingw_builder="$source_dir/vendor/mingw/build.sh"
-    wine_runner="$source_dir/tests/run-wine-suite.sh"
-    test -x "$mingw_builder" \
-        || fail "MinGW dependency builder is unavailable: $mingw_builder"
-
     architecture_root="$build_root/windows/$windows_architecture"
-    vendor_build_dir="$architecture_root/vendor"
-    vendor_prefix="$architecture_root/vendor-prefix"
-    xpilot_build_dir="$architecture_root/xpilot-ng"
     install_prefix="$architecture_root/install"
-
-    "$mingw_builder" \
-        --build-dir "$vendor_build_dir" \
-        --prefix "$vendor_prefix" \
-        --triplet "$triplet" \
-        --toolchain-file "$selected_toolchain" \
-        --jobs "$jobs" \
-        --build-type "$build_type"
-
-    windows_cppflags="-I$vendor_prefix/include"
-    if test -n "${CPPFLAGS:-}"; then
-        windows_cppflags="$windows_cppflags $CPPFLAGS"
-    fi
-    windows_ldflags="-L$vendor_prefix/lib"
-    if test -n "${LDFLAGS:-}"; then
-        windows_ldflags="$windows_ldflags $LDFLAGS"
-    fi
-
-    mkdir -p "$xpilot_build_dir"
+    mkdir -p "$architecture_root"
     echo "===== configure: XPilot NG for $triplet ====="
     (
-        cd "$xpilot_build_dir"
-        CC="$triplet-gcc" \
-        CPPFLAGS="$windows_cppflags" \
-        LDFLAGS="$windows_ldflags" \
-        PKG_CONFIG_PATH= \
-        PKG_CONFIG_LIBDIR="$vendor_prefix/lib/pkgconfig" \
-        GL_CFLAGS=-DWIN32 \
-        GL_LIBS=-lopengl32 \
+        cd "$architecture_root"
+        if test -n "$toolchain_file"; then
             "$source_dir/configure" "$@" \
                 "--host=$triplet" \
                 "--prefix=$install_prefix" \
-                --disable-x11-client \
-                --with-sdl3=vendored \
-                "--with-sdl3-prefix=$vendor_prefix"
-        "$make_program" "-j$jobs"
+                --enable-mingw-vendored-deps \
+                "--with-mingw-deps-build-type=$build_type" \
+                "--with-mingw-toolchain-file=$toolchain_file"
+        else
+            "$source_dir/configure" "$@" \
+                "--host=$triplet" \
+                "--prefix=$install_prefix" \
+                --enable-mingw-vendored-deps \
+                "--with-mingw-deps-build-type=$build_type"
+        fi
+
+        "$make_program" "-j$jobs" "MINGW_DEPS_JOBS=$jobs"
+        "$make_program" "MINGW_DEPS_JOBS=$jobs" windows-package
+        if test "$run_tests" = true; then
+            "$make_program" "MINGW_DEPS_JOBS=$jobs" \
+                "MINGW_TEST_JOBS=$jobs" check
+        fi
     )
 
-    package_windows_build "$architecture_root" "$xpilot_build_dir"
-
-    if test "$run_tests" = true; then
-        test -x "$wine_runner" \
-            || fail "Wine test runner is unavailable: $wine_runner"
-        XPILOT_BUILD_TEST_LOG=${XPILOT_BUILD_TEST_LOG:-} \
-            "$wine_runner" \
-                --build-dir "$xpilot_build_dir" \
-                --package-dir "$architecture_root/package" \
-                --wine-prefix "$architecture_root/wine-prefix" \
-                --arch "$windows_architecture" \
-                --jobs "$jobs"
-    fi
+    echo "XPilot NG Windows package completed in $architecture_root/package"
 )
 
 if test "$target" = native; then

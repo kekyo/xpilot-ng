@@ -148,6 +148,16 @@ case "$(pwd)" in
         : > tests/test-socket-io.exe
         : > tests/test-sdl-versions.exe
         ;;
+    */output/windows/x86|*/output/windows/x86_64)
+        case " $* " in
+            *" windows-package "*)
+                mkdir -p package/lib/maps
+                : > package/xpilot-ng-server.exe
+                : > package/xpilot-ng-sdl.exe
+                : > package/lib/maps/ndh.xp2
+                ;;
+        esac
+        ;;
 esac
 EOF
 
@@ -223,44 +233,48 @@ for architecture in x86 x86_64; do
     case "$architecture" in
         x86)
             triplet=i686-w64-mingw32
-            toolchain=cmake-toolchain-mingw64-i686.cmake
             ;;
         x86_64)
             triplet=x86_64-w64-mingw32
-            toolchain=cmake-toolchain-mingw64-x86_64.cmake
             ;;
     esac
     architecture_root="$fixture_output/windows/$architecture"
-    vendor_prefix="$architecture_root/vendor-prefix"
 
-    grep -Fx "mingw.arg=$triplet" "$fixture_log" >/dev/null \
-        || fail "$architecture dependency triplet was not passed"
-    grep -Fx "mingw.arg=$fixture_source/vendor/sdl3/SDL/build-scripts/$toolchain" \
-        "$fixture_log" >/dev/null \
-        || fail "$architecture toolchain was not passed"
-    grep -Fx "configure.cwd=$architecture_root/xpilot-ng" \
+    if grep -q '^mingw\.arg=' "$fixture_log"; then
+        fail "$architecture dependencies were built outside make"
+    fi
+    grep -Fx "configure.cwd=$architecture_root" \
         "$fixture_log" >/dev/null \
         || fail "$architecture build was not configured out of tree"
-    grep -Fx "configure.cc=$triplet-gcc" "$fixture_log" >/dev/null \
-        || fail "$architecture C compiler was not selected"
-    grep -Fx "configure.cppflags=-I$vendor_prefix/include" \
-        "$fixture_log" >/dev/null \
-        || fail "$architecture dependency include path was not selected"
-    grep -Fx "configure.ldflags=-L$vendor_prefix/lib" \
-        "$fixture_log" >/dev/null \
-        || fail "$architecture dependency library path was not selected"
-    grep -Fx "configure.pkg_config_libdir=$vendor_prefix/lib/pkgconfig" \
-        "$fixture_log" >/dev/null \
-        || fail "$architecture pkg-config directory was not isolated"
-    grep -Fx "configure.gl_cflags=-DWIN32" "$fixture_log" >/dev/null \
-        || fail "$architecture OpenGL declarations were not selected"
-    grep -Fx "configure.gl_libs=-lopengl32" "$fixture_log" >/dev/null \
-        || fail "$architecture OpenGL library was not selected"
+    grep -Fx 'configure.cc=' "$fixture_log" >/dev/null \
+        || fail "$architecture compiler leaked from the wrapper"
+    grep -Fx 'configure.cppflags=' "$fixture_log" >/dev/null \
+        || fail "$architecture include flags leaked from the wrapper"
+    grep -Fx 'configure.ldflags=' "$fixture_log" >/dev/null \
+        || fail "$architecture linker flags leaked from the wrapper"
+    grep -Fx 'configure.pkg_config_libdir=' "$fixture_log" >/dev/null \
+        || fail "$architecture pkg-config path leaked from the wrapper"
+    grep -Fx 'configure.gl_cflags=' "$fixture_log" >/dev/null \
+        || fail "$architecture OpenGL flags leaked from the wrapper"
+    grep -Fx 'configure.gl_libs=' "$fixture_log" >/dev/null \
+        || fail "$architecture OpenGL libraries leaked from the wrapper"
     grep -Fx "configure.arg=--host=$triplet" "$fixture_log" >/dev/null \
         || fail "$architecture host triplet was not configured"
-    grep -Fx "configure.arg=--with-sdl3-prefix=$vendor_prefix" \
+    grep -Fx 'configure.arg=--enable-mingw-vendored-deps' \
         "$fixture_log" >/dev/null \
-        || fail "$architecture SDL3 prefix was not configured"
+        || fail "$architecture vendored dependencies were not configured"
+    grep -Fx 'configure.arg=--with-mingw-deps-build-type=Release' \
+        "$fixture_log" >/dev/null \
+        || fail "$architecture dependency build type was not configured"
+
+    grep -Fx "make.cwd=$architecture_root" "$fixture_log" >/dev/null \
+        || fail "$architecture was not built through its configured tree"
+    grep -Fx 'make.arg=-j2' "$fixture_log" >/dev/null \
+        || fail "$architecture parallel build was not requested"
+    grep -Fx 'make.arg=windows-package' "$fixture_log" >/dev/null \
+        || fail "$architecture package target was not requested"
+    grep -Fx 'make.arg=check' "$fixture_log" >/dev/null \
+        || fail "$architecture check target was not requested"
 
     test -f "$architecture_root/package/xpilot-ng-server.exe" \
         || fail "$architecture server was not packaged"
@@ -268,13 +282,11 @@ for architecture in x86 x86_64; do
         || fail "$architecture SDL client was not packaged"
     test -f "$architecture_root/package/lib/maps/ndh.xp2" \
         || fail "$architecture game data was not packaged"
-    grep -Fx "wine.arg=--arch" "$fixture_log" >/dev/null \
-        || fail "$architecture Wine test architecture option was not passed"
-    grep -Fx "wine.arg=$architecture" "$fixture_log" >/dev/null \
-        || fail "$architecture Wine tests were not requested"
-    grep -Fx "wine.arg=$architecture_root/package" "$fixture_log" >/dev/null \
-        || fail "$architecture package was not passed to Wine tests"
 done
+
+if grep -q '^wine\.arg=' "$fixture_log"; then
+    fail "Wine tests were run outside make check"
+fi
 
 if "$fixture_source/build.sh" --jobs 0 \
     --build-root "$wrapper_test_dir/invalid" >/dev/null 2>&1; then
