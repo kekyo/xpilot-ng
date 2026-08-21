@@ -50,7 +50,9 @@ int main(int argc, char *argv[])
 {
     bool auto_shutdown = false;
     Connect_target_t *targets = NULL;
+    Connect_target_status_t target_status;
     int target_count;
+    int invalid_target_index;
     int result;
 
     init_error(argv[0]);
@@ -70,13 +72,19 @@ int main(int argc, char *argv[])
     memset(&xpArgs, 0, sizeof(xp_args_t));
     Parse_options(&argc, argv);
     target_count = argc - 1;
-    if (target_count > 0) {
-	targets = Connect_targets_create(target_count, &argv[1],
-					 &connectDefaults);
-	if (targets == NULL) {
-	    error("Invalid or oversized server address");
-	    return 1;
+    target_status = Connect_targets_parse(target_count, &argv[1],
+					  &connectDefaults, &targets,
+					  &invalid_target_index);
+    if (target_status != CONNECT_TARGET_STATUS_OK) {
+	if (invalid_target_index >= 0) {
+	    error("Invalid server target '%s': %s",
+		  argv[invalid_target_index + 1],
+		  Connect_target_status_message(target_status));
+	} else {
+	    error("Cannot prepare server targets: %s",
+		  Connect_target_status_message(target_status));
 	}
+	return 1;
     }
 
     /* CLIENTRANK */

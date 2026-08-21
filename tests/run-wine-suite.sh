@@ -372,8 +372,11 @@ run_contact_target_failover()
 
     timeout 60s "$wine_program" \
         "$build_dir/tests/test-contact-target-probe.exe" \
-        127.0.0.1 "$contact_port" >"$probe_log" 2>&1 \
+        "tcp://127.0.0.1:$contact_port" \
+        "udp://127.0.0.1:$contact_port" >"$probe_log" 2>&1 \
         || fail "TCP target failure did not continue to the UDP target"
+    test "$(grep -Fc 'Contacting server 127.0.0.1.' "$probe_log")" -ge 2 \
+        || fail "contact target probe did not attempt the endpoints"
     grep -Fq '[Contact/Lobby: UDP, Gameplay: UDP]' "$probe_log" \
         || fail "contact target probe did not establish the UDP endpoint"
     stop_server
@@ -474,14 +477,27 @@ run_gameplay_case()
 
     (
         cd "$runtime_package"
-        exec "$wine_program" ./xpilot-ng-sdl.exe \
-            -geometry 800x600 \
-            -join \
-            -port "$contact_port" \
-            -name "$client_name" \
-            -contactTransport "$contact_transport" \
-            -gameTransport "$gameplay_transport" \
-            127.0.0.1
+        case "$contact_transport:$gameplay_transport" in
+        tcp:tcp)
+            exec "$wine_program" ./xpilot-ng-sdl.exe \
+                -geometry 800x600 -join -name "$client_name" \
+                "tcp://127.0.0.1:$contact_port"
+            ;;
+        udp:udp)
+            exec "$wine_program" ./xpilot-ng-sdl.exe \
+                -geometry 800x600 -join -name "$client_name" \
+                -contactTransport tcp -gameTransport tcp \
+                "udp://127.0.0.1:$contact_port"
+            ;;
+        *)
+            exec "$wine_program" ./xpilot-ng-sdl.exe \
+                -geometry 800x600 -join -port "$contact_port" \
+                -name "$client_name" \
+                -contactTransport "$contact_transport" \
+                -gameTransport "$gameplay_transport" \
+                127.0.0.1
+            ;;
+        esac
     ) >"$client_log" 2>&1 &
     client_pid=$!
 

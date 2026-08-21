@@ -390,6 +390,22 @@ stop_local_server()
     server_pid=
 }
 
+run_invalid_target_rejection()
+{
+    invalid_target_log="$runtime_dir/client-invalid-target.log"
+
+    if "$client" -join 'tls://invalid.example' \
+	>"$invalid_target_log" 2>&1; then
+	fail "unsupported target scheme was accepted"
+    fi
+    grep -Fq "Invalid server target 'tls://invalid.example'" \
+	"$invalid_target_log" \
+	|| fail "invalid target diagnostic did not identify the input"
+    grep -Fq 'unsupported scheme; expected tcp:// or udp://' \
+	"$invalid_target_log" \
+	|| fail "invalid target diagnostic did not explain the scheme"
+}
+
 run_contact_target_failover()
 {
     port=$(reserve_contact_port)
@@ -402,9 +418,10 @@ run_contact_target_failover()
     server_pid=$!
     wait_until "contact target failover server readiness" 20 server_ready
 
-    "$contact_target_probe" 127.0.0.1 "$port" >"$probe_log" 2>&1 \
+    "$contact_target_probe" "tcp://127.0.0.1:$port" \
+	"udp://127.0.0.1:$port" >"$probe_log" 2>&1 \
 	|| fail "TCP target failure did not continue to the UDP target"
-    grep -Fq 'Contacting server 127.0.0.1.' "$probe_log" \
+    test "$(grep -Fc 'Contacting server 127.0.0.1.' "$probe_log")" -ge 2 \
 	|| fail "contact target probe did not attempt the endpoints"
     grep -Fq '[Contact/Lobby: UDP, Gameplay: UDP]' "$probe_log" \
 	|| fail "contact target probe did not establish the UDP endpoint"
@@ -498,7 +515,16 @@ run_gameplay_case()
     server_pid=$!
     wait_until "$game_case server readiness" 20 server_ready
 
-    if test "$game_transport" = default \
+    if test "$game_case" = udp-explicit; then
+	"$client" -geometry 800x600 -join \
+	    -name "$game_client_name" \
+	    -contactTransport tcp -gameTransport tcp \
+	    "udp://127.0.0.1:$port" >"$game_client_log" 2>&1 &
+    elif test "$game_case" = tcp-contact; then
+	"$client" -geometry 800x600 -join \
+	    -name "$game_client_name" \
+	    "tcp://127.0.0.1:$port" >"$game_client_log" 2>&1 &
+    elif test "$game_transport" = default \
 	&& test "$contact_transport" = default; then
 	"$client" -geometry 800x600 -join -port "$port" \
 	    -name "$game_client_name" 127.0.0.1 >"$game_client_log" 2>&1 &
@@ -585,7 +611,7 @@ run_gameplay_case()
 run_x11_gameplay_title_case()
 {
     game_case=x11-tcp
-    expected_contact_transport=UDP
+    expected_contact_transport=TCP
     expected_gameplay_transport=TCP
     port=$(reserve_contact_port)
     game_server_log="$runtime_dir/server-$game_case.log"
@@ -593,13 +619,13 @@ run_x11_gameplay_title_case()
     game_client_name=X11TCP
 
     "$server" -map "$map" -port "$port" -noQuit +reportMeta \
-	-gameTransport tcp >"$game_server_log" 2>&1 &
+	-contactTransport tcp -gameTransport tcp >"$game_server_log" 2>&1 &
     server_pid=$!
     wait_until "$game_case server readiness" 20 server_ready
 
-    "$x11_client" -geometry 800x600 -join -port "$port" \
-	-name "$game_client_name" -gameTransport tcp \
-	127.0.0.1 >"$game_client_log" 2>&1 &
+    "$x11_client" -geometry 800x600 -join \
+	-name "$game_client_name" \
+	"tcp://127.0.0.1:$port" >"$game_client_log" 2>&1 &
     client_pid=$!
     window_owner_pid=$client_pid
     wait_until "$game_case game window" 20 find_x11_game_window
@@ -807,6 +833,7 @@ fi
 wait_until "metaserver window teardown" 5 process_window_absent \
     "$finished_meta_pid"
 
+run_invalid_target_rejection
 run_contact_target_failover
 run_gameplay_case tcp tcp no default
 run_gameplay_case udp-default default yes default

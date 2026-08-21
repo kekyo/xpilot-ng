@@ -39,6 +39,26 @@ typedef struct Connect_target {
     game_transport_t game_transport;
 } Connect_target_t;
 
+/** Result of parsing one or more command-line connection targets. */
+typedef enum Connect_target_status {
+    /** Every target was parsed successfully. */
+    CONNECT_TARGET_STATUS_OK = 0,
+    /** A required argument or default setting is invalid. */
+    CONNECT_TARGET_STATUS_INVALID_ARGUMENT,
+    /** A qualified target uses a scheme other than `tcp` or `udp`. */
+    CONNECT_TARGET_STATUS_UNSUPPORTED_SCHEME,
+    /** The target does not contain a host address. */
+    CONNECT_TARGET_STATUS_MISSING_ADDRESS,
+    /** The target contains URI components or address syntax not supported. */
+    CONNECT_TARGET_STATUS_UNSUPPORTED_SYNTAX,
+    /** An explicit port is not an integer in the range 1 through 65535. */
+    CONNECT_TARGET_STATUS_INVALID_PORT,
+    /** The parsed host does not fit in `Connect_target_t`. */
+    CONNECT_TARGET_STATUS_ADDRESS_TOO_LONG,
+    /** Memory for the target array could not be allocated. */
+    CONNECT_TARGET_STATUS_NO_MEMORY
+} Connect_target_status_t;
+
 /**
  * Initialize one connection target with explicit endpoint settings.
  *
@@ -55,19 +75,49 @@ bool Connect_target_init(Connect_target_t *target, const char *address,
                          game_transport_t game_transport);
 
 /**
- * Create connection targets for unqualified command-line addresses.
+ * Parse one command-line connection target.
  *
- * Each returned target receives an independent copy of `defaults`. The caller
- * owns the returned array and must release it with `free()`. A count of zero
- * returns `NULL` without indicating an error.
+ * A bare `HOST` copies all defaults. `tcp://HOST[:PORT]` and
+ * `udp://HOST[:PORT]` select that transport for both contact/lobby and
+ * gameplay. An explicit port overrides the default contact port. Paths,
+ * credentials, queries, fragments, percent encoding, and IPv6 literals are
+ * not supported.
  *
- * @param count Number of addresses.
- * @param addresses Array containing `count` nonempty addresses.
- * @param defaults Default port and transports copied to every target.
- * @return Allocated target array, or `NULL` for invalid input or allocation
- * failure.
+ * @param target Receives the parsed endpoint.
+ * @param specification Target specification from a positional argument.
+ * @param defaults Port and transports used for unqualified values.
+ * @return Detailed parsing status.
  */
-Connect_target_t *Connect_targets_create(int count, char *const *addresses,
-                                         const Connect_defaults_t *defaults);
+Connect_target_status_t Connect_target_parse(
+    Connect_target_t *target, const char *specification,
+    const Connect_defaults_t *defaults);
+
+/**
+ * Parse an ordered array of command-line connection targets.
+ *
+ * On success, the caller owns `*targets` and must release it with `free()`.
+ * A count of zero succeeds with `*targets` set to `NULL`. On failure, no
+ * partial array is returned and `invalid_index` identifies the rejected
+ * specification, or is set to `-1` for an argument or allocation failure.
+ *
+ * @param count Number of target specifications.
+ * @param specifications Array containing `count` target specifications.
+ * @param defaults Default port and transports.
+ * @param targets Receives the allocated target array or `NULL`.
+ * @param invalid_index Receives the rejected specification index or `-1`.
+ * @return Detailed parsing or allocation status.
+ */
+Connect_target_status_t Connect_targets_parse(
+    int count, char *const *specifications,
+    const Connect_defaults_t *defaults, Connect_target_t **targets,
+    int *invalid_index);
+
+/**
+ * Return a user-facing explanation for a connection target status.
+ *
+ * @param status Status returned by a connection target parser.
+ * @return Static English text describing the status.
+ */
+const char *Connect_target_status_message(Connect_target_status_t status);
 
 #endif /* CONNECT_TARGET_H */

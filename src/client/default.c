@@ -639,7 +639,8 @@ xp_option_t default_options[] = {
 	&connectDefaults.contact_port,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Set the contact port number of the server.\n"
+	"Set the default contact port number for direct server targets.\n"
+	"A port in tcp://HOST:PORT or udp://HOST:PORT overrides this value.\n"
 	"Almost all servers use the default port, which is the recommended\n"
 	"policy.  You can find out about which port is used by a server by\n"
 	"querying the XPilot Meta server.\n"),
@@ -937,7 +938,8 @@ xp_option_t default_options[] = {
 	NULL, 0,
 	Set_contactTransport, NULL, Get_contactTransport,
 	XP_OPTFLAG_KEEP,
-	"Contact and lobby transport for direct server connections: udp or tcp.\n"
+	"Default contact and lobby transport for bare server targets: udp or tcp.\n"
+	"A tcp:// or udp:// target selects both transports for that target.\n"
 	"Direct connections must match the server; metaserver selections apply "
 	"the advertised value.\n"),
 
@@ -947,7 +949,8 @@ xp_option_t default_options[] = {
 	NULL, 0,
 	Set_gameTransport, NULL, Get_gameTransport,
 	XP_OPTFLAG_KEEP,
-	"Gameplay transport to use when joining servers: udp or tcp.\n"
+	"Default gameplay transport for bare server targets: udp or tcp.\n"
+	"A tcp:// or udp:// target selects both transports for that target.\n"
 	"Direct connections must match the server; metaserver selections apply "
 	"the advertised value.\n"),
 

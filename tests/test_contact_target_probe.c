@@ -1,34 +1,25 @@
 #include "xpclient.h"
 
-#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
 int clientPortStart;
 int clientPortEnd;
 
-static int parse_port(const char *text, int *port)
-{
-    char *end;
-    long value;
-
-    errno = 0;
-    value = strtol(text, &end, 10);
-    if (errno != 0 || end == text || *end != '\0'
-        || value <= 0 || value > 65535)
-        return -1;
-    *port = (int)value;
-    return 0;
-}
-
 int main(int argc, char **argv)
 {
     Connect_param_t connection;
-    Connect_target_t targets[2];
-    int contact_port;
+    Connect_defaults_t defaults = {
+        1,
+        GAME_TRANSPORT_UDP,
+        GAME_TRANSPORT_TCP
+    };
+    Connect_target_t *targets;
+    Connect_target_status_t status;
+    int invalid_index;
     int result;
 
-    if (argc != 3 || parse_port(argv[2], &contact_port) != 0)
+    if (argc != 3)
         return 2;
     init_error(argv[0]);
     if (sock_startup() != 0)
@@ -45,15 +36,15 @@ int main(int argc, char **argv)
             sizeof(connection.disp_name));
     connection.team = TEAM_NOT_SET;
 
-    if (!Connect_target_init(&targets[0], argv[1], contact_port,
-                             GAME_TRANSPORT_TCP, GAME_TRANSPORT_TCP)
-        || !Connect_target_init(&targets[1], argv[1], contact_port,
-                                GAME_TRANSPORT_UDP, GAME_TRANSPORT_UDP)) {
+    status = Connect_targets_parse(2, &argv[1], &defaults, &targets,
+                                   &invalid_index);
+    if (status != CONNECT_TARGET_STATUS_OK) {
         sock_cleanup();
         return 4;
     }
 
     result = Contact_servers(2, targets, 1, 0, 0, NULL, &connection);
+    free(targets);
     sock_cleanup();
     if (!result)
         return 5;
