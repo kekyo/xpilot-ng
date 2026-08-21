@@ -36,8 +36,9 @@ client="${XPILOT_TEST_BINDIR:?XPILOT_TEST_BINDIR is required}/xpilot-ng-sdl"
 x11_client="${XPILOT_TEST_BINDIR}/xpilot-ng-x11"
 server="${XPILOT_TEST_BINDIR}/xpilot-ng-server"
 map="${XPILOT_TEST_PKGDATADIR:?XPILOT_TEST_PKGDATADIR is required}/maps/ndh.xp2"
+contact_target_probe="${XPILOT_CONTACT_TARGET_PROBE:?XPILOT_CONTACT_TARGET_PROBE is required}"
 
-for required_file in "$client" "$server" "$map"; do
+for required_file in "$client" "$server" "$map" "$contact_target_probe"; do
     if test ! -r "$required_file"; then
         echo "Installed E2E input is missing: $required_file" >&2
         exit 1
@@ -387,6 +388,27 @@ stop_local_server()
     wait_until "server shutdown" 10 process_stopped "$server_pid"
     wait "$server_pid" 2>/dev/null || true
     server_pid=
+}
+
+run_contact_target_failover()
+{
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-contact-target-failover.log"
+    probe_log="$runtime_dir/contact-target-failover.log"
+
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	-contactTransport udp -gameTransport udp \
+	>"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "contact target failover server readiness" 20 server_ready
+
+    "$contact_target_probe" 127.0.0.1 "$port" >"$probe_log" 2>&1 \
+	|| fail "TCP target failure did not continue to the UDP target"
+    grep -Fq 'Contacting server 127.0.0.1.' "$probe_log" \
+	|| fail "contact target probe did not attempt the endpoints"
+    grep -Fq '[Contact/Lobby: UDP, Gameplay: UDP]' "$probe_log" \
+	|| fail "contact target probe did not establish the UDP endpoint"
+    stop_local_server
 }
 
 run_recording_playback()
@@ -785,6 +807,7 @@ fi
 wait_until "metaserver window teardown" 5 process_window_absent \
     "$finished_meta_pid"
 
+run_contact_target_failover
 run_gameplay_case tcp tcp no default
 run_gameplay_case udp-default default yes default
 run_gameplay_case udp-explicit udp no default

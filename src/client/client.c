@@ -30,6 +30,7 @@ client_data_t	clData = { 0, };
 char	*geometry;
 xp_args_t xpArgs;
 Connect_param_t connectParam;
+Connect_defaults_t connectDefaults;
 
 bool	newbie;
 int	baseWarningType;	/* Which type of base warning you prefer */

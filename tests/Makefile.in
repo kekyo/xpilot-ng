@@ -89,8 +89,10 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 check_PROGRAMS = test-framed-stream$(EXEEXT) \
-	test-game-transport$(EXEEXT) test-transport-display$(EXEEXT) \
-	test-socket-io$(EXEEXT) test-native-socket-handle$(EXEEXT) \
+	test-game-transport$(EXEEXT) test-connect-target$(EXEEXT) \
+	test-contact-target-probe$(EXEEXT) \
+	test-transport-display$(EXEEXT) test-socket-io$(EXEEXT) \
+	test-native-socket-handle$(EXEEXT) \
 	test-meta-environment$(EXEEXT) test-sdl-versions$(EXEEXT) \
 	test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
@@ -118,8 +120,8 @@ check_PROGRAMS = test-framed-stream$(EXEEXT) \
 	test-text-ttf-atlas$(EXEEXT) test-text-renderer$(EXEEXT) \
 	test-text-cache-adapter$(EXEEXT)
 TESTS = test-framed-stream$(EXEEXT) test-game-transport$(EXEEXT) \
-	test-transport-display$(EXEEXT) test-socket-io$(EXEEXT) \
-	test-native-socket-handle$(EXEEXT) \
+	test-connect-target$(EXEEXT) test-transport-display$(EXEEXT) \
+	test-socket-io$(EXEEXT) test-native-socket-handle$(EXEEXT) \
 	test-meta-environment$(EXEEXT) test-sdl-versions$(EXEEXT) \
 	test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
 	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
@@ -157,6 +159,18 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+am_test_connect_target_OBJECTS = test_connect_target.$(OBJEXT) \
+	connect_target.$(OBJEXT)
+test_connect_target_OBJECTS = $(am_test_connect_target_OBJECTS)
+test_connect_target_DEPENDENCIES =  \
+	$(top_builddir)/src/common/libxpcommon.a
+am_test_contact_target_probe_OBJECTS =  \
+	test_contact_target_probe.$(OBJEXT) win32hacks.$(OBJEXT)
+test_contact_target_probe_OBJECTS =  \
+	$(am_test_contact_target_probe_OBJECTS)
+test_contact_target_probe_DEPENDENCIES =  \
+	$(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a
 am_test_framed_stream_OBJECTS = test_framed_stream.$(OBJEXT)
 test_framed_stream_OBJECTS = $(am_test_framed_stream_OBJECTS)
 test_framed_stream_DEPENDENCIES =  \
@@ -214,6 +228,7 @@ test_images_DEPENDENCIES =
 am_test_meta_environment_OBJECTS =  \
 	test_meta_environment-test_meta_environment.$(OBJEXT) \
 	test_meta_environment-meta.$(OBJEXT) \
+	test_meta_environment-connect_target.$(OBJEXT) \
 	test_meta_environment-transport_display.$(OBJEXT) \
 	test_meta_environment-game_transport.$(OBJEXT) \
 	test_meta_environment-list.$(OBJEXT) \
@@ -464,7 +479,8 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
+am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
+	./$(DEPDIR)/connect_target.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/image_geometry.Po ./$(DEPDIR)/paint_transform.Po \
 	./$(DEPDIR)/polygon_geometry.Po ./$(DEPDIR)/renderer.Po \
 	./$(DEPDIR)/renderer_gl_core.Po ./$(DEPDIR)/sdlclipboard.Po \
@@ -472,6 +488,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/sdlgameframe.Po ./$(DEPDIR)/sdlkeys.Po \
 	./$(DEPDIR)/sdlmetaframe.Po ./$(DEPDIR)/sdlrenderer.Po \
 	./$(DEPDIR)/sdlwindow.Po ./$(DEPDIR)/surface_rgba8.Po \
+	./$(DEPDIR)/test_connect_target.Po \
+	./$(DEPDIR)/test_contact_target_probe.Po \
 	./$(DEPDIR)/test_framed_stream.Po \
 	./$(DEPDIR)/test_game_transport.Po \
 	./$(DEPDIR)/test_gfx2d_picture.Po \
@@ -492,6 +510,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_images-images.Po \
 	./$(DEPDIR)/test_images-strdup.Po \
 	./$(DEPDIR)/test_images-test_images.Po \
+	./$(DEPDIR)/test_meta_environment-connect_target.Po \
 	./$(DEPDIR)/test_meta_environment-game_transport.Po \
 	./$(DEPDIR)/test_meta_environment-list.Po \
 	./$(DEPDIR)/test_meta_environment-meta.Po \
@@ -564,7 +583,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po \
 	./$(DEPDIR)/test_transport_display.Po \
 	./$(DEPDIR)/text_atlas.Po ./$(DEPDIR)/text_geometry.Po \
-	./$(DEPDIR)/text_renderer.Po ./$(DEPDIR)/transport_display.Po
+	./$(DEPDIR)/text_renderer.Po ./$(DEPDIR)/transport_display.Po \
+	./$(DEPDIR)/win32hacks.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -582,7 +602,9 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
-SOURCES = $(test_framed_stream_SOURCES) $(test_game_transport_SOURCES) \
+SOURCES = $(test_connect_target_SOURCES) \
+	$(test_contact_target_probe_SOURCES) \
+	$(test_framed_stream_SOURCES) $(test_game_transport_SOURCES) \
 	$(test_gfx2d_picture_SOURCES) \
 	$(test_gl_core_resources_SOURCES) \
 	$(test_glwidgets_primitives_SOURCES) \
@@ -617,8 +639,10 @@ SOURCES = $(test_framed_stream_SOURCES) $(test_game_transport_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES) \
 	$(test_transport_display_SOURCES)
-DIST_SOURCES = $(test_framed_stream_SOURCES) \
-	$(test_game_transport_SOURCES) $(test_gfx2d_picture_SOURCES) \
+DIST_SOURCES = $(test_connect_target_SOURCES) \
+	$(test_contact_target_probe_SOURCES) \
+	$(test_framed_stream_SOURCES) $(test_game_transport_SOURCES) \
+	$(test_gfx2d_picture_SOURCES) \
 	$(test_gl_core_resources_SOURCES) \
 	$(test_glwidgets_primitives_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
@@ -1020,6 +1044,17 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
+test_connect_target_SOURCES = test_connect_target.c \
+	$(top_srcdir)/src/client/connect_target.c
+
+test_connect_target_LDADD = $(top_builddir)/src/common/libxpcommon.a
+test_contact_target_probe_SOURCES = test_contact_target_probe.c \
+	$(top_srcdir)/src/client/sdl/win32hacks.c
+
+test_contact_target_probe_LDADD = \
+	$(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a @W32_LIBS@
+
 test_transport_display_SOURCES = test_transport_display.c \
 	$(top_srcdir)/src/client/transport_display.c
 
@@ -1035,6 +1070,7 @@ test_native_socket_handle_SOURCES = test_native_socket_handle.c
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
 	$(top_srcdir)/src/client/meta_test_support.h \
+	$(top_srcdir)/src/client/connect_target.c \
 	$(top_srcdir)/src/client/transport_display.c \
 	$(top_srcdir)/src/common/game_transport.c \
 	$(top_srcdir)/src/common/list.c \
@@ -1436,6 +1472,8 @@ AM_TESTS_ENVIRONMENT = \
 	XPILOT_TEST_PREFIX='$(prefix)'; export XPILOT_TEST_PREFIX; \
 	XPILOT_TEST_BINDIR='$(bindir)'; export XPILOT_TEST_BINDIR; \
 	XPILOT_TEST_PKGDATADIR='$(pkgdatadir)'; export XPILOT_TEST_PKGDATADIR; \
+	XPILOT_CONTACT_TARGET_PROBE='$(abs_builddir)/test-contact-target-probe'; \
+	export XPILOT_CONTACT_TARGET_PROBE; \
 	XPILOT_GL_CORE_RESOURCE_TEST_BINARY='$(abs_builddir)/test-gl-core-resources'; \
 	export XPILOT_GL_CORE_RESOURCE_TEST_BINARY; \
 	XPILOT_RENDERER_GL_CORE_TEST_BINARY='$(abs_builddir)/test-renderer-gl-core'; \
@@ -1493,6 +1531,14 @@ $(am__aclocal_m4_deps):
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
+
+test-connect-target$(EXEEXT): $(test_connect_target_OBJECTS) $(test_connect_target_DEPENDENCIES) $(EXTRA_test_connect_target_DEPENDENCIES)
+	@rm -f test-connect-target$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_connect_target_OBJECTS) $(test_connect_target_LDADD) $(LIBS)
+
+test-contact-target-probe$(EXEEXT): $(test_contact_target_probe_OBJECTS) $(test_contact_target_probe_DEPENDENCIES) $(EXTRA_test_contact_target_probe_DEPENDENCIES)
+	@rm -f test-contact-target-probe$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_contact_target_probe_OBJECTS) $(test_contact_target_probe_LDADD) $(LIBS)
 
 test-framed-stream$(EXEEXT): $(test_framed_stream_OBJECTS) $(test_framed_stream_DEPENDENCIES) $(EXTRA_test_framed_stream_DEPENDENCIES)
 	@rm -f test-framed-stream$(EXEEXT)
@@ -1685,6 +1731,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SDL_console.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/connect_target.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gfx2d.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/image_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/paint_transform.Po@am__quote@ # am--include-marker
@@ -1700,6 +1747,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlrenderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlwindow.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/surface_rgba8.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_connect_target.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_contact_target_probe.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_framed_stream.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_game_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gfx2d_picture.Po@am__quote@ # am--include-marker
@@ -1720,6 +1769,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-images.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-strdup.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_images-test_images.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-connect_target.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-game_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-list.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-meta.Po@am__quote@ # am--include-marker
@@ -1796,6 +1846,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/transport_display.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/win32hacks.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -1816,6 +1867,34 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+connect_target.o: $(top_srcdir)/src/client/connect_target.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT connect_target.o -MD -MP -MF $(DEPDIR)/connect_target.Tpo -c -o connect_target.o `test -f '$(top_srcdir)/src/client/connect_target.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/connect_target.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/connect_target.Tpo $(DEPDIR)/connect_target.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/connect_target.c' object='connect_target.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o connect_target.o `test -f '$(top_srcdir)/src/client/connect_target.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/connect_target.c
+
+connect_target.obj: $(top_srcdir)/src/client/connect_target.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT connect_target.obj -MD -MP -MF $(DEPDIR)/connect_target.Tpo -c -o connect_target.obj `if test -f '$(top_srcdir)/src/client/connect_target.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/connect_target.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/connect_target.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/connect_target.Tpo $(DEPDIR)/connect_target.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/connect_target.c' object='connect_target.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o connect_target.obj `if test -f '$(top_srcdir)/src/client/connect_target.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/connect_target.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/connect_target.c'; fi`
+
+win32hacks.o: $(top_srcdir)/src/client/sdl/win32hacks.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT win32hacks.o -MD -MP -MF $(DEPDIR)/win32hacks.Tpo -c -o win32hacks.o `test -f '$(top_srcdir)/src/client/sdl/win32hacks.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/win32hacks.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/win32hacks.Tpo $(DEPDIR)/win32hacks.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/win32hacks.c' object='win32hacks.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o win32hacks.o `test -f '$(top_srcdir)/src/client/sdl/win32hacks.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/win32hacks.c
+
+win32hacks.obj: $(top_srcdir)/src/client/sdl/win32hacks.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT win32hacks.obj -MD -MP -MF $(DEPDIR)/win32hacks.Tpo -c -o win32hacks.obj `if test -f '$(top_srcdir)/src/client/sdl/win32hacks.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/win32hacks.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/win32hacks.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/win32hacks.Tpo $(DEPDIR)/win32hacks.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/win32hacks.c' object='win32hacks.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o win32hacks.obj `if test -f '$(top_srcdir)/src/client/sdl/win32hacks.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/win32hacks.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/win32hacks.c'; fi`
 
 gfx2d.o: $(top_srcdir)/src/client/gfx2d.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT gfx2d.o -MD -MP -MF $(DEPDIR)/gfx2d.Tpo -c -o gfx2d.o `test -f '$(top_srcdir)/src/client/gfx2d.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/gfx2d.c
@@ -2096,6 +2175,20 @@ test_meta_environment-meta.obj: $(top_srcdir)/src/client/meta.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/meta.c' object='test_meta_environment-meta.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-meta.obj `if test -f '$(top_srcdir)/src/client/meta.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/meta.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/meta.c'; fi`
+
+test_meta_environment-connect_target.o: $(top_srcdir)/src/client/connect_target.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-connect_target.o -MD -MP -MF $(DEPDIR)/test_meta_environment-connect_target.Tpo -c -o test_meta_environment-connect_target.o `test -f '$(top_srcdir)/src/client/connect_target.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/connect_target.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_meta_environment-connect_target.Tpo $(DEPDIR)/test_meta_environment-connect_target.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/connect_target.c' object='test_meta_environment-connect_target.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-connect_target.o `test -f '$(top_srcdir)/src/client/connect_target.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/connect_target.c
+
+test_meta_environment-connect_target.obj: $(top_srcdir)/src/client/connect_target.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-connect_target.obj -MD -MP -MF $(DEPDIR)/test_meta_environment-connect_target.Tpo -c -o test_meta_environment-connect_target.obj `if test -f '$(top_srcdir)/src/client/connect_target.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/connect_target.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/connect_target.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_meta_environment-connect_target.Tpo $(DEPDIR)/test_meta_environment-connect_target.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/connect_target.c' object='test_meta_environment-connect_target.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-connect_target.obj `if test -f '$(top_srcdir)/src/client/connect_target.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/connect_target.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/connect_target.c'; fi`
 
 test_meta_environment-transport_display.o: $(top_srcdir)/src/client/transport_display.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-transport_display.o -MD -MP -MF $(DEPDIR)/test_meta_environment-transport_display.Tpo -c -o test_meta_environment-transport_display.o `test -f '$(top_srcdir)/src/client/transport_display.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/transport_display.c
@@ -3228,6 +3321,13 @@ test-game-transport.log: test-game-transport$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-connect-target.log: test-connect-target$(EXEEXT)
+	@p='test-connect-target$(EXEEXT)'; \
+	b='test-connect-target'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-transport-display.log: test-transport-display$(EXEEXT)
 	@p='test-transport-display$(EXEEXT)'; \
 	b='test-transport-display'; \
@@ -3607,6 +3707,7 @@ clean-am: clean-checkPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/SDL_console.Po
+	-rm -f ./$(DEPDIR)/connect_target.Po
 	-rm -f ./$(DEPDIR)/gfx2d.Po
 	-rm -f ./$(DEPDIR)/image_geometry.Po
 	-rm -f ./$(DEPDIR)/paint_transform.Po
@@ -3622,6 +3723,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/sdlwindow.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
+	-rm -f ./$(DEPDIR)/test_connect_target.Po
+	-rm -f ./$(DEPDIR)/test_contact_target_probe.Po
 	-rm -f ./$(DEPDIR)/test_framed_stream.Po
 	-rm -f ./$(DEPDIR)/test_game_transport.Po
 	-rm -f ./$(DEPDIR)/test_gfx2d_picture.Po
@@ -3642,6 +3745,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_images-images.Po
 	-rm -f ./$(DEPDIR)/test_images-strdup.Po
 	-rm -f ./$(DEPDIR)/test_images-test_images.Po
+	-rm -f ./$(DEPDIR)/test_meta_environment-connect_target.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-game_transport.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-list.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-meta.Po
@@ -3718,6 +3822,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/text_geometry.Po
 	-rm -f ./$(DEPDIR)/text_renderer.Po
 	-rm -f ./$(DEPDIR)/transport_display.Po
+	-rm -f ./$(DEPDIR)/win32hacks.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -3764,6 +3869,7 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/SDL_console.Po
+	-rm -f ./$(DEPDIR)/connect_target.Po
 	-rm -f ./$(DEPDIR)/gfx2d.Po
 	-rm -f ./$(DEPDIR)/image_geometry.Po
 	-rm -f ./$(DEPDIR)/paint_transform.Po
@@ -3779,6 +3885,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/sdlwindow.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
+	-rm -f ./$(DEPDIR)/test_connect_target.Po
+	-rm -f ./$(DEPDIR)/test_contact_target_probe.Po
 	-rm -f ./$(DEPDIR)/test_framed_stream.Po
 	-rm -f ./$(DEPDIR)/test_game_transport.Po
 	-rm -f ./$(DEPDIR)/test_gfx2d_picture.Po
@@ -3799,6 +3907,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_images-images.Po
 	-rm -f ./$(DEPDIR)/test_images-strdup.Po
 	-rm -f ./$(DEPDIR)/test_images-test_images.Po
+	-rm -f ./$(DEPDIR)/test_meta_environment-connect_target.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-game_transport.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-list.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-meta.Po
@@ -3875,6 +3984,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/text_geometry.Po
 	-rm -f ./$(DEPDIR)/text_renderer.Po
 	-rm -f ./$(DEPDIR)/transport_display.Po
+	-rm -f ./$(DEPDIR)/win32hacks.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

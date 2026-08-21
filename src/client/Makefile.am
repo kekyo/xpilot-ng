@@ -6,7 +6,7 @@ noinst_LIBRARIES = libxpclient.a
 libxpclient_a_SOURCES = \
 	client.c client.h \
 	clientcommand.c clientcommand.h clientrank.c clientrank.h \
-	configure.h connectparam.h \
+	configure.h connectparam.h connect_target.c connect_target.h \
 	datagram.c datagram.h default.c \
 	event.c \
 	gfx2d.c gfx2d.h \

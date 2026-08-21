@@ -1025,20 +1025,20 @@ static GLWidget *Init_MetaWidget(SdlRenderer *sdl_renderer,
 
 static bool join_server(Connect_param_t *conpar, server_info_t *sip)
 {
-    char *server_addr_ptr = conpar->server_addr;
+    Connect_param_t attempt = *conpar;
+    Connect_target_t target;
 
-    Meta_select_server_transports(sip);
-    strlcpy(conpar->server_name, sip->hostname,
-            sizeof(conpar->server_name));
-    strlcpy(conpar->server_addr, sip->ip_str, sizeof(conpar->server_addr));
-    conpar->contact_port = sip->port;
-    if (Contact_servers(1, &server_addr_ptr, 1, 0, 0, NULL,
-			0, NULL, NULL, NULL, NULL, conpar)) {
+    if (!Meta_server_to_connect_target(sip, &target)) {
+	printf("Server %s has an invalid connection endpoint\n",
+	       sip->hostname);
+	return false;
+    }
+    if (Contact_servers(1, &target, 1, 0, 0, NULL, &attempt)) {
+	*conpar = attempt;
 	return true;
     }
     printf("Server %s (%s) didn't respond on port %d\n",
-	   conpar->server_name, conpar->server_addr,
-	   conpar->contact_port);
+	   sip->hostname, target.address, target.contact_port);
     return false;
 }
 

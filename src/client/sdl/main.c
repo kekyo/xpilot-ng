@@ -49,6 +49,8 @@ const char *Program_name(void)
 int main(int argc, char *argv[])
 {
     bool auto_shutdown = false;
+    Connect_target_t *targets = NULL;
+    int target_count;
     int result;
 
     init_error(argv[0]);
@@ -56,7 +58,6 @@ int main(int argc, char *argv[])
     seedMT((unsigned)time(NULL) ^ Get_process_id());
 
     memset(&connectParam, 0, sizeof(Connect_param_t));
-    connectParam.contact_port = SERVER_PORT;
     connectParam.team = TEAM_NOT_SET;
 
     Store_default_options();
@@ -68,6 +69,15 @@ int main(int argc, char *argv[])
 
     memset(&xpArgs, 0, sizeof(xp_args_t));
     Parse_options(&argc, argv);
+    target_count = argc - 1;
+    if (target_count > 0) {
+	targets = Connect_targets_create(target_count, &argv[1],
+					 &connectDefaults);
+	if (targets == NULL) {
+	    error("Invalid or oversized server address");
+	    return 1;
+	}
+    }
 
     /* CLIENTRANK */
     Init_saved_scores();
@@ -78,11 +88,20 @@ int main(int argc, char *argv[])
     }
 
     if (xpArgs.text || xpArgs.auto_connect || argv[1]) {
-	if (!Contact_servers(argc - 1, &argv[1],
-			     xpArgs.auto_connect, xpArgs.list_servers,
-			     auto_shutdown, xpArgs.shutdown_reason,
-			     0, NULL, NULL, NULL, NULL,
-			     &connectParam))
+	int contacted = target_count > 0
+	    ? Contact_servers(target_count, targets,
+			      xpArgs.auto_connect, xpArgs.list_servers,
+			      auto_shutdown, xpArgs.shutdown_reason,
+			      &connectParam)
+	    : Contact_local_servers(&connectDefaults,
+				    xpArgs.auto_connect, xpArgs.list_servers,
+				    auto_shutdown, xpArgs.shutdown_reason,
+				    0, NULL, NULL, NULL, NULL,
+				    &connectParam);
+
+	free(targets);
+	targets = NULL;
+	if (!contacted)
 	    return 0;
 	if (Init_window()) {
 	    error("Could not initialize SDL, check your settings.");
@@ -109,8 +128,8 @@ int main(int argc, char *argv[])
 	exit(1);
     }
 
-    
-    if (Net_init(connectParam.server_addr, connectParam.login_port)) {
+    if (Net_init(connectParam.server_addr, connectParam.login_port,
+		 connectParam.game_transport)) {
 	error("failed to initialize networking"); 
 	exit(1);
     }

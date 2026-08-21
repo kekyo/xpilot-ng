@@ -459,7 +459,7 @@ int Net_verify(char *user_name, char *nick_name, char *disp)
  * 3) cbuf receives the protocol's reliable data stream copied from the
  *    logical packets in rbuf.
  */
-int Net_init(char *server, int port)
+int Net_init(char *server, int port, game_transport_t transport)
 {
     int			i;
     int			transport_state;
@@ -478,23 +478,23 @@ int Net_init(char *server, int port)
     server_display.num_spark_colors = 0;
 
     Receive_init();
-    transport_state = gameTransport == GAME_TRANSPORT_TCP
+    transport_state = transport == GAME_TRANSPORT_TCP
 	? SOCKBUF_FRAMED : SOCKBUF_DGRAM;
     if (!clientPortStart || !clientPortEnd ||
 	(clientPortStart > clientPortEnd)) {
-	int status = gameTransport == GAME_TRANSPORT_TCP
+	int status = transport == GAME_TRANSPORT_TCP
 	    ? sock_open_tcp_bound(&sock, NULL, 0)
 	    : sock_open_udp(&sock, NULL, 0);
 
 	if (status == SOCK_IS_ERROR) {
 	    error("Cannot create %s gameplay socket (%d)",
-		  Game_transport_name(gameTransport), sock.error.error);
+		  Game_transport_name(transport), sock.error.error);
 	    return -1;
 	}
     } else {
 	int found_socket = 0;
 	for (i = clientPortStart; i <= clientPortEnd; i++) {
-	    int status = gameTransport == GAME_TRANSPORT_TCP
+	    int status = transport == GAME_TRANSPORT_TCP
 		? sock_open_tcp_bound(&sock, NULL, i)
 		: sock_open_udp(&sock, NULL, i);
 
@@ -514,7 +514,7 @@ int Net_init(char *server, int port)
 	sock_close(&sock);
 	return -1;
     }
-    if (gameTransport == GAME_TRANSPORT_TCP
+    if (transport == GAME_TRANSPORT_TCP
 	&& sock_set_tcp_nodelay(&sock, 1) == SOCK_IS_ERROR) {
 	error("Can't disable TCP write coalescing");
 	sock_close(&sock);

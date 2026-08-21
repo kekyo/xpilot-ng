@@ -8,6 +8,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	@GL_CFLAGS@
 
 check_PROGRAMS = test-framed-stream test-game-transport \
+	test-connect-target test-contact-target-probe \
 	test-transport-display test-socket-io \
 	test-native-socket-handle \
 	test-meta-environment test-sdl-versions \
@@ -27,7 +28,8 @@ check_PROGRAMS = test-framed-stream test-game-transport \
 	test-sdlgui-polygons test-sdlgui-sparks test-sdlgui-ships \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
-TESTS = test-framed-stream test-game-transport test-transport-display \
+TESTS = test-framed-stream test-game-transport test-connect-target \
+	test-transport-display \
 	test-socket-io \
 	test-native-socket-handle \
 	test-meta-environment test-sdl-versions \
@@ -55,6 +57,16 @@ TESTS = test-framed-stream test-game-transport test-transport-display \
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
 
+test_connect_target_SOURCES = test_connect_target.c \
+	$(top_srcdir)/src/client/connect_target.c
+test_connect_target_LDADD = $(top_builddir)/src/common/libxpcommon.a
+
+test_contact_target_probe_SOURCES = test_contact_target_probe.c \
+	$(top_srcdir)/src/client/sdl/win32hacks.c
+test_contact_target_probe_LDADD = \
+	$(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a @W32_LIBS@
+
 test_transport_display_SOURCES = test_transport_display.c \
 	$(top_srcdir)/src/client/transport_display.c
 
@@ -71,6 +83,7 @@ test_native_socket_handle_SOURCES = test_native_socket_handle.c
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
 	$(top_srcdir)/src/client/meta_test_support.h \
+	$(top_srcdir)/src/client/connect_target.c \
 	$(top_srcdir)/src/client/transport_display.c \
 	$(top_srcdir)/src/common/game_transport.c \
 	$(top_srcdir)/src/common/list.c \
@@ -430,6 +443,8 @@ AM_TESTS_ENVIRONMENT = \
 	XPILOT_TEST_PREFIX='$(prefix)'; export XPILOT_TEST_PREFIX; \
 	XPILOT_TEST_BINDIR='$(bindir)'; export XPILOT_TEST_BINDIR; \
 	XPILOT_TEST_PKGDATADIR='$(pkgdatadir)'; export XPILOT_TEST_PKGDATADIR; \
+	XPILOT_CONTACT_TARGET_PROBE='$(abs_builddir)/test-contact-target-probe'; \
+	export XPILOT_CONTACT_TARGET_PROBE; \
 	XPILOT_GL_CORE_RESOURCE_TEST_BINARY='$(abs_builddir)/test-gl-core-resources'; \
 	export XPILOT_GL_CORE_RESOURCE_TEST_BINARY; \
 	XPILOT_RENDERER_GL_CORE_TEST_BINARY='$(abs_builddir)/test-renderer-gl-core'; \

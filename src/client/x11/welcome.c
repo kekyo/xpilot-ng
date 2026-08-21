@@ -339,9 +339,9 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 	name_ptrs[i] = &server_names[i * MAX_HOST_LEN];
 	addr_ptrs[i] = &server_addrs[i * MAX_HOST_LEN];
     }
-    Contact_servers(0, NULL, 0, 2, 0, NULL,
-		    MAX_LOCAL_SERVERS, &n,
-		    addr_ptrs, name_ptrs, server_versions, conpar);
+    Contact_local_servers(&connectDefaults, 0, 2, 0, NULL,
+			  MAX_LOCAL_SERVERS, &n,
+			  addr_ptrs, name_ptrs, server_versions, conpar);
     LIMIT(n, 0, MAX_LOCAL_SERVERS);
 
     Widget_destroy_children(subform_widget);
@@ -387,6 +387,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 		    MAX_HOST_LEN);
 	    strlcpy(localnet_conpars[i].server_addr, addr_ptrs[i],
 		    MAX_HOST_LEN);
+	    localnet_conpars[i].contact_port = connectDefaults.contact_port;
 	    localnet_conpars[i].server_version = server_versions[i];
 	    localnet_conpars[i].contact_transport = GAME_TRANSPORT_UDP;
 	    if (!Game_transport_from_protocol_version(
@@ -460,28 +461,26 @@ static int Internet_server_join_cb(int widget, void *user_data,
     server_info_t *sip = (server_info_t *) user_data;
     struct Connect_param connect_param;
     struct Connect_param *conpar = &connect_param;
+    Connect_target_t target;
     int result;
-    char *server_addr_ptr = conpar->server_addr;
 
     UNUSED_PARAM(widget); UNUSED_PARAM(text);
 
     /* structure copy */
     *conpar = *global_conpar;
-    Meta_select_server_transports(sip);
-    strlcpy(conpar->server_name, sip->hostname,
-	    sizeof(conpar->server_name));
-    strlcpy(conpar->server_addr, sip->ip_str, sizeof(conpar->server_addr));
-    conpar->contact_port = sip->port;
-    result = Contact_servers(1, &server_addr_ptr, 1, 0, 0, NULL,
-			     0, NULL, NULL, NULL, NULL, conpar);
+    if (!Meta_server_to_connect_target(sip, &target)) {
+	printf("Server %s has an invalid connection endpoint\n",
+	       sip->hostname);
+	return 0;
+    }
+    result = Contact_servers(1, &target, 1, 0, 0, NULL, conpar);
     if (result) {
 	/* structure copy */
 	*global_conpar = *conpar;
 	joining = true;
     } else {
 	printf("Server %s (%s) didn't respond on port %d\n",
-	       conpar->server_name, conpar->server_addr,
-	       conpar->contact_port);
+	       sip->hostname, target.address, target.contact_port);
     }
 
     return 0;

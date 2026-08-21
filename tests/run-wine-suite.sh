@@ -122,6 +122,8 @@ if test "$inside_xvfb" = false; then
     "$make_program" -C "$build_dir/tests" "-j$jobs" \
         test-framed-stream.exe \
         test-game-transport.exe \
+        test-connect-target.exe \
+        test-contact-target-probe.exe \
         test-transport-display.exe \
         test-socket-io.exe \
         test-sdl-versions.exe \
@@ -351,6 +353,32 @@ stop_server()
     server_pid=
 }
 
+run_contact_target_failover()
+{
+    contact_port=$(reserve_contact_port)
+    server_log="$runtime_dir/server-contact-target-failover.log"
+    probe_log="$runtime_dir/contact-target-failover.log"
+
+    (
+        cd "$runtime_package"
+        exec "$wine_program" ./xpilot-ng-server.exe \
+            -map lib/maps/ndh.xp2 \
+            -port "$contact_port" \
+            -noQuit +reportMeta \
+            -contactTransport udp -gameTransport udp
+    ) >"$server_log" 2>&1 &
+    server_pid=$!
+    wait_until "contact target failover server readiness" 30 server_ready
+
+    timeout 60s "$wine_program" \
+        "$build_dir/tests/test-contact-target-probe.exe" \
+        127.0.0.1 "$contact_port" >"$probe_log" 2>&1 \
+        || fail "TCP target failure did not continue to the UDP target"
+    grep -Fq '[Contact/Lobby: UDP, Gameplay: UDP]' "$probe_log" \
+        || fail "contact target probe did not establish the UDP endpoint"
+    stop_server
+}
+
 run_meta_report_case()
 {
     node -e '
@@ -516,12 +544,13 @@ timeout 60s "$wineboot_program" -u >"$runtime_dir/wineboot.log" 2>&1 \
 timeout 30s wineserver -w >>"$runtime_dir/wineboot.log" 2>&1 \
     || fail "Wine prefix initialization did not settle"
 
-for unit_test in test-framed-stream test-game-transport \
+for unit_test in test-framed-stream test-game-transport test-connect-target \
     test-transport-display test-socket-io test-sdl-versions \
     test-native-socket-handle; do
     run_wine_unit_test "$unit_test"
 done
 
+run_contact_target_failover
 run_meta_report_case
 for contact_transport in udp tcp; do
     for gameplay_transport in udp tcp; do

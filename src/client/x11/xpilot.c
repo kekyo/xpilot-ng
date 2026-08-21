@@ -55,6 +55,8 @@ int main(int argc, char *argv[])
     int result, retval = 1;
     bool auto_shutdown = false;
     Connect_param_t *conpar = &connectParam;
+    Connect_target_t *targets = NULL;
+    int target_count;
 
     /*
      * --- Output copyright notice ---
@@ -101,6 +103,15 @@ int main(int argc, char *argv[])
      */
     memset(&xpArgs, 0, sizeof(xp_args_t));
     Parse_options(&argc, argv);
+    target_count = argc - 1;
+    if (target_count > 0) {
+	targets = Connect_targets_create(target_count, &argv[1],
+					 &connectDefaults);
+	if (targets == NULL) {
+	    error("Invalid or oversized server address");
+	    return 1;
+	}
+    }
     /*strcpy(clientname,connectParam.nick_name); */
 
     Config_init();
@@ -126,11 +137,16 @@ int main(int argc, char *argv[])
 	if (xpArgs.list_servers)
 	    printf("LISTING AVAILABLE SERVERS:\n");
 
-	result = Contact_servers(argc - 1, &argv[1],
-				 xpArgs.auto_connect, xpArgs.list_servers,
-				 auto_shutdown, xpArgs.shutdown_reason,
-				 0, NULL, NULL, NULL, NULL,
-				 conpar);
+	result = target_count > 0
+	    ? Contact_servers(target_count, targets,
+			      xpArgs.auto_connect, xpArgs.list_servers,
+			      auto_shutdown, xpArgs.shutdown_reason, conpar)
+	    : Contact_local_servers(&connectDefaults,
+				    xpArgs.auto_connect, xpArgs.list_servers,
+				    auto_shutdown, xpArgs.shutdown_reason,
+				    0, NULL, NULL, NULL, NULL, conpar);
+	free(targets);
+	targets = NULL;
     }
     else
 	result = Welcome_screen(conpar);

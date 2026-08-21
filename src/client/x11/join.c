@@ -173,7 +173,8 @@ int Join(Connect_param_t *conpar)
     if (Client_init(conpar->server_name, conpar->server_version) == -1)
 	return -1;
 
-    if (Net_init(conpar->server_addr, conpar->login_port) == -1) {
+    if (Net_init(conpar->server_addr, conpar->login_port,
+		 conpar->game_transport) == -1) {
 	Client_cleanup();
 	return -1;
     }
@@ -212,4 +213,3 @@ int Join(Connect_param_t *conpar)
 
     return 0;
 }
-

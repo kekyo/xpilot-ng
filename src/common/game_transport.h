@@ -32,11 +32,15 @@ typedef enum {
     GAME_TRANSPORT_TCP = 1
 } game_transport_t;
 
-/** Gameplay transport selected by the current client or server process. */
+/* A server process has one transport pair. Clients carry transports in each
+ * connection target and established connection instead of these globals. */
+#ifdef SERVER
+/** Gameplay transport selected by the current server process. */
 extern game_transport_t gameTransport;
 
-/** Contact and lobby transport selected by the current process. */
+/** Contact and lobby transport selected by the current server process. */
 extern game_transport_t contactTransport;
+#endif
 
 /**
  * Parse a gameplay transport option value.

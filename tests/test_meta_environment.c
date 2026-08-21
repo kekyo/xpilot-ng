@@ -12,9 +12,7 @@
 #include <string.h>
 
 static int tcp_connect_attempts;
-
-game_transport_t gameTransport = GAME_TRANSPORT_UDP;
-game_transport_t contactTransport = GAME_TRANSPORT_UDP;
+Connect_defaults_t connectDefaults;
 
 int sock_close(sock_t *sock)
 {
@@ -182,10 +180,14 @@ static int add_transport_line(const char *version)
     return 0;
 }
 
-static int check_transport_metadata_is_applied(void)
+static int check_transport_metadata_does_not_change_client_defaults(void)
 {
+    Connect_target_t target;
     server_info_t *server;
 
+    connectDefaults.contact_port = 25345;
+    connectDefaults.contact_transport = GAME_TRANSPORT_UDP;
+    connectDefaults.game_transport = GAME_TRANSPORT_TCP;
     Delete_server_list();
     TEST_CHECK(add_transport_line("4.7.3ng+ct=tcp+gt=udp") == 0);
     server = (server_info_t *)List_front(server_list);
@@ -194,11 +196,14 @@ static int check_transport_metadata_is_applied(void)
     TEST_CHECK(server->game_transport == GAME_TRANSPORT_UDP);
     TEST_CHECK(strcmp(server->transport_pair, "TCP -> UDP") == 0);
 
-    contactTransport = GAME_TRANSPORT_UDP;
-    gameTransport = GAME_TRANSPORT_TCP;
-    Meta_select_server_transports(server);
-    TEST_CHECK(contactTransport == GAME_TRANSPORT_TCP);
-    TEST_CHECK(gameTransport == GAME_TRANSPORT_UDP);
+    TEST_CHECK(Meta_server_to_connect_target(server, &target));
+    TEST_CHECK(strcmp(target.address, "127.0.0.1") == 0);
+    TEST_CHECK(target.contact_port == 15345);
+    TEST_CHECK(target.contact_transport == GAME_TRANSPORT_TCP);
+    TEST_CHECK(target.game_transport == GAME_TRANSPORT_UDP);
+    TEST_CHECK(connectDefaults.contact_port == 25345);
+    TEST_CHECK(connectDefaults.contact_transport == GAME_TRANSPORT_UDP);
+    TEST_CHECK(connectDefaults.game_transport == GAME_TRANSPORT_TCP);
 
     Delete_server_list();
     TEST_CHECK(add_transport_line("4.7.3ng") == 0);
@@ -206,6 +211,9 @@ static int check_transport_metadata_is_applied(void)
     TEST_CHECK(server->contact_transport == GAME_TRANSPORT_UDP);
     TEST_CHECK(server->game_transport == GAME_TRANSPORT_UDP);
     TEST_CHECK(strcmp(server->transport_pair, "UDP -> UDP") == 0);
+    TEST_CHECK(Meta_server_to_connect_target(server, &target));
+    TEST_CHECK(target.contact_transport == GAME_TRANSPORT_UDP);
+    TEST_CHECK(target.game_transport == GAME_TRANSPORT_UDP);
     Delete_server_list();
     return 0;
 }
@@ -218,6 +226,7 @@ int main(void)
     TEST_CHECK(check_private_hosts_fail_closed() == 0);
     TEST_CHECK(check_unresolved_private_hosts_are_not_connected() == 0);
     TEST_CHECK(check_invalid_query_is_rejected() == 0);
-    TEST_CHECK(check_transport_metadata_is_applied() == 0);
+    TEST_CHECK(check_transport_metadata_does_not_change_client_defaults()
+               == 0);
     return 0;
 }

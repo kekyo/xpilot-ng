@@ -407,12 +407,14 @@ void Add_meta_line(char *meta_line)
     }
 }
 
-void Meta_select_server_transports(const server_info_t *server)
+bool Meta_server_to_connect_target(const server_info_t *server,
+                                   Connect_target_t *target)
 {
-    if (server == NULL)
-	return;
-    contactTransport = server->contact_transport;
-    gameTransport = server->game_transport;
+    if (server == NULL || server->port > 65535)
+	return false;
+    return Connect_target_init(target, server->ip_str, (int)server->port,
+			       server->contact_transport,
+			       server->game_transport);
 }
 
 /*
@@ -537,7 +539,7 @@ void Ping_servers(void)
 		 */
 		Sockbuf_clear(&sbuf);
 		Packet_printf(&sbuf, "%u%s%hu%c",
-			      MAGIC & 0xffff, "p",
+			      MAGIC_WORD, "p",
 			      sock_get_port(&sock), serial);
 
 		/*

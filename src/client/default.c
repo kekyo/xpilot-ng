@@ -503,13 +503,10 @@ static bool Set_dirPrediction(xp_option_t *opt, bool val)
     return true;
 }
 
-game_transport_t gameTransport = GAME_TRANSPORT_UDP;
-game_transport_t contactTransport = GAME_TRANSPORT_UDP;
-
 static bool Set_contactTransport(xp_option_t *opt, const char *value)
 {
     UNUSED_PARAM(opt);
-    if (!Game_transport_parse(value, &contactTransport)) {
+    if (!Game_transport_parse(value, &connectDefaults.contact_transport)) {
 	warn("Invalid contactTransport '%s'; expected 'udp' or 'tcp'", value);
 	return false;
     }
@@ -519,13 +516,13 @@ static bool Set_contactTransport(xp_option_t *opt, const char *value)
 static const char *Get_contactTransport(xp_option_t *opt)
 {
     UNUSED_PARAM(opt);
-    return Game_transport_name(contactTransport);
+    return Game_transport_name(connectDefaults.contact_transport);
 }
 
 static bool Set_gameTransport(xp_option_t *opt, const char *value)
 {
     UNUSED_PARAM(opt);
-    if (!Game_transport_parse(value, &gameTransport)) {
+    if (!Game_transport_parse(value, &connectDefaults.game_transport)) {
 	warn("Invalid gameTransport '%s'; expected 'udp' or 'tcp'", value);
 	return false;
     }
@@ -535,7 +532,7 @@ static bool Set_gameTransport(xp_option_t *opt, const char *value)
 static const char *Get_gameTransport(xp_option_t *opt)
 {
     UNUSED_PARAM(opt);
-    return Game_transport_name(gameTransport);
+    return Game_transport_name(connectDefaults.game_transport);
 }
 
 void defaultCleanup(void)
@@ -639,7 +636,7 @@ xp_option_t default_options[] = {
 	SERVER_PORT,
 	0,
 	65535,
-	&connectParam.contact_port,
+	&connectDefaults.contact_port,
 	NULL,
 	XP_OPTFLAG_KEEP,
 	"Set the contact port number of the server.\n"
