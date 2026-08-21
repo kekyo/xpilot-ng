@@ -28,6 +28,19 @@ requested from the server by an operator.
 .PP
 The possible options include:
 .HP
+\fB\-tcp\fR
+.IP
+Select TCP for both contact/lobby and gameplay.
+.HP
+\fB\-udp\fR
+.IP
+Select UDP for both contact/lobby and gameplay.  This is the default.
+.HP
+\fB\-transport\fR <udp|tcp>
+.IP
+Select one transport for both contact/lobby and gameplay.
+Transport options are applied from left to right.
+.HP
 \fB\-help\fR
 .IP
 Print out this help message.

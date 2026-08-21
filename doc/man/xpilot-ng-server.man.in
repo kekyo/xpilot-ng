@@ -24,6 +24,9 @@ xpilots \- XPilot multiplayer gravity war game server
 [\fB-password\fP \fIpassword\fP]
 [\fB-serverHost\fP \fIhostname\fP]
 [\fB-reportMeta\fP]
+[\fB-tcp\fP]
+[\fB-udp\fP]
+[\fB-transport\fP \fIudp|tcp\fP]
 [\fB-contactTransport\fP \fIudp|tcp\fP]
 [\fB-gameTransport\fP \fIudp|tcp\fP]
 [\fB-clientPortStart\fP \fIport-number\fP]
@@ -68,6 +71,21 @@ Prints the current version.
 .B -dump
 Prints all options with their default values in \fBdefaults file\fP
 format.
+
+.TP 15
+.B -tcp
+Selects TCP for both contact/lobby and gameplay.
+
+.TP 15
+.B -udp
+Selects UDP for both contact/lobby and gameplay.  This is the default.
+
+.TP 15
+.B -transport \fIudp|tcp\fP
+Selects one transport for both contact/lobby and gameplay.  Transport options
+are applied from left to right.  A later \fB-contactTransport\fP or
+\fB-gameTransport\fP therefore overrides the corresponding part of an earlier
+combined selection, while a later combined selection overrides both.
 
 .TP 15
 .B -defaultsFileName or defaults \fIstring\fP
