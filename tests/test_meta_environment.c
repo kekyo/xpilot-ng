@@ -192,6 +192,7 @@ static int check_transport_metadata_is_applied(void)
     TEST_CHECK(strcmp(server->version, "4.7.3ng") == 0);
     TEST_CHECK(server->contact_transport == GAME_TRANSPORT_TCP);
     TEST_CHECK(server->game_transport == GAME_TRANSPORT_UDP);
+    TEST_CHECK(strcmp(server->transport_pair, "TCP -> UDP") == 0);
 
     contactTransport = GAME_TRANSPORT_UDP;
     gameTransport = GAME_TRANSPORT_TCP;
@@ -204,6 +205,7 @@ static int check_transport_metadata_is_applied(void)
     server = (server_info_t *)List_front(server_list);
     TEST_CHECK(server->contact_transport == GAME_TRANSPORT_UDP);
     TEST_CHECK(server->game_transport == GAME_TRANSPORT_UDP);
+    TEST_CHECK(strcmp(server->transport_pair, "UDP -> UDP") == 0);
     Delete_server_list();
     return 0;
 }

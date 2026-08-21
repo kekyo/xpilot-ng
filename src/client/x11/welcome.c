@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -54,7 +54,7 @@ struct Label labels[] = {
 	{"Server", 0, 0, 0},
 	{"IP:Port", 0, 0, 0},
 	{"Version", 0, 0, 0},
-	{"Contact", 0, 0, 0},
+	{"Contact/Lobby", 0, 0, 0},
 	{"Gameplay", 0, 0, 0},
 	{"Users", 0, 0, 0},
 	{"Map name", 0, 0, 0},
@@ -97,6 +97,7 @@ static int ping_servers_widget = NO_WIDGET;
  */
 static Connect_param_t *global_conpar;
 static Connect_param_t *localnet_conpars;
+static char (*localnet_transport_pairs)[TRANSPORT_DISPLAY_PAIR_SIZE];
 static server_info_t *global_sip;
 
 
@@ -132,6 +133,7 @@ static const char team_header[] = "Tm";
 static const char fps_header[] = "FPS";
 static const char status_header[] = "Stat";
 static const char version_header[] = "Version";
+static const char transport_header[] = "C/L -> Game";
 static const char map_header[] = "Map Name";
 static const char server_header[] = "Server";
 static const char ping_header[] = "Ping";
@@ -260,6 +262,10 @@ static void Localnet_cleanup(void)
 	free(localnet_conpars);
 	localnet_conpars = NULL;
     }
+    if (localnet_transport_pairs) {
+	free(localnet_transport_pairs);
+	localnet_transport_pairs = NULL;
+    }
 }
 
 static void Internet_widget_cleanup(void)
@@ -300,6 +306,8 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
     int button_height;
     int button_x;
     int button_y;
+    int transport_width;
+    int transport_x;
     
     int button3;
     int button3_width;
@@ -322,6 +330,8 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
     server_addrs = (char *) malloc(MAX_LOCAL_SERVERS * MAX_HOST_LEN);
     if (!server_names || !server_addrs) {
         error("Not enough memory\n");
+	free(server_names);
+	free(server_addrs);
 	quitting = true;
 	return 0;
     }
@@ -340,7 +350,8 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 			     "No servers were found on your local network.");
     else
 	Welcome_create_label(0,
-			     "The following local XPilot servers were found:");
+			     "Local XPilot servers "
+			     "(Contact/Lobby -> Gameplay):");
 
     label_y = 10;
     label_height = textFont->ascent + textFont->descent;
@@ -350,8 +361,14 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 
 	localnet_conpars =
 	    (Connect_param_t *) malloc(n * sizeof(Connect_param_t));
-	if (!localnet_conpars) {
+	localnet_transport_pairs = malloc(
+	    (size_t)n * sizeof(*localnet_transport_pairs));
+	if (!localnet_conpars || !localnet_transport_pairs) {
 	    error("Not enough memory\n");
+	    free(localnet_conpars);
+	    localnet_conpars = NULL;
+	    free(localnet_transport_pairs);
+	    localnet_transport_pairs = NULL;
 	    free(server_names);
 	    free(server_addrs);
 	    quitting = true;
@@ -371,6 +388,18 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 	    strlcpy(localnet_conpars[i].server_addr, addr_ptrs[i],
 		    MAX_HOST_LEN);
 	    localnet_conpars[i].server_version = server_versions[i];
+	    localnet_conpars[i].contact_transport = GAME_TRANSPORT_UDP;
+	    if (!Game_transport_from_protocol_version(
+		    server_versions[i],
+		    &localnet_conpars[i].game_transport)
+		|| !Transport_display_pair(
+		    localnet_transport_pairs[i],
+		    sizeof(localnet_transport_pairs[i]),
+		    localnet_conpars[i].contact_transport,
+		    localnet_conpars[i].game_transport)) {
+		strlcpy(localnet_transport_pairs[i], "UNKNOWN",
+			sizeof(localnet_transport_pairs[i]));
+	    }
 	    button_width = max_width + 20;
 	    button_height = textFont->ascent + textFont->descent + 10;
 	    button_x = 20;
@@ -380,7 +409,13 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 	      Widget_create_colored_label(subform_widget, button_x, button_y,
 				          button_width, button_height, true, 1,
 					  2, 0,
-				           localnet_conpars[i].server_name);
+					           localnet_conpars[i].server_name);
+	    transport_width = XTextWidth(textFont, "UDP -> TCP", 10) + 20;
+	    transport_x = button_x + button_width + button_x;
+	    (void) Widget_create_colored_label(
+		subform_widget, transport_x, button_y,
+		transport_width, button_height, true, 1, BLACK, WHITE,
+		localnet_transport_pairs[i]);
 	    
 
 	    /* button2_x = button_x + button_width + button_x;
@@ -395,7 +430,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 	    			     Local_status_cb,
 	     			     (void *) &localnet_conpars[i]);  */
 
-	    button3_x = button_x + button_width + button_x;
+	    button3_x = transport_x + transport_width + button_x;
 	    button3_y = button_y;
 	    button3_width = XTextWidth(buttonFont, "Join game", 7) + 40;
 	    button3_height = buttonFont->ascent + buttonFont->descent + 10;
@@ -611,14 +646,14 @@ static int Internet_server_show_cb(int widget, void *user_data,
 			label_x + label_width, labels[i].yoff,
 			data_label_width, labels[i].height, true,
 			label_border, BLACK, WHITE,
-			Game_transport_name(sip->contact_transport));
+			Transport_display_name(sip->contact_transport));
     i++;
 
     (void) Widget_create_colored_label(subform_widget,
 			label_x + label_width, labels[i].yoff,
 			data_label_width, labels[i].height, true,
 			label_border, BLACK, WHITE,
-			Game_transport_name(sip->game_transport));
+			Transport_display_name(sip->game_transport));
     i++;
 
     /* Number of users label */
@@ -873,6 +908,9 @@ static int Welcome_show_server_list(Connect_param_t * conpar)
 				   "4.2.0alpha7",
 				   max_version_length)
 	+ extra_width + 2 * border;
+    int transport_width = XTextWidth(textFont, transport_header,
+				     (int)strlen(transport_header))
+	+ extra_width + 2 * border;
     int map_width = XTextWidth(textFont, "", max_map_length)
 	+ extra_width + 2 * border;
     int server_width = XTextWidth(buttonFont, server_header,
@@ -894,7 +932,8 @@ static int Welcome_show_server_list(Connect_param_t * conpar)
     int fps_offset = team_offset + team_width + space_width;
     int status_offset = fps_offset + fps_width + space_width;
     int version_offset = status_offset + status_width + space_width;
-    int map_offset = version_offset + version_width + space_width;
+    int transport_offset = version_offset + version_width + space_width;
+    int map_offset = transport_offset + transport_width + space_width;
     int server_offset = map_offset + map_width + space_width;
     int ping_offset =
 	server_offset + server_width + server_border_width + space_width;
@@ -913,7 +952,8 @@ static int Welcome_show_server_list(Connect_param_t * conpar)
 
     all_offset = player_width + queue_width + bases_width
 	+ team_width + fps_width + stat_width + version_width +
-	server_width + map_width + ping_width + status_width;
+	transport_width + server_width + map_width + ping_width +
+	status_width;
 
     Widget_destroy_children(subform_widget);
 
@@ -960,7 +1000,8 @@ static int Welcome_show_server_list(Connect_param_t * conpar)
     } else {
 
 	version_offset = queue_offset + queue_width + space_width;
-	map_offset = version_offset + version_width + space_width;
+	transport_offset = version_offset + version_width + space_width;
+	map_offset = transport_offset + transport_width + space_width;
 	server_offset = map_offset + map_width + space_width;
 	ping_offset =
 	    server_offset + server_width + server_border_width +
@@ -973,6 +1014,10 @@ static int Welcome_show_server_list(Connect_param_t * conpar)
 			version_width, label_height, true,
 			border, version_header);
 
+    Widget_create_label(subform_widget,
+			transport_offset, yoff,
+			transport_width, label_height, true,
+			border, transport_header);
 
     Widget_create_label(subform_widget,
 			map_offset, yoff,
@@ -1041,6 +1086,10 @@ static int Welcome_show_server_list(Connect_param_t * conpar)
 			    version_offset, yoff,
 			    version_width, label_height, true,
 			    border, sip->version);
+	Widget_create_label(subform_widget,
+			    transport_offset, yoff,
+			    transport_width, label_height, true,
+			    border, sip->transport_pair);
 	Widget_create_label(subform_widget,
 			    map_offset, yoff,
 			    map_width, label_height, true,

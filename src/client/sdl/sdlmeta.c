@@ -54,6 +54,7 @@
 #define PLIST_ITEM_BG 0x000070ff
 #define ROW_HEIGHT 19
 #define VERSION_WIDTH 100
+#define TRANSPORT_WIDTH 105
 #define COUNT_WIDTH 20
 #define META_WIDTH 837
 #define META_HEIGHT 768
@@ -67,7 +68,7 @@
 #define STATUSWIDGET      104
 #define PLAYERLISTWIDGET  105
 
-static int status_column_widths[] = { 100, 0, 100, 70 };
+static int status_column_widths[] = { 120, 0, 100, 70 };
 
 typedef struct {
     GLWidget   *table;
@@ -461,10 +462,10 @@ static GLWidget *Init_StatusWidget(server_info_t *sip)
     add_status_entry(" Server", sip->hostname, tmp);
     add_status_entry(" Address", info->address_str, tmp);
     add_status_entry(" Version", sip->version, tmp);
-    add_status_entry(" Contact", Game_transport_name(sip->contact_transport),
-		     tmp);
-    add_status_entry(" Gameplay", Game_transport_name(sip->game_transport),
-		     tmp);
+    add_status_entry(" Contact/Lobby",
+		     Transport_display_name(sip->contact_transport), tmp);
+    add_status_entry(" Gameplay",
+		     Transport_display_name(sip->game_transport), tmp);
     add_status_entry(" Map name", sip->mapname, tmp);
     add_status_entry(" Map size", sip->mapsize, tmp);
     add_status_entry(" Map author", sip->author, tmp);
@@ -594,7 +595,8 @@ static void SetBounds_MetaRowWidget(GLWidget *row, SDL_Rect *rb)
     GLWidget *col;
 
     row->bounds = *rb;
-    free_width = MAX(rb->w - (VERSION_WIDTH + COUNT_WIDTH), 0);
+    free_width = MAX(rb->w
+		     - (VERSION_WIDTH + TRANSPORT_WIDTH + COUNT_WIDTH), 0);
 
     if (!(col = row->children)) return;
     cb.x = rb->x; 
@@ -611,6 +613,12 @@ static void SetBounds_MetaRowWidget(GLWidget *row, SDL_Rect *rb)
     cb.x = cb.x + cb.w;
     cb.y = rb->y; cb.h = rb->h;
     cb.w = VERSION_WIDTH;
+    SetBounds_GLWidget(col, &cb);
+
+    if (!(col = col->next)) return;
+    cb.x = cb.x + cb.w;
+    cb.y = rb->y; cb.h = rb->h;
+    cb.w = TRANSPORT_WIDTH;
     SetBounds_GLWidget(col, &cb);
 
     if (!(col = col->next)) return;
@@ -714,6 +722,7 @@ static GLWidget *Init_MetaRowWidget(server_info_t *sip,
     COLUMN(sip->hostname);
     COLUMN(sip->mapname);
     COLUMN(sip->version);
+    COLUMN(sip->transport_pair);
     COLUMN(sip->users_str);
 #undef COLUMN
 
@@ -747,8 +756,9 @@ static GLWidget *Init_MetaHeaderWidget(void)
     HEADER("Server");
     HEADER("Map");
     HEADER("Version");
+    HEADER("C/L -> Game");
     HEADER("Pl");
-#undef COLUMN
+#undef HEADER
 
     return tmp;    
 }

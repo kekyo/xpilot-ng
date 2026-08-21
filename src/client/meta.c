@@ -377,6 +377,13 @@ void Add_meta_line(char *meta_line)
 	    &sip->game_transport, &version_length)) {
 	sip->version[version_length] = '\0';
     }
+    if (!Transport_display_pair(sip->transport_pair,
+				sizeof(sip->transport_pair),
+				sip->contact_transport,
+				sip->game_transport)) {
+	strlcpy(sip->transport_pair, "UNKNOWN",
+		sizeof(sip->transport_pair));
+    }
     if (sscanf(fields[i = 2], "%u", &sip->port) != 1 ||
 	sscanf(fields[i = 3], "%u", &sip->users) != 1 ||
 	sscanf(fields[i = 8], "%u", &sip->bases) != 1 ||

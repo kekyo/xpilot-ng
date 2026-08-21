@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -25,6 +25,8 @@
 
 #ifndef META_H
 #define META_H
+
+#include "transport_display.h"
 
 /*
  * max number of servers we can find on the local network.
@@ -73,6 +75,8 @@ struct ServerInfo {
 	*sound,
 	*teambases_str,
 	*timing, *ip_str, *freebases, *queue_str, *domain, pingtime_str[5];
+    /** Contact/lobby and gameplay transports formatted for server lists. */
+    char transport_pair[TRANSPORT_DISPLAY_PAIR_SIZE];
     unsigned port,
 	ip, users, bases, fps, uptime, teambases, queue, pingtime;
     game_transport_t contact_transport, game_transport;
@@ -132,5 +136,4 @@ void  Ping_servers(void);
 int   Get_meta_data(char *errorstr);
 
 #endif
-
 

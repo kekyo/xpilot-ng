@@ -624,7 +624,9 @@ const net = require("net");
 const portFile = process.argv[1];
 const servedFile = process.argv[2];
 const response = Array.from({ length: 12 }, (_, index) => [
-  "4.7.3",
+  index % 2 === 0
+    ? "4.7.3+ct=tcp+gt=udp"
+    : "4.7.3+ct=udp+gt=tcp",
   `fixture${index}.local`,
   String(15000 + index),
   String(index),

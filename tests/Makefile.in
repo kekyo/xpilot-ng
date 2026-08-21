@@ -214,6 +214,7 @@ test_images_DEPENDENCIES =
 am_test_meta_environment_OBJECTS =  \
 	test_meta_environment-test_meta_environment.$(OBJEXT) \
 	test_meta_environment-meta.$(OBJEXT) \
+	test_meta_environment-transport_display.$(OBJEXT) \
 	test_meta_environment-game_transport.$(OBJEXT) \
 	test_meta_environment-list.$(OBJEXT) \
 	test_meta_environment-strdup.$(OBJEXT) \
@@ -497,6 +498,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/test_meta_environment-strdup.Po \
 	./$(DEPDIR)/test_meta_environment-strlcpy.Po \
 	./$(DEPDIR)/test_meta_environment-test_meta_environment.Po \
+	./$(DEPDIR)/test_meta_environment-transport_display.Po \
 	./$(DEPDIR)/test_native_socket_handle.Po \
 	./$(DEPDIR)/test_paint_transform.Po \
 	./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po \
@@ -1033,6 +1035,7 @@ test_native_socket_handle_SOURCES = test_native_socket_handle.c
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
 	$(top_srcdir)/src/client/meta_test_support.h \
+	$(top_srcdir)/src/client/transport_display.c \
 	$(top_srcdir)/src/common/game_transport.c \
 	$(top_srcdir)/src/common/list.c \
 	$(top_srcdir)/src/common/strdup.c \
@@ -1723,6 +1726,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-strdup.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-strlcpy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-test_meta_environment.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-transport_display.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_native_socket_handle.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paint_transform.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po@am__quote@ # am--include-marker
@@ -2092,6 +2096,20 @@ test_meta_environment-meta.obj: $(top_srcdir)/src/client/meta.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/meta.c' object='test_meta_environment-meta.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-meta.obj `if test -f '$(top_srcdir)/src/client/meta.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/meta.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/meta.c'; fi`
+
+test_meta_environment-transport_display.o: $(top_srcdir)/src/client/transport_display.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-transport_display.o -MD -MP -MF $(DEPDIR)/test_meta_environment-transport_display.Tpo -c -o test_meta_environment-transport_display.o `test -f '$(top_srcdir)/src/client/transport_display.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/transport_display.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_meta_environment-transport_display.Tpo $(DEPDIR)/test_meta_environment-transport_display.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/transport_display.c' object='test_meta_environment-transport_display.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-transport_display.o `test -f '$(top_srcdir)/src/client/transport_display.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/transport_display.c
+
+test_meta_environment-transport_display.obj: $(top_srcdir)/src/client/transport_display.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-transport_display.obj -MD -MP -MF $(DEPDIR)/test_meta_environment-transport_display.Tpo -c -o test_meta_environment-transport_display.obj `if test -f '$(top_srcdir)/src/client/transport_display.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/transport_display.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/transport_display.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_meta_environment-transport_display.Tpo $(DEPDIR)/test_meta_environment-transport_display.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/transport_display.c' object='test_meta_environment-transport_display.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-transport_display.obj `if test -f '$(top_srcdir)/src/client/transport_display.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/transport_display.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/transport_display.c'; fi`
 
 test_meta_environment-game_transport.o: $(top_srcdir)/src/common/game_transport.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -MT test_meta_environment-game_transport.o -MD -MP -MF $(DEPDIR)/test_meta_environment-game_transport.Tpo -c -o test_meta_environment-game_transport.o `test -f '$(top_srcdir)/src/common/game_transport.c' || echo '$(srcdir)/'`$(top_srcdir)/src/common/game_transport.c
@@ -3630,6 +3648,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_meta_environment-strdup.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-strlcpy.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-test_meta_environment.Po
+	-rm -f ./$(DEPDIR)/test_meta_environment-transport_display.Po
 	-rm -f ./$(DEPDIR)/test_native_socket_handle.Po
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
@@ -3786,6 +3805,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_meta_environment-strdup.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-strlcpy.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-test_meta_environment.Po
+	-rm -f ./$(DEPDIR)/test_meta_environment-transport_display.Po
 	-rm -f ./$(DEPDIR)/test_native_socket_handle.Po
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
