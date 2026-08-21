@@ -17,7 +17,7 @@ int main(int argc, char **argv)
     Connect_target_t *targets;
     Connect_target_status_t status;
     int invalid_index;
-    int result;
+    Contact_servers_result_t result;
 
     if (argc != 3)
         return 2;
@@ -43,10 +43,11 @@ int main(int argc, char **argv)
         return 4;
     }
 
-    result = Contact_servers(2, targets, 1, 0, 0, NULL, &connection);
+    result = Contact_servers_detailed(
+        2, targets, 1, 0, 0, NULL, &connection);
     free(targets);
     sock_cleanup();
-    if (!result)
+    if (!result.contacted || !result.connected)
         return 5;
     if (connection.contact_transport != GAME_TRANSPORT_UDP
         || connection.game_transport != GAME_TRANSPORT_UDP)

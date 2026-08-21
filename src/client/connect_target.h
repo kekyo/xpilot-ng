@@ -17,6 +17,8 @@
 
 #include <stdbool.h>
 
+struct Connect_param;
+
 /** Default endpoint settings applied to direct client connections. */
 typedef struct Connect_defaults {
     /** Contact port used when a target does not provide its own port. */
@@ -38,6 +40,14 @@ typedef struct Connect_target {
     /** Gameplay transport expected from this endpoint. */
     game_transport_t game_transport;
 } Connect_target_t;
+
+/** Outcome of contacting an ordered set of explicit server endpoints. */
+typedef struct Contact_servers_result {
+    /** At least one server returned a valid contact response. */
+    bool contacted;
+    /** A contact response led to a completed gameplay join. */
+    bool connected;
+} Contact_servers_result_t;
 
 /** Result of parsing one or more command-line connection targets. */
 typedef enum Connect_target_status {
@@ -111,6 +121,27 @@ Connect_target_status_t Connect_targets_parse(
     int count, char *const *specifications,
     const Connect_defaults_t *defaults, Connect_target_t **targets,
     int *invalid_index);
+
+/**
+ * Contact explicit endpoints in order until one joins successfully.
+ *
+ * A failed attempt is isolated from subsequent targets. `conpar` is updated
+ * with endpoint and negotiated connection data only after a successful join.
+ *
+ * @param count Number of entries in `targets`.
+ * @param targets Connection targets to try in command-line order.
+ * @param auto_connect Whether to request joining without an interactive prompt.
+ * @param list_servers Whether to request and print server status.
+ * @param auto_shutdown Whether to request server shutdown.
+ * @param shutdown_message Shutdown reason used when `auto_shutdown` is set.
+ * @param conpar Client identity input and successful connection output.
+ * @return Separate indicators for receiving a response and completing a join.
+ */
+Contact_servers_result_t Contact_servers_detailed(
+    int count, const Connect_target_t *targets,
+    int auto_connect, int list_servers,
+    int auto_shutdown, char *shutdown_message,
+    struct Connect_param *conpar);
 
 /**
  * Return a user-facing explanation for a connection target status.

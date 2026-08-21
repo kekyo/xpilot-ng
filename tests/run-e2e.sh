@@ -273,6 +273,24 @@ find_game_window()
     return 1
 }
 
+find_connection_failure_window()
+{
+    # SDL's X11 message box runs in a short-lived child process, so its
+    # _NET_WM_PID intentionally differs from the waiting client process.
+    window_id=$(xdotool search --onlyvisible \
+	--name '^XPilot NG - Connection failed$' 2>/dev/null \
+	| tail -n 1 || true)
+    test -n "$window_id"
+}
+
+connection_failure_window_visible()
+{
+    if ! kill -0 "$client_pid" 2>/dev/null; then
+	fail "client stopped before showing the connection failure"
+    fi
+    find_connection_failure_window
+}
+
 find_x11_game_window()
 {
     if ! kill -0 "$client_pid" 2>/dev/null; then
@@ -424,6 +442,7 @@ run_contact_target_failover()
     port=$(reserve_contact_port)
     game_server_log="$runtime_dir/server-contact-target-failover.log"
     probe_log="$runtime_dir/contact-target-failover.log"
+    list_log="$runtime_dir/client-contact-target-list.log"
 
     "$server" -map "$map" -port "$port" -noQuit +reportMeta \
 	-contactTransport tcp -gameTransport tcp -udp \
@@ -438,6 +457,80 @@ run_contact_target_failover()
 	|| fail "contact target probe did not attempt the endpoints"
     grep -Fq '[Contact/Lobby: UDP, Gameplay: UDP]' "$probe_log" \
 	|| fail "contact target probe did not establish the UDP endpoint"
+
+    "$client" -list "tcp://127.0.0.1:$port" \
+	"udp://127.0.0.1:$port" >"$list_log" 2>&1 \
+	|| fail "server listing did not preserve a contacted fallback result"
+    grep -Fq 'TRANSPORTS.......: UDP -> UDP' "$list_log" \
+	|| fail "server listing did not report the responding UDP endpoint"
+    if grep -Fq 'ERROR: Connection failed:' "$list_log"; then
+	fail "server listing response was reported as a connection failure"
+    fi
+    if xdotool search --onlyvisible \
+	--name '^XPilot NG - Connection failed$' >/dev/null 2>&1; then
+	fail "server listing displayed a connection failure dialog"
+    fi
+    stop_local_server
+}
+
+run_connection_failure_notification()
+{
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-connection-failure.log"
+    game_client_log="$runtime_dir/client-connection-failure.log"
+
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	-transport udp >"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "UDP-only failure fixture readiness" 20 server_ready
+
+    text_failure_log="$runtime_dir/client-text-connection-failure.log"
+    if "$client" -text "tcp://127.0.0.1:$port" \
+	>"$text_failure_log" 2>&1; then
+	fail "text-mode connection failure returned a successful exit status"
+    fi
+    grep -Fq "Could not contact 127.0.0.1:$port." "$text_failure_log" \
+	|| fail "text-mode failure did not identify the endpoint"
+    if xdotool search --onlyvisible \
+	--name '^XPilot NG - Connection failed$' >/dev/null 2>&1; then
+	fail "text-mode connection failure displayed a dialog"
+    fi
+
+    "$client" "tcp://127.0.0.1:$port" >"$game_client_log" 2>&1 &
+    client_pid=$!
+    window_owner_pid=$client_pid
+    wait_until "connection failure dialog" 30 \
+	connection_failure_window_visible
+
+    kill -0 "$client_pid" 2>/dev/null \
+	|| fail "client exited while the connection failure dialog was visible"
+    grep -Fq "Could not contact 127.0.0.1:$port." "$game_client_log" \
+	|| fail "final connection failure did not identify the endpoint"
+    grep -Fq 'Contact/Lobby: TCP' "$game_client_log" \
+	|| fail "final connection failure omitted the contact transport"
+    grep -Fq 'Gameplay: TCP' "$game_client_log" \
+	|| fail "final connection failure omitted the gameplay transport"
+
+    failure_window_count=$(xdotool search --onlyvisible \
+	--name '^XPilot NG - Connection failed$' 2>/dev/null \
+	| wc -l)
+    test "$failure_window_count" -eq 1 \
+	|| fail "expected one final connection failure dialog"
+
+    xdotool key --clearmodifiers --window "$window_id" Return \
+	>/dev/null 2>&1 \
+	|| fail "could not dismiss the connection failure dialog"
+    wait_until "client exit after failure acknowledgement" 10 \
+	process_stopped "$client_pid"
+    set +e
+    wait "$client_pid"
+    client_status=$?
+    set -e
+    client_pid=
+    test "$client_status" -ne 0 \
+	|| fail "connection failure returned a successful exit status"
+
+    window_id=
     stop_local_server
 }
 
@@ -864,6 +957,7 @@ wait_until "metaserver window teardown" 5 process_window_absent \
 run_invalid_target_rejection
 run_server_transport_option_help
 run_contact_target_failover
+run_connection_failure_notification
 run_gameplay_case tcp tcp no default
 run_gameplay_case udp-default default yes default
 run_gameplay_case udp-explicit udp no default

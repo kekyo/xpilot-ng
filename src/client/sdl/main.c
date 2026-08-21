@@ -24,6 +24,7 @@
 
 #include "sdlinit.h"
 #include "sdlmeta.h"
+#include "transport_display.h"
 
 static void Main_shutdown(void)
 {
@@ -44,6 +45,69 @@ static void sigcatch(int signum)
 const char *Program_name(void)
 {
     return "xpilot-ng-sdl";
+}
+
+static void Main_report_connection_failure(
+    int target_count, const Connect_target_t *targets, bool show_dialog)
+{
+    const Connect_target_t *last_target = &targets[target_count - 1];
+    const char *contact_transport =
+	Transport_display_name(last_target->contact_transport);
+    const char *gameplay_transport =
+	Transport_display_name(last_target->game_transport);
+    const char *transport_advice;
+    char message[1024];
+    int written;
+
+    if (last_target->contact_transport == GAME_TRANSPORT_TCP
+	&& last_target->game_transport == GAME_TRANSPORT_TCP) {
+	transport_advice =
+	    "\nFor TCP on both transports, start the server with -tcp "
+	    "or -transport tcp.";
+    } else {
+	transport_advice =
+	    "\nConfigure the server contact and gameplay transports to match.";
+    }
+
+    if (target_count == 1) {
+	written = snprintf(
+	    message, sizeof(message),
+	    "Could not contact %s:%d.\n\n"
+	    "Contact/Lobby: %s\n"
+	    "Gameplay: %s\n\n"
+	    "Verify that the server is running and uses matching transport "
+	    "settings.%s",
+	    last_target->address, last_target->contact_port,
+	    contact_transport, gameplay_transport, transport_advice);
+    } else {
+	written = snprintf(
+	    message, sizeof(message),
+	    "Could not contact any of %d server targets.\n\n"
+	    "Last target: %s:%d\n"
+	    "Contact/Lobby: %s\n"
+	    "Gameplay: %s\n\n"
+	    "Verify that the servers are running and use matching transport "
+	    "settings.%s",
+	    target_count, last_target->address, last_target->contact_port,
+	    contact_transport, gameplay_transport, transport_advice);
+    }
+    if (written < 0 || (size_t)written >= sizeof(message)) {
+	strlcpy(message,
+		"Could not contact the requested server targets.",
+		sizeof(message));
+    }
+
+    fprintf(stderr, "%s: ERROR: Connection failed:\n%s\n",
+	    Program_name(), message);
+    fflush(stderr);
+    if (show_dialog
+	&& !SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+				     "XPilot NG - Connection failed",
+				     message, NULL)) {
+	fprintf(stderr, "%s: ERROR: Could not show the connection failure "
+		"dialog: %s\n", Program_name(), SDL_GetError());
+	fflush(stderr);
+    }
 }
 
 int main(int argc, char *argv[])
@@ -86,6 +150,8 @@ int main(int argc, char *argv[])
 	}
 	return 1;
     }
+    if (xpArgs.list_servers)
+	xpArgs.auto_connect = true;
 
     /* CLIENTRANK */
     Init_saved_scores();
@@ -96,20 +162,33 @@ int main(int argc, char *argv[])
     }
 
     if (xpArgs.text || xpArgs.auto_connect || argv[1]) {
-	int contacted = target_count > 0
-	    ? Contact_servers(target_count, targets,
-			      xpArgs.auto_connect, xpArgs.list_servers,
-			      auto_shutdown, xpArgs.shutdown_reason,
-			      &connectParam)
-	    : Contact_local_servers(&connectDefaults,
-				    xpArgs.auto_connect, xpArgs.list_servers,
-				    auto_shutdown, xpArgs.shutdown_reason,
-				    0, NULL, NULL, NULL, NULL,
-				    &connectParam);
+	int connected;
+
+	if (target_count > 0) {
+	    Contact_servers_result_t contact_result =
+		Contact_servers_detailed(
+		    target_count, targets,
+		    xpArgs.auto_connect, xpArgs.list_servers,
+		    auto_shutdown, xpArgs.shutdown_reason, &connectParam);
+
+	    connected = contact_result.connected;
+	    if (!contact_result.contacted) {
+		Main_report_connection_failure(
+		    target_count, targets,
+		    !xpArgs.text && !xpArgs.list_servers && !auto_shutdown);
+		free(targets);
+		return 1;
+	    }
+	} else {
+	    connected = Contact_local_servers(
+		&connectDefaults, xpArgs.auto_connect, xpArgs.list_servers,
+		auto_shutdown, xpArgs.shutdown_reason,
+		0, NULL, NULL, NULL, NULL, &connectParam);
+	}
 
 	free(targets);
 	targets = NULL;
-	if (!contacted)
+	if (!connected)
 	    return 0;
 	if (Init_window()) {
 	    error("Could not initialize SDL, check your settings.");

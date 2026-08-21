@@ -177,19 +177,23 @@ static int Read_contact_payload(sockbuf_t *sbuf)
 }
 
 
-static int Get_contact_message(sockbuf_t *sbuf,
-			       const char *contact_server,
-			       const Connect_target_t *target,
-			       Connect_param_t *conpar)
+typedef struct Contact_message_result {
+    bool responded;
+    int status;
+} Contact_message_result_t;
+
+static Contact_message_result_t Get_contact_message(
+    sockbuf_t *sbuf, const char *contact_server,
+    const Connect_target_t *target, Connect_param_t *conpar)
 {
+    Contact_message_result_t result = { false, 0 };
     int			len;
     int			server_version;
     unsigned		magic;
     unsigned char	reply_to, status;
-    int			readable = 0;
 
     sock_set_timeout(&sbuf->sock, 2, 0);
-    while (readable == false && sock_readable(&sbuf->sock) > 0) {
+    while (result.status == 0 && sock_readable(&sbuf->sock) > 0) {
 
 	len = Read_contact_payload(sbuf);
 	if (len <= 0) {
@@ -197,7 +201,7 @@ static int Get_contact_message(sockbuf_t *sbuf,
 		continue;
 	    xpprintf("Error while reading contact message.\n");
 	    /* exit(1);  no good since meta gui. */
-	    return 0;
+	    return result;
 	}
 
 	/*
@@ -225,6 +229,7 @@ static int Get_contact_message(sockbuf_t *sbuf,
 	else {
 	    game_transport_t server_transport = (game_transport_t)-1;
 
+	    result.responded = true;
 	    server_version = MAGIC2VERSION(magic);
 	    if (!Game_transport_from_protocol_version(server_version,
 						 &server_transport)
@@ -234,7 +239,6 @@ static int Get_contact_message(sockbuf_t *sbuf,
 		warn("Client requested %s, while server requires %s.",
 		     Game_transport_name(target->game_transport),
 		     Game_transport_name(server_transport));
-		readable = 0;
 	    } else if (!Client_supports_server_version(
 			   (unsigned)server_version, target->game_transport)) {
 		unsigned client_version = Client_protocol_version(
@@ -246,7 +250,7 @@ static int Get_contact_message(sockbuf_t *sbuf,
 		     client_version, server_version);
 		if ((client_version >> 4) < ((unsigned)server_version >> 4))
 		    warn("Time for us to upgrade?");
-		readable = 2;
+		result.status = 2;
 	    } else {
 		/*
 		 * Found one which we can talk to.
@@ -256,12 +260,12 @@ static int Get_contact_message(sockbuf_t *sbuf,
 		conpar->contact_port = target->contact_port;
 		conpar->contact_transport = target->contact_transport;
 		conpar->game_transport = server_transport;
-		readable = 1;
+		result.status = 1;
 	    }
 	}
     }
 
-    return readable;
+    return result;
 }
 
 
@@ -912,17 +916,19 @@ int Connect_to_server(int auto_connect, int list_servers,
 
 /* Keep all attempt-specific state local so a failed endpoint cannot alter the
  * defaults or the established connection selected by the caller. */
-static int Contact_target(const Connect_target_t *target,
-			  int auto_connect, int list_servers,
-			  int auto_shutdown, char *shutdown_reason,
-			  Connect_param_t *conpar)
+static Contact_servers_result_t Contact_target(
+    const Connect_target_t *target,
+    int auto_connect, int list_servers,
+    int auto_shutdown, char *shutdown_reason,
+    Connect_param_t *conpar)
 {
     const int max_retries = 2;
     Connect_param_t attempt = *conpar;
+    Contact_servers_result_t result = { false, false };
+    Contact_message_result_t message_result;
     bool compat_mode = false;
     bool request_sent;
-    int connected = false;
-    int contacted = 0;
+    bool retry_compat;
     int request_length;
     int retries = 0;
     int ret;
@@ -938,6 +944,7 @@ static int Contact_target(const Connect_target_t *target,
     }
 
     do {
+	retry_compat = false;
 	printf("Contacting server %s.\n", target->address);
 	IFWINDOWS( Progress("Contacting server %s", target->address) );
 	request_sent = true;
@@ -984,29 +991,60 @@ static int Contact_target(const Connect_target_t *target,
 	    printf("Retrying %s...\n", target->address);
 	    IFWINDOWS( Progress("Retrying %s...", target->address) );
 	}
-	ret = request_sent
-	    ? Get_contact_message(&sbuf, target->address, target, &attempt) : 0;
+	if (request_sent) {
+	    message_result = Get_contact_message(
+		&sbuf, target->address, target, &attempt);
+	} else {
+	    message_result.responded = false;
+	    message_result.status = 0;
+	}
+	result.contacted = result.contacted || message_result.responded;
+	ret = message_result.status;
 	if (ret == 2 && !compat_mode) {
 	    printf("Trying compatibility version %04x\n",
 		   Client_protocol_version(target->game_transport, true));
 	    compat_mode = true;
 	    retries--;	/* cancels the loop increment for this extra attempt */
+	    retry_compat = true;
 	    continue;
 	}
 	if (ret == 1) {
-	    contacted++;
+	    result.contacted = true;
 	    IFWINDOWS( Progress("Contacted %s", target->address) );
-	    connected = Connect_to_server(auto_connect, list_servers,
-					  auto_shutdown, shutdown_reason,
-					  &attempt);
+	    result.connected = Connect_to_server(
+		auto_connect, list_servers, auto_shutdown, shutdown_reason,
+		&attempt);
 	}
-    } while (!contacted && retries++ < max_retries);
+    } while ((retry_compat || !result.contacted)
+	     && retries++ < max_retries);
 
     Close_contact_socket(&sbuf);
     Sockbuf_cleanup(&sbuf);
-    if (connected)
+    if (result.connected)
 	*conpar = attempt;
-    return connected;
+    return result;
+}
+
+Contact_servers_result_t Contact_servers_detailed(
+    int count, const Connect_target_t *targets,
+    int auto_connect, int list_servers,
+    int auto_shutdown, char *shutdown_reason,
+    Connect_param_t *conpar)
+{
+    Contact_servers_result_t result = { false, false };
+    Contact_servers_result_t target_result;
+    int index;
+
+    if (count <= 0 || targets == NULL || conpar == NULL)
+	return result;
+    for (index = 0; index < count && !result.connected; index++) {
+	target_result = Contact_target(
+	    &targets[index], auto_connect, list_servers, auto_shutdown,
+	    shutdown_reason, conpar);
+	result.contacted = result.contacted || target_result.contacted;
+	result.connected = target_result.connected;
+    }
+    return result;
 }
 
 int Contact_servers(int count, const Connect_target_t *targets,
@@ -1014,17 +1052,11 @@ int Contact_servers(int count, const Connect_target_t *targets,
 		    int auto_shutdown, char *shutdown_reason,
 		    Connect_param_t *conpar)
 {
-    int connected = false;
-    int index;
+    Contact_servers_result_t result = Contact_servers_detailed(
+	count, targets, auto_connect, list_servers, auto_shutdown,
+	shutdown_reason, conpar);
 
-    if (count <= 0 || targets == NULL || conpar == NULL)
-	return false;
-    for (index = 0; index < count && !connected; index++) {
-	connected = Contact_target(&targets[index], auto_connect,
-				   list_servers, auto_shutdown,
-				   shutdown_reason, conpar);
-    }
-    return connected;
+    return result.connected;
 }
 
 int Contact_local_servers(const Connect_defaults_t *defaults,
@@ -1084,7 +1116,9 @@ int Contact_local_servers(const Connect_defaults_t *defaults,
 	}
 	for (;;) {
 	    Connect_param_t attempt = *conpar;
-	    int ret = Get_contact_message(&sbuf, "", &target, &attempt);
+	    Contact_message_result_t message_result = Get_contact_message(
+		&sbuf, "", &target, &attempt);
+	    int ret = message_result.status;
 
 	    if (ret == 0)
 		break;

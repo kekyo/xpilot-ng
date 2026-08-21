@@ -1026,6 +1026,7 @@ static GLWidget *Init_MetaWidget(SdlRenderer *sdl_renderer,
 static bool join_server(Connect_param_t *conpar, server_info_t *sip)
 {
     Connect_param_t attempt = *conpar;
+    Contact_servers_result_t result;
     Connect_target_t target;
 
     if (!Meta_server_to_connect_target(sip, &target)) {
@@ -1033,12 +1034,18 @@ static bool join_server(Connect_param_t *conpar, server_info_t *sip)
 	       sip->hostname);
 	return false;
     }
-    if (Contact_servers(1, &target, 1, 0, 0, NULL, &attempt)) {
+    result = Contact_servers_detailed(1, &target, 1, 0, 0, NULL, &attempt);
+    if (result.connected) {
 	*conpar = attempt;
 	return true;
     }
-    printf("Server %s (%s) didn't respond on port %d\n",
-	   sip->hostname, target.address, target.contact_port);
+    if (!result.contacted) {
+	printf("Server %s (%s) didn't respond on port %d\n",
+	       sip->hostname, target.address, target.contact_port);
+    } else {
+	printf("Could not join server %s (%s) on port %d\n",
+	       sip->hostname, target.address, target.contact_port);
+    }
     return false;
 }
 
