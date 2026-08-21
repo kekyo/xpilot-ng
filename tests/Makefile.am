@@ -1,12 +1,36 @@
+if COND_MINGW_VENDORED
+-include $(top_builddir)/mingw-deps.mk
+XP_SDL3_CFLAGS = $(MINGW_SDL3_CFLAGS)
+XP_SDL3_LIBS = $(MINGW_SDL3_LIBS)
+XP_SDL3_IMAGE_CFLAGS = $(MINGW_SDL3_IMAGE_CFLAGS)
+XP_SDL3_IMAGE_LIBS = $(MINGW_SDL3_IMAGE_LIBS)
+XP_SDL3_TTF_CFLAGS = $(MINGW_SDL3_TTF_CFLAGS)
+XP_SDL3_TTF_LIBS = $(MINGW_SDL3_TTF_LIBS)
+else
+XP_SDL3_CFLAGS = @SDL3_CFLAGS@
+XP_SDL3_LIBS = @SDL3_LIBS@
+XP_SDL3_IMAGE_CFLAGS = @SDL3_IMAGE_CFLAGS@
+XP_SDL3_IMAGE_LIBS = @SDL3_IMAGE_LIBS@
+XP_SDL3_TTF_CFLAGS = @SDL3_TTF_CFLAGS@
+XP_SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
+endif
+
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-DSDL_DISABLE_OLD_NAMES \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/src/client/sdl \
 	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
-	@SDL3_CFLAGS@ @SDL3_IMAGE_CFLAGS@ @SDL3_TTF_CFLAGS@ \
+	$(XP_SDL3_CFLAGS) $(XP_SDL3_IMAGE_CFLAGS) $(XP_SDL3_TTF_CFLAGS) \
 	@GL_CFLAGS@
 
+if COND_WINDOWS
+check_PROGRAMS = test-framed-stream test-game-transport \
+	test-connect-target test-contact-target-probe \
+	test-transport-display test-socket-io \
+	test-native-socket-handle test-sdl-versions
+TESTS =
+else
 check_PROGRAMS = test-framed-stream test-game-transport \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-socket-io \
@@ -53,6 +77,7 @@ TESTS = test-framed-stream test-game-transport test-connect-target \
 	test-text-cache-adapter \
 	run-renderer-gl-core.sh run-sdl-renderer-core-context.sh \
 	run-build-wrapper.sh run-vendored-zlib.sh run-e2e.sh
+endif
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
@@ -95,38 +120,38 @@ test_meta_environment_CFLAGS = $(AM_CFLAGS) \
 test_meta_environment_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 
 test_sdl_versions_SOURCES = test_sdl_versions.c
-test_sdl_versions_LDADD = @SDL3_IMAGE_LIBS@ @SDL3_TTF_LIBS@ @SDL3_LIBS@
+test_sdl_versions_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
 
 test_sdl_keys_SOURCES = test_sdl_keys.c \
 	$(top_srcdir)/src/client/sdl/sdlkeys.c
-test_sdl_keys_LDADD = @SDL3_LIBS@
+test_sdl_keys_LDADD = $(XP_SDL3_LIBS)
 
 test_sdl_console_SOURCES = test_sdl_console.c \
 	$(top_srcdir)/src/client/sdl/SDL_console.c
-test_sdl_console_LDADD = @SDL3_IMAGE_LIBS@ @SDL3_LIBS@
+test_sdl_console_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_LIBS)
 
 test_sdl_surface_SOURCES = test_sdl_surface.c \
 	$(top_srcdir)/src/client/sdl/sdlcompat.c
-test_sdl_surface_LDADD = @SDL3_LIBS@
+test_sdl_surface_LDADD = $(XP_SDL3_LIBS)
 
 test_surface_rgba8_SOURCES = test_surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/sdlcompat.c
-test_surface_rgba8_LDADD = @SDL3_LIBS@
+test_surface_rgba8_LDADD = $(XP_SDL3_LIBS)
 
 test_sdl_window_SOURCES = test_sdl_window.c \
 	$(top_srcdir)/src/client/sdl/sdlwindow.c
-test_sdl_window_LDADD = @SDL3_LIBS@
+test_sdl_window_LDADD = $(XP_SDL3_LIBS)
 
 test_sdl_clipboard_SOURCES = test_sdl_clipboard.c \
 	$(top_srcdir)/src/client/sdl/sdlclipboard.c
-test_sdl_clipboard_LDADD = @SDL3_LIBS@
+test_sdl_clipboard_LDADD = $(XP_SDL3_LIBS)
 
 test_sdl_event_SOURCES = test_sdl_event.c \
 	$(top_srcdir)/src/client/sdl/sdlevent.c
 test_sdl_event_LDFLAGS = $(AM_LDFLAGS) \
 	-Wl,--wrap=SDL_GetMouseState
-test_sdl_event_LDADD = @SDL3_LIBS@
+test_sdl_event_LDADD = $(XP_SDL3_LIBS)
 
 test_gl_core_resources_SOURCES = test_gl_core_resources.c \
 	$(top_srcdir)/src/client/sdl/gl_diagnostics.c \
@@ -146,7 +171,7 @@ test_gl_core_resources_CFLAGS = $(AM_CFLAGS) \
 test_gl_core_resources_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=TTF_OpenFont \
 	-Wl,--wrap=TTF_CloseFont
-test_gl_core_resources_LDADD = @SDL3_TTF_LIBS@ @SDL3_LIBS@ \
+test_gl_core_resources_LDADD = $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) \
 	@GL_LIBS@
 
 test_renderer_commands_SOURCES = test_renderer_commands.c \
@@ -161,7 +186,7 @@ test_renderer_gl_core_SOURCES = test_renderer_gl_core.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c
-test_renderer_gl_core_LDADD = @SDL3_LIBS@ @GL_LIBS@
+test_renderer_gl_core_LDADD = $(XP_SDL3_LIBS) @GL_LIBS@
 
 test_paint_transform_SOURCES = test_paint_transform.c \
 	$(top_srcdir)/src/client/sdl/paint_transform.c
@@ -185,7 +210,7 @@ test_images_SOURCES = test_images.c \
 	$(top_srcdir)/src/client/sdl/image_geometry.c \
 	$(top_srcdir)/src/common/strdup.c
 test_images_CPPFLAGS = $(AM_CPPFLAGS) -DXPILOT_IMAGE_TEST_HOOKS
-test_images_LDADD = @SDL3_LIBS@
+test_images_LDADD = $(XP_SDL3_LIBS)
 
 test_radar_renderer_SOURCES = test_radar_renderer.c \
 	$(top_srcdir)/src/client/sdl/radar.c
@@ -193,7 +218,7 @@ test_radar_renderer_CPPFLAGS = $(AM_CPPFLAGS) -DXPILOT_RADAR_TEST_HOOKS
 test_radar_renderer_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_radar_renderer_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_radar_renderer_LDADD = @SDL3_LIBS@
+test_radar_renderer_LDADD = $(XP_SDL3_LIBS)
 
 test_sdl_ui_image_SOURCES = test_sdl_ui_image.c \
 	$(top_srcdir)/src/client/sdl/sdluiimage.c \
@@ -204,7 +229,7 @@ test_sdl_ui_image_SOURCES = test_sdl_ui_image.c \
 test_sdl_ui_image_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_sdl_ui_image_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_sdl_ui_image_LDADD = @SDL3_LIBS@
+test_sdl_ui_image_LDADD = $(XP_SDL3_LIBS)
 
 test_sdl_meta_frame_SOURCES = test_sdl_meta_frame.c \
 	$(top_srcdir)/src/client/sdl/sdlmetaframe.c
@@ -219,7 +244,7 @@ test_sdlpaint_stage_CPPFLAGS = $(AM_CPPFLAGS) \
 test_sdlpaint_stage_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_sdlpaint_stage_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_sdlpaint_stage_LDADD = @SDL3_LIBS@
+test_sdlpaint_stage_LDADD = $(XP_SDL3_LIBS)
 
 test_paintmap_vdecor_SOURCES = test_paintmap_vdecor.c \
 	$(top_srcdir)/src/client/paintmap.c
@@ -238,7 +263,7 @@ test_sdl_renderer_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=SDL_GL_GetCurrentContext \
 	-Wl,--wrap=SDL_GL_GetProcAddress \
 	-Wl,--wrap=SDL_GetWindowSizeInPixels
-test_sdl_renderer_scissor_LDADD = @SDL3_LIBS@ @GL_LIBS@
+test_sdl_renderer_scissor_LDADD = $(XP_SDL3_LIBS) @GL_LIBS@
 
 test_sdl_init_core_profile_SOURCES = test_sdl_init_core_profile.c \
 	$(top_srcdir)/src/client/sdl/sdlinit.c
@@ -248,21 +273,21 @@ test_sdl_init_core_profile_LDFLAGS = $(AM_LDFLAGS) \
 	-Wl,--gc-sections -Wl,--wrap=SDL_Init -Wl,--wrap=SDL_Quit \
 	-Wl,--wrap=TTF_Init -Wl,--wrap=TTF_Quit \
 	-Wl,--wrap=SDL_GL_SetAttribute -Wl,--wrap=SDL_CreateWindow
-test_sdl_init_core_profile_LDADD = @SDL3_TTF_LIBS@ @SDL3_LIBS@
+test_sdl_init_core_profile_LDADD = $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
 
 test_sdl_renderer_core_context_SOURCES = \
 	test_sdl_renderer_core_context.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
 	$(top_srcdir)/src/client/sdl/sdlrenderer.c
-test_sdl_renderer_core_context_LDADD = @SDL3_LIBS@ @GL_LIBS@
+test_sdl_renderer_core_context_LDADD = $(XP_SDL3_LIBS) @GL_LIBS@
 
 test_glwidgets_scissor_SOURCES = test_glwidgets_scissor.c \
 	$(top_srcdir)/src/client/sdl/glwidgets.c
 test_glwidgets_scissor_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_glwidgets_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_glwidgets_scissor_LDADD = @SDL3_LIBS@
+test_glwidgets_scissor_LDADD = $(XP_SDL3_LIBS)
 
 test_glwidgets_primitives_SOURCES = test_glwidgets_primitives.c \
 	$(top_srcdir)/src/client/sdl/glwidgets.c
@@ -271,7 +296,7 @@ test_glwidgets_primitives_CPPFLAGS = $(AM_CPPFLAGS) \
 test_glwidgets_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_glwidgets_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_glwidgets_primitives_LDADD = @SDL3_LIBS@
+test_glwidgets_primitives_LDADD = $(XP_SDL3_LIBS)
 
 test_sdlmeta_primitives_SOURCES = test_sdlmeta_primitives.c \
 	$(top_srcdir)/src/client/sdl/sdlmeta.c
@@ -280,7 +305,7 @@ test_sdlmeta_primitives_CPPFLAGS = $(AM_CPPFLAGS) \
 test_sdlmeta_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_sdlmeta_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_sdlmeta_primitives_LDADD = @SDL3_LIBS@
+test_sdlmeta_primitives_LDADD = $(XP_SDL3_LIBS)
 
 test_sdlgui_appearing_SOURCES = test_sdlgui_appearing.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
@@ -299,7 +324,7 @@ test_sdlgui_appearing_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_refuel \
 	-Wl,--wrap=Gui_paint_connector \
 	-Wl,--wrap=Gui_paint_transporter
-test_sdlgui_appearing_LDADD = @SDL3_LIBS@
+test_sdlgui_appearing_LDADD = $(XP_SDL3_LIBS)
 
 test_sdlgui_hud_primitives_SOURCES = test_sdlgui_hud_primitives.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c
@@ -308,7 +333,7 @@ test_sdlgui_hud_primitives_CPPFLAGS = $(AM_CPPFLAGS) \
 test_sdlgui_hud_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_sdlgui_hud_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_sdlgui_hud_primitives_LDADD = @SDL3_LIBS@
+test_sdlgui_hud_primitives_LDADD = $(XP_SDL3_LIBS)
 
 test_sdlgui_asteroids_SOURCES = test_sdlgui_asteroids.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
@@ -340,7 +365,7 @@ test_sdlgui_asteroids_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_lasers_end \
 	-Wl,--wrap=Gui_paint_laser
 test_sdlgui_asteroids_LDADD = \
-	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL3_LIBS@
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a $(XP_SDL3_LIBS)
 
 test_sdlgui_polygons_SOURCES = test_sdlgui_polygons.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
@@ -354,7 +379,7 @@ test_sdlgui_polygons_CFLAGS = $(AM_CFLAGS) \
 test_sdlgui_polygons_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc
 test_sdlgui_polygons_LDADD = \
-	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL3_LIBS@
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a $(XP_SDL3_LIBS)
 
 test_sdlgui_sparks_SOURCES = test_sdlgui_sparks.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
@@ -382,7 +407,7 @@ test_sdlgui_sparks_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_lasers_begin \
 	-Wl,--wrap=Gui_paint_lasers_end \
 	-Wl,--wrap=Gui_paint_laser
-test_sdlgui_sparks_LDADD = @SDL3_LIBS@
+test_sdlgui_sparks_LDADD = $(XP_SDL3_LIBS)
 
 test_sdlgui_ships_SOURCES = test_sdlgui_ships.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
@@ -399,7 +424,7 @@ test_sdlgui_ships_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_refuel \
 	-Wl,--wrap=Gui_paint_connector \
 	-Wl,--wrap=Gui_paint_transporter
-test_sdlgui_ships_LDADD = @SDL3_LIBS@
+test_sdlgui_ships_LDADD = $(XP_SDL3_LIBS)
 
 test_text_geometry_SOURCES = test_text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c \
@@ -408,7 +433,7 @@ test_text_geometry_SOURCES = test_text_geometry.c \
 test_text_atlas_SOURCES = test_text_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.h
-test_text_atlas_LDADD = @SDL3_LIBS@
+test_text_atlas_LDADD = $(XP_SDL3_LIBS)
 
 test_text_ttf_atlas_SOURCES = test_text_ttf_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_ttf_atlas.c \
@@ -421,7 +446,7 @@ test_text_ttf_atlas_CPPFLAGS = $(AM_CPPFLAGS) \
 	-DXPILOT_TEST_FONT_PATH=\"$(top_srcdir)/lib/fonts/FreeSansBoldOblique.ttf\"
 test_text_ttf_atlas_LDFLAGS = $(AM_LDFLAGS) \
 	-Wl,--wrap=TTF_GetGlyphMetrics
-test_text_ttf_atlas_LDADD = @SDL3_TTF_LIBS@ @SDL3_LIBS@
+test_text_ttf_atlas_LDADD = $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
 
 test_text_renderer_SOURCES = test_text_renderer.c \
 	$(top_srcdir)/src/client/sdl/text_renderer.c \

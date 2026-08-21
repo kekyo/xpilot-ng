@@ -105,20 +105,20 @@ PROGRAMS = $(bin_PROGRAMS)
 am_xpilot_ng_server_OBJECTS = alliance.$(OBJEXT) asteroid.$(OBJEXT) \
 	cannon.$(OBJEXT) cell.$(OBJEXT) cmdline.$(OBJEXT) \
 	collision.$(OBJEXT) command.$(OBJEXT) contact.$(OBJEXT) \
-	contact_stream.$(OBJEXT) event.$(OBJEXT) fileparser.$(OBJEXT) frame.$(OBJEXT) \
-	gravity.$(OBJEXT) id.$(OBJEXT) item.$(OBJEXT) laser.$(OBJEXT) \
-	map.$(OBJEXT) metaserver.$(OBJEXT) modifiers.$(OBJEXT) \
-	netserver.$(OBJEXT) object.$(OBJEXT) objpos.$(OBJEXT) \
-	option.$(OBJEXT) parser.$(OBJEXT) player.$(OBJEXT) \
-	polygon.$(OBJEXT) race.$(OBJEXT) rank.$(OBJEXT) \
-	recwrap.$(OBJEXT) robot.$(OBJEXT) robotdef.$(OBJEXT) \
-	rules.$(OBJEXT) saudio.$(OBJEXT) sched.$(OBJEXT) \
-	score.$(OBJEXT) server.$(OBJEXT) ship.$(OBJEXT) shot.$(OBJEXT) \
-	showtime.$(OBJEXT) srecord.$(OBJEXT) suibotdef.$(OBJEXT) \
-	tag.$(OBJEXT) target.$(OBJEXT) teamcup.$(OBJEXT) \
-	tuner.$(OBJEXT) treasure.$(OBJEXT) update.$(OBJEXT) \
-	walls.$(OBJEXT) wormhole.$(OBJEXT) xp2map.$(OBJEXT) \
-	xpmap.$(OBJEXT)
+	contact_stream.$(OBJEXT) event.$(OBJEXT) fileparser.$(OBJEXT) \
+	frame.$(OBJEXT) gravity.$(OBJEXT) id.$(OBJEXT) item.$(OBJEXT) \
+	laser.$(OBJEXT) map.$(OBJEXT) metaserver.$(OBJEXT) \
+	modifiers.$(OBJEXT) netserver.$(OBJEXT) object.$(OBJEXT) \
+	objpos.$(OBJEXT) option.$(OBJEXT) parser.$(OBJEXT) \
+	player.$(OBJEXT) polygon.$(OBJEXT) race.$(OBJEXT) \
+	rank.$(OBJEXT) recwrap.$(OBJEXT) robot.$(OBJEXT) \
+	robotdef.$(OBJEXT) rules.$(OBJEXT) saudio.$(OBJEXT) \
+	sched.$(OBJEXT) score.$(OBJEXT) server.$(OBJEXT) \
+	ship.$(OBJEXT) shot.$(OBJEXT) showtime.$(OBJEXT) \
+	srecord.$(OBJEXT) suibotdef.$(OBJEXT) tag.$(OBJEXT) \
+	target.$(OBJEXT) teamcup.$(OBJEXT) tuner.$(OBJEXT) \
+	treasure.$(OBJEXT) update.$(OBJEXT) walls.$(OBJEXT) \
+	wormhole.$(OBJEXT) xp2map.$(OBJEXT) xpmap.$(OBJEXT)
 xpilot_ng_server_OBJECTS = $(am_xpilot_ng_server_OBJECTS)
 xpilot_ng_server_DEPENDENCIES =  \
 	$(top_builddir)/src/common/libxpcommon.a
@@ -141,9 +141,10 @@ am__depfiles_remade = ./$(DEPDIR)/alliance.Po ./$(DEPDIR)/asteroid.Po \
 	./$(DEPDIR)/cannon.Po ./$(DEPDIR)/cell.Po \
 	./$(DEPDIR)/cmdline.Po ./$(DEPDIR)/collision.Po \
 	./$(DEPDIR)/command.Po ./$(DEPDIR)/contact.Po \
-	./$(DEPDIR)/contact_stream.Po ./$(DEPDIR)/event.Po ./$(DEPDIR)/fileparser.Po \
-	./$(DEPDIR)/frame.Po ./$(DEPDIR)/gravity.Po ./$(DEPDIR)/id.Po \
-	./$(DEPDIR)/item.Po ./$(DEPDIR)/laser.Po ./$(DEPDIR)/map.Po \
+	./$(DEPDIR)/contact_stream.Po ./$(DEPDIR)/event.Po \
+	./$(DEPDIR)/fileparser.Po ./$(DEPDIR)/frame.Po \
+	./$(DEPDIR)/gravity.Po ./$(DEPDIR)/id.Po ./$(DEPDIR)/item.Po \
+	./$(DEPDIR)/laser.Po ./$(DEPDIR)/map.Po \
 	./$(DEPDIR)/metaserver.Po ./$(DEPDIR)/modifiers.Po \
 	./$(DEPDIR)/netserver.Po ./$(DEPDIR)/object.Po \
 	./$(DEPDIR)/objpos.Po ./$(DEPDIR)/option.Po \
@@ -210,6 +211,7 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CMAKE = @CMAKE@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CSCOPE = @CSCOPE@
@@ -235,6 +237,14 @@ LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
+MINGW_ARCH = @MINGW_ARCH@
+MINGW_DEPS_BUILD_DIR = @MINGW_DEPS_BUILD_DIR@
+MINGW_DEPS_BUILD_TYPE = @MINGW_DEPS_BUILD_TYPE@
+MINGW_DEPS_MAKEFILE = @MINGW_DEPS_MAKEFILE@
+MINGW_DEPS_PREFIX = @MINGW_DEPS_PREFIX@
+MINGW_PACKAGE_DIR = @MINGW_PACKAGE_DIR@
+MINGW_TOOLCHAIN_FILE = @MINGW_TOOLCHAIN_FILE@
+MINGW_WINE_PREFIX = @MINGW_WINE_PREFIX@
 MKDIR_P = @MKDIR_P@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@

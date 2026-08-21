@@ -88,67 +88,112 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-check_PROGRAMS = test-framed-stream$(EXEEXT) \
-	test-game-transport$(EXEEXT) test-connect-target$(EXEEXT) \
-	test-contact-target-probe$(EXEEXT) \
-	test-transport-display$(EXEEXT) test-socket-io$(EXEEXT) \
-	test-native-socket-handle$(EXEEXT) \
-	test-meta-environment$(EXEEXT) test-sdl-versions$(EXEEXT) \
-	test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
-	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
-	test-sdl-window$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
-	test-sdl-event$(EXEEXT) test-gl-core-resources$(EXEEXT) \
-	test-renderer-commands$(EXEEXT) \
-	test-renderer-geometry$(EXEEXT) test-renderer-gl-core$(EXEEXT) \
-	test-paint-transform$(EXEEXT) test-image-geometry$(EXEEXT) \
-	test-polygon-geometry$(EXEEXT) test-gfx2d-picture$(EXEEXT) \
-	test-images$(EXEEXT) test-radar-renderer$(EXEEXT) \
-	test-sdl-ui-image$(EXEEXT) test-sdl-meta-frame$(EXEEXT) \
-	test-sdl-game-frame$(EXEEXT) \
-	test-sdl-renderer-scissor$(EXEEXT) \
-	test-sdl-init-core-profile$(EXEEXT) \
-	test-sdl-renderer-core-context$(EXEEXT) \
-	test-sdlpaint-stage$(EXEEXT) test-paintmap-vdecor$(EXEEXT) \
-	test-glwidgets-scissor$(EXEEXT) \
-	test-glwidgets-primitives$(EXEEXT) \
-	test-sdlmeta-primitives$(EXEEXT) \
-	test-sdlgui-appearing$(EXEEXT) \
-	test-sdlgui-hud-primitives$(EXEEXT) \
-	test-sdlgui-asteroids$(EXEEXT) test-sdlgui-polygons$(EXEEXT) \
-	test-sdlgui-sparks$(EXEEXT) test-sdlgui-ships$(EXEEXT) \
-	test-text-geometry$(EXEEXT) test-text-atlas$(EXEEXT) \
-	test-text-ttf-atlas$(EXEEXT) test-text-renderer$(EXEEXT) \
-	test-text-cache-adapter$(EXEEXT)
-TESTS = test-framed-stream$(EXEEXT) test-game-transport$(EXEEXT) \
-	test-connect-target$(EXEEXT) test-transport-display$(EXEEXT) \
-	test-socket-io$(EXEEXT) test-native-socket-handle$(EXEEXT) \
-	test-meta-environment$(EXEEXT) test-sdl-versions$(EXEEXT) \
-	test-sdl-keys$(EXEEXT) test-sdl-console$(EXEEXT) \
-	test-sdl-surface$(EXEEXT) test-surface-rgba8$(EXEEXT) \
-	test-sdl-window$(EXEEXT) test-sdl-clipboard$(EXEEXT) \
-	test-sdl-event$(EXEEXT) test-renderer-commands$(EXEEXT) \
-	test-renderer-geometry$(EXEEXT) test-paint-transform$(EXEEXT) \
-	run-gl-core-resources.sh test-image-geometry$(EXEEXT) \
-	test-polygon-geometry$(EXEEXT) test-gfx2d-picture$(EXEEXT) \
-	test-images$(EXEEXT) test-radar-renderer$(EXEEXT) \
-	test-sdl-ui-image$(EXEEXT) test-sdl-meta-frame$(EXEEXT) \
-	test-sdl-game-frame$(EXEEXT) \
-	test-sdl-init-core-profile$(EXEEXT) \
-	test-sdlpaint-stage$(EXEEXT) run-sdl-core-boundary.sh \
-	test-paintmap-vdecor$(EXEEXT) \
-	test-sdl-renderer-scissor$(EXEEXT) \
-	test-glwidgets-scissor$(EXEEXT) \
-	test-glwidgets-primitives$(EXEEXT) \
-	test-sdlmeta-primitives$(EXEEXT) \
-	test-sdlgui-appearing$(EXEEXT) \
-	test-sdlgui-hud-primitives$(EXEEXT) \
-	test-sdlgui-asteroids$(EXEEXT) test-sdlgui-polygons$(EXEEXT) \
-	test-sdlgui-sparks$(EXEEXT) test-sdlgui-ships$(EXEEXT) \
-	test-text-geometry$(EXEEXT) test-text-atlas$(EXEEXT) \
-	test-text-ttf-atlas$(EXEEXT) test-text-renderer$(EXEEXT) \
-	test-text-cache-adapter$(EXEEXT) run-renderer-gl-core.sh \
-	run-sdl-renderer-core-context.sh run-build-wrapper.sh \
-	run-vendored-zlib.sh run-e2e.sh
+@COND_WINDOWS_FALSE@check_PROGRAMS = test-framed-stream$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-game-transport$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-connect-target$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-contact-target-probe$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-transport-display$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-socket-io$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-native-socket-handle$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-keys$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-console$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-surface$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-surface-rgba8$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-window$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-clipboard$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-event$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-gl-core-resources$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-renderer-commands$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-renderer-geometry$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-renderer-gl-core$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-paint-transform$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-image-geometry$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-polygon-geometry$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-gfx2d-picture$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-images$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-radar-renderer$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-ui-image$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-meta-frame$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-game-frame$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-renderer-scissor$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-init-core-profile$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-renderer-core-context$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlpaint-stage$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-paintmap-vdecor$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-glwidgets-scissor$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-glwidgets-primitives$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlmeta-primitives$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlgui-appearing$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlgui-hud-primitives$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlgui-asteroids$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlgui-polygons$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlgui-sparks$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlgui-ships$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-text-geometry$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-text-atlas$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-text-ttf-atlas$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-text-renderer$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-text-cache-adapter$(EXEEXT)
+@COND_WINDOWS_TRUE@check_PROGRAMS = test-framed-stream$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-game-transport$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-connect-target$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-contact-target-probe$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-transport-display$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-socket-io$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-native-socket-handle$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT)
+@COND_WINDOWS_FALSE@TESTS = test-framed-stream$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-game-transport$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-connect-target$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-transport-display$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-socket-io$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-native-socket-handle$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-keys$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-console$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-surface$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-surface-rgba8$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-window$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-clipboard$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-event$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-renderer-commands$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-renderer-geometry$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-paint-transform$(EXEEXT) \
+@COND_WINDOWS_FALSE@	run-gl-core-resources.sh \
+@COND_WINDOWS_FALSE@	test-image-geometry$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-polygon-geometry$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-gfx2d-picture$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-images$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-radar-renderer$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-ui-image$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-meta-frame$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-game-frame$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-init-core-profile$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlpaint-stage$(EXEEXT) \
+@COND_WINDOWS_FALSE@	run-sdl-core-boundary.sh \
+@COND_WINDOWS_FALSE@	test-paintmap-vdecor$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-renderer-scissor$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-glwidgets-scissor$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-glwidgets-primitives$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlmeta-primitives$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlgui-appearing$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlgui-hud-primitives$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlgui-asteroids$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlgui-polygons$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlgui-sparks$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdlgui-ships$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-text-geometry$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-text-atlas$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-text-ttf-atlas$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-text-renderer$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-text-cache-adapter$(EXEEXT) \
+@COND_WINDOWS_FALSE@	run-renderer-gl-core.sh \
+@COND_WINDOWS_FALSE@	run-sdl-renderer-core-context.sh \
+@COND_WINDOWS_FALSE@	run-build-wrapper.sh run-vendored-zlib.sh \
+@COND_WINDOWS_FALSE@	run-e2e.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -196,7 +241,9 @@ am_test_gl_core_resources_OBJECTS =  \
 	test_gl_core_resources-text_geometry.$(OBJEXT) \
 	test_gl_core_resources-text_ttf_atlas.$(OBJEXT)
 test_gl_core_resources_OBJECTS = $(am_test_gl_core_resources_OBJECTS)
-test_gl_core_resources_DEPENDENCIES =
+am__DEPENDENCIES_1 =
+test_gl_core_resources_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 test_gl_core_resources_LINK = $(CCLD) $(test_gl_core_resources_CFLAGS) \
 	$(CFLAGS) $(test_gl_core_resources_LDFLAGS) $(LDFLAGS) -o $@
 am_test_glwidgets_primitives_OBJECTS =  \
@@ -204,7 +251,7 @@ am_test_glwidgets_primitives_OBJECTS =  \
 	test_glwidgets_primitives-glwidgets.$(OBJEXT)
 test_glwidgets_primitives_OBJECTS =  \
 	$(am_test_glwidgets_primitives_OBJECTS)
-test_glwidgets_primitives_DEPENDENCIES =
+test_glwidgets_primitives_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_glwidgets_primitives_LINK = $(CCLD) \
 	$(test_glwidgets_primitives_CFLAGS) $(CFLAGS) \
 	$(test_glwidgets_primitives_LDFLAGS) $(LDFLAGS) -o $@
@@ -212,7 +259,7 @@ am_test_glwidgets_scissor_OBJECTS =  \
 	test_glwidgets_scissor-test_glwidgets_scissor.$(OBJEXT) \
 	test_glwidgets_scissor-glwidgets.$(OBJEXT)
 test_glwidgets_scissor_OBJECTS = $(am_test_glwidgets_scissor_OBJECTS)
-test_glwidgets_scissor_DEPENDENCIES =
+test_glwidgets_scissor_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_glwidgets_scissor_LINK = $(CCLD) $(test_glwidgets_scissor_CFLAGS) \
 	$(CFLAGS) $(test_glwidgets_scissor_LDFLAGS) $(LDFLAGS) -o $@
 am_test_image_geometry_OBJECTS = test_image_geometry.$(OBJEXT) \
@@ -224,7 +271,7 @@ am_test_images_OBJECTS = test_images-test_images.$(OBJEXT) \
 	test_images-image_geometry.$(OBJEXT) \
 	test_images-strdup.$(OBJEXT)
 test_images_OBJECTS = $(am_test_images_OBJECTS)
-test_images_DEPENDENCIES =
+test_images_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_test_meta_environment_OBJECTS =  \
 	test_meta_environment-test_meta_environment.$(OBJEXT) \
 	test_meta_environment-meta.$(OBJEXT) \
@@ -263,7 +310,7 @@ am_test_radar_renderer_OBJECTS =  \
 	test_radar_renderer-test_radar_renderer.$(OBJEXT) \
 	test_radar_renderer-radar.$(OBJEXT)
 test_radar_renderer_OBJECTS = $(am_test_radar_renderer_OBJECTS)
-test_radar_renderer_DEPENDENCIES =
+test_radar_renderer_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_radar_renderer_LINK = $(CCLD) $(test_radar_renderer_CFLAGS) \
 	$(CFLAGS) $(test_radar_renderer_LDFLAGS) $(LDFLAGS) -o $@
 am_test_renderer_commands_OBJECTS = test_renderer_commands.$(OBJEXT) \
@@ -280,19 +327,20 @@ am_test_renderer_gl_core_OBJECTS = test_renderer_gl_core.$(OBJEXT) \
 	renderer.$(OBJEXT) renderer_gl_core.$(OBJEXT) \
 	text_geometry.$(OBJEXT)
 test_renderer_gl_core_OBJECTS = $(am_test_renderer_gl_core_OBJECTS)
-test_renderer_gl_core_DEPENDENCIES =
+test_renderer_gl_core_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_test_sdl_clipboard_OBJECTS = test_sdl_clipboard.$(OBJEXT) \
 	sdlclipboard.$(OBJEXT)
 test_sdl_clipboard_OBJECTS = $(am_test_sdl_clipboard_OBJECTS)
-test_sdl_clipboard_DEPENDENCIES =
+test_sdl_clipboard_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_test_sdl_console_OBJECTS = test_sdl_console.$(OBJEXT) \
 	SDL_console.$(OBJEXT)
 test_sdl_console_OBJECTS = $(am_test_sdl_console_OBJECTS)
-test_sdl_console_DEPENDENCIES =
+test_sdl_console_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_test_sdl_event_OBJECTS = test_sdl_event.$(OBJEXT) \
 	sdlevent.$(OBJEXT)
 test_sdl_event_OBJECTS = $(am_test_sdl_event_OBJECTS)
-test_sdl_event_DEPENDENCIES =
+test_sdl_event_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_sdl_event_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(test_sdl_event_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdl_game_frame_OBJECTS = test_sdl_game_frame.$(OBJEXT) \
@@ -303,13 +351,14 @@ am_test_sdl_init_core_profile_OBJECTS = test_sdl_init_core_profile-test_sdl_init
 	test_sdl_init_core_profile-sdlinit.$(OBJEXT)
 test_sdl_init_core_profile_OBJECTS =  \
 	$(am_test_sdl_init_core_profile_OBJECTS)
-test_sdl_init_core_profile_DEPENDENCIES =
+test_sdl_init_core_profile_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 test_sdl_init_core_profile_LINK = $(CCLD) \
 	$(test_sdl_init_core_profile_CFLAGS) $(CFLAGS) \
 	$(test_sdl_init_core_profile_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdl_keys_OBJECTS = test_sdl_keys.$(OBJEXT) sdlkeys.$(OBJEXT)
 test_sdl_keys_OBJECTS = $(am_test_sdl_keys_OBJECTS)
-test_sdl_keys_DEPENDENCIES =
+test_sdl_keys_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_test_sdl_meta_frame_OBJECTS = test_sdl_meta_frame.$(OBJEXT) \
 	sdlmetaframe.$(OBJEXT)
 test_sdl_meta_frame_OBJECTS = $(am_test_sdl_meta_frame_OBJECTS)
@@ -319,21 +368,21 @@ am_test_sdl_renderer_core_context_OBJECTS =  \
 	renderer_gl_core.$(OBJEXT) sdlrenderer.$(OBJEXT)
 test_sdl_renderer_core_context_OBJECTS =  \
 	$(am_test_sdl_renderer_core_context_OBJECTS)
-test_sdl_renderer_core_context_DEPENDENCIES =
+test_sdl_renderer_core_context_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_test_sdl_renderer_scissor_OBJECTS =  \
 	test_sdl_renderer_scissor-test_sdl_renderer_scissor.$(OBJEXT) \
 	test_sdl_renderer_scissor-renderer.$(OBJEXT) \
 	test_sdl_renderer_scissor-sdlrenderer.$(OBJEXT)
 test_sdl_renderer_scissor_OBJECTS =  \
 	$(am_test_sdl_renderer_scissor_OBJECTS)
-test_sdl_renderer_scissor_DEPENDENCIES =
+test_sdl_renderer_scissor_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_sdl_renderer_scissor_LINK = $(CCLD) \
 	$(test_sdl_renderer_scissor_CFLAGS) $(CFLAGS) \
 	$(test_sdl_renderer_scissor_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdl_surface_OBJECTS = test_sdl_surface.$(OBJEXT) \
 	sdlcompat.$(OBJEXT)
 test_sdl_surface_OBJECTS = $(am_test_sdl_surface_OBJECTS)
-test_sdl_surface_DEPENDENCIES =
+test_sdl_surface_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_test_sdl_ui_image_OBJECTS =  \
 	test_sdl_ui_image-test_sdl_ui_image.$(OBJEXT) \
 	test_sdl_ui_image-sdluiimage.$(OBJEXT) \
@@ -342,22 +391,23 @@ am_test_sdl_ui_image_OBJECTS =  \
 	test_sdl_ui_image-surface_rgba8.$(OBJEXT) \
 	test_sdl_ui_image-sdlcompat.$(OBJEXT)
 test_sdl_ui_image_OBJECTS = $(am_test_sdl_ui_image_OBJECTS)
-test_sdl_ui_image_DEPENDENCIES =
+test_sdl_ui_image_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_sdl_ui_image_LINK = $(CCLD) $(test_sdl_ui_image_CFLAGS) $(CFLAGS) \
 	$(test_sdl_ui_image_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdl_versions_OBJECTS = test_sdl_versions.$(OBJEXT)
 test_sdl_versions_OBJECTS = $(am_test_sdl_versions_OBJECTS)
-test_sdl_versions_DEPENDENCIES =
+test_sdl_versions_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_test_sdl_window_OBJECTS = test_sdl_window.$(OBJEXT) \
 	sdlwindow.$(OBJEXT)
 test_sdl_window_OBJECTS = $(am_test_sdl_window_OBJECTS)
-test_sdl_window_DEPENDENCIES =
+test_sdl_window_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_test_sdlgui_appearing_OBJECTS =  \
 	test_sdlgui_appearing-test_sdlgui_appearing.$(OBJEXT) \
 	test_sdlgui_appearing-sdlgui.$(OBJEXT) \
 	test_sdlgui_appearing-paintobjects.$(OBJEXT)
 test_sdlgui_appearing_OBJECTS = $(am_test_sdlgui_appearing_OBJECTS)
-test_sdlgui_appearing_DEPENDENCIES =
+test_sdlgui_appearing_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_sdlgui_appearing_LINK = $(CCLD) $(test_sdlgui_appearing_CFLAGS) \
 	$(CFLAGS) $(test_sdlgui_appearing_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdlgui_asteroids_OBJECTS =  \
@@ -367,14 +417,15 @@ am_test_sdlgui_asteroids_OBJECTS =  \
 	test_sdlgui_asteroids-paintobjects.$(OBJEXT)
 test_sdlgui_asteroids_OBJECTS = $(am_test_sdlgui_asteroids_OBJECTS)
 test_sdlgui_asteroids_DEPENDENCIES =  \
-	$(top_builddir)/src/client/sdl/libxp_libtess2.a
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a \
+	$(am__DEPENDENCIES_1)
 test_sdlgui_asteroids_LINK = $(CCLD) $(test_sdlgui_asteroids_CFLAGS) \
 	$(CFLAGS) $(test_sdlgui_asteroids_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdlgui_hud_primitives_OBJECTS = test_sdlgui_hud_primitives-test_sdlgui_hud_primitives.$(OBJEXT) \
 	test_sdlgui_hud_primitives-sdlgui.$(OBJEXT)
 test_sdlgui_hud_primitives_OBJECTS =  \
 	$(am_test_sdlgui_hud_primitives_OBJECTS)
-test_sdlgui_hud_primitives_DEPENDENCIES =
+test_sdlgui_hud_primitives_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_sdlgui_hud_primitives_LINK = $(CCLD) \
 	$(test_sdlgui_hud_primitives_CFLAGS) $(CFLAGS) \
 	$(test_sdlgui_hud_primitives_LDFLAGS) $(LDFLAGS) -o $@
@@ -384,7 +435,8 @@ am_test_sdlgui_polygons_OBJECTS =  \
 	test_sdlgui_polygons-polygon_geometry.$(OBJEXT)
 test_sdlgui_polygons_OBJECTS = $(am_test_sdlgui_polygons_OBJECTS)
 test_sdlgui_polygons_DEPENDENCIES =  \
-	$(top_builddir)/src/client/sdl/libxp_libtess2.a
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a \
+	$(am__DEPENDENCIES_1)
 test_sdlgui_polygons_LINK = $(CCLD) $(test_sdlgui_polygons_CFLAGS) \
 	$(CFLAGS) $(test_sdlgui_polygons_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdlgui_ships_OBJECTS =  \
@@ -392,7 +444,7 @@ am_test_sdlgui_ships_OBJECTS =  \
 	test_sdlgui_ships-sdlgui.$(OBJEXT) \
 	test_sdlgui_ships-paintobjects.$(OBJEXT)
 test_sdlgui_ships_OBJECTS = $(am_test_sdlgui_ships_OBJECTS)
-test_sdlgui_ships_DEPENDENCIES =
+test_sdlgui_ships_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_sdlgui_ships_LINK = $(CCLD) $(test_sdlgui_ships_CFLAGS) $(CFLAGS) \
 	$(test_sdlgui_ships_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdlgui_sparks_OBJECTS =  \
@@ -400,7 +452,7 @@ am_test_sdlgui_sparks_OBJECTS =  \
 	test_sdlgui_sparks-sdlgui.$(OBJEXT) \
 	test_sdlgui_sparks-paintobjects.$(OBJEXT)
 test_sdlgui_sparks_OBJECTS = $(am_test_sdlgui_sparks_OBJECTS)
-test_sdlgui_sparks_DEPENDENCIES =
+test_sdlgui_sparks_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_sdlgui_sparks_LINK = $(CCLD) $(test_sdlgui_sparks_CFLAGS) \
 	$(CFLAGS) $(test_sdlgui_sparks_LDFLAGS) $(LDFLAGS) -o $@
 am_test_sdlmeta_primitives_OBJECTS =  \
@@ -408,7 +460,7 @@ am_test_sdlmeta_primitives_OBJECTS =  \
 	test_sdlmeta_primitives-sdlmeta.$(OBJEXT)
 test_sdlmeta_primitives_OBJECTS =  \
 	$(am_test_sdlmeta_primitives_OBJECTS)
-test_sdlmeta_primitives_DEPENDENCIES =
+test_sdlmeta_primitives_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_sdlmeta_primitives_LINK = $(CCLD) \
 	$(test_sdlmeta_primitives_CFLAGS) $(CFLAGS) \
 	$(test_sdlmeta_primitives_LDFLAGS) $(LDFLAGS) -o $@
@@ -416,7 +468,7 @@ am_test_sdlpaint_stage_OBJECTS =  \
 	test_sdlpaint_stage-test_sdlpaint_stage.$(OBJEXT) \
 	test_sdlpaint_stage-sdlpaint.$(OBJEXT)
 test_sdlpaint_stage_OBJECTS = $(am_test_sdlpaint_stage_OBJECTS)
-test_sdlpaint_stage_DEPENDENCIES =
+test_sdlpaint_stage_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_sdlpaint_stage_LINK = $(CCLD) $(test_sdlpaint_stage_CFLAGS) \
 	$(CFLAGS) $(test_sdlpaint_stage_LDFLAGS) $(LDFLAGS) -o $@
 am_test_socket_io_OBJECTS = test_socket_io.$(OBJEXT)
@@ -426,11 +478,11 @@ test_socket_io_DEPENDENCIES =  \
 am_test_surface_rgba8_OBJECTS = test_surface_rgba8.$(OBJEXT) \
 	surface_rgba8.$(OBJEXT) sdlcompat.$(OBJEXT)
 test_surface_rgba8_OBJECTS = $(am_test_surface_rgba8_OBJECTS)
-test_surface_rgba8_DEPENDENCIES =
+test_surface_rgba8_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_test_text_atlas_OBJECTS = test_text_atlas.$(OBJEXT) \
 	text_atlas.$(OBJEXT)
 test_text_atlas_OBJECTS = $(am_test_text_atlas_OBJECTS)
-test_text_atlas_DEPENDENCIES =
+test_text_atlas_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_test_text_cache_adapter_OBJECTS =  \
 	test_text_cache_adapter-test_text_cache_adapter.$(OBJEXT) \
 	test_text_cache_adapter-text.$(OBJEXT)
@@ -457,7 +509,8 @@ am_test_text_ttf_atlas_OBJECTS =  \
 	test_text_ttf_atlas-text_atlas.$(OBJEXT) \
 	test_text_ttf_atlas-text_geometry.$(OBJEXT)
 test_text_ttf_atlas_OBJECTS = $(am_test_text_ttf_atlas_OBJECTS)
-test_text_ttf_atlas_DEPENDENCIES =
+test_text_ttf_atlas_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 test_text_ttf_atlas_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(test_text_ttf_atlas_LDFLAGS) $(LDFLAGS) -o $@
 am_test_transport_display_OBJECTS = test_transport_display.$(OBJEXT) \
@@ -915,6 +968,7 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CMAKE = @CMAKE@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CSCOPE = @CSCOPE@
@@ -940,6 +994,14 @@ LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
+MINGW_ARCH = @MINGW_ARCH@
+MINGW_DEPS_BUILD_DIR = @MINGW_DEPS_BUILD_DIR@
+MINGW_DEPS_BUILD_TYPE = @MINGW_DEPS_BUILD_TYPE@
+MINGW_DEPS_MAKEFILE = @MINGW_DEPS_MAKEFILE@
+MINGW_DEPS_PREFIX = @MINGW_DEPS_PREFIX@
+MINGW_PACKAGE_DIR = @MINGW_PACKAGE_DIR@
+MINGW_TOOLCHAIN_FILE = @MINGW_TOOLCHAIN_FILE@
+MINGW_WINE_PREFIX = @MINGW_WINE_PREFIX@
 MKDIR_P = @MKDIR_P@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
@@ -1033,13 +1095,25 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+@COND_MINGW_VENDORED_FALSE@XP_SDL3_CFLAGS = @SDL3_CFLAGS@
+@COND_MINGW_VENDORED_TRUE@XP_SDL3_CFLAGS = $(MINGW_SDL3_CFLAGS)
+@COND_MINGW_VENDORED_FALSE@XP_SDL3_LIBS = @SDL3_LIBS@
+@COND_MINGW_VENDORED_TRUE@XP_SDL3_LIBS = $(MINGW_SDL3_LIBS)
+@COND_MINGW_VENDORED_FALSE@XP_SDL3_IMAGE_CFLAGS = @SDL3_IMAGE_CFLAGS@
+@COND_MINGW_VENDORED_TRUE@XP_SDL3_IMAGE_CFLAGS = $(MINGW_SDL3_IMAGE_CFLAGS)
+@COND_MINGW_VENDORED_FALSE@XP_SDL3_IMAGE_LIBS = @SDL3_IMAGE_LIBS@
+@COND_MINGW_VENDORED_TRUE@XP_SDL3_IMAGE_LIBS = $(MINGW_SDL3_IMAGE_LIBS)
+@COND_MINGW_VENDORED_FALSE@XP_SDL3_TTF_CFLAGS = @SDL3_TTF_CFLAGS@
+@COND_MINGW_VENDORED_TRUE@XP_SDL3_TTF_CFLAGS = $(MINGW_SDL3_TTF_CFLAGS)
+@COND_MINGW_VENDORED_FALSE@XP_SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
+@COND_MINGW_VENDORED_TRUE@XP_SDL3_TTF_LIBS = $(MINGW_SDL3_TTF_LIBS)
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-DSDL_DISABLE_OLD_NAMES \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/src/client/sdl \
 	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
-	@SDL3_CFLAGS@ @SDL3_IMAGE_CFLAGS@ @SDL3_TTF_CFLAGS@ \
+	$(XP_SDL3_CFLAGS) $(XP_SDL3_IMAGE_CFLAGS) $(XP_SDL3_TTF_CFLAGS) \
 	@GL_CFLAGS@
 
 test_game_transport_SOURCES = test_game_transport.c
@@ -1083,39 +1157,39 @@ test_meta_environment_CFLAGS = $(AM_CFLAGS) \
 
 test_meta_environment_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdl_versions_SOURCES = test_sdl_versions.c
-test_sdl_versions_LDADD = @SDL3_IMAGE_LIBS@ @SDL3_TTF_LIBS@ @SDL3_LIBS@
+test_sdl_versions_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
 test_sdl_keys_SOURCES = test_sdl_keys.c \
 	$(top_srcdir)/src/client/sdl/sdlkeys.c
 
-test_sdl_keys_LDADD = @SDL3_LIBS@
+test_sdl_keys_LDADD = $(XP_SDL3_LIBS)
 test_sdl_console_SOURCES = test_sdl_console.c \
 	$(top_srcdir)/src/client/sdl/SDL_console.c
 
-test_sdl_console_LDADD = @SDL3_IMAGE_LIBS@ @SDL3_LIBS@
+test_sdl_console_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_LIBS)
 test_sdl_surface_SOURCES = test_sdl_surface.c \
 	$(top_srcdir)/src/client/sdl/sdlcompat.c
 
-test_sdl_surface_LDADD = @SDL3_LIBS@
+test_sdl_surface_LDADD = $(XP_SDL3_LIBS)
 test_surface_rgba8_SOURCES = test_surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/sdlcompat.c
 
-test_surface_rgba8_LDADD = @SDL3_LIBS@
+test_surface_rgba8_LDADD = $(XP_SDL3_LIBS)
 test_sdl_window_SOURCES = test_sdl_window.c \
 	$(top_srcdir)/src/client/sdl/sdlwindow.c
 
-test_sdl_window_LDADD = @SDL3_LIBS@
+test_sdl_window_LDADD = $(XP_SDL3_LIBS)
 test_sdl_clipboard_SOURCES = test_sdl_clipboard.c \
 	$(top_srcdir)/src/client/sdl/sdlclipboard.c
 
-test_sdl_clipboard_LDADD = @SDL3_LIBS@
+test_sdl_clipboard_LDADD = $(XP_SDL3_LIBS)
 test_sdl_event_SOURCES = test_sdl_event.c \
 	$(top_srcdir)/src/client/sdl/sdlevent.c
 
 test_sdl_event_LDFLAGS = $(AM_LDFLAGS) \
 	-Wl,--wrap=SDL_GetMouseState
 
-test_sdl_event_LDADD = @SDL3_LIBS@
+test_sdl_event_LDADD = $(XP_SDL3_LIBS)
 test_gl_core_resources_SOURCES = test_gl_core_resources.c \
 	$(top_srcdir)/src/client/sdl/gl_diagnostics.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
@@ -1138,7 +1212,7 @@ test_gl_core_resources_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=TTF_OpenFont \
 	-Wl,--wrap=TTF_CloseFont
 
-test_gl_core_resources_LDADD = @SDL3_TTF_LIBS@ @SDL3_LIBS@ \
+test_gl_core_resources_LDADD = $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) \
 	@GL_LIBS@
 
 test_renderer_commands_SOURCES = test_renderer_commands.c \
@@ -1155,7 +1229,7 @@ test_renderer_gl_core_SOURCES = test_renderer_gl_core.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c
 
-test_renderer_gl_core_LDADD = @SDL3_LIBS@ @GL_LIBS@
+test_renderer_gl_core_LDADD = $(XP_SDL3_LIBS) @GL_LIBS@
 test_paint_transform_SOURCES = test_paint_transform.c \
 	$(top_srcdir)/src/client/sdl/paint_transform.c
 
@@ -1180,7 +1254,7 @@ test_images_SOURCES = test_images.c \
 	$(top_srcdir)/src/common/strdup.c
 
 test_images_CPPFLAGS = $(AM_CPPFLAGS) -DXPILOT_IMAGE_TEST_HOOKS
-test_images_LDADD = @SDL3_LIBS@
+test_images_LDADD = $(XP_SDL3_LIBS)
 test_radar_renderer_SOURCES = test_radar_renderer.c \
 	$(top_srcdir)/src/client/sdl/radar.c
 
@@ -1189,7 +1263,7 @@ test_radar_renderer_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
 test_radar_renderer_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_radar_renderer_LDADD = @SDL3_LIBS@
+test_radar_renderer_LDADD = $(XP_SDL3_LIBS)
 test_sdl_ui_image_SOURCES = test_sdl_ui_image.c \
 	$(top_srcdir)/src/client/sdl/sdluiimage.c \
 	$(top_srcdir)/src/client/sdl/sdlmetaframe.c \
@@ -1201,7 +1275,7 @@ test_sdl_ui_image_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
 test_sdl_ui_image_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_sdl_ui_image_LDADD = @SDL3_LIBS@
+test_sdl_ui_image_LDADD = $(XP_SDL3_LIBS)
 test_sdl_meta_frame_SOURCES = test_sdl_meta_frame.c \
 	$(top_srcdir)/src/client/sdl/sdlmetaframe.c
 
@@ -1218,7 +1292,7 @@ test_sdlpaint_stage_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
 test_sdlpaint_stage_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_sdlpaint_stage_LDADD = @SDL3_LIBS@
+test_sdlpaint_stage_LDADD = $(XP_SDL3_LIBS)
 test_paintmap_vdecor_SOURCES = test_paintmap_vdecor.c \
 	$(top_srcdir)/src/client/paintmap.c
 
@@ -1240,7 +1314,7 @@ test_sdl_renderer_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=SDL_GL_GetProcAddress \
 	-Wl,--wrap=SDL_GetWindowSizeInPixels
 
-test_sdl_renderer_scissor_LDADD = @SDL3_LIBS@ @GL_LIBS@
+test_sdl_renderer_scissor_LDADD = $(XP_SDL3_LIBS) @GL_LIBS@
 test_sdl_init_core_profile_SOURCES = test_sdl_init_core_profile.c \
 	$(top_srcdir)/src/client/sdl/sdlinit.c
 
@@ -1252,14 +1326,14 @@ test_sdl_init_core_profile_LDFLAGS = $(AM_LDFLAGS) \
 	-Wl,--wrap=TTF_Init -Wl,--wrap=TTF_Quit \
 	-Wl,--wrap=SDL_GL_SetAttribute -Wl,--wrap=SDL_CreateWindow
 
-test_sdl_init_core_profile_LDADD = @SDL3_TTF_LIBS@ @SDL3_LIBS@
+test_sdl_init_core_profile_LDADD = $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
 test_sdl_renderer_core_context_SOURCES = \
 	test_sdl_renderer_core_context.c \
 	$(top_srcdir)/src/client/sdl/renderer.c \
 	$(top_srcdir)/src/client/sdl/renderer_gl_core.c \
 	$(top_srcdir)/src/client/sdl/sdlrenderer.c
 
-test_sdl_renderer_core_context_LDADD = @SDL3_LIBS@ @GL_LIBS@
+test_sdl_renderer_core_context_LDADD = $(XP_SDL3_LIBS) @GL_LIBS@
 test_glwidgets_scissor_SOURCES = test_glwidgets_scissor.c \
 	$(top_srcdir)/src/client/sdl/glwidgets.c
 
@@ -1267,7 +1341,7 @@ test_glwidgets_scissor_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
 test_glwidgets_scissor_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_glwidgets_scissor_LDADD = @SDL3_LIBS@
+test_glwidgets_scissor_LDADD = $(XP_SDL3_LIBS)
 test_glwidgets_primitives_SOURCES = test_glwidgets_primitives.c \
 	$(top_srcdir)/src/client/sdl/glwidgets.c
 
@@ -1278,7 +1352,7 @@ test_glwidgets_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
 test_glwidgets_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_glwidgets_primitives_LDADD = @SDL3_LIBS@
+test_glwidgets_primitives_LDADD = $(XP_SDL3_LIBS)
 test_sdlmeta_primitives_SOURCES = test_sdlmeta_primitives.c \
 	$(top_srcdir)/src/client/sdl/sdlmeta.c
 
@@ -1289,7 +1363,7 @@ test_sdlmeta_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
 test_sdlmeta_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_sdlmeta_primitives_LDADD = @SDL3_LIBS@
+test_sdlmeta_primitives_LDADD = $(XP_SDL3_LIBS)
 test_sdlgui_appearing_SOURCES = test_sdlgui_appearing.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/appearing_batch_test_support.h \
@@ -1311,7 +1385,7 @@ test_sdlgui_appearing_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_connector \
 	-Wl,--wrap=Gui_paint_transporter
 
-test_sdlgui_appearing_LDADD = @SDL3_LIBS@
+test_sdlgui_appearing_LDADD = $(XP_SDL3_LIBS)
 test_sdlgui_hud_primitives_SOURCES = test_sdlgui_hud_primitives.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c
 
@@ -1322,7 +1396,7 @@ test_sdlgui_hud_primitives_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
 test_sdlgui_hud_primitives_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
-test_sdlgui_hud_primitives_LDADD = @SDL3_LIBS@
+test_sdlgui_hud_primitives_LDADD = $(XP_SDL3_LIBS)
 test_sdlgui_asteroids_SOURCES = test_sdlgui_asteroids.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/sdl/asteroid_batch_test_support.h \
@@ -1357,7 +1431,7 @@ test_sdlgui_asteroids_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_laser
 
 test_sdlgui_asteroids_LDADD = \
-	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL3_LIBS@
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a $(XP_SDL3_LIBS)
 
 test_sdlgui_polygons_SOURCES = test_sdlgui_polygons.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
@@ -1375,7 +1449,7 @@ test_sdlgui_polygons_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc
 
 test_sdlgui_polygons_LDADD = \
-	$(top_builddir)/src/client/sdl/libxp_libtess2.a @SDL3_LIBS@
+	$(top_builddir)/src/client/sdl/libxp_libtess2.a $(XP_SDL3_LIBS)
 
 test_sdlgui_sparks_SOURCES = test_sdlgui_sparks.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
@@ -1407,7 +1481,7 @@ test_sdlgui_sparks_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_lasers_end \
 	-Wl,--wrap=Gui_paint_laser
 
-test_sdlgui_sparks_LDADD = @SDL3_LIBS@
+test_sdlgui_sparks_LDADD = $(XP_SDL3_LIBS)
 test_sdlgui_ships_SOURCES = test_sdlgui_ships.c \
 	$(top_srcdir)/src/client/sdl/sdlgui.c \
 	$(top_srcdir)/src/client/paintobjects.c
@@ -1426,7 +1500,7 @@ test_sdlgui_ships_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
 	-Wl,--wrap=Gui_paint_connector \
 	-Wl,--wrap=Gui_paint_transporter
 
-test_sdlgui_ships_LDADD = @SDL3_LIBS@
+test_sdlgui_ships_LDADD = $(XP_SDL3_LIBS)
 test_text_geometry_SOURCES = test_text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.h
@@ -1435,7 +1509,7 @@ test_text_atlas_SOURCES = test_text_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_atlas.h
 
-test_text_atlas_LDADD = @SDL3_LIBS@
+test_text_atlas_LDADD = $(XP_SDL3_LIBS)
 test_text_ttf_atlas_SOURCES = test_text_ttf_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_ttf_atlas.c \
 	$(top_srcdir)/src/client/sdl/text_ttf_atlas.h \
@@ -1450,7 +1524,7 @@ test_text_ttf_atlas_CPPFLAGS = $(AM_CPPFLAGS) \
 test_text_ttf_atlas_LDFLAGS = $(AM_LDFLAGS) \
 	-Wl,--wrap=TTF_GetGlyphMetrics
 
-test_text_ttf_atlas_LDADD = @SDL3_TTF_LIBS@ @SDL3_LIBS@
+test_text_ttf_atlas_LDADD = $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
 test_text_renderer_SOURCES = test_text_renderer.c \
 	$(top_srcdir)/src/client/sdl/text_renderer.c \
 	$(top_srcdir)/src/client/sdl/text_renderer.h \
@@ -4019,6 +4093,7 @@ uninstall-am:
 
 .PRECIOUS: Makefile
 
+@COND_MINGW_VENDORED_TRUE@-include $(top_builddir)/mingw-deps.mk
 
 run-sdl-core-boundary.log: \
 	$(top_builddir)/src/client/sdl/xpilot-ng-sdl
