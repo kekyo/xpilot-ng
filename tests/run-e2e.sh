@@ -406,6 +406,19 @@ run_invalid_target_rejection()
 	|| fail "invalid target diagnostic did not explain the scheme"
 }
 
+run_server_transport_option_help()
+{
+    transport_help_log="$runtime_dir/server-transport-help.log"
+
+    "$server" -help >"$transport_help_log" 2>&1 || true
+    grep -Fq -- '-tcp' "$transport_help_log" \
+	|| fail "server help did not list -tcp"
+    grep -Fq -- '-udp' "$transport_help_log" \
+	|| fail "server help did not list -udp"
+    grep -Fq -- '-transport <udp|tcp>' "$transport_help_log" \
+	|| fail "server help did not list -transport"
+}
+
 run_contact_target_failover()
 {
     port=$(reserve_contact_port)
@@ -413,7 +426,7 @@ run_contact_target_failover()
     probe_log="$runtime_dir/contact-target-failover.log"
 
     "$server" -map "$map" -port "$port" -noQuit +reportMeta \
-	-contactTransport udp -gameTransport udp \
+	-contactTransport tcp -gameTransport tcp -udp \
 	>"$game_server_log" 2>&1 &
     server_pid=$!
     wait_until "contact target failover server readiness" 20 server_ready
@@ -495,7 +508,22 @@ run_gameplay_case()
 	;;
     esac
 
-    if test "$game_transport" = default \
+    if test "$game_case" = udp-explicit; then
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -contactTransport tcp -gameTransport tcp -transport udp \
+	    -recordFileName "$game_recording" -recordMode 1 \
+	    >"$game_server_log" 2>&1 &
+    elif test "$game_case" = tcp-contact; then
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -transport tcp \
+	    -recordFileName "$game_recording" -recordMode 1 \
+	    >"$game_server_log" 2>&1 &
+    elif test "$game_case" = tcp-contact-udp-game; then
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -tcp -gameTransport udp \
+	    -recordFileName "$game_recording" -recordMode 1 \
+	    >"$game_server_log" 2>&1 &
+    elif test "$game_transport" = default \
 	&& test "$contact_transport" = default; then
 	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
 	    -recordFileName "$game_recording" -recordMode 1 \
@@ -618,8 +646,8 @@ run_x11_gameplay_title_case()
     game_client_log="$runtime_dir/client-$game_case.log"
     game_client_name=X11TCP
 
-    "$server" -map "$map" -port "$port" -noQuit +reportMeta \
-	-contactTransport tcp -gameTransport tcp >"$game_server_log" 2>&1 &
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta -tcp \
+	>"$game_server_log" 2>&1 &
     server_pid=$!
     wait_until "$game_case server readiness" 20 server_ready
 
@@ -834,6 +862,7 @@ wait_until "metaserver window teardown" 5 process_window_absent \
     "$finished_meta_pid"
 
 run_invalid_target_rejection
+run_server_transport_option_help
 run_contact_target_failover
 run_gameplay_case tcp tcp no default
 run_gameplay_case udp-default default yes default

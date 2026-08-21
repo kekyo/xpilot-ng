@@ -365,7 +365,7 @@ run_contact_target_failover()
             -map lib/maps/ndh.xp2 \
             -port "$contact_port" \
             -noQuit +reportMeta \
-            -contactTransport udp -gameTransport udp
+            -contactTransport tcp -gameTransport tcp -udp
     ) >"$server_log" 2>&1 &
     server_pid=$!
     wait_until "contact target failover server readiness" 30 server_ready
@@ -465,12 +465,29 @@ run_gameplay_case()
 
     (
         cd "$runtime_package"
-        exec "$wine_program" ./xpilot-ng-server.exe \
-            -map lib/maps/ndh.xp2 \
-            -port "$contact_port" \
-            -noQuit +reportMeta \
-            -contactTransport "$contact_transport" \
-            -gameTransport "$gameplay_transport"
+        case "$contact_transport:$gameplay_transport" in
+        tcp:tcp)
+            exec "$wine_program" ./xpilot-ng-server.exe \
+                -map lib/maps/ndh.xp2 -port "$contact_port" \
+                -noQuit +reportMeta -transport tcp
+            ;;
+        udp:udp)
+            exec "$wine_program" ./xpilot-ng-server.exe \
+                -map lib/maps/ndh.xp2 -port "$contact_port" \
+                -noQuit +reportMeta \
+                -contactTransport tcp -gameTransport tcp -udp
+            ;;
+        tcp:udp)
+            exec "$wine_program" ./xpilot-ng-server.exe \
+                -map lib/maps/ndh.xp2 -port "$contact_port" \
+                -noQuit +reportMeta -tcp -gameTransport udp
+            ;;
+        udp:tcp)
+            exec "$wine_program" ./xpilot-ng-server.exe \
+                -map lib/maps/ndh.xp2 -port "$contact_port" \
+                -noQuit +reportMeta -transport udp -gameTransport tcp
+            ;;
+        esac
     ) >"$server_log" 2>&1 &
     server_pid=$!
     wait_until "$transport_case server readiness" 30 server_ready
