@@ -32,7 +32,7 @@ static int Handle_input(int new_input)
 
 static void Input_loop(void)
 {
-    fd_set rfds, tfds;
+    fd_set rfds;
     int max, n, netfd, result, clientfd;
     struct timeval tv;
 
@@ -50,16 +50,16 @@ static void Input_loop(void)
 	error("Bad client filedescriptor");
 	return;
     }
-    if ((netfd = Net_fd()) == -1) {
-	error("Bad socket filedescriptor");
-	return;
-    }
     Net_key_change();
-    FD_ZERO(&rfds);
-    FD_SET(clientfd, &rfds);
-    FD_SET(netfd, &rfds);
-    max = (clientfd > netfd) ? clientfd : netfd;
-    for (tfds = rfds; ; rfds = tfds) {
+    for (;;) {
+	if ((netfd = Net_fd()) == SOCK_FD_INVALID) {
+	    error("Bad socket filedescriptor");
+	    return;
+	}
+	FD_ZERO(&rfds);
+	FD_SET(clientfd, &rfds);
+	FD_SET(netfd, &rfds);
+	max = (clientfd > netfd) ? clientfd : netfd;
 
 	tv.tv_sec = 1;
 	tv.tv_usec = 0;

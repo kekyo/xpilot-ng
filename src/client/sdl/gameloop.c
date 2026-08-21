@@ -57,6 +57,11 @@ void Game_loop(void)
     Net_key_change();
 
     while (1) {
+	netfd = Net_fd();
+	if (netfd == SOCK_FD_INVALID) {
+	    error("Bad socket filedescriptor");
+	    return;
+	}
 	FD_ZERO(&rfds);
 	FD_SET(netfd, &rfds);
 	tv.tv_sec = 0;

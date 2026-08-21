@@ -51,6 +51,7 @@ meta_fixture_pid=
 meta_report_fixture_pid=
 server_pid=
 client_pid=
+tcp_proxy_pid=
 window_id=
 window_owner_pid=
 game_server_log=
@@ -77,7 +78,7 @@ capture_window()
 cleanup()
 {
     cleanup_deadline=$(($(date +%s) + 5))
-    for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
+    for process_id in "$client_pid" "$tcp_proxy_pid" "$meta_pid" "$meta_fixture_pid" \
         "$meta_report_fixture_pid" "$server_pid"; do
         if test -n "$process_id" && kill -0 "$process_id" 2>/dev/null; then
             kill -TERM "$process_id" 2>/dev/null || true
@@ -85,7 +86,7 @@ cleanup()
     done
     while :; do
         cleanup_running=0
-        for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
+        for process_id in "$client_pid" "$tcp_proxy_pid" "$meta_pid" "$meta_fixture_pid" \
             "$meta_report_fixture_pid" "$server_pid"; do
             if test -n "$process_id" \
                 && kill -0 "$process_id" 2>/dev/null; then
@@ -96,7 +97,7 @@ cleanup()
             break
         fi
         if test "$(date +%s)" -ge "$cleanup_deadline"; then
-            for process_id in "$client_pid" "$meta_pid" \
+            for process_id in "$client_pid" "$tcp_proxy_pid" "$meta_pid" \
                 "$meta_fixture_pid" "$meta_report_fixture_pid" \
                 "$server_pid"; do
                 if test -n "$process_id" \
@@ -108,7 +109,7 @@ cleanup()
         fi
         sleep 0.1
     done
-    for process_id in "$client_pid" "$meta_pid" "$meta_fixture_pid" \
+    for process_id in "$client_pid" "$tcp_proxy_pid" "$meta_pid" "$meta_fixture_pid" \
         "$meta_report_fixture_pid" "$server_pid"; do
         if test -n "$process_id"; then
             wait "$process_id" 2>/dev/null || true
@@ -729,6 +730,80 @@ run_gameplay_case()
     run_recording_playback "$game_case" "$game_transport" "$game_recording"
 }
 
+run_tcp_reconnection_case()
+{
+    game_case=tcp-reconnect
+    port=$(reserve_contact_port)
+    proxy_host=127.0.0.2
+    proxy_state="$runtime_dir/tcp-reconnect-proxy.state"
+    proxy_trigger="$runtime_dir/tcp-reconnect.trigger"
+    game_server_log="$runtime_dir/server-$game_case.log"
+    game_client_log="$runtime_dir/client-$game_case.log"
+    game_client_name=SDL3TCPResume
+
+    "$server" -map "$map" -port "$port" +reportMeta \
+	-serverHost 127.0.0.1 -transport tcp \
+	>"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "$game_case server readiness" 20 server_ready
+
+    node "$(dirname "$0")/tcp-reconnect-proxy.mjs" \
+	127.0.0.1 "$proxy_host" "$port" "$proxy_trigger" "$proxy_state" \
+	>"$runtime_dir/tcp-reconnect-proxy.log" 2>&1 &
+    tcp_proxy_pid=$!
+    wait_until "$game_case proxy readiness" 10 \
+	grep -q '^contact-ready$' "$proxy_state"
+
+    "$client" -geometry 800x600 -join -name "$game_client_name" \
+	"tcp://$proxy_host:$port" >"$game_client_log" 2>&1 &
+    client_pid=$!
+    window_owner_pid=$client_pid
+    wait_until "$game_case SDL game window" 20 find_game_window
+    wait_until "$game_case local client acceptance" 20 client_accepted
+    wait_until "$game_case semantic game frame presentation" 20 \
+	game_frame_ready
+
+    touch "$proxy_trigger"
+    wait_until "$game_case forced transport loss" 10 \
+	grep -q '^dropped$' "$proxy_state"
+    sleep 1
+    kill -0 "$server_pid" 2>/dev/null \
+	|| fail "$game_case server exited during the reconnection grace period"
+    kill -0 "$client_pid" 2>/dev/null \
+	|| fail "$game_case client exited instead of reconnecting"
+
+    wait_until "$game_case replacement TCP stream" 15 \
+	grep -q '^resumed$' "$proxy_state"
+    wait_until "$game_case server session resumption" 15 \
+	grep -q "TCP gameplay connection resumed.*$game_client_name" \
+	    "$game_server_log"
+    test "$(grep -c "Welcome .*$game_client_name" "$game_server_log")" -eq 1 \
+	|| fail "$game_case created a second player session"
+    if grep -q "Goodbye .*$game_client_name" "$game_server_log"; then
+	fail "$game_case removed the player before graceful quit"
+    fi
+
+    quit_game_client "$game_case"
+    set +e
+    wait "$client_pid"
+    client_status=$?
+    set -e
+    client_pid=
+    window_id=
+    test "$client_status" -eq 0 \
+	|| fail "$game_case client returned status $client_status"
+    wait_until "$game_case graceful server shutdown" 10 \
+	process_stopped "$server_pid"
+    wait "$server_pid" 2>/dev/null || true
+    server_pid=
+    grep -q "Goodbye .*$game_client_name.*client quit" "$game_server_log" \
+	|| fail "$game_case graceful quit was not handled immediately"
+
+    kill -TERM "$tcp_proxy_pid" 2>/dev/null || true
+    wait "$tcp_proxy_pid" 2>/dev/null || true
+    tcp_proxy_pid=
+}
+
 run_x11_gameplay_title_case()
 {
     game_case=x11-tcp
@@ -959,6 +1034,7 @@ run_server_transport_option_help
 run_contact_target_failover
 run_connection_failure_notification
 run_gameplay_case tcp tcp no default
+run_tcp_reconnection_case
 run_gameplay_case udp-default default yes default
 run_gameplay_case udp-explicit udp no default
 run_gameplay_case tcp-contact tcp no tcp

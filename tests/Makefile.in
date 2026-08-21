@@ -93,6 +93,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-connect-target$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-contact-target-probe$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-transport-display$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-session-token$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-socket-io$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-native-socket-handle$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
@@ -141,6 +142,7 @@ target_triplet = @target@
 @COND_WINDOWS_TRUE@	test-connect-target$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-contact-target-probe$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-transport-display$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-session-token$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-socket-io$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-native-socket-handle$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT)
@@ -148,6 +150,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-game-transport$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-connect-target$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-transport-display$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-session-token$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-socket-io$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-native-socket-handle$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
@@ -471,6 +474,10 @@ test_sdlpaint_stage_OBJECTS = $(am_test_sdlpaint_stage_OBJECTS)
 test_sdlpaint_stage_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_sdlpaint_stage_LINK = $(CCLD) $(test_sdlpaint_stage_CFLAGS) \
 	$(CFLAGS) $(test_sdlpaint_stage_LDFLAGS) $(LDFLAGS) -o $@
+am_test_session_token_OBJECTS = test_session_token.$(OBJEXT)
+test_session_token_OBJECTS = $(am_test_session_token_OBJECTS)
+test_session_token_DEPENDENCIES =  \
+	$(top_builddir)/src/common/libxpcommon.a
 am_test_socket_io_OBJECTS = test_socket_io.$(OBJEXT)
 test_socket_io_OBJECTS = $(am_test_socket_io_OBJECTS)
 test_socket_io_DEPENDENCIES =  \
@@ -623,6 +630,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po \
 	./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po \
 	./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po \
+	./$(DEPDIR)/test_session_token.Po \
 	./$(DEPDIR)/test_socket_io.Po \
 	./$(DEPDIR)/test_surface_rgba8.Po \
 	./$(DEPDIR)/test_text_atlas.Po \
@@ -686,7 +694,8 @@ SOURCES = $(test_connect_target_SOURCES) \
 	$(test_sdlgui_polygons_SOURCES) $(test_sdlgui_ships_SOURCES) \
 	$(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlmeta_primitives_SOURCES) \
-	$(test_sdlpaint_stage_SOURCES) $(test_socket_io_SOURCES) \
+	$(test_sdlpaint_stage_SOURCES) $(test_session_token_SOURCES) \
+	$(test_socket_io_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
 	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
@@ -723,7 +732,8 @@ DIST_SOURCES = $(test_connect_target_SOURCES) \
 	$(test_sdlgui_polygons_SOURCES) $(test_sdlgui_ships_SOURCES) \
 	$(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlmeta_primitives_SOURCES) \
-	$(test_sdlpaint_stage_SOURCES) $(test_socket_io_SOURCES) \
+	$(test_sdlpaint_stage_SOURCES) $(test_session_token_SOURCES) \
+	$(test_socket_io_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
 	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
@@ -1118,6 +1128,8 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
+test_session_token_SOURCES = test_session_token.c
+test_session_token_LDADD = $(top_builddir)/src/common/libxpcommon.a
 test_connect_target_SOURCES = test_connect_target.c \
 	$(top_srcdir)/src/client/connect_target.c
 
@@ -1564,6 +1576,7 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_VENDOR_ZLIB_SOURCE;
 
 EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
+	tcp-reconnect-proxy.mjs \
 	run-gl-core-resources.sh \
 	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
 	run-sdl-renderer-core-context.sh run-vendored-zlib.sh \
@@ -1766,6 +1779,10 @@ test-sdlpaint-stage$(EXEEXT): $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_sta
 	@rm -f test-sdlpaint-stage$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlpaint_stage_LINK) $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_stage_LDADD) $(LIBS)
 
+test-session-token$(EXEEXT): $(test_session_token_OBJECTS) $(test_session_token_DEPENDENCIES) $(EXTRA_test_session_token_DEPENDENCIES)
+	@rm -f test-session-token$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_session_token_OBJECTS) $(test_session_token_LDADD) $(LIBS)
+
 test-socket-io$(EXEEXT): $(test_socket_io_OBJECTS) $(test_socket_io_DEPENDENCIES) $(EXTRA_test_socket_io_DEPENDENCIES)
 	@rm -f test-socket-io$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_socket_io_OBJECTS) $(test_socket_io_LDADD) $(LIBS)
@@ -1904,6 +1921,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_session_token.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_socket_io.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_atlas.Po@am__quote@ # am--include-marker
@@ -3409,6 +3427,13 @@ test-transport-display.log: test-transport-display$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-session-token.log: test-session-token$(EXEEXT)
+	@p='test-session-token$(EXEEXT)'; \
+	b='test-session-token'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-socket-io.log: test-socket-io$(EXEEXT)
 	@p='test-socket-io$(EXEEXT)'; \
 	b='test-socket-io'; \
@@ -3880,6 +3905,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
+	-rm -f ./$(DEPDIR)/test_session_token.Po
 	-rm -f ./$(DEPDIR)/test_socket_io.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
@@ -4042,6 +4068,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
+	-rm -f ./$(DEPDIR)/test_session_token.Po
 	-rm -f ./$(DEPDIR)/test_socket_io.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po

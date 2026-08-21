@@ -19,10 +19,17 @@
 #define GAME_PROTOCOL_UDP_POLYGON_VERSION 0x4F15
 /** UDP gameplay protocol version for legacy maps. */
 #define GAME_PROTOCOL_UDP_LEGACY_VERSION 0x4501
-/** Framed TCP gameplay protocol version for polygon maps. */
-#define GAME_PROTOCOL_TCP_POLYGON_VERSION 0x4F16
-/** Framed TCP gameplay protocol version for legacy maps. */
-#define GAME_PROTOCOL_TCP_LEGACY_VERSION 0x4502
+/** Framed TCP gameplay protocol version before session resumption. */
+#define GAME_PROTOCOL_TCP_POLYGON_PRE_RECONNECT_VERSION 0x4F16
+/** Legacy-map TCP protocol version before session resumption. */
+#define GAME_PROTOCOL_TCP_LEGACY_PRE_RECONNECT_VERSION 0x4502
+/** Framed TCP gameplay protocol version with session resumption. */
+#define GAME_PROTOCOL_TCP_POLYGON_VERSION 0x4F17
+/** Legacy-map TCP protocol version with session resumption. */
+#define GAME_PROTOCOL_TCP_LEGACY_VERSION 0x4503
+
+/** TCP gameplay reconnection grace period shared by client and server. */
+#define GAME_TCP_RECONNECT_GRACE_SECONDS 30
 
 /** Gameplay network transport selected at process startup. */
 typedef enum {
@@ -81,6 +88,14 @@ unsigned Game_transport_protocol_version(game_transport_t transport,
  */
 bool Game_transport_from_protocol_version(unsigned version,
                                           game_transport_t *transport);
+
+/**
+ * Determine whether a protocol version supports TCP session resumption.
+ *
+ * @param version Protocol version negotiated during contact.
+ * @return `true` only for TCP protocol versions carrying resumption tokens.
+ */
+bool Game_transport_protocol_supports_reconnect(unsigned version);
 
 /**
  * Append contact and gameplay transport metadata to a version string.

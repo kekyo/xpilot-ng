@@ -13,6 +13,7 @@ libxpcommon_a_SOURCES = \
 	net.c net.h \
 	pack.h packet.h portability.c portability.h \
 	randommt.c rules.h \
+	session_token.c session_token.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \
 	strcasecmp.c strdup.c strlcpy.c \
 	types.h win32.h \

@@ -27,13 +27,13 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 if COND_WINDOWS
 check_PROGRAMS = test-framed-stream test-game-transport \
 	test-connect-target test-contact-target-probe \
-	test-transport-display test-socket-io \
+	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle test-sdl-versions
 TESTS =
 else
 check_PROGRAMS = test-framed-stream test-game-transport \
 	test-connect-target test-contact-target-probe \
-	test-transport-display test-socket-io \
+	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle \
 	test-meta-environment test-sdl-versions \
 	test-sdl-keys test-sdl-console test-sdl-surface \
@@ -53,7 +53,7 @@ check_PROGRAMS = test-framed-stream test-game-transport \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
 TESTS = test-framed-stream test-game-transport test-connect-target \
-	test-transport-display \
+	test-transport-display test-session-token \
 	test-socket-io \
 	test-native-socket-handle \
 	test-meta-environment test-sdl-versions \
@@ -81,6 +81,9 @@ endif
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
+
+test_session_token_SOURCES = test_session_token.c
+test_session_token_LDADD = $(top_builddir)/src/common/libxpcommon.a
 
 test_connect_target_SOURCES = test_connect_target.c \
 	$(top_srcdir)/src/client/connect_target.c
@@ -486,6 +489,7 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_VENDOR_ZLIB_SOURCE;
 
 EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
+	tcp-reconnect-proxy.mjs \
 	run-gl-core-resources.sh \
 	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
 	run-sdl-renderer-core-context.sh run-vendored-zlib.sh \

@@ -82,7 +82,9 @@ bool Game_transport_from_protocol_version(unsigned version,
         return false;
 
     if (version == GAME_PROTOCOL_TCP_POLYGON_VERSION
-        || version == GAME_PROTOCOL_TCP_LEGACY_VERSION) {
+        || version == GAME_PROTOCOL_TCP_LEGACY_VERSION
+        || version == GAME_PROTOCOL_TCP_POLYGON_PRE_RECONNECT_VERSION
+        || version == GAME_PROTOCOL_TCP_LEGACY_PRE_RECONNECT_VERSION) {
         *transport = GAME_TRANSPORT_TCP;
         return true;
     }
@@ -92,6 +94,12 @@ bool Game_transport_from_protocol_version(unsigned version,
         return true;
     }
     return false;
+}
+
+bool Game_transport_protocol_supports_reconnect(unsigned version)
+{
+    return version == GAME_PROTOCOL_TCP_POLYGON_VERSION
+        || version == GAME_PROTOCOL_TCP_LEGACY_VERSION;
 }
 
 bool Game_transport_format_meta_version(char *output, size_t output_size,
