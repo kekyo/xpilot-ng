@@ -113,7 +113,7 @@ am_libxpcommon_a_OBJECTS = arraylist.$(OBJEXT) checknames.$(OBJEXT) \
 	list.$(OBJEXT) math.$(OBJEXT) net.$(OBJEXT) \
 	record_drain.$(OBJEXT) recording_input.$(OBJEXT) \
 	record_session.$(OBJEXT) record_transport.$(OBJEXT) \
-	portability.$(OBJEXT) randommt.$(OBJEXT) \
+	portability.$(OBJEXT) randommt.$(OBJEXT) secure_random.$(OBJEXT) \
 	session_protocol.$(OBJEXT) session_token.$(OBJEXT) \
 	shipshape.$(OBJEXT) socklib.$(OBJEXT) strcasecmp.$(OBJEXT) \
 	strdup.$(OBJEXT) strlcpy.$(OBJEXT) xpmemory.$(OBJEXT)
@@ -138,6 +138,7 @@ am__depfiles_remade = ./$(DEPDIR)/arraylist.Po \
 	./$(DEPDIR)/error.Po ./$(DEPDIR)/game_transport.Po \
 	./$(DEPDIR)/list.Po ./$(DEPDIR)/math.Po ./$(DEPDIR)/net.Po \
 	./$(DEPDIR)/portability.Po ./$(DEPDIR)/randommt.Po \
+	./$(DEPDIR)/secure_random.Po \
 	./$(DEPDIR)/record_drain.Po ./$(DEPDIR)/record_session.Po \
 	./$(DEPDIR)/record_transport.Po ./$(DEPDIR)/recording_input.Po \
 	./$(DEPDIR)/session_protocol.Po ./$(DEPDIR)/session_token.Po \
@@ -339,6 +340,7 @@ libxpcommon_a_SOURCES = \
 	record_session.c record_session.h record_transport.c record_transport.h \
 	pack.h packet.h portability.c portability.h \
 	randommt.c rules.h \
+	secure_random.c secure_random.h \
 	session_protocol.c session_protocol.h \
 	session_token.c session_token.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \
@@ -408,6 +410,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/net.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/portability.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/randommt.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/secure_random.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/record_drain.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/record_session.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/record_transport.Po@am__quote@ # am--include-marker
@@ -574,6 +577,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/net.Po
 	-rm -f ./$(DEPDIR)/portability.Po
 	-rm -f ./$(DEPDIR)/randommt.Po
+	-rm -f ./$(DEPDIR)/secure_random.Po
 	-rm -f ./$(DEPDIR)/record_drain.Po
 	-rm -f ./$(DEPDIR)/record_session.Po
 	-rm -f ./$(DEPDIR)/record_transport.Po
@@ -641,6 +645,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/net.Po
 	-rm -f ./$(DEPDIR)/portability.Po
 	-rm -f ./$(DEPDIR)/randommt.Po
+	-rm -f ./$(DEPDIR)/secure_random.Po
 	-rm -f ./$(DEPDIR)/record_drain.Po
 	-rm -f ./$(DEPDIR)/record_session.Po
 	-rm -f ./$(DEPDIR)/record_transport.Po
