@@ -35,6 +35,8 @@ typedef void (APIENTRYP framebuffer_texture_2d_fn)(GLenum, GLenum, GLenum,
                                                    GLuint, GLint);
 typedef GLenum (APIENTRYP check_framebuffer_status_fn)(GLenum);
 typedef void (APIENTRYP delete_framebuffers_fn)(GLsizei, const GLuint *);
+typedef GLenum (APIENTRYP get_error_fn)(void);
+typedef void (APIENTRYP flush_fn)(void);
 
 typedef struct BufferApi {
     PFNGLACTIVETEXTUREPROC active_texture;
@@ -90,6 +92,13 @@ typedef struct MissingProcLoader {
     int requested;
 } MissingProcLoader;
 
+typedef struct HotPathProbe {
+    get_error_fn real_get_error;
+    flush_fn real_flush;
+    int get_error_calls;
+    int flush_calls;
+} HotPathProbe;
+
 typedef struct PixelExpectation {
     int x;
     int y;
@@ -139,6 +148,8 @@ static const uint8_t test_text_atlas_pixels[] = {
     255, 255, 255, 128,   0,   0,   0,   0
 };
 
+static HotPathProbe *active_hot_path_probe;
+
 static TextGeometryFont make_test_text_font(void)
 {
     TextGeometryFont font;
@@ -171,6 +182,39 @@ static void *load_gl_proc(void *userdata, const char *name)
 {
     (void)userdata;
     return SDL_GL_GetProcAddress(name);
+}
+
+static GLenum APIENTRY count_get_error(void)
+{
+    active_hot_path_probe->get_error_calls++;
+    return active_hot_path_probe->real_get_error();
+}
+
+static void APIENTRY count_flush(void)
+{
+    active_hot_path_probe->flush_calls++;
+    active_hot_path_probe->real_flush();
+}
+
+static void *load_counted_hot_path_proc(void *userdata, const char *name)
+{
+    HotPathProbe *probe = userdata;
+    void *address = SDL_GL_GetProcAddress(name);
+
+    if (address == NULL)
+        return NULL;
+    if (strcmp(name, "glGetError") == 0) {
+        get_error_fn replacement = count_get_error;
+
+        memcpy(&probe->real_get_error, &address, sizeof(address));
+        memcpy(&address, &replacement, sizeof(address));
+    } else if (strcmp(name, "glFlush") == 0) {
+        flush_fn replacement = count_flush;
+
+        memcpy(&probe->real_flush, &address, sizeof(address));
+        memcpy(&address, &replacement, sizeof(address));
+    }
+    return address;
 }
 
 static void *load_gl_proc_except(void *userdata, const char *name)
@@ -1039,6 +1083,58 @@ static int check_feature_pixels(const GLubyte *pixels)
     return 0;
 }
 
+static int check_hot_path_avoids_synchronous_queries(
+    TestContext *test_context)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor orange = {240, 96, 16, 255};
+    GLubyte pixels[FRAME_WIDTH * FRAME_HEIGHT * PIXEL_COMPONENTS];
+    HotPathProbe probe;
+    Renderer *renderer = NULL;
+    int result = 1;
+
+    memset(&probe, 0, sizeof(probe));
+    TEST_CHECK_CLEANUP(SDL_GL_MakeCurrent(test_context->window,
+                                          test_context->context));
+    test_context->framebuffer_api.bind(GL_FRAMEBUFFER,
+                                       test_context->framebuffer);
+    active_hot_path_probe = &probe;
+    TEST_CHECK_CLEANUP(Renderer_gl_core_create(
+                           load_counted_hot_path_proc, &probe, &renderer)
+                       == RENDERER_STATUS_OK);
+    probe.get_error_calls = 0;
+    probe.flush_calls = 0;
+
+    TEST_CHECK_CLEANUP(Renderer_begin_frame(
+                           renderer, FRAME_WIDTH, FRAME_HEIGHT, black)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_fill_rect(
+                           renderer, 8.0f, 8.0f, 16.0f, 16.0f, orange)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_fill_rect(
+                           renderer, 32.0f, 8.0f, 16.0f, 16.0f, orange)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_flush(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(probe.get_error_calls == 0);
+    TEST_CHECK_CLEANUP(probe.flush_calls == 0);
+
+    glFinish();
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, FRAME_WIDTH, FRAME_HEIGHT,
+                 GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    TEST_CHECK_CLEANUP(glGetError() == GL_NO_ERROR);
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 12, 12, 240, 96, 16, 255) == 0);
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 36, 12, 240, 96, 16, 255) == 0);
+    result = 0;
+
+cleanup:
+    if (renderer != NULL)
+        Renderer_destroy(renderer);
+    active_hot_path_probe = NULL;
+    return result;
+}
+
 int main(void)
 {
     TestContext core_context;
@@ -1062,6 +1158,8 @@ int main(void)
     if (check_factory_failure_contract(Renderer_gl_core_create,
                                        &core_context,
                                        "glDrawArrays") != 0)
+        goto cleanup;
+    if (check_hot_path_avoids_synchronous_queries(&core_context) != 0)
         goto cleanup;
     if (render_scene(Renderer_gl_core_create, &core_context,
                      pixels, 1) != 0)

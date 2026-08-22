@@ -27,7 +27,6 @@ typedef void (APIENTRYP CoreScissorProc)(GLint x, GLint y,
                                         GLsizei width, GLsizei height);
 typedef void (APIENTRYP CorePolygonModeProc)(GLenum face, GLenum mode);
 typedef void (APIENTRYP CoreBlendFuncProc)(GLenum source, GLenum destination);
-typedef void (APIENTRYP CoreFlushProc)(void);
 typedef void (APIENTRYP CoreGenTexturesProc)(GLsizei count, GLuint *textures);
 typedef void (APIENTRYP CoreBindTextureProc)(GLenum target, GLuint texture);
 typedef void (APIENTRYP CoreTexParameteriProc)(GLenum target, GLenum name,
@@ -61,7 +60,6 @@ typedef struct CoreFunctions {
     CorePolygonModeProc polygon_mode;
     PFNGLBLENDEQUATIONPROC blend_equation;
     CoreBlendFuncProc blend_func;
-    CoreFlushProc flush;
     CoreGenTexturesProc gen_textures;
     CoreBindTextureProc bind_texture;
     CoreTexParameteriProc tex_parameter_i;
@@ -196,7 +194,6 @@ static int Core_load_functions(CoreFunctions *functions,
         && CORE_LOAD(functions, loader, userdata, blend_equation,
                      "glBlendEquation")
         && CORE_LOAD(functions, loader, userdata, blend_func, "glBlendFunc")
-        && CORE_LOAD(functions, loader, userdata, flush, "glFlush")
         && CORE_LOAD(functions, loader, userdata, gen_textures,
                      "glGenTextures")
         && CORE_LOAD(functions, loader, userdata, bind_texture,
@@ -548,7 +545,6 @@ static RendererStatus Core_begin_frame(void *opaque, int width, int height,
 {
     CoreContext *context = opaque;
 
-    Core_clear_errors(context);
     context->frame_width = width;
     context->frame_height = height;
     context->gl.viewport(0, 0, width, height);
@@ -560,8 +556,7 @@ static RendererStatus Core_begin_frame(void *opaque, int width, int height,
                             (GLfloat)clear_color.blue / 255.0f,
                             (GLfloat)clear_color.alpha / 255.0f);
     context->gl.clear(GL_COLOR_BUFFER_BIT);
-    return Core_operation_succeeded(context) ? RENDERER_STATUS_OK
-                                             : RENDERER_STATUS_BACKEND_ERROR;
+    return RENDERER_STATUS_OK;
 }
 
 static RendererStatus Core_set_draw_state(CoreContext *context,
@@ -649,11 +644,9 @@ static RendererStatus Core_draw(void *opaque,
         vertex_count = (GLsizei)draw->vertex_count;
     }
 
-    Core_clear_errors(context);
     status = Core_set_draw_state(context, draw);
     if (status != RENDERER_STATUS_OK)
         return status;
-    Core_prepare_raster_state(context);
     context->gl.use_program(context->program);
     context->gl.bind_vertex_array(context->vertex_array);
     context->gl.uniform_matrix_3fv(context->transform_uniform, 1, GL_FALSE,
@@ -673,36 +666,25 @@ static RendererStatus Core_draw(void *opaque,
         context->gl.buffer_data(GL_ARRAY_BUFFER, byte_count, draw->vertices,
                                 GL_STREAM_DRAW);
     }
-    if (!Core_operation_succeeded(context))
-        return RENDERER_STATUS_BACKEND_ERROR;
-    Core_clear_errors(context);
     context->gl.draw_arrays(GL_TRIANGLES, 0, vertex_count);
-    return Core_operation_succeeded(context) ? RENDERER_STATUS_OK
-                                             : RENDERER_STATUS_BACKEND_ERROR;
+    return RENDERER_STATUS_OK;
 }
 
 static RendererStatus Core_flush(void *opaque)
 {
-    CoreContext *context = opaque;
-
-    Core_clear_errors(context);
-    context->gl.flush();
-    return Core_operation_succeeded(context) ? RENDERER_STATUS_OK
-                                             : RENDERER_STATUS_BACKEND_ERROR;
+    (void)opaque;
+    /* GL preserves command order without an explicit flush. Presentation by
+     * SDL submits the completed frame to the implementation. */
+    return RENDERER_STATUS_OK;
 }
 
 static RendererStatus Core_end_frame(void *opaque)
 {
     CoreContext *context = opaque;
-    RendererStatus status;
 
-    status = Core_operation_succeeded(context) ? RENDERER_STATUS_OK
-                                               : RENDERER_STATUS_BACKEND_ERROR;
-    if (status == RENDERER_STATUS_OK) {
-        context->frame_width = 0;
-        context->frame_height = 0;
-    }
-    return status;
+    context->frame_width = 0;
+    context->frame_height = 0;
+    return RENDERER_STATUS_OK;
 }
 
 static RendererStatus Core_texture_create(void *opaque,
