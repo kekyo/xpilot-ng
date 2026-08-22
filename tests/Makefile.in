@@ -109,6 +109,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-sdl-event$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-gl-core-resources$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-renderer-commands$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-renderer-context-recovery$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-renderer-geometry$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-renderer-gl-core$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-paint-transform$(EXEEXT) \
@@ -168,6 +169,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-sdl-clipboard$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-event$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-renderer-commands$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-renderer-context-recovery$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-renderer-geometry$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-paint-transform$(EXEEXT) \
 @COND_WINDOWS_FALSE@	run-gl-core-resources.sh \
@@ -334,6 +336,11 @@ test_renderer_commands_OBJECTS = $(am_test_renderer_commands_OBJECTS)
 test_renderer_commands_LDADD = $(LDADD)
 test_renderer_commands_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(test_renderer_commands_LDFLAGS) $(LDFLAGS) -o $@
+am_test_renderer_context_recovery_OBJECTS = \
+	test_renderer_context_recovery.$(OBJEXT) renderer.$(OBJEXT)
+test_renderer_context_recovery_OBJECTS = \
+	$(am_test_renderer_context_recovery_OBJECTS)
+test_renderer_context_recovery_LDADD = $(LDADD)
 am_test_renderer_geometry_OBJECTS = test_renderer_geometry.$(OBJEXT) \
 	renderer.$(OBJEXT)
 test_renderer_geometry_OBJECTS = $(am_test_renderer_geometry_OBJECTS)
@@ -602,6 +609,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_radar_renderer-radar.Po \
 	./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po \
 	./$(DEPDIR)/test_renderer_commands.Po \
+	./$(DEPDIR)/test_renderer_context_recovery.Po \
 	./$(DEPDIR)/test_renderer_geometry.Po \
 	./$(DEPDIR)/test_renderer_gl_core.Po \
 	./$(DEPDIR)/test_sdl_clipboard.Po \
@@ -695,6 +703,7 @@ SOURCES = $(test_connect_target_SOURCES) \
 	$(test_polygon_geometry_SOURCES) \
 	$(test_radar_renderer_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
+	$(test_renderer_context_recovery_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
 	$(test_renderer_gl_core_SOURCES) $(test_sdl_clipboard_SOURCES) \
 	$(test_sdl_console_SOURCES) $(test_sdl_event_SOURCES) \
@@ -733,6 +742,7 @@ DIST_SOURCES = $(test_connect_target_SOURCES) \
 	$(test_polygon_geometry_SOURCES) \
 	$(test_radar_renderer_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
+	$(test_renderer_context_recovery_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
 	$(test_renderer_gl_core_SOURCES) $(test_sdl_clipboard_SOURCES) \
 	$(test_sdl_console_SOURCES) $(test_sdl_event_SOURCES) \
@@ -1257,6 +1267,10 @@ test_renderer_commands_SOURCES = test_renderer_commands.c \
 test_renderer_commands_LDFLAGS = $(AM_LDFLAGS) \
 	-Wl,--wrap=malloc -Wl,--wrap=calloc
 
+test_renderer_context_recovery_SOURCES = \
+	test_renderer_context_recovery.c \
+	$(top_srcdir)/src/client/sdl/renderer.c
+
 test_renderer_geometry_SOURCES = test_renderer_geometry.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
 
@@ -1719,6 +1733,10 @@ test-renderer-commands$(EXEEXT): $(test_renderer_commands_OBJECTS) $(test_render
 	@rm -f test-renderer-commands$(EXEEXT)
 	$(AM_V_CCLD)$(test_renderer_commands_LINK) $(test_renderer_commands_OBJECTS) $(test_renderer_commands_LDADD) $(LIBS)
 
+test-renderer-context-recovery$(EXEEXT): $(test_renderer_context_recovery_OBJECTS) $(test_renderer_context_recovery_DEPENDENCIES) $(EXTRA_test_renderer_context_recovery_DEPENDENCIES)
+	@rm -f test-renderer-context-recovery$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_renderer_context_recovery_OBJECTS) $(test_renderer_context_recovery_LDADD) $(LIBS)
+
 test-renderer-geometry$(EXEEXT): $(test_renderer_geometry_OBJECTS) $(test_renderer_geometry_DEPENDENCIES) $(EXTRA_test_renderer_geometry_DEPENDENCIES)
 	@rm -f test-renderer-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_renderer_geometry_OBJECTS) $(test_renderer_geometry_LDADD) $(LIBS)
@@ -1912,6 +1930,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_radar_renderer-radar.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_commands.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_context_recovery.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_gl_core.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_clipboard.Po@am__quote@ # am--include-marker
@@ -3596,6 +3615,13 @@ test-renderer-commands.log: test-renderer-commands$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-renderer-context-recovery.log: test-renderer-context-recovery$(EXEEXT)
+	@p='test-renderer-context-recovery$(EXEEXT)'; \
+	b='test-renderer-context-recovery'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-renderer-geometry.log: test-renderer-geometry$(EXEEXT)
 	@p='test-renderer-geometry$(EXEEXT)'; \
 	b='test-renderer-geometry'; \
@@ -3942,6 +3968,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_radar_renderer-radar.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
+	-rm -f ./$(DEPDIR)/test_renderer_context_recovery.Po
 	-rm -f ./$(DEPDIR)/test_renderer_geometry.Po
 	-rm -f ./$(DEPDIR)/test_renderer_gl_core.Po
 	-rm -f ./$(DEPDIR)/test_sdl_clipboard.Po
@@ -4109,6 +4136,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_radar_renderer-radar.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
+	-rm -f ./$(DEPDIR)/test_renderer_context_recovery.Po
 	-rm -f ./$(DEPDIR)/test_renderer_geometry.Po
 	-rm -f ./$(DEPDIR)/test_renderer_gl_core.Po
 	-rm -f ./$(DEPDIR)/test_sdl_clipboard.Po

@@ -1135,6 +1135,86 @@ cleanup:
     return result;
 }
 
+static int check_context_resource_recovery(void)
+{
+    static const uint8_t red_pixel[] = {240, 32, 16, 255};
+    static const RendererTextureDesc texture_desc = {
+        1, 1,
+        RENDERER_TEXTURE_FILTER_NEAREST,
+        RENDERER_TEXTURE_WRAP_CLAMP
+    };
+    static const RendererVertex2D vertices[] = {
+        {8.0f, 8.0f, 0.5f, 0.5f, {255, 255, 255, 255}},
+        {24.0f, 8.0f, 0.5f, 0.5f, {255, 255, 255, 255}},
+        {8.0f, 24.0f, 0.5f, 0.5f, {255, 255, 255, 255}}
+    };
+    const RendererColor black = {0, 0, 0, 255};
+    GLubyte pixels[FRAME_WIDTH * FRAME_HEIGHT * PIXEL_COMPONENTS];
+    TestContext original;
+    TestContext replacement;
+    Renderer *renderer = NULL;
+    RendererTexture *texture = NULL;
+    RendererMesh *mesh = NULL;
+    int result = 1;
+
+    memset(&original, 0, sizeof(original));
+    memset(&replacement, 0, sizeof(replacement));
+    if (create_context(&original, 3, 3, SDL_GL_CONTEXT_PROFILE_CORE,
+                       "OpenGL context recovery source") != 0)
+        goto cleanup;
+    TEST_CHECK_CLEANUP(Renderer_gl_core_create(load_gl_proc, NULL, &renderer)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_texture_create_with_desc(
+                           renderer, &texture_desc, red_pixel,
+                           sizeof(red_pixel), &texture)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_mesh_create(renderer, vertices, 3, &mesh)
+                       == RENDERER_STATUS_OK);
+
+    /* Deleting the source context models the object invalidation performed
+     * by a browser before it emits the context-restored event. */
+    destroy_context(&original);
+    TEST_CHECK_CLEANUP(Renderer_notify_context_lost(renderer)
+                       == RENDERER_STATUS_OK);
+    if (create_context(&replacement, 3, 3,
+                       SDL_GL_CONTEXT_PROFILE_CORE,
+                       "OpenGL context recovery replacement") != 0)
+        goto cleanup;
+    TEST_CHECK_CLEANUP(Renderer_restore_context(renderer)
+                       == RENDERER_STATUS_OK);
+
+    replacement.framebuffer_api.bind(GL_FRAMEBUFFER,
+                                     replacement.framebuffer);
+    TEST_CHECK_CLEANUP(Renderer_begin_frame(
+                           renderer, FRAME_WIDTH, FRAME_HEIGHT, black)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_draw_mesh(renderer, texture, mesh)
+                       == RENDERER_STATUS_OK);
+    TEST_CHECK_CLEANUP(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+    glFinish();
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, FRAME_WIDTH, FRAME_HEIGHT,
+                 GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    TEST_CHECK_CLEANUP(glGetError() == GL_NO_ERROR);
+    TEST_CHECK_CLEANUP(check_rgba(pixels, 12, 12, 240, 32, 16, 255) == 0);
+    result = 0;
+
+cleanup:
+    if (renderer != NULL) {
+        if (replacement.context != NULL) {
+            SDL_GL_MakeCurrent(replacement.window, replacement.context);
+        } else if (original.context != NULL) {
+            SDL_GL_MakeCurrent(original.window, original.context);
+        } else {
+            Renderer_notify_context_lost(renderer);
+        }
+        Renderer_destroy(renderer);
+    }
+    destroy_context(&replacement);
+    destroy_context(&original);
+    return result;
+}
+
 int main(void)
 {
     TestContext core_context;
@@ -1160,6 +1240,8 @@ int main(void)
                                        "glDrawArrays") != 0)
         goto cleanup;
     if (check_hot_path_avoids_synchronous_queries(&core_context) != 0)
+        goto cleanup;
+    if (check_context_resource_recovery() != 0)
         goto cleanup;
     if (render_scene(Renderer_gl_core_create, &core_context,
                      pixels, 1) != 0)

@@ -40,7 +40,8 @@ check_PROGRAMS = test-framed-stream test-game-transport \
 	test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-gl-core-resources \
-	test-renderer-commands test-renderer-geometry \
+	test-renderer-commands test-renderer-context-recovery \
+	test-renderer-geometry \
 	test-renderer-gl-core test-paint-transform test-image-geometry \
 	test-polygon-geometry \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
@@ -62,7 +63,8 @@ TESTS = test-framed-stream test-game-transport test-connect-target \
 	test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
-	test-renderer-geometry test-paint-transform run-gl-core-resources.sh \
+	test-renderer-context-recovery test-renderer-geometry \
+	test-paint-transform run-gl-core-resources.sh \
 	test-image-geometry test-polygon-geometry test-gfx2d-picture \
 	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
 	test-sdl-game-frame \
@@ -191,6 +193,10 @@ test_renderer_commands_SOURCES = test_renderer_commands.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
 test_renderer_commands_LDFLAGS = $(AM_LDFLAGS) \
 	-Wl,--wrap=malloc -Wl,--wrap=calloc
+
+test_renderer_context_recovery_SOURCES = \
+	test_renderer_context_recovery.c \
+	$(top_srcdir)/src/client/sdl/renderer.c
 
 test_renderer_geometry_SOURCES = test_renderer_geometry.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
