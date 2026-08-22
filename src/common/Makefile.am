@@ -10,7 +10,7 @@ libxpcommon_a_SOURCES = \
 	keys.h \
 	list.c list.h \
 	math.c metaserver.h \
-	net.c net.h \
+	net.c net.h record_transport.c record_transport.h \
 	pack.h packet.h portability.c portability.h \
 	randommt.c rules.h \
 	session_token.c session_token.h \

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "xpcommon.h"
+#include "record_transport.h"
 
 typedef struct {
     char bytes[128];
@@ -395,6 +396,95 @@ static int test_tcp_socket_connection(void)
     return 0;
 }
 
+static int test_memory_transport_preserves_record_boundaries(void)
+{
+    static const char first_payload[] = "first";
+    static const char second_payload[] = "second";
+    char received[32];
+    size_t received_length;
+    record_transport_t *first;
+    record_transport_t *second;
+
+    TEST_CHECK(Record_transport_create_memory_pair(
+                   1, sizeof(received), &first, &second) == 0);
+    TEST_CHECK(Record_transport_send(
+                   first, first_payload, sizeof(first_payload) - 1,
+                   RECORD_DELIVERY_REQUIRED) == RECORD_SEND_ACCEPTED);
+    TEST_CHECK(Record_transport_send(
+                   first, second_payload, sizeof(second_payload) - 1,
+                   RECORD_DELIVERY_REQUIRED) == RECORD_SEND_BACKPRESSURED);
+    TEST_CHECK(Record_transport_send(
+                   first, second_payload, sizeof(second_payload) - 1,
+                   RECORD_DELIVERY_TRANSIENT) == RECORD_SEND_DROPPED);
+
+    received_length = 0;
+    TEST_CHECK(Record_transport_receive(
+                   second, received, sizeof(received),
+                   &received_length) == RECORD_RECEIVE_READY);
+    TEST_CHECK(received_length == sizeof(first_payload) - 1);
+    TEST_CHECK(memcmp(received, first_payload, received_length) == 0);
+    TEST_CHECK(Record_transport_receive(
+                   second, received, sizeof(received),
+                   &received_length) == RECORD_RECEIVE_EMPTY);
+
+    TEST_CHECK(Record_transport_send(
+                   first, second_payload, sizeof(second_payload) - 1,
+                   RECORD_DELIVERY_REQUIRED) == RECORD_SEND_ACCEPTED);
+    Record_transport_close(first);
+    TEST_CHECK(Record_transport_receive(
+                   second, received, sizeof(received),
+                   &received_length) == RECORD_RECEIVE_READY);
+    TEST_CHECK(received_length == sizeof(second_payload) - 1);
+    TEST_CHECK(memcmp(received, second_payload, received_length) == 0);
+    TEST_CHECK(Record_transport_receive(
+                   second, received, sizeof(received),
+                   &received_length) == RECORD_RECEIVE_CLOSED);
+
+    Record_transport_destroy(second);
+    Record_transport_destroy(first);
+    return 0;
+}
+
+static int test_tcp_transport_exposes_logical_records(void)
+{
+    static const char payload[] = "logical record";
+    char received[64];
+    size_t received_length;
+    sock_t first_socket;
+    sock_t second_socket;
+    socket_handle_t first_fd;
+    record_transport_t *first;
+    record_transport_t *second;
+
+    TEST_CHECK(open_connected_sockets(&first_socket, &second_socket) == 0);
+    first_fd = first_socket.fd;
+    first = Record_transport_create_tcp(&first_socket, 64, 64);
+    second = Record_transport_create_tcp(&second_socket, 64, 64);
+    TEST_CHECK(first != NULL);
+    TEST_CHECK(second != NULL);
+    TEST_CHECK(first_socket.fd == SOCK_FD_INVALID);
+    TEST_CHECK(second_socket.fd == SOCK_FD_INVALID);
+    TEST_CHECK(Record_transport_native_handle(first) == first_fd);
+
+    TEST_CHECK(Record_transport_send(
+                   first, payload, sizeof(payload) - 1,
+                   RECORD_DELIVERY_REQUIRED) == RECORD_SEND_ACCEPTED);
+    received_length = 0;
+    TEST_CHECK(Record_transport_receive(
+                   second, received, sizeof(received),
+                   &received_length) == RECORD_RECEIVE_READY);
+    TEST_CHECK(received_length == sizeof(payload) - 1);
+    TEST_CHECK(memcmp(received, payload, received_length) == 0);
+
+    Record_transport_close(first);
+    TEST_CHECK(Record_transport_receive(
+                   second, received, sizeof(received),
+                   &received_length) == RECORD_RECEIVE_CLOSED);
+    Record_transport_destroy(second);
+    Record_transport_destroy(first);
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(sock_startup() == 0);
@@ -409,6 +499,8 @@ int main(void)
     TEST_CHECK(test_invalid_frame_length_is_error() == 0);
     TEST_CHECK(test_eof_is_error() == 0);
     TEST_CHECK(test_tcp_socket_connection() == 0);
+    TEST_CHECK(test_memory_transport_preserves_record_boundaries() == 0);
+    TEST_CHECK(test_tcp_transport_exposes_logical_records() == 0);
     sock_cleanup();
     return 0;
 }
