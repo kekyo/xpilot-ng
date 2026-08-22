@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -65,7 +65,10 @@ static void Parse_help(char *progname)
 	   "\tSelect UDP for both contact/lobby and gameplay.  This is the "
 	       "default.\n"
 	   "\n"
-	   "    -transport <udp|tcp>\n"
+	   "    -websocket\n"
+	   "\tSelect WebSocket for both contact/lobby and gameplay.\n"
+	   "\n"
+	   "    -transport <udp|tcp|websocket>\n"
 	   "\tSelect one transport for both contact/lobby and gameplay.\n"
 	   "\tTransport options are applied from left to right.\n"
 	   "\n");
@@ -345,6 +348,8 @@ static bool Parse_transport_option(int argc, char **argv, int *index)
 	transport = "tcp";
     else if (!strcasecmp(arg + 1, "udp"))
 	transport = "udp";
+    else if (!strcasecmp(arg + 1, "websocket"))
+	transport = "websocket";
     else if (!strcasecmp(arg + 1, "transport")) {
 	if (*index + 1 == argc) {
 	    warn("Option '%s' needs an argument", arg);

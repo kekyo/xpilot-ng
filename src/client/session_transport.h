@@ -9,14 +9,16 @@
  * (at your option) any later version.
  */
 
-#ifndef CLIENT_TCP_TRANSPORT_H
-#define CLIENT_TCP_TRANSPORT_H
+#ifndef CLIENT_SESSION_TRANSPORT_H
+#define CLIENT_SESSION_TRANSPORT_H
 
+#include "game_transport.h"
 #include "record_transport.h"
 
 /**
- * Connect a native TCP socket and adapt it to logical records.
+ * Connect a fixed-endpoint session transport over a native TCP socket.
  *
+ * @param transport TCP record framing or WebSocket message framing.
  * @param server Numeric address or hostname.
  * @param port Destination port in the range 1 through 65535.
  * @param source_port_start First requested source port, or zero to let the
@@ -29,8 +31,8 @@
  * @remarks The returned transport owns the connected socket and closes it
  * when Record_transport_destroy() is called.
  */
-record_transport_t *Client_tcp_transport_connect(
-    const char *server, int port, int source_port_start,
-    int source_port_end, int timeout_seconds);
+record_transport_t *Client_session_transport_connect(
+    game_transport_t transport, const char *server, int port,
+    int source_port_start, int source_port_end, int timeout_seconds);
 
-#endif /* CLIENT_TCP_TRANSPORT_H */
+#endif /* CLIENT_SESSION_TRANSPORT_H */

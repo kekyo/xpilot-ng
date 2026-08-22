@@ -89,6 +89,7 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 @COND_WINDOWS_FALSE@check_PROGRAMS = test-framed-stream$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-websocket-transport$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-transport$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-connect-target$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-contact-target-probe$(EXEEXT) \
@@ -143,6 +144,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-text-renderer$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-cache-adapter$(EXEEXT)
 @COND_WINDOWS_TRUE@check_PROGRAMS = test-framed-stream$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-websocket-transport$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-game-transport$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-connect-target$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-contact-target-probe$(EXEEXT) \
@@ -155,6 +157,7 @@ target_triplet = @target@
 @COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-game-input$(EXEEXT)
 @COND_WINDOWS_FALSE@TESTS = test-framed-stream$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-websocket-transport$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-transport$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-connect-target$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-transport-display$(EXEEXT) \
@@ -560,6 +563,12 @@ am_test_transport_display_OBJECTS = test_transport_display.$(OBJEXT) \
 	transport_display.$(OBJEXT)
 test_transport_display_OBJECTS = $(am_test_transport_display_OBJECTS)
 test_transport_display_LDADD = $(LDADD)
+am_test_websocket_transport_OBJECTS =  \
+	test_websocket_transport.$(OBJEXT)
+test_websocket_transport_OBJECTS =  \
+	$(am_test_websocket_transport_OBJECTS)
+test_websocket_transport_DEPENDENCIES =  \
+	$(top_builddir)/src/common/libxpcommon.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -685,6 +694,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po \
 	./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po \
 	./$(DEPDIR)/test_transport_display.Po \
+	./$(DEPDIR)/test_websocket_transport.Po \
 	./$(DEPDIR)/text_atlas.Po ./$(DEPDIR)/text_geometry.Po \
 	./$(DEPDIR)/text_renderer.Po ./$(DEPDIR)/transport_display.Po \
 	./$(DEPDIR)/win32hacks.Po
@@ -744,7 +754,8 @@ SOURCES = $(test_connect_target_SOURCES) \
 	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES) \
-	$(test_transport_display_SOURCES)
+	$(test_transport_display_SOURCES) \
+	$(test_websocket_transport_SOURCES)
 DIST_SOURCES = $(test_connect_target_SOURCES) \
 	$(test_contact_target_probe_SOURCES) \
 	$(test_framed_stream_SOURCES) $(test_game_input_SOURCES) \
@@ -784,7 +795,8 @@ DIST_SOURCES = $(test_connect_target_SOURCES) \
 	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES) \
-	$(test_transport_display_SOURCES)
+	$(test_transport_display_SOURCES) \
+	$(test_websocket_transport_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -1193,6 +1205,10 @@ test_transport_display_SOURCES = test_transport_display.c \
 test_framed_stream_SOURCES = test_framed_stream.c
 test_framed_stream_LDADD = $(top_builddir)/src/common/libxpcommon.a \
 	@W32_LIBS@
+
+test_websocket_transport_SOURCES = test_websocket_transport.c
+test_websocket_transport_LDADD = \
+	$(top_builddir)/src/common/libxpcommon.a @W32_LIBS@
 
 test_socket_io_SOURCES = test_socket_io.c
 test_socket_io_LDADD = $(top_builddir)/src/common/libxpcommon.a \
@@ -1902,6 +1918,10 @@ test-transport-display$(EXEEXT): $(test_transport_display_OBJECTS) $(test_transp
 	@rm -f test-transport-display$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_transport_display_OBJECTS) $(test_transport_display_LDADD) $(LIBS)
 
+test-websocket-transport$(EXEEXT): $(test_websocket_transport_OBJECTS) $(test_websocket_transport_DEPENDENCIES) $(EXTRA_test_websocket_transport_DEPENDENCIES)
+	@rm -f test-websocket-transport$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_websocket_transport_OBJECTS) $(test_websocket_transport_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -2029,6 +2049,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_transport_display.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_websocket_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_renderer.Po@am__quote@ # am--include-marker
@@ -3557,6 +3578,13 @@ test-framed-stream.log: test-framed-stream$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-websocket-transport.log: test-websocket-transport$(EXEEXT)
+	@p='test-websocket-transport$(EXEEXT)'; \
+	b='test-websocket-transport'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-game-transport.log: test-game-transport$(EXEEXT)
 	@p='test-game-transport$(EXEEXT)'; \
 	b='test-game-transport'; \
@@ -4112,6 +4140,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po
 	-rm -f ./$(DEPDIR)/test_transport_display.Po
+	-rm -f ./$(DEPDIR)/test_websocket_transport.Po
 	-rm -f ./$(DEPDIR)/text_atlas.Po
 	-rm -f ./$(DEPDIR)/text_geometry.Po
 	-rm -f ./$(DEPDIR)/text_renderer.Po
@@ -4283,6 +4312,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po
 	-rm -f ./$(DEPDIR)/test_transport_display.Po
+	-rm -f ./$(DEPDIR)/test_websocket_transport.Po
 	-rm -f ./$(DEPDIR)/text_atlas.Po
 	-rm -f ./$(DEPDIR)/text_geometry.Po
 	-rm -f ./$(DEPDIR)/text_renderer.Po

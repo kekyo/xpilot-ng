@@ -14,11 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static bool transport_is_valid(game_transport_t transport)
-{
-    return Game_transport_protocol_version(transport, true) != 0;
-}
-
 static char ascii_lower(char ch)
 {
     if (ch >= 'A' && ch <= 'Z')
@@ -45,8 +40,8 @@ static bool defaults_are_valid(const Connect_defaults_t *defaults)
     return defaults != NULL
         && defaults->contact_port >= 0
         && defaults->contact_port <= 65535
-        && transport_is_valid(defaults->contact_transport)
-        && transport_is_valid(defaults->game_transport);
+        && Game_transport_pair_is_supported(
+            defaults->contact_transport, defaults->game_transport);
 }
 
 static bool address_syntax_is_supported(const char *address, size_t length)
@@ -98,8 +93,8 @@ bool Connect_target_init(Connect_target_t *target, const char *address,
     address_length = strlen(address);
     if (address_length == 0 || address_length >= sizeof(target->address)
         || contact_port < 0 || contact_port > 65535
-        || !transport_is_valid(contact_transport)
-        || !transport_is_valid(game_transport))
+        || !Game_transport_pair_is_supported(
+            contact_transport, game_transport))
         return false;
 
     memcpy(target->address, address, address_length + 1);
@@ -138,6 +133,8 @@ Connect_target_status_t Connect_target_parse(
             contact_transport = game_transport = GAME_TRANSPORT_TCP;
         else if (scheme_equals(specification, scheme_length, "udp"))
             contact_transport = game_transport = GAME_TRANSPORT_UDP;
+        else if (scheme_equals(specification, scheme_length, "ws"))
+            contact_transport = game_transport = GAME_TRANSPORT_WEBSOCKET;
         else
             return CONNECT_TARGET_STATUS_UNSUPPORTED_SCHEME;
         address = scheme_separator + 3;
@@ -218,12 +215,12 @@ const char *Connect_target_status_message(Connect_target_status_t status)
     case CONNECT_TARGET_STATUS_INVALID_ARGUMENT:
         return "invalid connection target arguments or defaults";
     case CONNECT_TARGET_STATUS_UNSUPPORTED_SCHEME:
-        return "unsupported scheme; expected tcp:// or udp://";
+        return "unsupported scheme; expected ws://, tcp://, or udp://";
     case CONNECT_TARGET_STATUS_MISSING_ADDRESS:
         return "missing server host";
     case CONNECT_TARGET_STATUS_UNSUPPORTED_SYNTAX:
-        return "unsupported syntax; expected HOST, tcp://HOST[:PORT], or "
-            "udp://HOST[:PORT]";
+        return "unsupported syntax; expected HOST, ws://HOST[:PORT], "
+            "tcp://HOST[:PORT], or udp://HOST[:PORT]";
     case CONNECT_TARGET_STATUS_INVALID_PORT:
         return "port must be an integer from 1 through 65535";
     case CONNECT_TARGET_STATUS_ADDRESS_TOO_LONG:

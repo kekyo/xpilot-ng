@@ -27,7 +27,7 @@
 
 #include "xpclient.h"
 #include "session_connection.h"
-#include "tcp_transport.h"
+#include "session_transport.h"
 #include "transport_display.h"
 
 
@@ -974,9 +974,9 @@ static Contact_servers_result_t Contact_session_target(
 	source_end = 0;
     }
     printf("Contacting server %s.\n", target->address);
-    transport = Client_tcp_transport_connect(
-	target->address, target->contact_port, source_start, source_end,
-	CONTACT_CONNECT_TIMEOUT);
+    transport = Client_session_transport_connect(
+	target->contact_transport, target->address, target->contact_port,
+	source_start, source_end, CONTACT_CONNECT_TIMEOUT);
     if (transport == NULL)
 	return result;
     result.contacted = true;
@@ -984,8 +984,8 @@ static Contact_servers_result_t Contact_session_target(
     attempt.contact_port = target->contact_port;
     attempt.server_port = target->contact_port;
     attempt.login_port = target->contact_port;
-    attempt.contact_transport = GAME_TRANSPORT_TCP;
-    attempt.game_transport = GAME_TRANSPORT_TCP;
+    attempt.contact_transport = target->contact_transport;
+    attempt.game_transport = target->game_transport;
     strlcpy(attempt.server_addr, target->address,
 	    sizeof(attempt.server_addr));
     strlcpy(attempt.server_name, target->address,
@@ -997,9 +997,12 @@ static Contact_servers_result_t Contact_session_target(
 	int control_status;
 
 	memset(&request, 0, sizeof(request));
-	request.polygon_version =
-	    GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION;
-	request.legacy_version = GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION;
+	request.polygon_version = (unsigned short)
+	    Game_transport_session_protocol_version(
+		target->game_transport, true);
+	request.legacy_version = (unsigned short)
+	    Game_transport_session_protocol_version(
+		target->game_transport, false);
 	strlcpy(request.user, attempt.user_name, sizeof(request.user));
 	request.command = list_servers ? REPORT_STATUS_pack : SHUTDOWN_pack;
 	if (auto_shutdown && shutdown_reason != NULL)
@@ -1025,9 +1028,12 @@ static Contact_servers_result_t Contact_session_target(
 	unsigned selected_version = 0;
 
 	memset(&request, 0, sizeof(request));
-	request.polygon_version =
-	    GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION;
-	request.legacy_version = GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION;
+	request.polygon_version = (unsigned short)
+	    Game_transport_session_protocol_version(
+		target->game_transport, true);
+	request.legacy_version = (unsigned short)
+	    Game_transport_session_protocol_version(
+		target->game_transport, false);
 	strlcpy(request.user, attempt.user_name, sizeof(request.user));
 	strlcpy(request.nick, attempt.nick_name, sizeof(request.nick));
 	strlcpy(request.display, attempt.disp_name, sizeof(request.display));
@@ -1048,8 +1054,10 @@ static Contact_servers_result_t Contact_session_target(
 	}
 	attempt.server_version = selected_version;
 	printf("*** Connected to %s "
-	       "[Contact/Lobby: TCP, Gameplay: TCP]\n",
-	       attempt.server_name);
+	       "[Contact/Lobby: %s, Gameplay: %s]\n",
+	       attempt.server_name,
+	       Transport_display_name(attempt.contact_transport),
+	       Transport_display_name(attempt.game_transport));
 	printf("*** Login allowed.\n");
 	*connection = attempt;
 	result.connected = true;
@@ -1057,7 +1065,7 @@ static Contact_servers_result_t Contact_session_target(
     }
 
     Record_transport_destroy(transport);
-    warn("Interactive commands are unavailable on fixed TCP sessions");
+    warn("Interactive commands are unavailable on fixed sessions");
     return result;
 }
 
@@ -1082,8 +1090,9 @@ static Contact_servers_result_t Contact_target(
     int ret;
     sockbuf_t sbuf;
 
-    if (target->contact_transport == GAME_TRANSPORT_TCP
-	&& target->game_transport == GAME_TRANSPORT_TCP)
+    if (target->contact_transport == target->game_transport
+	&& Game_transport_session_protocol_version(
+	       target->contact_transport, true) != 0)
 	return Contact_session_target(
 	    target, auto_connect, list_servers, auto_shutdown,
 	    shutdown_reason, conpar);
@@ -1236,8 +1245,8 @@ static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
 	*num_found = 0;
     if (defaults == NULL || conpar == NULL)
 	return false;
-    if (defaults->contact_transport == GAME_TRANSPORT_TCP) {
-	warn("TCP contact transport cannot broadcast on the local network");
+    if (defaults->contact_transport != GAME_TRANSPORT_UDP) {
+	warn("Only UDP contact transport can broadcast on the local network");
 	warn("Specify a server address or select one from the metaserver");
 	return false;
     }

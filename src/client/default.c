@@ -3,12 +3,12 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
  *
- * Copyright (C) 2003-2004 Kristian Söderblom <kps@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Kristian SÃ¶derblom <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -507,7 +507,8 @@ static bool Set_contactTransport(xp_option_t *opt, const char *value)
 {
     UNUSED_PARAM(opt);
     if (!Game_transport_parse(value, &connectDefaults.contact_transport)) {
-	warn("Invalid contactTransport '%s'; expected 'udp' or 'tcp'", value);
+	warn("Invalid contactTransport '%s'; expected 'udp', 'tcp', or "
+	     "'websocket'", value);
 	return false;
     }
     return true;
@@ -523,7 +524,8 @@ static bool Set_gameTransport(xp_option_t *opt, const char *value)
 {
     UNUSED_PARAM(opt);
     if (!Game_transport_parse(value, &connectDefaults.game_transport)) {
-	warn("Invalid gameTransport '%s'; expected 'udp' or 'tcp'", value);
+	warn("Invalid gameTransport '%s'; expected 'udp', 'tcp', or "
+	     "'websocket'", value);
 	return false;
     }
     return true;
@@ -640,7 +642,8 @@ xp_option_t default_options[] = {
 	NULL,
 	XP_OPTFLAG_KEEP,
 	"Set the default contact port number for direct server targets.\n"
-	"A port in tcp://HOST:PORT or udp://HOST:PORT overrides this value.\n"
+	"A port in ws://HOST:PORT, tcp://HOST:PORT, or udp://HOST:PORT "
+	"overrides this value.\n"
 	"Almost all servers use the default port, which is the recommended\n"
 	"policy.  You can find out about which port is used by a server by\n"
 	"querying the XPilot Meta server.\n"),
@@ -938,8 +941,11 @@ xp_option_t default_options[] = {
 	NULL, 0,
 	Set_contactTransport, NULL, Get_contactTransport,
 	XP_OPTFLAG_KEEP,
-	"Default contact and lobby transport for bare server targets: udp or tcp.\n"
-	"A tcp:// or udp:// target selects both transports for that target.\n"
+	"Default contact and lobby transport for bare server targets: udp, tcp, "
+	"or websocket.\n"
+	"A ws://, tcp://, or udp:// target selects both transports for that "
+	"target.\n"
+	"WebSocket must be selected for both transport settings.\n"
 	"Direct connections must match the server; metaserver selections apply "
 	"the advertised value.\n"),
 
@@ -949,8 +955,11 @@ xp_option_t default_options[] = {
 	NULL, 0,
 	Set_gameTransport, NULL, Get_gameTransport,
 	XP_OPTFLAG_KEEP,
-	"Default gameplay transport for bare server targets: udp or tcp.\n"
-	"A tcp:// or udp:// target selects both transports for that target.\n"
+	"Default gameplay transport for bare server targets: udp, tcp, or "
+	"websocket.\n"
+	"A ws://, tcp://, or udp:// target selects both transports for that "
+	"target.\n"
+	"WebSocket must be selected for both transport settings.\n"
 	"Direct connections must match the server; metaserver selections apply "
 	"the advertised value.\n"),
 

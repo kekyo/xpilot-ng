@@ -10,6 +10,8 @@ static int check_names(void)
                == 0);
     TEST_CHECK(strcmp(Transport_display_name(GAME_TRANSPORT_TCP), "TCP")
                == 0);
+    TEST_CHECK(strcmp(Transport_display_name(GAME_TRANSPORT_WEBSOCKET),
+                      "WebSocket") == 0);
     TEST_CHECK(strcmp(Transport_display_name((game_transport_t)-1),
                       "UNKNOWN") == 0);
     return 0;
@@ -35,10 +37,14 @@ static int check_pairs(void)
                                      GAME_TRANSPORT_TCP,
                                      GAME_TRANSPORT_TCP));
     TEST_CHECK(strcmp(pair, "TCP -> TCP") == 0);
+    TEST_CHECK(Transport_display_pair(pair, sizeof(pair),
+                                     GAME_TRANSPORT_WEBSOCKET,
+                                     GAME_TRANSPORT_WEBSOCKET));
+    TEST_CHECK(strcmp(pair, "WebSocket -> WebSocket") == 0);
 
     TEST_CHECK(!Transport_display_pair(pair, sizeof(pair) - 1,
-                                      GAME_TRANSPORT_UDP,
-                                      GAME_TRANSPORT_TCP));
+                                      GAME_TRANSPORT_WEBSOCKET,
+                                      GAME_TRANSPORT_WEBSOCKET));
     TEST_CHECK(!Transport_display_pair(pair, sizeof(pair),
                                       (game_transport_t)-1,
                                       GAME_TRANSPORT_TCP));
@@ -62,6 +68,13 @@ static int check_gameplay_titles(void)
                    "127.0.0.1", GAME_TRANSPORT_UDP));
     TEST_CHECK(strcmp(title,
                       "XPilot NG 4.7.3 - 127.0.0.1 [Gameplay: UDP]") == 0);
+    TEST_CHECK(Transport_display_gameplay_title(
+                   title, sizeof(title), "XPilot NG 4.7.3",
+                   "ws.example", GAME_TRANSPORT_WEBSOCKET));
+    TEST_CHECK(strcmp(
+                   title,
+                   "XPilot NG 4.7.3 - ws.example [Gameplay: WebSocket]")
+               == 0);
 
     TEST_CHECK(!Transport_display_gameplay_title(
                     title, 12, "XPilot NG 4.7.3", "game.example",

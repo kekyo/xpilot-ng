@@ -89,6 +89,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
+@COND_WINDOWS_TRUE@am__append_1 = -DHAVE_WINSOCK2_H
 subdir = src/common
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -108,15 +109,21 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 =
 libxpcommon_a_AR = $(AR) $(ARFLAGS)
 libxpcommon_a_LIBADD =
+am__dirstamp = $(am__leading_dot)dirstamp
 am_libxpcommon_a_OBJECTS = arraylist.$(OBJEXT) checknames.$(OBJEXT) \
 	config.$(OBJEXT) error.$(OBJEXT) game_transport.$(OBJEXT) \
 	list.$(OBJEXT) math.$(OBJEXT) net.$(OBJEXT) \
 	record_drain.$(OBJEXT) recording_input.$(OBJEXT) \
 	record_session.$(OBJEXT) record_transport.$(OBJEXT) \
-	portability.$(OBJEXT) randommt.$(OBJEXT) secure_random.$(OBJEXT) \
-	session_protocol.$(OBJEXT) session_token.$(OBJEXT) \
-	shipshape.$(OBJEXT) socklib.$(OBJEXT) strcasecmp.$(OBJEXT) \
-	strdup.$(OBJEXT) strlcpy.$(OBJEXT) xpmemory.$(OBJEXT)
+	portability.$(OBJEXT) randommt.$(OBJEXT) \
+	secure_random.$(OBJEXT) session_protocol.$(OBJEXT) \
+	session_token.$(OBJEXT) websocket_http.$(OBJEXT) \
+	websocket_transport.$(OBJEXT) shipshape.$(OBJEXT) \
+	socklib.$(OBJEXT) strcasecmp.$(OBJEXT) strdup.$(OBJEXT) \
+	strlcpy.$(OBJEXT) third_party/wslay/wslay_event.$(OBJEXT) \
+	third_party/wslay/wslay_frame.$(OBJEXT) \
+	third_party/wslay/wslay_net.$(OBJEXT) \
+	third_party/wslay/wslay_queue.$(OBJEXT) xpmemory.$(OBJEXT)
 libxpcommon_a_OBJECTS = $(am_libxpcommon_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -138,13 +145,18 @@ am__depfiles_remade = ./$(DEPDIR)/arraylist.Po \
 	./$(DEPDIR)/error.Po ./$(DEPDIR)/game_transport.Po \
 	./$(DEPDIR)/list.Po ./$(DEPDIR)/math.Po ./$(DEPDIR)/net.Po \
 	./$(DEPDIR)/portability.Po ./$(DEPDIR)/randommt.Po \
-	./$(DEPDIR)/secure_random.Po \
 	./$(DEPDIR)/record_drain.Po ./$(DEPDIR)/record_session.Po \
 	./$(DEPDIR)/record_transport.Po ./$(DEPDIR)/recording_input.Po \
-	./$(DEPDIR)/session_protocol.Po ./$(DEPDIR)/session_token.Po \
-	./$(DEPDIR)/shipshape.Po ./$(DEPDIR)/socklib.Po \
-	./$(DEPDIR)/strcasecmp.Po ./$(DEPDIR)/strdup.Po \
-	./$(DEPDIR)/strlcpy.Po ./$(DEPDIR)/xpmemory.Po
+	./$(DEPDIR)/secure_random.Po ./$(DEPDIR)/session_protocol.Po \
+	./$(DEPDIR)/session_token.Po ./$(DEPDIR)/shipshape.Po \
+	./$(DEPDIR)/socklib.Po ./$(DEPDIR)/strcasecmp.Po \
+	./$(DEPDIR)/strdup.Po ./$(DEPDIR)/strlcpy.Po \
+	./$(DEPDIR)/websocket_http.Po \
+	./$(DEPDIR)/websocket_transport.Po ./$(DEPDIR)/xpmemory.Po \
+	third_party/wslay/$(DEPDIR)/wslay_event.Po \
+	third_party/wslay/$(DEPDIR)/wslay_frame.Po \
+	third_party/wslay/$(DEPDIR)/wslay_net.Po \
+	third_party/wslay/$(DEPDIR)/wslay_queue.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -323,7 +335,11 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\"
+AUTOMAKE_OPTIONS = subdir-objects
+AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
+	-I$(srcdir)/third_party/wslay/include \
+	-I$(srcdir)/third_party/wslay -DWSLAY_VERSION=\"1.1.1\" \
+	$(am__append_1)
 noinst_LIBRARIES = libxpcommon.a
 libxpcommon_a_SOURCES = \
 	arraylist.c arraylist.h astershape.h audio.h \
@@ -343,13 +359,21 @@ libxpcommon_a_SOURCES = \
 	secure_random.c secure_random.h \
 	session_protocol.c session_protocol.h \
 	session_token.c session_token.h \
+	websocket_http.c websocket_http.h \
+	websocket_transport.c websocket_transport.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \
 	strcasecmp.c strdup.c strlcpy.c \
+	third_party/wslay/wslay_event.c third_party/wslay/wslay_event.h \
+	third_party/wslay/wslay_frame.c third_party/wslay/wslay_frame.h \
+	third_party/wslay/wslay_net.c third_party/wslay/wslay_net.h \
+	third_party/wslay/wslay_queue.c third_party/wslay/wslay_queue.h \
+	third_party/wslay/include/wslay/wslay.h \
 	types.h win32.h \
 	version.h \
 	wreckshape.h \
 	xpcommon.h xpconfig.h xpmap.h xpmemory.c
 
+EXTRA_DIST = third_party/wslay/LICENSE third_party/wslay/UPSTREAM.md
 all: all-am
 
 .SUFFIXES:
@@ -388,6 +412,24 @@ version.h: $(top_builddir)/config.status $(srcdir)/version.h.in
 
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+third_party/wslay/$(am__dirstamp):
+	@$(MKDIR_P) third_party/wslay
+	@: > third_party/wslay/$(am__dirstamp)
+third_party/wslay/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) third_party/wslay/$(DEPDIR)
+	@: > third_party/wslay/$(DEPDIR)/$(am__dirstamp)
+third_party/wslay/wslay_event.$(OBJEXT):  \
+	third_party/wslay/$(am__dirstamp) \
+	third_party/wslay/$(DEPDIR)/$(am__dirstamp)
+third_party/wslay/wslay_frame.$(OBJEXT):  \
+	third_party/wslay/$(am__dirstamp) \
+	third_party/wslay/$(DEPDIR)/$(am__dirstamp)
+third_party/wslay/wslay_net.$(OBJEXT):  \
+	third_party/wslay/$(am__dirstamp) \
+	third_party/wslay/$(DEPDIR)/$(am__dirstamp)
+third_party/wslay/wslay_queue.$(OBJEXT):  \
+	third_party/wslay/$(am__dirstamp) \
+	third_party/wslay/$(DEPDIR)/$(am__dirstamp)
 
 libxpcommon.a: $(libxpcommon_a_OBJECTS) $(libxpcommon_a_DEPENDENCIES) $(EXTRA_libxpcommon_a_DEPENDENCIES)
 	$(AM_V_at)-rm -f libxpcommon.a
@@ -396,6 +438,7 @@ libxpcommon.a: $(libxpcommon_a_OBJECTS) $(libxpcommon_a_DEPENDENCIES) $(EXTRA_li
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f third_party/wslay/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -410,11 +453,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/net.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/portability.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/randommt.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/secure_random.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/record_drain.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/record_session.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/record_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/recording_input.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/secure_random.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session_protocol.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session_token.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/shipshape.Po@am__quote@ # am--include-marker
@@ -422,7 +465,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/strcasecmp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/strdup.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/strlcpy.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/websocket_http.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/websocket_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xpmemory.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@third_party/wslay/$(DEPDIR)/wslay_event.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@third_party/wslay/$(DEPDIR)/wslay_frame.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@third_party/wslay/$(DEPDIR)/wslay_net.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@third_party/wslay/$(DEPDIR)/wslay_queue.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -431,15 +480,17 @@ $(am__depfiles_remade):
 am--depfiles: $(am__depfiles_remade)
 
 .c.o:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ $<
 
 .c.obj:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
@@ -558,6 +609,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f third_party/wslay/$(DEPDIR)/$(am__dirstamp)
+	-rm -f third_party/wslay/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -577,11 +630,11 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/net.Po
 	-rm -f ./$(DEPDIR)/portability.Po
 	-rm -f ./$(DEPDIR)/randommt.Po
-	-rm -f ./$(DEPDIR)/secure_random.Po
 	-rm -f ./$(DEPDIR)/record_drain.Po
 	-rm -f ./$(DEPDIR)/record_session.Po
 	-rm -f ./$(DEPDIR)/record_transport.Po
 	-rm -f ./$(DEPDIR)/recording_input.Po
+	-rm -f ./$(DEPDIR)/secure_random.Po
 	-rm -f ./$(DEPDIR)/session_protocol.Po
 	-rm -f ./$(DEPDIR)/session_token.Po
 	-rm -f ./$(DEPDIR)/shipshape.Po
@@ -589,7 +642,13 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/strcasecmp.Po
 	-rm -f ./$(DEPDIR)/strdup.Po
 	-rm -f ./$(DEPDIR)/strlcpy.Po
+	-rm -f ./$(DEPDIR)/websocket_http.Po
+	-rm -f ./$(DEPDIR)/websocket_transport.Po
 	-rm -f ./$(DEPDIR)/xpmemory.Po
+	-rm -f third_party/wslay/$(DEPDIR)/wslay_event.Po
+	-rm -f third_party/wslay/$(DEPDIR)/wslay_frame.Po
+	-rm -f third_party/wslay/$(DEPDIR)/wslay_net.Po
+	-rm -f third_party/wslay/$(DEPDIR)/wslay_queue.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -645,11 +704,11 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/net.Po
 	-rm -f ./$(DEPDIR)/portability.Po
 	-rm -f ./$(DEPDIR)/randommt.Po
-	-rm -f ./$(DEPDIR)/secure_random.Po
 	-rm -f ./$(DEPDIR)/record_drain.Po
 	-rm -f ./$(DEPDIR)/record_session.Po
 	-rm -f ./$(DEPDIR)/record_transport.Po
 	-rm -f ./$(DEPDIR)/recording_input.Po
+	-rm -f ./$(DEPDIR)/secure_random.Po
 	-rm -f ./$(DEPDIR)/session_protocol.Po
 	-rm -f ./$(DEPDIR)/session_token.Po
 	-rm -f ./$(DEPDIR)/shipshape.Po
@@ -657,7 +716,13 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/strcasecmp.Po
 	-rm -f ./$(DEPDIR)/strdup.Po
 	-rm -f ./$(DEPDIR)/strlcpy.Po
+	-rm -f ./$(DEPDIR)/websocket_http.Po
+	-rm -f ./$(DEPDIR)/websocket_transport.Po
 	-rm -f ./$(DEPDIR)/xpmemory.Po
+	-rm -f third_party/wslay/$(DEPDIR)/wslay_event.Po
+	-rm -f third_party/wslay/$(DEPDIR)/wslay_frame.Po
+	-rm -f third_party/wslay/$(DEPDIR)/wslay_net.Po
+	-rm -f third_party/wslay/$(DEPDIR)/wslay_queue.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

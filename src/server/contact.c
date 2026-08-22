@@ -30,6 +30,7 @@
 #include "record_session.h"
 #include "session_acceptor.h"
 #include "session_protocol.h"
+#include "websocket_transport.h"
 
 #define MAX_PENDING_SESSIONS 4
 #define MAX_PENDING_PER_IP 2
@@ -102,8 +103,15 @@ static void Contact_session_poll(void);
 
 static bool Contact_uses_session(void)
 {
-    return contactTransport == GAME_TRANSPORT_TCP
-	&& gameTransport == GAME_TRANSPORT_TCP;
+    return contactTransport == gameTransport
+	&& Game_transport_session_protocol_version(
+	       contactTransport, true) != 0;
+}
+
+static unsigned Contact_session_protocol_version(bool polygon_map)
+{
+    return Game_transport_session_protocol_version(
+	gameTransport, polygon_map);
 }
 
 void Contact_cleanup(void)
@@ -151,7 +159,8 @@ int Contact_init(void)
 	    || sock_set_non_blocking(&contactSocket, 1) == SOCK_IS_ERROR
 	    || install_input(Contact_accept_session, contactSocket.fd, NULL)
 	       == SOCK_IS_ERROR) {
-	    error("Could not create fixed TCP session listener");
+	    error("Could not create fixed %s session listener",
+		  Game_transport_name(contactTransport));
 	    if (contactSocket.fd != SOCK_FD_INVALID)
 		sock_close(&contactSocket);
 	    return false;
@@ -458,7 +467,8 @@ static void Contact_accept_session(socket_handle_t fd, void *arg)
 	errno = 0;
 	if (sock_accept(&contactSocket, &accepted) == SOCK_IS_ERROR) {
 	    if (errno != EWOULDBLOCK && errno != EAGAIN && errno != EINTR)
-		error("Cannot accept TCP session (%d)", errno);
+		error("Cannot accept %s session (%d)",
+		      Game_transport_name(contactTransport), errno);
 	    return;
 	}
 
@@ -475,8 +485,11 @@ static void Contact_accept_session(socket_handle_t fd, void *arg)
 	if (sock_set_send_buffer_size(
 		&accepted, SERVER_SEND_SIZE + 256) == SOCK_IS_ERROR)
 	    error("Cannot set session send buffer size");
-	transport = Record_transport_create_tcp(
-	    &accepted, SERVER_RECV_SIZE, SERVER_SEND_SIZE);
+	transport = contactTransport == GAME_TRANSPORT_WEBSOCKET
+	    ? Record_transport_create_websocket_server(
+		&accepted, SERVER_RECV_SIZE, SERVER_SEND_SIZE)
+	    : Record_transport_create_tcp(
+		&accepted, SERVER_RECV_SIZE, SERVER_SEND_SIZE);
 	if (transport == NULL) {
 	    sock_close(&accepted);
 	    continue;
@@ -518,13 +531,13 @@ static int Admit_session_game(pending_session_t *pending)
 	game->team = TEAM_NOT_SET;
 
     if (game->polygon_version
-	    != GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION
+	    != Contact_session_protocol_version(true)
 	|| game->legacy_version
-	    != GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION)
+	    != Contact_session_protocol_version(false))
 	return E_VERSION;
     pending->selected_version = is_polygon_map
-	? GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION
-	: GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION;
+	? Contact_session_protocol_version(true)
+	: Contact_session_protocol_version(false);
     if (Check_address(pending->address))
 	return E_GAME_LOCKED;
     status = Check_names(game->nick, game->user, game->host);
@@ -731,9 +744,9 @@ static int Execute_session_control(pending_session_t *pending)
 
     Fix_user_name(control->user);
     if (control->polygon_version
-	    != GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION
+	    != Contact_session_protocol_version(true)
 	|| control->legacy_version
-	    != GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION)
+	    != Contact_session_protocol_version(false))
 	return Queue_simple_session_control_reply(pending, E_VERSION);
     if (!Session_control_is_public(control->command)
 	&& !Session_control_is_owner(pending))
@@ -868,12 +881,10 @@ static void Promote_session_game(pending_session_t *pending)
     strlcpy(address, pending->address, sizeof(address));
     pending->session = NULL;
     memset(pending, 0, sizeof(*pending));
-    Setup_session_connection(session, game.user, game.nick, game.display,
-			     game.team, address, game.host,
-			     is_polygon_map
-			     ? GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION
-			     : GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION,
-			     peer_port);
+    Setup_session_connection(
+	session, game.user, game.nick, game.display,
+	game.team, address, game.host,
+	Contact_session_protocol_version(is_polygon_map), peer_port);
 }
 
 static void Process_pending_session(pending_session_t *pending)

@@ -11,9 +11,10 @@
 
 #include "xpclient.h"
 
-#include "tcp_transport.h"
+#include "session_transport.h"
+#include "websocket_transport.h"
 
-static int Client_tcp_open_source(sock_t *socket, int start, int end)
+static int Client_session_open_source(sock_t *socket, int start, int end)
 {
     int port;
 
@@ -26,14 +27,15 @@ static int Client_tcp_open_source(sock_t *socket, int start, int end)
     return SOCK_IS_ERROR;
 }
 
-record_transport_t *Client_tcp_transport_connect(
-    const char *server, int port, int source_port_start,
-    int source_port_end, int timeout_seconds)
+record_transport_t *Client_session_transport_connect(
+    game_transport_t transport_kind, const char *server, int port,
+    int source_port_start, int source_port_end, int timeout_seconds)
 {
     record_transport_t *transport;
     sock_t socket;
 
-    if (server == NULL || port <= 0 || port > 65535
+    if (Game_transport_session_protocol_version(transport_kind, true) == 0
+        || server == NULL || port <= 0 || port > 65535
         || source_port_start < 0 || source_port_start > 65535
         || source_port_end < 0 || source_port_end > 65535
         || ((source_port_start == 0) != (source_port_end == 0))
@@ -43,7 +45,7 @@ record_transport_t *Client_tcp_transport_connect(
         return NULL;
     }
     sock_init(&socket);
-    if (Client_tcp_open_source(
+    if (Client_session_open_source(
             &socket, source_port_start, source_port_end) == SOCK_IS_ERROR) {
         error("Cannot create a TCP socket in the requested source range");
         return NULL;
@@ -57,7 +59,8 @@ record_transport_t *Client_tcp_transport_connect(
     }
     if (sock_set_tcp_nodelay(&socket, 1) == SOCK_IS_ERROR
         || sock_set_non_blocking(&socket, 1) == SOCK_IS_ERROR) {
-        error("Can't configure TCP session socket");
+        error("Can't configure %s session socket",
+              Game_transport_name(transport_kind));
         sock_close(&socket);
         return NULL;
     }
@@ -68,8 +71,11 @@ record_transport_t *Client_tcp_transport_connect(
             &socket, CLIENT_RECV_SIZE + 256) == SOCK_IS_ERROR)
         error("Can't set receive buffer size to %d", CLIENT_RECV_SIZE + 256);
 
-    transport = Record_transport_create_tcp(
-        &socket, CLIENT_RECV_SIZE, CLIENT_SEND_SIZE);
+    transport = transport_kind == GAME_TRANSPORT_WEBSOCKET
+        ? Record_transport_create_websocket_client(
+            &socket, server, port, CLIENT_RECV_SIZE, CLIENT_SEND_SIZE)
+        : Record_transport_create_tcp(
+            &socket, CLIENT_RECV_SIZE, CLIENT_SEND_SIZE);
     if (transport == NULL)
         sock_close(&socket);
     return transport;

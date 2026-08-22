@@ -18,13 +18,13 @@
 #include <stddef.h>
 
 /** Buffer size required by Transport_display_pair(). */
-#define TRANSPORT_DISPLAY_PAIR_SIZE 11
+#define TRANSPORT_DISPLAY_PAIR_SIZE 23
 
 /**
  * Return the user-facing name of a network transport.
  *
  * @param transport Transport to name.
- * @return `UDP`, `TCP`, or `UNKNOWN` for an invalid value.
+ * @return `UDP`, `TCP`, `WebSocket`, or `UNKNOWN` for an invalid value.
  */
 const char *Transport_display_name(game_transport_t transport);
 
@@ -35,7 +35,7 @@ const char *Transport_display_name(game_transport_t transport);
  * @param output_size Size of the destination buffer.
  * @param contact Contact and lobby transport.
  * @param gameplay Gameplay transport.
- * @return `true` when the complete `UDP -> TCP` form fits and both
+ * @return `true` when the complete `WebSocket -> WebSocket` form fits and both
  * transports are valid, otherwise `false`.
  */
 bool Transport_display_pair(char *output, size_t output_size,

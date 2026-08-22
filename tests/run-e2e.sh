@@ -495,7 +495,7 @@ run_invalid_target_rejection()
     grep -Fq "Invalid server target 'tls://invalid.example'" \
 	"$invalid_target_log" \
 	|| fail "invalid target diagnostic did not identify the input"
-    grep -Fq 'unsupported scheme; expected tcp:// or udp://' \
+    grep -Fq 'unsupported scheme; expected ws://, tcp://, or udp://' \
 	"$invalid_target_log" \
 	|| fail "invalid target diagnostic did not explain the scheme"
 }
@@ -509,7 +509,9 @@ run_server_transport_option_help()
 	|| fail "server help did not list -tcp"
     grep -Fq -- '-udp' "$transport_help_log" \
 	|| fail "server help did not list -udp"
-    grep -Fq -- '-transport <udp|tcp>' "$transport_help_log" \
+    grep -Fq -- '-websocket' "$transport_help_log" \
+	|| fail "server help did not list -websocket"
+    grep -Fq -- '-transport <udp|tcp|websocket>' "$transport_help_log" \
 	|| fail "server help did not list -transport"
 }
 
@@ -650,10 +652,12 @@ run_gameplay_case()
     case "$game_transport" in
     default|udp) expected_gameplay_transport=UDP ;;
     tcp) expected_gameplay_transport=TCP ;;
+    websocket) expected_gameplay_transport=WebSocket ;;
     esac
     case "$contact_transport" in
     default|udp) expected_contact_transport=UDP ;;
     tcp) expected_contact_transport=TCP ;;
+    websocket) expected_contact_transport=WebSocket ;;
     esac
     port=$(reserve_contact_port)
     game_recording="$runtime_dir/server-$game_case.xpr"
@@ -668,6 +672,9 @@ run_gameplay_case()
 	;;
     tcp-contact-udp-game)
 	game_client_name=SDL3TCPUDP
+	;;
+    websocket)
+	game_client_name=SDL3WebSocket
 	;;
     udp-default)
 	game_client_name=SDL3UDPDefault
@@ -691,6 +698,9 @@ run_gameplay_case()
 	    -tcp -gameTransport udp \
 	    -recordFileName "$game_recording" -recordMode 1 \
 	    >"$game_server_log" 2>&1 &
+    elif test "$game_case" = websocket; then
+	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	    -websocket >"$game_server_log" 2>&1 &
     elif test "$game_transport" = default \
 	&& test "$contact_transport" = default; then
 	"$server" -map "$map" -port "$port" -noQuit +reportMeta \
@@ -720,6 +730,10 @@ run_gameplay_case()
 	"$client" -geometry 800x600 -join \
 	    -name "$game_client_name" \
 	    "tcp://127.0.0.1:$port" >"$game_client_log" 2>&1 &
+    elif test "$game_case" = websocket; then
+	"$client" -geometry 800x600 -join \
+	    -name "$game_client_name" \
+	    "ws://127.0.0.1:$port" >"$game_client_log" 2>&1 &
     elif test "$game_transport" = default \
 	&& test "$contact_transport" = default; then
 	"$client" -geometry 800x600 -join -port "$port" \
@@ -742,7 +756,8 @@ run_gameplay_case()
     wait_until "$game_case local client acceptance" 20 client_accepted
     wait_until "$game_case connection transport banner" 10 \
 	client_transport_banner_reported
-    if test "$game_transport" = tcp; then
+    if test "$game_transport" = tcp \
+	|| test "$game_transport" = websocket; then
 	game_socket_protocol=tcp
     else
 	game_socket_protocol=udp
@@ -751,7 +766,8 @@ run_gameplay_case()
 	process_has_connected_inet_socket "$client_pid" "$game_socket_protocol"
     wait_until "$game_case server $game_socket_protocol connection" 5 \
 	process_has_connected_inet_socket "$server_pid" "$game_socket_protocol"
-    if test "$game_case" = tcp-contact; then
+    if test "$game_case" = tcp-contact \
+	|| test "$game_case" = websocket; then
 	wait_until "$game_case gameplay on fixed contact port" 5 \
 	    process_has_connected_tcp_remote_port "$client_pid" "$port"
     fi
@@ -805,7 +821,8 @@ run_gameplay_case()
 	"$finished_client_pid"
     wait_until "$game_case server-side client departure" 5 client_departed
     stop_local_server
-    if test "$game_case" != tcp-contact; then
+    if test "$game_case" != tcp-contact \
+	&& test "$game_case" != websocket; then
 	run_recording_playback "$game_case" "$game_transport" "$game_recording"
     fi
 }
@@ -1164,6 +1181,7 @@ run_server_transport_option_help
 run_contact_target_failover
 run_connection_failure_notification
 run_gameplay_case tcp tcp no default
+run_gameplay_case websocket websocket no websocket
 run_tcp_reconnection_case
 run_gameplay_case udp-default default yes default
 run_gameplay_case udp-explicit udp no default

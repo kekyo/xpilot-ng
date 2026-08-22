@@ -25,14 +25,16 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	@GL_CFLAGS@
 
 if COND_WINDOWS
-check_PROGRAMS = test-framed-stream test-game-transport \
+check_PROGRAMS = test-framed-stream test-websocket-transport \
+	test-game-transport \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle test-recording-input test-session-flow \
 	test-sdl-versions test-game-input
 TESTS =
 else
-check_PROGRAMS = test-framed-stream test-game-transport \
+check_PROGRAMS = test-framed-stream test-websocket-transport \
+	test-game-transport \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle \
@@ -57,7 +59,8 @@ check_PROGRAMS = test-framed-stream test-game-transport \
 	test-sdlgui-polygons test-sdlgui-sparks test-sdlgui-ships \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
-TESTS = test-framed-stream test-game-transport test-connect-target \
+TESTS = test-framed-stream test-websocket-transport \
+	test-game-transport test-connect-target \
 	test-transport-display test-session-token \
 	test-socket-io \
 	test-native-socket-handle \
@@ -110,6 +113,10 @@ test_transport_display_SOURCES = test_transport_display.c \
 test_framed_stream_SOURCES = test_framed_stream.c
 test_framed_stream_LDADD = $(top_builddir)/src/common/libxpcommon.a \
 	@W32_LIBS@
+
+test_websocket_transport_SOURCES = test_websocket_transport.c
+test_websocket_transport_LDADD = \
+	$(top_builddir)/src/common/libxpcommon.a @W32_LIBS@
 
 test_socket_io_SOURCES = test_socket_io.c
 test_socket_io_LDADD = $(top_builddir)/src/common/libxpcommon.a \

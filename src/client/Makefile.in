@@ -118,9 +118,9 @@ am__libxpclient_a_SOURCES_DIST = client.c client.h client_session.c \
 	netclient.c netclient.h paint.c paint.h paintmap.c \
 	paintobjects.c option.c option.h query.c recordfmt.h \
 	transport_display.c transport_display.h session_connection.c \
-	session_connection.h talk.h talkmacros.c textinterface.c \
-	tcp_transport.c tcp_transport.h usleep.c xpclient.h caudio.c caudio.h \
-	oalaudio.c
+	session_connection.h session_transport.c session_transport.h \
+	talk.h talkmacros.c textinterface.c usleep.c xpclient.h \
+	caudio.c caudio.h oalaudio.c
 @COND_SOUND_TRUE@am__objects_1 = caudio.$(OBJEXT) oalaudio.$(OBJEXT)
 am_libxpclient_a_OBJECTS = client.$(OBJEXT) client_session.$(OBJEXT) \
 	clientcommand.$(OBJEXT) clientrank.$(OBJEXT) \
@@ -130,8 +130,8 @@ am_libxpclient_a_OBJECTS = client.$(OBJEXT) client_session.$(OBJEXT) \
 	meta.$(OBJEXT) netclient.$(OBJEXT) paint.$(OBJEXT) \
 	paintmap.$(OBJEXT) paintobjects.$(OBJEXT) option.$(OBJEXT) \
 	query.$(OBJEXT) transport_display.$(OBJEXT) \
-	session_connection.$(OBJEXT) talkmacros.$(OBJEXT) \
-	textinterface.$(OBJEXT) tcp_transport.$(OBJEXT) usleep.$(OBJEXT) \
+	session_connection.$(OBJEXT) session_transport.$(OBJEXT) \
+	talkmacros.$(OBJEXT) textinterface.$(OBJEXT) usleep.$(OBJEXT) \
 	$(am__objects_1)
 libxpclient_a_OBJECTS = $(am_libxpclient_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -160,7 +160,7 @@ am__depfiles_remade = ./$(DEPDIR)/caudio.Po ./$(DEPDIR)/client.Po \
 	./$(DEPDIR)/option.Po ./$(DEPDIR)/paint.Po \
 	./$(DEPDIR)/paintmap.Po ./$(DEPDIR)/paintobjects.Po \
 	./$(DEPDIR)/query.Po ./$(DEPDIR)/session_connection.Po \
-	./$(DEPDIR)/talkmacros.Po ./$(DEPDIR)/tcp_transport.Po \
+	./$(DEPDIR)/session_transport.Po ./$(DEPDIR)/talkmacros.Po \
 	./$(DEPDIR)/textinterface.Po ./$(DEPDIR)/transport_display.Po \
 	./$(DEPDIR)/usleep.Po
 am__mv = mv -f
@@ -395,8 +395,9 @@ libxpclient_a_SOURCES = client.c client.h client_session.c \
 	netclient.c netclient.h paint.c paint.h paintmap.c \
 	paintobjects.c option.c option.h query.c recordfmt.h \
 	transport_display.c transport_display.h session_connection.c \
-	session_connection.h talk.h talkmacros.c textinterface.c \
-	tcp_transport.c tcp_transport.h usleep.c xpclient.h $(am__append_1)
+	session_connection.h session_transport.c session_transport.h \
+	talk.h talkmacros.c textinterface.c usleep.c xpclient.h \
+	$(am__append_1)
 @COND_SDL_CLIENT_FALSE@MAYBE_SDL =
 
 # From section Conditional subdirectories with AM_CONDITIONAL
@@ -478,8 +479,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/paintobjects.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/query.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session_connection.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/talkmacros.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tcp_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/textinterface.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/transport_display.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/usleep.Po@am__quote@ # am--include-marker
@@ -722,8 +723,8 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/paintobjects.Po
 	-rm -f ./$(DEPDIR)/query.Po
 	-rm -f ./$(DEPDIR)/session_connection.Po
+	-rm -f ./$(DEPDIR)/session_transport.Po
 	-rm -f ./$(DEPDIR)/talkmacros.Po
-	-rm -f ./$(DEPDIR)/tcp_transport.Po
 	-rm -f ./$(DEPDIR)/textinterface.Po
 	-rm -f ./$(DEPDIR)/transport_display.Po
 	-rm -f ./$(DEPDIR)/usleep.Po
@@ -794,8 +795,8 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/paintobjects.Po
 	-rm -f ./$(DEPDIR)/query.Po
 	-rm -f ./$(DEPDIR)/session_connection.Po
+	-rm -f ./$(DEPDIR)/session_transport.Po
 	-rm -f ./$(DEPDIR)/talkmacros.Po
-	-rm -f ./$(DEPDIR)/tcp_transport.Po
 	-rm -f ./$(DEPDIR)/textinterface.Po
 	-rm -f ./$(DEPDIR)/transport_display.Po
 	-rm -f ./$(DEPDIR)/usleep.Po

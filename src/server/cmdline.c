@@ -4,11 +4,11 @@
  * Copyright (C) 2000-2004 by
  *
  *      Uoti Urpala          <uau@users.sourceforge.net>
- *      Kristian Söderblom   <kps@users.sourceforge.net>
+ *      Kristian SÃ¶derblom   <kps@users.sourceforge.net>
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -611,8 +611,10 @@ static option_desc opts[] = {
 	&options.contactTransport,
 	valString,
 	tuner_dummy,
-	"Contact and lobby transport for direct connections: udp or tcp.\n"
+	"Contact and lobby transport for direct connections: udp, tcp, or "
+	"websocket.\n"
 	"This value must match the client; there is no automatic fallback.\n"
+	"WebSocket must also be selected for gameplay.\n"
 	"LAN broadcast discovery is available only in udp mode.\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
@@ -623,8 +625,9 @@ static option_desc opts[] = {
 	&options.gameTransport,
 	valString,
 	tuner_dummy,
-	"Gameplay transport for player connections: udp or tcp.\n"
-	"This value must match every client; there is no automatic fallback.\n",
+	"Gameplay transport for player connections: udp, tcp, or websocket.\n"
+	"This value must match every client; there is no automatic fallback.\n"
+	"WebSocket must also be selected for contact and lobby traffic.\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {

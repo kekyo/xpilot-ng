@@ -45,6 +45,11 @@ bool Game_transport_parse(const char *value, game_transport_t *transport)
         *transport = GAME_TRANSPORT_TCP;
         return true;
     }
+    if (ascii_equal_case_insensitive(value, "websocket")
+        || ascii_equal_case_insensitive(value, "ws")) {
+        *transport = GAME_TRANSPORT_WEBSOCKET;
+        return true;
+    }
     return false;
 }
 
@@ -55,6 +60,8 @@ const char *Game_transport_name(game_transport_t transport)
         return "udp";
     case GAME_TRANSPORT_TCP:
         return "tcp";
+    case GAME_TRANSPORT_WEBSOCKET:
+        return "websocket";
     default:
         return "unknown";
     }
@@ -70,6 +77,10 @@ unsigned Game_transport_protocol_version(game_transport_t transport,
     case GAME_TRANSPORT_TCP:
         return polygon_map ? GAME_PROTOCOL_TCP_POLYGON_VERSION
                            : GAME_PROTOCOL_TCP_LEGACY_VERSION;
+    case GAME_TRANSPORT_WEBSOCKET:
+        return polygon_map
+            ? GAME_PROTOCOL_WEBSOCKET_SESSION_POLYGON_VERSION
+            : GAME_PROTOCOL_WEBSOCKET_SESSION_LEGACY_VERSION;
     default:
         return 0;
     }
@@ -78,10 +89,30 @@ unsigned Game_transport_protocol_version(game_transport_t transport,
 unsigned Game_transport_session_protocol_version(game_transport_t transport,
                                                  bool polygon_map)
 {
-    if (transport != GAME_TRANSPORT_TCP)
+    switch (transport) {
+    case GAME_TRANSPORT_TCP:
+        return polygon_map ? GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION
+                           : GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION;
+    case GAME_TRANSPORT_WEBSOCKET:
+        return polygon_map
+            ? GAME_PROTOCOL_WEBSOCKET_SESSION_POLYGON_VERSION
+            : GAME_PROTOCOL_WEBSOCKET_SESSION_LEGACY_VERSION;
+    default:
         return 0;
-    return polygon_map ? GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION
-                       : GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION;
+    }
+}
+
+bool Game_transport_pair_is_supported(game_transport_t contact,
+                                      game_transport_t gameplay)
+{
+    if (Game_transport_protocol_version(contact, true) == 0
+        || Game_transport_protocol_version(gameplay, true) == 0)
+        return false;
+    if (contact == GAME_TRANSPORT_WEBSOCKET
+        || gameplay == GAME_TRANSPORT_WEBSOCKET)
+        return contact == GAME_TRANSPORT_WEBSOCKET
+            && gameplay == GAME_TRANSPORT_WEBSOCKET;
+    return true;
 }
 
 bool Game_transport_from_protocol_version(unsigned version,
@@ -97,6 +128,11 @@ bool Game_transport_from_protocol_version(unsigned version,
         || version == GAME_PROTOCOL_TCP_POLYGON_PRE_RECONNECT_VERSION
         || version == GAME_PROTOCOL_TCP_LEGACY_PRE_RECONNECT_VERSION) {
         *transport = GAME_TRANSPORT_TCP;
+        return true;
+    }
+    if (version == GAME_PROTOCOL_WEBSOCKET_SESSION_POLYGON_VERSION
+        || version == GAME_PROTOCOL_WEBSOCKET_SESSION_LEGACY_VERSION) {
+        *transport = GAME_TRANSPORT_WEBSOCKET;
         return true;
     }
     if (version >= 0x4203
@@ -116,7 +152,9 @@ bool Game_transport_protocol_supports_reconnect(unsigned version)
 bool Game_transport_protocol_uses_session(unsigned version)
 {
     return version == GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION
-        || version == GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION;
+        || version == GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION
+        || version == GAME_PROTOCOL_WEBSOCKET_SESSION_POLYGON_VERSION
+        || version == GAME_PROTOCOL_WEBSOCKET_SESSION_LEGACY_VERSION;
 }
 
 bool Game_transport_format_meta_version(char *output, size_t output_size,
@@ -128,7 +166,8 @@ bool Game_transport_format_meta_version(char *output, size_t output_size,
     const char *gameplay_name;
     int length;
 
-    if (output == NULL || output_size == 0 || version == NULL)
+    if (output == NULL || output_size == 0 || version == NULL
+        || !Game_transport_pair_is_supported(contact, gameplay))
         return false;
     contact_name = Game_transport_name(contact);
     gameplay_name = Game_transport_name(gameplay);
@@ -151,7 +190,7 @@ bool Game_transport_parse_meta_version(const char *version,
     const char *contact_tag;
     const char *contact_value;
     const char *gameplay_tag;
-    char contact_text[4];
+    char contact_text[sizeof("websocket")];
     game_transport_t parsed_contact;
     game_transport_t parsed_gameplay;
     size_t contact_length;
@@ -169,13 +208,15 @@ bool Game_transport_parse_meta_version(const char *version,
         return false;
 
     contact_length = (size_t)(gameplay_tag - contact_value);
-    if (contact_length != sizeof(contact_text) - 1)
+    if (contact_length == 0 || contact_length >= sizeof(contact_text))
         return false;
     memcpy(contact_text, contact_value, contact_length);
     contact_text[contact_length] = '\0';
     if (!Game_transport_parse(contact_text, &parsed_contact)
         || !Game_transport_parse(gameplay_tag + strlen(gameplay_marker),
-                                 &parsed_gameplay))
+                                 &parsed_gameplay)
+        || !Game_transport_pair_is_supported(
+            parsed_contact, parsed_gameplay))
         return false;
 
     *contact = parsed_contact;

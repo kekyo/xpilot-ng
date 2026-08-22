@@ -830,7 +830,7 @@ int Net_init(char *server, int port, game_transport_t transport)
 
     Receive_init();
     if (Session_connection_game_is_staged()) {
-	if (transport != GAME_TRANSPORT_TCP) {
+	if (Game_transport_session_protocol_version(transport, true) == 0) {
 	    Session_connection_discard_game();
 	    errno = EINVAL;
 	    return -1;

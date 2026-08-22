@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -78,7 +78,7 @@ static sock_t *Meta_report_socket(void)
 {
     if (!meta_reporting_ready)
 	return NULL;
-    return contactTransport == GAME_TRANSPORT_TCP
+    return contactTransport != GAME_TRANSPORT_UDP
 	? &metaSocket : &contactSocket;
 }
 
@@ -141,11 +141,11 @@ void Meta_init(void)
 	return;
 
     Meta_apply_environment();
-    if (contactTransport == GAME_TRANSPORT_TCP) {
+    if (contactTransport != GAME_TRANSPORT_UDP) {
 	/*
 	 * Current metaservers publish the UDP source port of each update.
-	 * TCP and UDP can share the same numeric port, so keep reporting
-	 * compatible without reopening the TCP contact listener as UDP.
+	 * Stream transports and UDP can share the same numeric port, so keep
+	 * reporting compatible without reopening the contact listener as UDP.
 	 */
 	if (sock_open_udp(&metaSocket, serverAddr, options.contactPort)
 	    == SOCK_IS_ERROR) {
