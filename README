@@ -25,25 +25,37 @@ settings, for example:
         xpilot-ng-server -transport tcp [options]
         xpilot-ng-sdl -join tcp://server.example
 
-The server shortcuts `-tcp`, `-udp`, and `-transport udp|tcp` select one
-transport for both contact/lobby and gameplay.  Command-line transport options
-are applied from left to right, so a later `contactTransport` or
-`gameTransport` option can still create a split configuration.
+Or use WebSocket for both:
 
-Direct client targets accept `HOST`, `tcp://HOST[:PORT]`, or
-`udp://HOST[:PORT]`.  A qualified target selects that transport for both
-contact/lobby and gameplay, while a bare host uses the `contactTransport`,
-`gameTransport`, and `port` option defaults.  An explicit target port overrides
-`-port`.  Split transport combinations remain available through the long
-options or metaserver advertisements.
+        xpilot-ng-server -websocket [options]
+        xpilot-ng-sdl -join ws://server.example
+
+The server shortcuts `-tcp`, `-udp`, `-websocket`, and
+`-transport udp|tcp|websocket` select one transport for both contact/lobby and
+gameplay.  Command-line transport options are applied from left to right, so a
+later `contactTransport` or `gameTransport` option can still create a split
+UDP/TCP configuration.  WebSocket must be selected for both transports.
+
+Direct client targets accept `HOST`, `ws://HOST[:PORT]`,
+`tcp://HOST[:PORT]`, or `udp://HOST[:PORT]`.  A qualified target selects that
+transport for both contact/lobby and gameplay, while a bare host uses the
+`contactTransport`, `gameTransport`, and `port` option defaults.  An explicit
+target port overrides `-port`.  Split UDP/TCP combinations remain available
+through the long options or metaserver advertisements.
+
+WebSocket uses RFC 6455 binary messages at `/xpilot` with the `xpilot-ng-v1`
+subprotocol; each message carries one logical XPilot record.  Only unencrypted
+`ws://` is currently implemented.  The native clients exercise this transport;
+browser client integration is intentionally a separate step.
 
 Multiple targets are tried in command-line order, for example
-`tcp://server1 udp://server2`.  This is explicit fallback between targets;
-the client does not automatically probe both protocols for one target.  Target
-hosts are DNS names or IPv4 addresses.  IPv6 literals and general URI features
-such as credentials, paths, queries, fragments, and percent encoding are not
-supported.  TCP contact requires an explicit target or a metaserver entry
-because LAN broadcast discovery is available only with UDP.
+`ws://server1 tcp://server2 udp://server3`.  This is explicit fallback between
+targets; the client does not automatically probe multiple protocols for one
+target.  Target hosts are DNS names or IPv4 addresses.  IPv6 literals and
+general URI features such as credentials, paths, queries, fragments, and
+percent encoding are not supported.  TCP and WebSocket contact require an
+explicit target or a metaserver entry because LAN broadcast discovery is
+available only with UDP.
 
 If every explicit target fails to return a valid contact response after its
 retries, the SDL client writes a final summary containing the last endpoint
@@ -62,8 +74,8 @@ use its existing protocols.
 
 The server's `clientPortStart` and `clientPortEnd` range applies to the
 selected gameplay protocol.  On clients it also applies to gameplay and the
-traditional UDP contact socket; TCP contact connections use an ephemeral
-local port.
+traditional UDP contact socket; fixed TCP and WebSocket sessions use that
+range for their local source port.
 
 TCP gameplay records contain a two-byte network-order payload length followed
 by an unchanged XPilot packet payload.  Server recordings must be replayed

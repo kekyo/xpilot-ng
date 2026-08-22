@@ -26,9 +26,10 @@ xpilots \- XPilot multiplayer gravity war game server
 [\fB-reportMeta\fP]
 [\fB-tcp\fP]
 [\fB-udp\fP]
-[\fB-transport\fP \fIudp|tcp\fP]
-[\fB-contactTransport\fP \fIudp|tcp\fP]
-[\fB-gameTransport\fP \fIudp|tcp\fP]
+[\fB-websocket\fP]
+[\fB-transport\fP \fIudp|tcp|websocket\fP]
+[\fB-contactTransport\fP \fIudp|tcp|websocket\fP]
+[\fB-gameTransport\fP \fIudp|tcp|websocket\fP]
 [\fB-clientPortStart\fP \fIport-number\fP]
 [\fB-clientPortEnd\fP \fIport-number\fP]
 
@@ -81,7 +82,11 @@ Selects TCP for both contact/lobby and gameplay.
 Selects UDP for both contact/lobby and gameplay.  This is the default.
 
 .TP 15
-.B -transport \fIudp|tcp\fP
+.B -websocket
+Selects WebSocket for both contact/lobby and gameplay.
+
+.TP 15
+.B -transport \fIudp|tcp|websocket\fP
 Selects one transport for both contact/lobby and gameplay.  Transport options
 are applied from left to right.  A later \fB-contactTransport\fP or
 \fB-gameTransport\fP therefore overrides the corresponding part of an earlier
@@ -151,17 +156,19 @@ directory (default is @XP_DATADIR@/maps/).
 The numeric server contact port, using the selected contact transport.
 
 .TP 15
-.B -contactTransport \fIudp|tcp\fP
+.B -contactTransport \fIudp|tcp|websocket\fP
 Selects the transport for direct contact and pre-game lobby requests.  The
 default is UDP.  Every direct client must select the same value; neither
-endpoint falls back automatically.  TCP contact accepts explicit-address and
-metaserver-selected connections but cannot provide LAN broadcast discovery.
+endpoint falls back automatically.  TCP and WebSocket contact accept
+explicit-address and metaserver-selected connections but cannot provide LAN
+broadcast discovery.  WebSocket must also be selected for gameplay.
 
 .TP 15
-.B -gameTransport \fIudp|tcp\fP
+.B -gameTransport \fIudp|tcp|websocket\fP
 Selects the transport for player gameplay connections independently from the
 contact transport.  The default is UDP.  Every connecting client must select
-the same value; neither endpoint falls back automatically.
+the same value; neither endpoint falls back automatically.  WebSocket must
+also be selected for contact and lobby traffic.
 
 .TP 15
 .B -serverHost \fIstring\fP
@@ -249,10 +256,11 @@ When the xpilots server is behind an IP masquerading or NAT firewall,
 the gameplay ports used for client connections (as distinct from the
 numeric contact port, which defaults to 15345) must be defined by the server.
 The firewall must forward the range as UDP for \fB-gameTransport udp\fP or
-TCP for \fB-gameTransport tcp\fP, and forward the contact port according to
-\fB-contactTransport\fP.  Use this switch with \fB-clientPortEnd\fP to
-define the range.  One port must be reserved for each client, so reserve the
-same number of ports as there are bases on the map.
+TCP for \fB-gameTransport tcp\fP and \fB-gameTransport websocket\fP, and
+forward the contact port according to \fB-contactTransport\fP.  Use this
+switch with \fB-clientPortEnd\fP to define the range.  One port must be
+reserved for each client, so reserve the same number of ports as there are
+bases on the map.
 
 .TP 15
 .B -clientPortEnd \fIinteger\fP
@@ -393,8 +401,8 @@ See \fIxpilot(6)\fP.
 .SH AUTHORS
 
 \fBXPilot\fP was developed by
-Bjørn Stabell <bjoern@xpilot.org> and
-Ken Ronny Schouten <ken@xpilot.org> from the University of Tromsø,
+BjÃ¸rn Stabell <bjoern@xpilot.org> and
+Ken Ronny Schouten <ken@xpilot.org> from the University of TromsÃ¸,
 Bert Gijsbers <bert@xpilot.org> from the University of Amsterdam,
 and Dick Balaska <dick@xpilot.org> from BuckoSoft.COM.
 
