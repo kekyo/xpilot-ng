@@ -63,6 +63,9 @@ static int read_available(sock_t *socket, unsigned char *bytes,
     return 0;
 }
 
+static int find_header_value(const char *headers, const char *name,
+                             char *value, size_t capacity);
+
 static int drive_server_handshake(record_transport_t *server,
                                   sock_t *raw_client,
                                   const char *request,
@@ -234,6 +237,81 @@ static int check_native_client_and_server_exchange_records(void)
     TEST_CHECK(client_received);
     Record_transport_destroy(client);
     Record_transport_destroy(server);
+    return 0;
+}
+
+static int check_native_client_receives_buffered_record_burst(void)
+{
+    enum { RECORD_COUNT = 16 };
+    sock_t client_socket;
+    sock_t raw_server;
+    record_transport_t *client;
+    unsigned char request[2048];
+    unsigned char server_bytes[1024];
+    char received[64];
+    char key[64];
+    char accept[WEBSOCKET_HTTP_ACCEPT_CAPACITY];
+    char response[512];
+    size_t request_length = 0;
+    size_t server_length;
+    size_t received_length = 0;
+    int response_length;
+    int received_count = 0;
+    int step;
+
+    TEST_CHECK(open_connected_sockets(&client_socket, &raw_server) == 0);
+    client = Record_transport_create_websocket_client(
+        &client_socket, "127.0.0.1", 15345, sizeof(received), 64);
+    TEST_CHECK(client != NULL);
+
+    for (step = 0; step < 100 && request_length == 0; step++) {
+        TEST_CHECK(Record_transport_flush(client) >= RECORD_FLUSH_IDLE);
+        TEST_CHECK(read_available(&raw_server, request,
+                                  sizeof(request) - 1,
+                                  &request_length) == 0);
+    }
+    TEST_CHECK(request_length > 0);
+    request[request_length] = '\0';
+    TEST_CHECK(find_header_value(
+                   (char *)request, "Sec-WebSocket-Key: ",
+                   key, sizeof(key)) == 0);
+    TEST_CHECK(WebSocket_http_create_accept(key, accept, sizeof(accept)));
+    response_length = snprintf(
+        response, sizeof(response),
+        "HTTP/1.1 101 Switching Protocols\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: Upgrade\r\n"
+        "Sec-WebSocket-Accept: %s\r\n"
+        "Sec-WebSocket-Protocol: xpilot-ng-v1\r\n"
+        "\r\n", accept);
+    TEST_CHECK(response_length > 0
+               && (size_t)response_length < sizeof(response));
+    memcpy(server_bytes, response, (size_t)response_length);
+    server_length = (size_t)response_length;
+    for (step = 0; step < RECORD_COUNT; step++) {
+        server_bytes[server_length++] = 0x82;
+        server_bytes[server_length++] = 1;
+        server_bytes[server_length++] = (unsigned char)(step + 1);
+    }
+    TEST_CHECK(write_all(&raw_server, server_bytes, server_length) == 0);
+
+    for (step = 0; step < 1000 && received_count < RECORD_COUNT; step++) {
+        record_receive_result_t receive_result = Record_transport_receive(
+            client, received, sizeof(received), &received_length);
+
+        TEST_CHECK(receive_result == RECORD_RECEIVE_EMPTY
+                   || receive_result == RECORD_RECEIVE_READY);
+        if (receive_result == RECORD_RECEIVE_READY) {
+            TEST_CHECK(received_length == 1);
+            TEST_CHECK((unsigned char)received[0]
+                       == (unsigned char)(received_count + 1));
+            received_count++;
+        }
+    }
+    TEST_CHECK(received_count == RECORD_COUNT);
+
+    Record_transport_destroy(client);
+    sock_close(&raw_server);
     return 0;
 }
 
@@ -501,6 +579,7 @@ int main(void)
     TEST_CHECK(check_rfc_accept_value() == 0);
     TEST_CHECK(check_subprotocol_is_case_sensitive() == 0);
     TEST_CHECK(check_native_client_and_server_exchange_records() == 0);
+    TEST_CHECK(check_native_client_receives_buffered_record_burst() == 0);
     TEST_CHECK(check_server_accepts_browser_style_frames() == 0);
     TEST_CHECK(check_native_client_masks_frames() == 0);
     TEST_CHECK(check_text_and_close_are_handled() == 0);

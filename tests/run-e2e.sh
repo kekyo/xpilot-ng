@@ -902,24 +902,43 @@ run_tcp_reconnection_case()
     tcp_proxy_pid=
 }
 
-run_x11_gameplay_title_case()
+run_x11_gameplay_case()
 {
-    game_case=x11-tcp
-    expected_contact_transport=TCP
-    expected_gameplay_transport=TCP
+    transport=$1
+    case "$transport" in
+    tcp)
+	game_case=x11-tcp
+	expected_contact_transport=TCP
+	expected_gameplay_transport=TCP
+	server_transport_option=-tcp
+	target_scheme=tcp
+	game_client_name=X11TCP
+	;;
+    websocket)
+	game_case=x11-websocket
+	expected_contact_transport=WebSocket
+	expected_gameplay_transport=WebSocket
+	server_transport_option=-websocket
+	target_scheme=ws
+	game_client_name=X11WebSocket
+	;;
+    *)
+	fail "unsupported X11 gameplay transport: $transport"
+	;;
+    esac
     port=$(reserve_contact_port)
     game_server_log="$runtime_dir/server-$game_case.log"
     game_client_log="$runtime_dir/client-$game_case.log"
-    game_client_name=X11TCP
 
-    "$server" -map "$map" -port "$port" -noQuit +reportMeta -tcp \
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	"$server_transport_option" \
 	>"$game_server_log" 2>&1 &
     server_pid=$!
     wait_until "$game_case server readiness" 20 server_ready
 
     "$x11_client" -geometry 800x600 -join \
 	-name "$game_client_name" \
-	"tcp://127.0.0.1:$port" >"$game_client_log" 2>&1 &
+	"$target_scheme://127.0.0.1:$port" >"$game_client_log" 2>&1 &
     client_pid=$!
     window_owner_pid=$client_pid
     wait_until "$game_case game window" 20 find_x11_game_window
@@ -1189,7 +1208,8 @@ run_gameplay_case tcp-contact tcp no tcp
 run_gameplay_case tcp-contact-udp-game udp no tcp
 if test -x "$x11_client"; then
     run_x11_local_discovery_case
-    run_x11_gameplay_title_case
+    run_x11_gameplay_case tcp
+    run_x11_gameplay_case websocket
 fi
 run_transport_mismatch udp tcp
 run_transport_mismatch tcp udp

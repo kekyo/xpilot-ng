@@ -17,7 +17,6 @@
 #include "websocket_http.h"
 #include "websocket_transport.h"
 
-#define WEBSOCKET_MAX_QUEUED_RECORDS 8
 #define WEBSOCKET_HANDSHAKE_OUTPUT_CAPACITY 1024
 
 typedef enum {
@@ -54,8 +53,6 @@ typedef struct {
     wslay_event_context_ptr event;
     websocket_record_t *record_head;
     websocket_record_t *record_tail;
-    size_t queued_records;
-    size_t queued_bytes;
 } websocket_transport_context_t;
 
 static int WebSocket_socket_write(websocket_transport_context_t *context,
@@ -93,8 +90,6 @@ static void WebSocket_clear_records(websocket_transport_context_t *context)
     }
     context->record_head = NULL;
     context->record_tail = NULL;
-    context->queued_records = 0;
-    context->queued_bytes = 0;
 }
 
 static void WebSocket_close_socket(websocket_transport_context_t *context)
@@ -124,6 +119,14 @@ static ssize_t WebSocket_receive_callback(wslay_event_context_ptr event,
     int received;
 
     (void)flags;
+    /* wslay_event_recv() keeps reading until the callback reports that it
+     * would block.  Once at least one application record is ready, leave
+     * further socket data for the next receive call so a delayed consumer
+     * cannot turn a valid burst into an artificial queue overflow. */
+    if (context->record_head != NULL) {
+        wslay_event_set_error(event, WSLAY_ERR_WOULDBLOCK);
+        return -1;
+    }
     prefetched_length = context->handshake_input_length
         - context->prefetched_offset;
     if (prefetched_length > 0) {
@@ -198,7 +201,6 @@ static void WebSocket_message_callback(
 {
     websocket_transport_context_t *context = user_data;
     websocket_record_t *record;
-    size_t maximum_bytes;
 
     (void)event;
     if (message->opcode == WSLAY_TEXT_FRAME) {
@@ -207,14 +209,8 @@ static void WebSocket_message_callback(
     }
     if (message->opcode != WSLAY_BINARY_FRAME)
         return;
-    maximum_bytes = context->receive_capacity
-        > SIZE_MAX / WEBSOCKET_MAX_QUEUED_RECORDS
-        ? SIZE_MAX
-        : context->receive_capacity * WEBSOCKET_MAX_QUEUED_RECORDS;
     if (message->msg_length == 0
-        || message->msg_length > context->receive_capacity
-        || context->queued_records >= WEBSOCKET_MAX_QUEUED_RECORDS
-        || message->msg_length > maximum_bytes - context->queued_bytes) {
+        || message->msg_length > context->receive_capacity) {
         WebSocket_queue_close(context, WSLAY_CODE_MESSAGE_TOO_BIG);
         return;
     }
@@ -231,8 +227,6 @@ static void WebSocket_message_callback(
     else
         context->record_head = record;
     context->record_tail = record;
-    context->queued_records++;
-    context->queued_bytes += record->length;
 }
 
 static const struct wslay_event_callbacks websocket_callbacks = {
@@ -472,8 +466,6 @@ static record_receive_result_t WebSocket_pop_record(
     context->record_head = record->next;
     if (context->record_head == NULL)
         context->record_tail = NULL;
-    context->queued_records--;
-    context->queued_bytes -= record->length;
     free(record);
     return RECORD_RECEIVE_READY;
 }
