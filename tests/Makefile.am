@@ -28,7 +28,7 @@ if COND_WINDOWS
 check_PROGRAMS = test-framed-stream test-game-transport \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
-	test-native-socket-handle test-sdl-versions
+	test-native-socket-handle test-sdl-versions test-game-input
 TESTS =
 else
 check_PROGRAMS = test-framed-stream test-game-transport \
@@ -36,7 +36,7 @@ check_PROGRAMS = test-framed-stream test-game-transport \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle \
 	test-meta-environment test-sdl-versions \
-	test-sdl-keys test-sdl-console test-sdl-surface \
+	test-game-input test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-gl-core-resources \
 	test-renderer-commands test-renderer-geometry \
@@ -57,7 +57,7 @@ TESTS = test-framed-stream test-game-transport test-connect-target \
 	test-socket-io \
 	test-native-socket-handle \
 	test-meta-environment test-sdl-versions \
-	test-sdl-keys test-sdl-console test-sdl-surface \
+	test-game-input test-sdl-keys test-sdl-console test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
 	test-renderer-geometry test-paint-transform run-gl-core-resources.sh \
@@ -124,6 +124,10 @@ test_meta_environment_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 
 test_sdl_versions_SOURCES = test_sdl_versions.c
 test_sdl_versions_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
+
+test_game_input_SOURCES = test_game_input.c \
+	$(top_srcdir)/src/client/sdl/gameinput.c
+test_game_input_LDADD = $(XP_SDL3_LIBS)
 
 test_sdl_keys_SOURCES = test_sdl_keys.c \
 	$(top_srcdir)/src/client/sdl/sdlkeys.c

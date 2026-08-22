@@ -98,6 +98,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-native-socket-handle$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-keys$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-console$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-surface$(EXEEXT) \
@@ -145,7 +146,8 @@ target_triplet = @target@
 @COND_WINDOWS_TRUE@	test-session-token$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-socket-io$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-native-socket-handle$(EXEEXT) \
-@COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT)
+@COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-game-input$(EXEEXT)
 @COND_WINDOWS_FALSE@TESTS = test-framed-stream$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-transport$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-connect-target$(EXEEXT) \
@@ -155,6 +157,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-native-socket-handle$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-keys$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-console$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-surface$(EXEEXT) \
@@ -223,6 +226,11 @@ am_test_framed_stream_OBJECTS = test_framed_stream.$(OBJEXT)
 test_framed_stream_OBJECTS = $(am_test_framed_stream_OBJECTS)
 test_framed_stream_DEPENDENCIES =  \
 	$(top_builddir)/src/common/libxpcommon.a
+am_test_game_input_OBJECTS = test_game_input.$(OBJEXT) \
+	gameinput.$(OBJEXT)
+test_game_input_OBJECTS = $(am_test_game_input_OBJECTS)
+am__DEPENDENCIES_1 =
+test_game_input_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_test_game_transport_OBJECTS = test_game_transport.$(OBJEXT)
 test_game_transport_OBJECTS = $(am_test_game_transport_OBJECTS)
 test_game_transport_DEPENDENCIES =  \
@@ -244,7 +252,6 @@ am_test_gl_core_resources_OBJECTS =  \
 	test_gl_core_resources-text_geometry.$(OBJEXT) \
 	test_gl_core_resources-text_ttf_atlas.$(OBJEXT)
 test_gl_core_resources_OBJECTS = $(am_test_gl_core_resources_OBJECTS)
-am__DEPENDENCIES_1 =
 test_gl_core_resources_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 test_gl_core_resources_LINK = $(CCLD) $(test_gl_core_resources_CFLAGS) \
@@ -540,17 +547,19 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
-	./$(DEPDIR)/connect_target.Po ./$(DEPDIR)/gfx2d.Po \
-	./$(DEPDIR)/image_geometry.Po ./$(DEPDIR)/paint_transform.Po \
-	./$(DEPDIR)/polygon_geometry.Po ./$(DEPDIR)/renderer.Po \
-	./$(DEPDIR)/renderer_gl_core.Po ./$(DEPDIR)/sdlclipboard.Po \
-	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
-	./$(DEPDIR)/sdlgameframe.Po ./$(DEPDIR)/sdlkeys.Po \
-	./$(DEPDIR)/sdlmetaframe.Po ./$(DEPDIR)/sdlrenderer.Po \
-	./$(DEPDIR)/sdlwindow.Po ./$(DEPDIR)/surface_rgba8.Po \
+	./$(DEPDIR)/connect_target.Po ./$(DEPDIR)/gameinput.Po \
+	./$(DEPDIR)/gfx2d.Po ./$(DEPDIR)/image_geometry.Po \
+	./$(DEPDIR)/paint_transform.Po ./$(DEPDIR)/polygon_geometry.Po \
+	./$(DEPDIR)/renderer.Po ./$(DEPDIR)/renderer_gl_core.Po \
+	./$(DEPDIR)/sdlclipboard.Po ./$(DEPDIR)/sdlcompat.Po \
+	./$(DEPDIR)/sdlevent.Po ./$(DEPDIR)/sdlgameframe.Po \
+	./$(DEPDIR)/sdlkeys.Po ./$(DEPDIR)/sdlmetaframe.Po \
+	./$(DEPDIR)/sdlrenderer.Po ./$(DEPDIR)/sdlwindow.Po \
+	./$(DEPDIR)/surface_rgba8.Po \
 	./$(DEPDIR)/test_connect_target.Po \
 	./$(DEPDIR)/test_contact_target_probe.Po \
 	./$(DEPDIR)/test_framed_stream.Po \
+	./$(DEPDIR)/test_game_input.Po \
 	./$(DEPDIR)/test_game_transport.Po \
 	./$(DEPDIR)/test_gfx2d_picture.Po \
 	./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po \
@@ -665,8 +674,8 @@ am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
 SOURCES = $(test_connect_target_SOURCES) \
 	$(test_contact_target_probe_SOURCES) \
-	$(test_framed_stream_SOURCES) $(test_game_transport_SOURCES) \
-	$(test_gfx2d_picture_SOURCES) \
+	$(test_framed_stream_SOURCES) $(test_game_input_SOURCES) \
+	$(test_game_transport_SOURCES) $(test_gfx2d_picture_SOURCES) \
 	$(test_gl_core_resources_SOURCES) \
 	$(test_glwidgets_primitives_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
@@ -695,16 +704,15 @@ SOURCES = $(test_connect_target_SOURCES) \
 	$(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlmeta_primitives_SOURCES) \
 	$(test_sdlpaint_stage_SOURCES) $(test_session_token_SOURCES) \
-	$(test_socket_io_SOURCES) \
-	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
-	$(test_text_cache_adapter_SOURCES) \
+	$(test_socket_io_SOURCES) $(test_surface_rgba8_SOURCES) \
+	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES) \
 	$(test_transport_display_SOURCES)
 DIST_SOURCES = $(test_connect_target_SOURCES) \
 	$(test_contact_target_probe_SOURCES) \
-	$(test_framed_stream_SOURCES) $(test_game_transport_SOURCES) \
-	$(test_gfx2d_picture_SOURCES) \
+	$(test_framed_stream_SOURCES) $(test_game_input_SOURCES) \
+	$(test_game_transport_SOURCES) $(test_gfx2d_picture_SOURCES) \
 	$(test_gl_core_resources_SOURCES) \
 	$(test_glwidgets_primitives_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
@@ -733,9 +741,8 @@ DIST_SOURCES = $(test_connect_target_SOURCES) \
 	$(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlmeta_primitives_SOURCES) \
 	$(test_sdlpaint_stage_SOURCES) $(test_session_token_SOURCES) \
-	$(test_socket_io_SOURCES) \
-	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
-	$(test_text_cache_adapter_SOURCES) \
+	$(test_socket_io_SOURCES) $(test_surface_rgba8_SOURCES) \
+	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES) \
 	$(test_transport_display_SOURCES)
@@ -1170,6 +1177,10 @@ test_meta_environment_CFLAGS = $(AM_CFLAGS) \
 test_meta_environment_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdl_versions_SOURCES = test_sdl_versions.c
 test_sdl_versions_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
+test_game_input_SOURCES = test_game_input.c \
+	$(top_srcdir)/src/client/sdl/gameinput.c
+
+test_game_input_LDADD = $(XP_SDL3_LIBS)
 test_sdl_keys_SOURCES = test_sdl_keys.c \
 	$(top_srcdir)/src/client/sdl/sdlkeys.c
 
@@ -1631,6 +1642,10 @@ test-framed-stream$(EXEEXT): $(test_framed_stream_OBJECTS) $(test_framed_stream_
 	@rm -f test-framed-stream$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_framed_stream_OBJECTS) $(test_framed_stream_LDADD) $(LIBS)
 
+test-game-input$(EXEEXT): $(test_game_input_OBJECTS) $(test_game_input_DEPENDENCIES) $(EXTRA_test_game_input_DEPENDENCIES)
+	@rm -f test-game-input$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_game_input_OBJECTS) $(test_game_input_LDADD) $(LIBS)
+
 test-game-transport$(EXEEXT): $(test_game_transport_OBJECTS) $(test_game_transport_DEPENDENCIES) $(EXTRA_test_game_transport_DEPENDENCIES)
 	@rm -f test-game-transport$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_game_transport_OBJECTS) $(test_game_transport_LDADD) $(LIBS)
@@ -1823,6 +1838,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SDL_console.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/connect_target.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gameinput.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gfx2d.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/image_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/paint_transform.Po@am__quote@ # am--include-marker
@@ -1841,6 +1857,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_connect_target.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_contact_target_probe.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_framed_stream.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_game_input.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_game_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gfx2d_picture.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po@am__quote@ # am--include-marker
@@ -1987,6 +2004,20 @@ win32hacks.obj: $(top_srcdir)/src/client/sdl/win32hacks.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/win32hacks.c' object='win32hacks.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o win32hacks.obj `if test -f '$(top_srcdir)/src/client/sdl/win32hacks.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/win32hacks.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/win32hacks.c'; fi`
+
+gameinput.o: $(top_srcdir)/src/client/sdl/gameinput.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT gameinput.o -MD -MP -MF $(DEPDIR)/gameinput.Tpo -c -o gameinput.o `test -f '$(top_srcdir)/src/client/sdl/gameinput.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/gameinput.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gameinput.Tpo $(DEPDIR)/gameinput.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/gameinput.c' object='gameinput.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gameinput.o `test -f '$(top_srcdir)/src/client/sdl/gameinput.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/gameinput.c
+
+gameinput.obj: $(top_srcdir)/src/client/sdl/gameinput.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT gameinput.obj -MD -MP -MF $(DEPDIR)/gameinput.Tpo -c -o gameinput.obj `if test -f '$(top_srcdir)/src/client/sdl/gameinput.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gameinput.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gameinput.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gameinput.Tpo $(DEPDIR)/gameinput.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/gameinput.c' object='gameinput.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gameinput.obj `if test -f '$(top_srcdir)/src/client/sdl/gameinput.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/gameinput.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/gameinput.c'; fi`
 
 gfx2d.o: $(top_srcdir)/src/client/gfx2d.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT gfx2d.o -MD -MP -MF $(DEPDIR)/gfx2d.Tpo -c -o gfx2d.o `test -f '$(top_srcdir)/src/client/gfx2d.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/gfx2d.c
@@ -3462,6 +3493,13 @@ test-sdl-versions.log: test-sdl-versions$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-game-input.log: test-game-input$(EXEEXT)
+	@p='test-game-input$(EXEEXT)'; \
+	b='test-game-input'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdl-keys.log: test-sdl-keys$(EXEEXT)
 	@p='test-sdl-keys$(EXEEXT)'; \
 	b='test-sdl-keys'; \
@@ -3807,6 +3845,7 @@ clean-am: clean-checkPROGRAMS clean-generic mostlyclean-am
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/SDL_console.Po
 	-rm -f ./$(DEPDIR)/connect_target.Po
+	-rm -f ./$(DEPDIR)/gameinput.Po
 	-rm -f ./$(DEPDIR)/gfx2d.Po
 	-rm -f ./$(DEPDIR)/image_geometry.Po
 	-rm -f ./$(DEPDIR)/paint_transform.Po
@@ -3825,6 +3864,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_connect_target.Po
 	-rm -f ./$(DEPDIR)/test_contact_target_probe.Po
 	-rm -f ./$(DEPDIR)/test_framed_stream.Po
+	-rm -f ./$(DEPDIR)/test_game_input.Po
 	-rm -f ./$(DEPDIR)/test_game_transport.Po
 	-rm -f ./$(DEPDIR)/test_gfx2d_picture.Po
 	-rm -f ./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po
@@ -3970,6 +4010,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/SDL_console.Po
 	-rm -f ./$(DEPDIR)/connect_target.Po
+	-rm -f ./$(DEPDIR)/gameinput.Po
 	-rm -f ./$(DEPDIR)/gfx2d.Po
 	-rm -f ./$(DEPDIR)/image_geometry.Po
 	-rm -f ./$(DEPDIR)/paint_transform.Po
@@ -3988,6 +4029,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_connect_target.Po
 	-rm -f ./$(DEPDIR)/test_contact_target_probe.Po
 	-rm -f ./$(DEPDIR)/test_framed_stream.Po
+	-rm -f ./$(DEPDIR)/test_game_input.Po
 	-rm -f ./$(DEPDIR)/test_game_transport.Po
 	-rm -f ./$(DEPDIR)/test_gfx2d_picture.Po
 	-rm -f ./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po

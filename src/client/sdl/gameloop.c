@@ -20,18 +20,7 @@
 
 #include "xpclient_sdl.h"
 
-extern int Process_event(SDL_Event *evt);
-
-static int Poll_input(void)
-{
-    SDL_Event evt;
-
-    while (SDL_PollEvent(&evt)) {
-	if (Process_event(&evt) == 0)
-	    return 1;
-    }
-    return 0;
-}
+#include "gameinput.h"
 
 void Game_loop(void)
 {
@@ -44,7 +33,7 @@ void Game_loop(void)
 	error("Bad server input");
 	return;
     }
-    if (Poll_input())
+    if (Game_input_process_batch())
 	return;
 
     if (Net_flush() == -1)
@@ -93,7 +82,7 @@ void Game_loop(void)
 		return;
 	    }
 	}
-	if (Poll_input())
+	if (Game_input_process_batch())
 	    return;
 	if (Net_flush() == -1) {
 	    error("Bad net flush");
