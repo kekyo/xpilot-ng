@@ -27,7 +27,6 @@ typedef void (APIENTRYP CoreScissorProc)(GLint x, GLint y,
                                         GLsizei width, GLsizei height);
 typedef void (APIENTRYP CorePolygonModeProc)(GLenum face, GLenum mode);
 typedef void (APIENTRYP CoreBlendFuncProc)(GLenum source, GLenum destination);
-typedef void (APIENTRYP CoreFlushProc)(void);
 typedef void (APIENTRYP CoreGenTexturesProc)(GLsizei count, GLuint *textures);
 typedef void (APIENTRYP CoreBindTextureProc)(GLenum target, GLuint texture);
 typedef void (APIENTRYP CoreTexParameteriProc)(GLenum target, GLenum name,
@@ -61,7 +60,6 @@ typedef struct CoreFunctions {
     CorePolygonModeProc polygon_mode;
     PFNGLBLENDEQUATIONPROC blend_equation;
     CoreBlendFuncProc blend_func;
-    CoreFlushProc flush;
     CoreGenTexturesProc gen_textures;
     CoreBindTextureProc bind_texture;
     CoreTexParameteriProc tex_parameter_i;
@@ -102,6 +100,8 @@ typedef struct CoreFunctions {
 
 typedef struct CoreContext {
     CoreFunctions gl;
+    RendererGLProcLoader loader;
+    void *loader_userdata;
     GLuint program;
     GLuint vertex_array;
     GLuint stream_buffer;
@@ -111,17 +111,21 @@ typedef struct CoreContext {
     GLint texture_uniform;
     int frame_width;
     int frame_height;
+    int context_available;
+    unsigned int generation;
 } CoreContext;
 
 typedef struct CoreTexture {
     GLuint name;
     int width;
     int height;
+    unsigned int generation;
 } CoreTexture;
 
 typedef struct CoreMesh {
     GLuint buffer;
     GLsizei vertex_count;
+    unsigned int generation;
 } CoreMesh;
 
 enum {
@@ -196,7 +200,6 @@ static int Core_load_functions(CoreFunctions *functions,
         && CORE_LOAD(functions, loader, userdata, blend_equation,
                      "glBlendEquation")
         && CORE_LOAD(functions, loader, userdata, blend_func, "glBlendFunc")
-        && CORE_LOAD(functions, loader, userdata, flush, "glFlush")
         && CORE_LOAD(functions, loader, userdata, gen_textures,
                      "glGenTextures")
         && CORE_LOAD(functions, loader, userdata, bind_texture,
@@ -283,6 +286,21 @@ static int Core_operation_succeeded(CoreContext *context)
         return 1;
     Core_clear_errors(context);
     return 0;
+}
+
+static int Core_context_supported(CoreContext *context)
+{
+    GLint major = 0;
+    GLint minor = 0;
+    GLint profile = 0;
+
+    Core_clear_errors(context);
+    context->gl.get_integerv(GL_MAJOR_VERSION, &major);
+    context->gl.get_integerv(GL_MINOR_VERSION, &minor);
+    context->gl.get_integerv(GL_CONTEXT_PROFILE_MASK, &profile);
+    return Core_operation_succeeded(context)
+        && (major > 3 || (major == 3 && minor >= 3))
+        && (profile & GL_CONTEXT_CORE_PROFILE_BIT) != 0;
 }
 
 static int Core_vertex_data_valid(size_t vertex_count, GLsizeiptr *byte_count)
@@ -525,6 +543,37 @@ static void Core_release_context_objects(CoreContext *context)
     Core_clear_errors(context);
 }
 
+static RendererStatus Core_create_context_objects(CoreContext *context)
+{
+    static const uint8_t white_pixel[] = {255, 255, 255, 255};
+    static const RendererTextureDesc white_texture_desc = {
+        1, 1,
+        RENDERER_TEXTURE_FILTER_NEAREST,
+        RENDERER_TEXTURE_WRAP_CLAMP
+    };
+    RendererStatus status;
+
+    if (!Core_create_program(context))
+        return RENDERER_STATUS_BACKEND_ERROR;
+
+    Core_clear_errors(context);
+    context->gl.gen_vertex_arrays(1, &context->vertex_array);
+    context->gl.gen_buffers(1, &context->stream_buffer);
+    context->gl.gen_textures(1, &context->white_texture);
+    if (context->vertex_array == 0 || context->stream_buffer == 0
+        || context->white_texture == 0
+        || !Core_operation_succeeded(context)) {
+        Core_release_context_objects(context);
+        return RENDERER_STATUS_BACKEND_ERROR;
+    }
+    status = Core_configure_and_upload_texture(
+        context, context->white_texture, &white_texture_desc, white_pixel,
+        sizeof(white_pixel));
+    if (status != RENDERER_STATUS_OK)
+        Core_release_context_objects(context);
+    return status;
+}
+
 static void Core_prepare_raster_state(CoreContext *context)
 {
     context->gl.disable(GL_RASTERIZER_DISCARD);
@@ -548,7 +597,8 @@ static RendererStatus Core_begin_frame(void *opaque, int width, int height,
 {
     CoreContext *context = opaque;
 
-    Core_clear_errors(context);
+    if (!context->context_available)
+        return RENDERER_STATUS_INVALID_STATE;
     context->frame_width = width;
     context->frame_height = height;
     context->gl.viewport(0, 0, width, height);
@@ -560,8 +610,7 @@ static RendererStatus Core_begin_frame(void *opaque, int width, int height,
                             (GLfloat)clear_color.blue / 255.0f,
                             (GLfloat)clear_color.alpha / 255.0f);
     context->gl.clear(GL_COLOR_BUFFER_BIT);
-    return Core_operation_succeeded(context) ? RENDERER_STATUS_OK
-                                             : RENDERER_STATUS_BACKEND_ERROR;
+    return RENDERER_STATUS_OK;
 }
 
 static RendererStatus Core_set_draw_state(CoreContext *context,
@@ -632,12 +681,16 @@ static RendererStatus Core_draw(void *opaque,
     GLsizei vertex_count;
     RendererStatus status;
 
+    if (!context->context_available)
+        return RENDERER_STATUS_INVALID_STATE;
     if (draw == NULL || context->frame_width <= 0 || context->frame_height <= 0)
         return RENDERER_STATUS_INVALID_ARGUMENT;
     if (draw->mesh != NULL) {
         if (draw->vertices != NULL || draw->vertex_count != 0)
             return RENDERER_STATUS_INVALID_ARGUMENT;
         mesh = draw->mesh;
+        if (mesh->generation != context->generation)
+            return RENDERER_STATUS_BACKEND_ERROR;
         buffer = mesh->buffer;
         vertex_count = mesh->vertex_count;
     } else {
@@ -649,11 +702,9 @@ static RendererStatus Core_draw(void *opaque,
         vertex_count = (GLsizei)draw->vertex_count;
     }
 
-    Core_clear_errors(context);
     status = Core_set_draw_state(context, draw);
     if (status != RENDERER_STATUS_OK)
         return status;
-    Core_prepare_raster_state(context);
     context->gl.use_program(context->program);
     context->gl.bind_vertex_array(context->vertex_array);
     context->gl.uniform_matrix_3fv(context->transform_uniform, 1, GL_FALSE,
@@ -665,6 +716,8 @@ static RendererStatus Core_draw(void *opaque,
     context->gl.active_texture(GL_TEXTURE0);
     context->gl.bind_sampler(0, 0);
     texture = draw->texture;
+    if (texture != NULL && texture->generation != context->generation)
+        return RENDERER_STATUS_BACKEND_ERROR;
     context->gl.bind_texture(GL_TEXTURE_2D,
                              texture != NULL ? texture->name
                                              : context->white_texture);
@@ -673,34 +726,49 @@ static RendererStatus Core_draw(void *opaque,
         context->gl.buffer_data(GL_ARRAY_BUFFER, byte_count, draw->vertices,
                                 GL_STREAM_DRAW);
     }
-    if (!Core_operation_succeeded(context))
-        return RENDERER_STATUS_BACKEND_ERROR;
-    Core_clear_errors(context);
     context->gl.draw_arrays(GL_TRIANGLES, 0, vertex_count);
-    return Core_operation_succeeded(context) ? RENDERER_STATUS_OK
-                                             : RENDERER_STATUS_BACKEND_ERROR;
+    return RENDERER_STATUS_OK;
 }
 
 static RendererStatus Core_flush(void *opaque)
 {
     CoreContext *context = opaque;
 
-    Core_clear_errors(context);
-    context->gl.flush();
-    return Core_operation_succeeded(context) ? RENDERER_STATUS_OK
-                                             : RENDERER_STATUS_BACKEND_ERROR;
+    if (!context->context_available)
+        return RENDERER_STATUS_INVALID_STATE;
+    /* GL preserves command order without an explicit flush. Presentation by
+     * SDL submits the completed frame to the implementation. */
+    return RENDERER_STATUS_OK;
 }
 
 static RendererStatus Core_end_frame(void *opaque)
 {
     CoreContext *context = opaque;
+
+    if (!context->context_available)
+        return RENDERER_STATUS_INVALID_STATE;
+    context->frame_width = 0;
+    context->frame_height = 0;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus Core_create_texture_name(
+    CoreContext *context, const RendererTextureDesc *desc,
+    const uint8_t *rgba_pixels, size_t pitch, GLuint *name)
+{
     RendererStatus status;
 
-    status = Core_operation_succeeded(context) ? RENDERER_STATUS_OK
-                                               : RENDERER_STATUS_BACKEND_ERROR;
-    if (status == RENDERER_STATUS_OK) {
-        context->frame_width = 0;
-        context->frame_height = 0;
+    *name = 0;
+    Core_clear_errors(context);
+    context->gl.gen_textures(1, name);
+    if (*name == 0 || !Core_operation_succeeded(context))
+        return RENDERER_STATUS_BACKEND_ERROR;
+    status = Core_configure_and_upload_texture(context, *name, desc,
+                                               rgba_pixels, pitch);
+    if (status != RENDERER_STATUS_OK) {
+        context->gl.delete_textures(1, name);
+        *name = 0;
+        Core_clear_errors(context);
     }
     return status;
 }
@@ -714,6 +782,8 @@ static RendererStatus Core_texture_create(void *opaque,
     CoreTexture *texture;
     RendererStatus status;
 
+    if (!context->context_available)
+        return RENDERER_STATUS_INVALID_STATE;
     if (handle == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
     *handle = NULL;
@@ -725,22 +795,15 @@ static RendererStatus Core_texture_create(void *opaque,
     if (texture == NULL)
         return RENDERER_STATUS_OUT_OF_MEMORY;
 
-    Core_clear_errors(context);
-    context->gl.gen_textures(1, &texture->name);
-    if (texture->name == 0 || !Core_operation_succeeded(context)) {
-        free(texture);
-        return RENDERER_STATUS_BACKEND_ERROR;
-    }
-    status = Core_configure_and_upload_texture(context, texture->name,
-                                               desc, rgba_pixels, pitch);
+    status = Core_create_texture_name(context, desc, rgba_pixels, pitch,
+                                      &texture->name);
     if (status != RENDERER_STATUS_OK) {
-        context->gl.delete_textures(1, &texture->name);
-        Core_clear_errors(context);
         free(texture);
         return status;
     }
     texture->width = desc->width;
     texture->height = desc->height;
+    texture->generation = context->generation;
     *handle = texture;
     return RENDERER_STATUS_OK;
 }
@@ -761,7 +824,10 @@ static RendererStatus Core_texture_update(void *opaque, void *handle,
     GLint previous_unpack_skip_pixels;
     RendererStatus status;
 
-    if (texture == NULL || rgba_pixels == NULL
+    if (!context->context_available)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (texture == NULL || texture->generation != context->generation
+        || rgba_pixels == NULL
         || region.x < 0 || region.y < 0
         || region.width <= 0 || region.height <= 0
         || region.x > texture->width - region.width
@@ -821,9 +887,40 @@ static void Core_texture_destroy(void *opaque, void *handle)
 
     if (texture == NULL)
         return;
-    context->gl.delete_textures(1, &texture->name);
-    Core_clear_errors(context);
+    if (context->context_available
+        && texture->generation == context->generation
+        && texture->name != 0) {
+        context->gl.delete_textures(1, &texture->name);
+        Core_clear_errors(context);
+    }
     free(texture);
+}
+
+static RendererStatus Core_create_mesh_buffer(
+    CoreContext *context, const RendererVertex2D *vertices,
+    size_t vertex_count, GLuint *buffer)
+{
+    GLsizeiptr byte_count;
+    GLint previous_buffer;
+
+    *buffer = 0;
+    if (!Core_vertex_data_valid(vertex_count, &byte_count))
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    Core_clear_errors(context);
+    context->gl.get_integerv(GL_ARRAY_BUFFER_BINDING, &previous_buffer);
+    context->gl.gen_buffers(1, buffer);
+    context->gl.bind_buffer(GL_ARRAY_BUFFER, *buffer);
+    context->gl.buffer_data(GL_ARRAY_BUFFER, byte_count, vertices,
+                            GL_STATIC_DRAW);
+    context->gl.bind_buffer(GL_ARRAY_BUFFER, (GLuint)previous_buffer);
+    if (*buffer == 0 || !Core_operation_succeeded(context)) {
+        if (*buffer != 0)
+            context->gl.delete_buffers(1, buffer);
+        *buffer = 0;
+        Core_clear_errors(context);
+        return RENDERER_STATUS_BACKEND_ERROR;
+    }
+    return RENDERER_STATUS_OK;
 }
 
 static RendererStatus Core_mesh_create(void *opaque,
@@ -832,35 +929,28 @@ static RendererStatus Core_mesh_create(void *opaque,
 {
     CoreContext *context = opaque;
     CoreMesh *mesh;
-    GLsizeiptr byte_count;
-    GLint previous_buffer;
+    RendererStatus status;
 
+    if (!context->context_available)
+        return RENDERER_STATUS_INVALID_STATE;
     if (handle == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
     *handle = NULL;
-    if (vertices == NULL
-        || !Core_vertex_data_valid(vertex_count, &byte_count)) {
+    if (vertices == NULL || vertex_count == 0) {
         return RENDERER_STATUS_INVALID_ARGUMENT;
     }
     mesh = calloc(1, sizeof(*mesh));
     if (mesh == NULL)
         return RENDERER_STATUS_OUT_OF_MEMORY;
 
-    Core_clear_errors(context);
-    context->gl.get_integerv(GL_ARRAY_BUFFER_BINDING, &previous_buffer);
-    context->gl.gen_buffers(1, &mesh->buffer);
-    context->gl.bind_buffer(GL_ARRAY_BUFFER, mesh->buffer);
-    context->gl.buffer_data(GL_ARRAY_BUFFER, byte_count, vertices,
-                            GL_STATIC_DRAW);
-    context->gl.bind_buffer(GL_ARRAY_BUFFER, (GLuint)previous_buffer);
-    if (mesh->buffer == 0 || !Core_operation_succeeded(context)) {
-        if (mesh->buffer != 0)
-            context->gl.delete_buffers(1, &mesh->buffer);
-        Core_clear_errors(context);
+    status = Core_create_mesh_buffer(context, vertices, vertex_count,
+                                     &mesh->buffer);
+    if (status != RENDERER_STATUS_OK) {
         free(mesh);
-        return RENDERER_STATUS_BACKEND_ERROR;
+        return status;
     }
     mesh->vertex_count = (GLsizei)vertex_count;
+    mesh->generation = context->generation;
     *handle = mesh;
     return RENDERER_STATUS_OK;
 }
@@ -875,7 +965,10 @@ static RendererStatus Core_mesh_update(void *opaque, void *handle,
     GLint previous_buffer;
     GLuint replacement = 0;
 
-    if (mesh == NULL || vertices == NULL
+    if (!context->context_available)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (mesh == NULL || mesh->generation != context->generation
+        || vertices == NULL
         || !Core_vertex_data_valid(vertex_count, &byte_count)) {
         return RENDERER_STATUS_INVALID_ARGUMENT;
     }
@@ -907,16 +1000,116 @@ static void Core_mesh_destroy(void *opaque, void *handle)
 
     if (mesh == NULL)
         return;
-    context->gl.delete_buffers(1, &mesh->buffer);
-    Core_clear_errors(context);
+    if (context->context_available
+        && mesh->generation == context->generation
+        && mesh->buffer != 0) {
+        context->gl.delete_buffers(1, &mesh->buffer);
+        Core_clear_errors(context);
+    }
     free(mesh);
+}
+
+static void Core_context_lost(void *opaque)
+{
+    CoreContext *context = opaque;
+
+    if (!context->context_available)
+        return;
+    context->program = 0;
+    context->vertex_array = 0;
+    context->stream_buffer = 0;
+    context->white_texture = 0;
+    context->frame_width = 0;
+    context->frame_height = 0;
+    context->context_available = 0;
+    context->generation++;
+    if (context->generation == 0)
+        context->generation = 1;
+}
+
+static RendererStatus Core_context_restore(void *opaque)
+{
+    CoreContext *context = opaque;
+    RendererStatus status;
+
+    if (context->context_available) {
+        Core_release_context_objects(context);
+        context->context_available = 0;
+    }
+    context->frame_width = 0;
+    context->frame_height = 0;
+    if (!Core_load_functions(&context->gl, context->loader,
+                             context->loader_userdata)
+        || !Core_context_supported(context)) {
+        return RENDERER_STATUS_BACKEND_ERROR;
+    }
+    status = Core_create_context_objects(context);
+    if (status == RENDERER_STATUS_OK)
+        context->context_available = 1;
+    return status;
+}
+
+static RendererStatus Core_texture_restore(
+    void *opaque, void *handle, const RendererTextureDesc *desc,
+    const uint8_t *rgba_pixels, size_t pitch)
+{
+    CoreContext *context = opaque;
+    CoreTexture *texture = handle;
+    GLuint replacement;
+    RendererStatus status;
+
+    if (!context->context_available)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (texture == NULL || desc == NULL || rgba_pixels == NULL
+        || !Core_pixel_data_valid(desc->width, desc->height, pitch)) {
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    status = Core_create_texture_name(context, desc, rgba_pixels, pitch,
+                                      &replacement);
+    if (status != RENDERER_STATUS_OK)
+        return status;
+    if (texture->generation == context->generation && texture->name != 0)
+        context->gl.delete_textures(1, &texture->name);
+    texture->name = replacement;
+    texture->width = desc->width;
+    texture->height = desc->height;
+    texture->generation = context->generation;
+    return Core_operation_succeeded(context) ? RENDERER_STATUS_OK
+                                             : RENDERER_STATUS_BACKEND_ERROR;
+}
+
+static RendererStatus Core_mesh_restore(void *opaque, void *handle,
+                                        const RendererVertex2D *vertices,
+                                        size_t vertex_count)
+{
+    CoreContext *context = opaque;
+    CoreMesh *mesh = handle;
+    GLuint replacement;
+    RendererStatus status;
+
+    if (!context->context_available)
+        return RENDERER_STATUS_INVALID_STATE;
+    if (mesh == NULL || vertices == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    status = Core_create_mesh_buffer(context, vertices, vertex_count,
+                                     &replacement);
+    if (status != RENDERER_STATUS_OK)
+        return status;
+    if (mesh->generation == context->generation && mesh->buffer != 0)
+        context->gl.delete_buffers(1, &mesh->buffer);
+    mesh->buffer = replacement;
+    mesh->vertex_count = (GLsizei)vertex_count;
+    mesh->generation = context->generation;
+    return Core_operation_succeeded(context) ? RENDERER_STATUS_OK
+                                             : RENDERER_STATUS_BACKEND_ERROR;
 }
 
 static void Core_destroy(void *opaque)
 {
     CoreContext *context = opaque;
 
-    Core_release_context_objects(context);
+    if (context->context_available)
+        Core_release_context_objects(context);
     free(context);
 }
 
@@ -931,6 +1124,10 @@ static const RendererBackendInterface core_backend_interface = {
     .mesh_create = Core_mesh_create,
     .mesh_update = Core_mesh_update,
     .mesh_destroy = Core_mesh_destroy,
+    .context_lost = Core_context_lost,
+    .context_restore = Core_context_restore,
+    .texture_restore = Core_texture_restore,
+    .mesh_restore = Core_mesh_restore,
     .destroy = Core_destroy
 };
 
@@ -938,17 +1135,8 @@ RendererStatus Renderer_gl_core_create(RendererGLProcLoader loader,
                                        void *userdata,
                                        Renderer **renderer)
 {
-    static const uint8_t white_pixel[] = {255, 255, 255, 255};
-    static const RendererTextureDesc white_texture_desc = {
-        1, 1,
-        RENDERER_TEXTURE_FILTER_NEAREST,
-        RENDERER_TEXTURE_WRAP_CLAMP
-    };
     CoreContext *context;
     Renderer *created;
-    GLint major = 0;
-    GLint minor = 0;
-    GLint profile = 0;
     RendererStatus status;
 
     if (renderer == NULL)
@@ -959,46 +1147,24 @@ RendererStatus Renderer_gl_core_create(RendererGLProcLoader loader,
     context = calloc(1, sizeof(*context));
     if (context == NULL)
         return RENDERER_STATUS_OUT_OF_MEMORY;
+    context->loader = loader;
+    context->loader_userdata = userdata;
+    context->generation = 1;
     if (!Core_load_functions(&context->gl, loader, userdata)) {
         free(context);
         return RENDERER_STATUS_BACKEND_ERROR;
     }
 
-    Core_clear_errors(context);
-    context->gl.get_integerv(GL_MAJOR_VERSION, &major);
-    context->gl.get_integerv(GL_MINOR_VERSION, &minor);
-    context->gl.get_integerv(GL_CONTEXT_PROFILE_MASK, &profile);
-    if (!Core_operation_succeeded(context)
-        || major < 3 || (major == 3 && minor < 3)
-        || (profile & GL_CONTEXT_CORE_PROFILE_BIT) == 0) {
+    if (!Core_context_supported(context)) {
         free(context);
         return RENDERER_STATUS_BACKEND_ERROR;
     }
-    if (!Core_create_program(context)) {
-        Core_release_context_objects(context);
-        free(context);
-        return RENDERER_STATUS_BACKEND_ERROR;
-    }
-
-    Core_clear_errors(context);
-    context->gl.gen_vertex_arrays(1, &context->vertex_array);
-    context->gl.gen_buffers(1, &context->stream_buffer);
-    context->gl.gen_textures(1, &context->white_texture);
-    if (context->vertex_array == 0 || context->stream_buffer == 0
-        || context->white_texture == 0
-        || !Core_operation_succeeded(context)) {
-        Core_release_context_objects(context);
-        free(context);
-        return RENDERER_STATUS_BACKEND_ERROR;
-    }
-    status = Core_configure_and_upload_texture(
-        context, context->white_texture, &white_texture_desc, white_pixel,
-        sizeof(white_pixel));
+    status = Core_create_context_objects(context);
     if (status != RENDERER_STATUS_OK) {
-        Core_release_context_objects(context);
         free(context);
         return status;
     }
+    context->context_available = 1;
 
     created = Renderer_backend_create(&core_backend_interface, context);
     if (created == NULL) {

@@ -111,10 +111,12 @@ libxpcommon_a_LIBADD =
 am_libxpcommon_a_OBJECTS = arraylist.$(OBJEXT) checknames.$(OBJEXT) \
 	config.$(OBJEXT) error.$(OBJEXT) game_transport.$(OBJEXT) \
 	list.$(OBJEXT) math.$(OBJEXT) net.$(OBJEXT) \
-	portability.$(OBJEXT) randommt.$(OBJEXT) shipshape.$(OBJEXT) \
-	session_token.$(OBJEXT) socklib.$(OBJEXT) \
-	strcasecmp.$(OBJEXT) strdup.$(OBJEXT) strlcpy.$(OBJEXT) \
-	xpmemory.$(OBJEXT)
+	record_drain.$(OBJEXT) recording_input.$(OBJEXT) \
+	record_session.$(OBJEXT) record_transport.$(OBJEXT) \
+	portability.$(OBJEXT) randommt.$(OBJEXT) \
+	session_protocol.$(OBJEXT) session_token.$(OBJEXT) \
+	shipshape.$(OBJEXT) socklib.$(OBJEXT) strcasecmp.$(OBJEXT) \
+	strdup.$(OBJEXT) strlcpy.$(OBJEXT) xpmemory.$(OBJEXT)
 libxpcommon_a_OBJECTS = $(am_libxpcommon_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -136,8 +138,10 @@ am__depfiles_remade = ./$(DEPDIR)/arraylist.Po \
 	./$(DEPDIR)/error.Po ./$(DEPDIR)/game_transport.Po \
 	./$(DEPDIR)/list.Po ./$(DEPDIR)/math.Po ./$(DEPDIR)/net.Po \
 	./$(DEPDIR)/portability.Po ./$(DEPDIR)/randommt.Po \
-	./$(DEPDIR)/session_token.Po ./$(DEPDIR)/shipshape.Po \
-	./$(DEPDIR)/socklib.Po \
+	./$(DEPDIR)/record_drain.Po ./$(DEPDIR)/record_session.Po \
+	./$(DEPDIR)/record_transport.Po ./$(DEPDIR)/recording_input.Po \
+	./$(DEPDIR)/session_protocol.Po ./$(DEPDIR)/session_token.Po \
+	./$(DEPDIR)/shipshape.Po ./$(DEPDIR)/socklib.Po \
 	./$(DEPDIR)/strcasecmp.Po ./$(DEPDIR)/strdup.Po \
 	./$(DEPDIR)/strlcpy.Po ./$(DEPDIR)/xpmemory.Po
 am__mv = mv -f
@@ -330,9 +334,12 @@ libxpcommon_a_SOURCES = \
 	keys.h \
 	list.c list.h \
 	math.c metaserver.h \
-	net.c net.h \
+	net.c net.h record_drain.c record_drain.h \
+	recording_input.c recording_input.h \
+	record_session.c record_session.h record_transport.c record_transport.h \
 	pack.h packet.h portability.c portability.h \
 	randommt.c rules.h \
+	session_protocol.c session_protocol.h \
 	session_token.c session_token.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \
 	strcasecmp.c strdup.c strlcpy.c \
@@ -401,6 +408,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/net.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/portability.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/randommt.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/record_drain.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/record_session.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/record_transport.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/recording_input.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session_protocol.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session_token.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/shipshape.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socklib.Po@am__quote@ # am--include-marker
@@ -562,6 +574,11 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/net.Po
 	-rm -f ./$(DEPDIR)/portability.Po
 	-rm -f ./$(DEPDIR)/randommt.Po
+	-rm -f ./$(DEPDIR)/record_drain.Po
+	-rm -f ./$(DEPDIR)/record_session.Po
+	-rm -f ./$(DEPDIR)/record_transport.Po
+	-rm -f ./$(DEPDIR)/recording_input.Po
+	-rm -f ./$(DEPDIR)/session_protocol.Po
 	-rm -f ./$(DEPDIR)/session_token.Po
 	-rm -f ./$(DEPDIR)/shipshape.Po
 	-rm -f ./$(DEPDIR)/socklib.Po
@@ -624,6 +641,11 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/net.Po
 	-rm -f ./$(DEPDIR)/portability.Po
 	-rm -f ./$(DEPDIR)/randommt.Po
+	-rm -f ./$(DEPDIR)/record_drain.Po
+	-rm -f ./$(DEPDIR)/record_session.Po
+	-rm -f ./$(DEPDIR)/record_transport.Po
+	-rm -f ./$(DEPDIR)/recording_input.Po
+	-rm -f ./$(DEPDIR)/session_protocol.Po
 	-rm -f ./$(DEPDIR)/session_token.Po
 	-rm -f ./$(DEPDIR)/shipshape.Po
 	-rm -f ./$(DEPDIR)/socklib.Po

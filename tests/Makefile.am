@@ -28,18 +28,23 @@ if COND_WINDOWS
 check_PROGRAMS = test-framed-stream test-game-transport \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
-	test-native-socket-handle test-sdl-versions
+	test-native-socket-handle test-recording-input test-session-flow \
+	test-sdl-versions test-game-input
 TESTS =
 else
 check_PROGRAMS = test-framed-stream test-game-transport \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle \
+	test-recording-input \
+	test-session-flow \
 	test-meta-environment test-sdl-versions \
-	test-sdl-keys test-sdl-console test-sdl-surface \
+	test-game-input test-gameloop test-sdl-keys test-sdl-console \
+	test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-gl-core-resources \
-	test-renderer-commands test-renderer-geometry \
+	test-renderer-commands test-renderer-context-recovery \
+	test-renderer-geometry \
 	test-renderer-gl-core test-paint-transform test-image-geometry \
 	test-polygon-geometry \
 	test-gfx2d-picture test-images test-radar-renderer test-sdl-ui-image \
@@ -56,11 +61,15 @@ TESTS = test-framed-stream test-game-transport test-connect-target \
 	test-transport-display test-session-token \
 	test-socket-io \
 	test-native-socket-handle \
+	test-recording-input \
+	test-session-flow \
 	test-meta-environment test-sdl-versions \
-	test-sdl-keys test-sdl-console test-sdl-surface \
+	test-game-input test-gameloop test-sdl-keys test-sdl-console \
+	test-sdl-surface \
 	test-surface-rgba8 test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
-	test-renderer-geometry test-paint-transform run-gl-core-resources.sh \
+	test-renderer-context-recovery test-renderer-geometry \
+	test-paint-transform run-gl-core-resources.sh \
 	test-image-geometry test-polygon-geometry test-gfx2d-picture \
 	test-images test-radar-renderer test-sdl-ui-image test-sdl-meta-frame \
 	test-sdl-game-frame \
@@ -108,6 +117,15 @@ test_socket_io_LDADD = $(top_builddir)/src/common/libxpcommon.a \
 
 test_native_socket_handle_SOURCES = test_native_socket_handle.c
 
+test_recording_input_SOURCES = test_recording_input.c
+test_recording_input_LDADD = $(top_builddir)/src/common/libxpcommon.a
+
+test_session_flow_SOURCES = test_session_flow.c \
+	$(top_srcdir)/src/server/session_acceptor.c
+test_session_flow_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src/server
+test_session_flow_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a @W32_LIBS@
+
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
 	$(top_srcdir)/src/client/meta_test_support.h \
@@ -124,6 +142,14 @@ test_meta_environment_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 
 test_sdl_versions_SOURCES = test_sdl_versions.c
 test_sdl_versions_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
+
+test_game_input_SOURCES = test_game_input.c \
+	$(top_srcdir)/src/client/sdl/gameinput.c
+test_game_input_LDADD = $(XP_SDL3_LIBS)
+
+test_gameloop_SOURCES = test_gameloop.c \
+	$(top_srcdir)/src/client/sdl/gameloop.c
+test_gameloop_LDADD = $(XP_SDL3_LIBS)
 
 test_sdl_keys_SOURCES = test_sdl_keys.c \
 	$(top_srcdir)/src/client/sdl/sdlkeys.c
@@ -181,6 +207,10 @@ test_renderer_commands_SOURCES = test_renderer_commands.c \
 	$(top_srcdir)/src/client/sdl/renderer.c
 test_renderer_commands_LDFLAGS = $(AM_LDFLAGS) \
 	-Wl,--wrap=malloc -Wl,--wrap=calloc
+
+test_renderer_context_recovery_SOURCES = \
+	test_renderer_context_recovery.c \
+	$(top_srcdir)/src/client/sdl/renderer.c
 
 test_renderer_geometry_SOURCES = test_renderer_geometry.c \
 	$(top_srcdir)/src/client/sdl/renderer.c

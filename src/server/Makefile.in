@@ -114,11 +114,12 @@ am_xpilot_ng_server_OBJECTS = alliance.$(OBJEXT) asteroid.$(OBJEXT) \
 	rank.$(OBJEXT) recwrap.$(OBJEXT) robot.$(OBJEXT) \
 	robotdef.$(OBJEXT) rules.$(OBJEXT) saudio.$(OBJEXT) \
 	sched.$(OBJEXT) score.$(OBJEXT) server.$(OBJEXT) \
-	ship.$(OBJEXT) shot.$(OBJEXT) showtime.$(OBJEXT) \
-	srecord.$(OBJEXT) suibotdef.$(OBJEXT) tag.$(OBJEXT) \
-	target.$(OBJEXT) teamcup.$(OBJEXT) tuner.$(OBJEXT) \
-	treasure.$(OBJEXT) update.$(OBJEXT) walls.$(OBJEXT) \
-	wormhole.$(OBJEXT) xp2map.$(OBJEXT) xpmap.$(OBJEXT)
+	session_acceptor.$(OBJEXT) ship.$(OBJEXT) shot.$(OBJEXT) \
+	showtime.$(OBJEXT) srecord.$(OBJEXT) suibotdef.$(OBJEXT) \
+	tag.$(OBJEXT) target.$(OBJEXT) teamcup.$(OBJEXT) \
+	tuner.$(OBJEXT) treasure.$(OBJEXT) update.$(OBJEXT) \
+	walls.$(OBJEXT) wormhole.$(OBJEXT) xp2map.$(OBJEXT) \
+	xpmap.$(OBJEXT)
 xpilot_ng_server_OBJECTS = $(am_xpilot_ng_server_OBJECTS)
 xpilot_ng_server_DEPENDENCIES =  \
 	$(top_builddir)/src/common/libxpcommon.a
@@ -153,7 +154,8 @@ am__depfiles_remade = ./$(DEPDIR)/alliance.Po ./$(DEPDIR)/asteroid.Po \
 	./$(DEPDIR)/recwrap.Po ./$(DEPDIR)/robot.Po \
 	./$(DEPDIR)/robotdef.Po ./$(DEPDIR)/rules.Po \
 	./$(DEPDIR)/saudio.Po ./$(DEPDIR)/sched.Po \
-	./$(DEPDIR)/score.Po ./$(DEPDIR)/server.Po ./$(DEPDIR)/ship.Po \
+	./$(DEPDIR)/score.Po ./$(DEPDIR)/server.Po \
+	./$(DEPDIR)/session_acceptor.Po ./$(DEPDIR)/ship.Po \
 	./$(DEPDIR)/shot.Po ./$(DEPDIR)/showtime.Po \
 	./$(DEPDIR)/srecord.Po ./$(DEPDIR)/suibotdef.Po \
 	./$(DEPDIR)/tag.Po ./$(DEPDIR)/target.Po \
@@ -357,7 +359,8 @@ xpilot_ng_server_SOURCES = \
 	race.c rank.c rank.h recwrap.c recwrap.h \
 	robot.c robot.h robotdef.c rules.c \
 	saudio.c saudio.h sched.c sched.h score.c score.h \
-	server.c server.h serverconst.h ship.c shot.c \
+	server.c server.h serverconst.h session_acceptor.c session_acceptor.h \
+	ship.c shot.c \
 	showtime.c srecord.c srecord.h suibotdef.c \
 	tag.c target.c target.h teamcup.h teamcup.c tuner.c tuner.h \
 	treasure.c update.c \
@@ -487,6 +490,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sched.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/score.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/server.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session_acceptor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ship.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/shot.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/showtime.Po@am__quote@ # am--include-marker
@@ -685,6 +689,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sched.Po
 	-rm -f ./$(DEPDIR)/score.Po
 	-rm -f ./$(DEPDIR)/server.Po
+	-rm -f ./$(DEPDIR)/session_acceptor.Po
 	-rm -f ./$(DEPDIR)/ship.Po
 	-rm -f ./$(DEPDIR)/shot.Po
 	-rm -f ./$(DEPDIR)/showtime.Po
@@ -781,6 +786,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sched.Po
 	-rm -f ./$(DEPDIR)/score.Po
 	-rm -f ./$(DEPDIR)/server.Po
+	-rm -f ./$(DEPDIR)/session_acceptor.Po
 	-rm -f ./$(DEPDIR)/ship.Po
 	-rm -f ./$(DEPDIR)/shot.Po
 	-rm -f ./$(DEPDIR)/showtime.Po

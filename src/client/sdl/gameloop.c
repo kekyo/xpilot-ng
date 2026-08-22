@@ -20,61 +20,102 @@
 
 #include "xpclient_sdl.h"
 
-extern int Process_event(SDL_Event *evt);
+#include "gameinput.h"
 
-static int Poll_input(void)
+static void Check_pointer_move_interval(void)
 {
-    SDL_Event evt;
+    if (maxMouseTurnsPS > 0)
+	Client_check_pointer_move_interval();
+}
 
-    while (SDL_PollEvent(&evt)) {
-	if (Process_event(&evt) == 0)
-	    return 1;
+static GameLoopResult Refresh_network_fd(GameLoopState *state)
+{
+    state->network_fd = Net_fd();
+    if (state->network_fd == SOCK_FD_INVALID) {
+	error("Bad socket filedescriptor");
+	return GAME_LOOP_STOP;
     }
-    return 0;
+    return GAME_LOOP_CONTINUE;
+}
+
+GameLoopResult Game_loop_prepare(GameLoopState *state)
+{
+    int result;
+
+    if (state == NULL)
+	return GAME_LOOP_STOP;
+    state->network_fd = SOCK_FD_INVALID;
+    state->previous_network_result = 0;
+
+    result = Net_input();
+    if (result == -1) {
+	error("Bad server input");
+	return GAME_LOOP_STOP;
+    }
+    state->previous_network_result = result;
+    if (Game_input_process_batch())
+	return GAME_LOOP_STOP;
+    if (Net_flush() == -1)
+	return GAME_LOOP_STOP;
+    if (Refresh_network_fd(state) != GAME_LOOP_CONTINUE)
+	return GAME_LOOP_STOP;
+    Net_key_change();
+    return GAME_LOOP_CONTINUE;
+}
+
+static GameLoopResult Advance_game_loop(GameLoopState *state,
+					int network_ready)
+{
+    int result;
+
+    if (network_ready || state->previous_network_result > 1) {
+	result = Net_input();
+	state->previous_network_result = result;
+	if (result == -1) {
+	    warn("Bad net input.  Have a nice day!");
+	    return GAME_LOOP_STOP;
+	}
+    }
+    if (Game_input_process_batch())
+	return GAME_LOOP_STOP;
+    if (Net_flush() == -1) {
+	error("Bad net flush");
+	return GAME_LOOP_STOP;
+    }
+    return Refresh_network_fd(state);
+}
+
+GameLoopResult Game_loop_step(GameLoopState *state, int network_ready)
+{
+    if (state == NULL)
+	return GAME_LOOP_STOP;
+    Check_pointer_move_interval();
+    return Advance_game_loop(state, network_ready);
 }
 
 void Game_loop(void)
 {
+    GameLoopState state;
     fd_set rfds;
-    socket_handle_t netfd;
-    int n, result;
+    int n;
     struct timeval tv;
 
-    if ((result = Net_input()) == -1) {
-	error("Bad server input");
+    if (Game_loop_prepare(&state) != GAME_LOOP_CONTINUE)
 	return;
-    }
-    if (Poll_input())
-	return;
-
-    if (Net_flush() == -1)
-	return;
-
-    if ((netfd = Net_fd()) == SOCK_FD_INVALID) {
-	error("Bad socket filedescriptor");
-	return;
-    }
-    Net_key_change();
 
     while (1) {
-	netfd = Net_fd();
-	if (netfd == SOCK_FD_INVALID) {
-	    error("Bad socket filedescriptor");
-	    return;
-	}
 	FD_ZERO(&rfds);
-	FD_SET(netfd, &rfds);
+	FD_SET(state.network_fd, &rfds);
 	tv.tv_sec = 0;
 	tv.tv_usec = 5000; /* wait max 5 ms */
 
-	if (maxMouseTurnsPS > 0)
-	    Client_check_pointer_move_interval();
+	Check_pointer_move_interval();
 
 /* Winsock retains nfds only for Berkeley compatibility and ignores it. */
 #ifdef _WINDOWS
         n = select(0, &rfds, NULL, NULL, &tv);
 #else
-        n = select(netfd + 1, &rfds, NULL, NULL, &tv);
+        n = select(state.network_fd + 1, &rfds, NULL, NULL, &tv);
 #endif
 	if (n == SOCK_IS_ERROR) {
 #ifdef _WINDOWS
@@ -86,18 +127,7 @@ void Game_loop(void)
 	    error("Select failed");
 	    return;
         }
-	if (n > 0 || result > 1) {
-	    result = Net_input();
-	    if (result == -1) {
-		warn("Bad net input.  Have a nice day!");
-		return;
-	    }
-	}
-	if (Poll_input())
+	if (Advance_game_loop(&state, n > 0) != GAME_LOOP_CONTINUE)
 	    return;
-	if (Net_flush() == -1) {
-	    error("Bad net flush");
-	    return;
-	}
     }
 }

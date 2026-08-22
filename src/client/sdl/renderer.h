@@ -160,6 +160,32 @@ uint32_t Renderer_color_to_rgba32(RendererColor color);
 void Renderer_destroy(Renderer *renderer);
 
 /**
+ * Notify a renderer that its graphics context has been lost.
+ *
+ * This operation does not call the graphics API. It discards any active
+ * frame while retaining CPU copies of textures and meshes. Repeated
+ * notifications before restoration have no effect.
+ *
+ * @param renderer Renderer whose current graphics objects are no longer
+ *        usable.
+ * @return Operation status.
+ */
+RendererStatus Renderer_notify_context_lost(Renderer *renderer);
+
+/**
+ * Restore a renderer after a compatible graphics context becomes current.
+ *
+ * Context-global objects and all owned textures and meshes are recreated.
+ * Existing RendererTexture and RendererMesh pointers remain valid. A failed
+ * restoration leaves the renderer unavailable and may be retried.
+ *
+ * @param renderer Renderer previously passed to
+ *        Renderer_notify_context_lost().
+ * @return Operation status.
+ */
+RendererStatus Renderer_restore_context(Renderer *renderer);
+
+/**
  * Begin a frame and reset transform, blending, and clipping state.
  *
  * @param renderer Renderer instance.
@@ -450,7 +476,7 @@ RendererStatus Renderer_texture_destroy(Renderer *renderer,
  * Create an owned triangle mesh.
  *
  * @param renderer Renderer that will own the mesh, outside an active frame.
- * @param vertices Triangle vertices copied by the backend.
+ * @param vertices Triangle vertices copied and retained by the renderer.
  * @param vertex_count Positive number of vertices divisible by three.
  * @param mesh Receives the created mesh on success.
  * @return Operation status.

@@ -59,6 +59,19 @@ typedef struct RendererBackendInterface {
                                   size_t vertex_count);
     /** Destroy a backend mesh handle. */
     void (*mesh_destroy)(void *context, void *handle);
+    /* The context-recovery callbacks are optional only as one complete set. */
+    /** Forget context-global graphics objects without issuing API calls. */
+    void (*context_lost)(void *context);
+    /** Recreate context-global graphics objects in the current context. */
+    RendererStatus (*context_restore)(void *context);
+    /** Recreate one texture handle from retained frontend pixels. */
+    RendererStatus (*texture_restore)(
+        void *context, void *handle, const RendererTextureDesc *desc,
+        const uint8_t *rgba_pixels, size_t pitch);
+    /** Recreate one mesh handle from retained frontend vertices. */
+    RendererStatus (*mesh_restore)(void *context, void *handle,
+                                   const RendererVertex2D *vertices,
+                                   size_t vertex_count);
     /** Destroy backend context data after every resource is released. */
     void (*destroy)(void *context);
 } RendererBackendInterface;

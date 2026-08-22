@@ -90,6 +90,7 @@ static int texture_create_attempts;
 static int texture_create_successes;
 static int fail_texture_create_attempt;
 static int texture_update_calls;
+static int fail_texture_update_attempt;
 static int texture_destroy_calls;
 static int resource_calls_during_frame;
 static int operation_result_pending;
@@ -238,14 +239,34 @@ RendererStatus Renderer_texture_update(Renderer *renderer,
                                        const uint8_t *rgba_pixels,
                                        size_t pitch)
 {
-    (void)texture;
-    (void)region;
-    (void)rgba_pixels;
-    (void)pitch;
+    FakeTexture *record = fake_texture_from_handle(texture);
+    size_t row_bytes;
+    int row;
+
     texture_update_calls++;
-    if (renderer != NULL && renderer->frame_active)
+    if (renderer == NULL || record == NULL || rgba_pixels == NULL
+        || region.x < 0 || region.y < 0
+        || region.width <= 0 || region.height <= 0
+        || region.x > record->desc.width - region.width
+        || region.y > record->desc.height - region.height
+        || pitch < (size_t)region.width * 4) {
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    if (renderer->frame_active) {
         resource_calls_during_frame++;
-    return RENDERER_STATUS_BACKEND_ERROR;
+        return RENDERER_STATUS_INVALID_STATE;
+    }
+    if (texture_update_calls == fail_texture_update_attempt)
+        return RENDERER_STATUS_BACKEND_ERROR;
+
+    row_bytes = (size_t)region.width * 4;
+    for (row = 0; row < region.height; row++) {
+        memcpy(record->pixels
+                   + (size_t)(region.y + row) * record->pitch
+                   + (size_t)region.x * 4,
+               rgba_pixels + (size_t)row * pitch, row_bytes);
+    }
+    return RENDERER_STATUS_OK;
 }
 
 RendererStatus Renderer_texture_destroy(Renderer *renderer,
@@ -479,6 +500,7 @@ static int check_dirty_refresh_and_semantic_paint(
     Uint32 changed;
     int attempts_before;
     int destroys_before;
+    int updates_before;
     FakeTexture *texture;
     const RendererColor white = {255, 255, 255, 255};
     const RendererColor black = {0, 0, 0, 255};
@@ -488,10 +510,11 @@ static int check_dirty_refresh_and_semantic_paint(
     TEST_CHECK(SDL_FillSurfaceRect(window->surface, &changed_rect, changed));
     attempts_before = texture_create_attempts;
     destroys_before = texture_destroy_calls;
+    updates_before = texture_update_calls;
     reset_paint_frame();
     sdl_window_refresh(window);
     TEST_CHECK(texture_create_attempts == attempts_before);
-    TEST_CHECK(texture_update_calls == 0);
+    TEST_CHECK(texture_update_calls == updates_before);
     TEST_CHECK(texture_destroy_calls == destroys_before);
 
     TEST_CHECK(sdl_window_paint(window, NULL) == RENDERER_STATUS_OK);
@@ -536,22 +559,62 @@ static int check_dirty_refresh_and_semantic_paint(
     TEST_CHECK(last_stroke.closed == 1);
     TEST_CHECK(fake_sdl_renderer.frame_result == RENDERER_STATUS_OK);
     TEST_CHECK(texture_create_attempts == attempts_before);
-    TEST_CHECK(texture_update_calls == 0);
+    TEST_CHECK(texture_update_calls == updates_before);
     TEST_CHECK(texture_destroy_calls == destroys_before);
     fake_renderer.frame_active = 0;
 
+    fail_texture_update_attempt = texture_update_calls + 1;
+    TEST_CHECK(sdl_window_prepare(window, &fake_renderer) == -1);
+    TEST_CHECK(window->texture == old_texture);
+    TEST_CHECK(texture_create_attempts == attempts_before);
+    TEST_CHECK(texture_destroy_calls == destroys_before);
+
+    fail_texture_update_attempt = 0;
     TEST_CHECK(sdl_window_prepare(window, &fake_renderer) == 0);
-    TEST_CHECK(texture_create_successes == 2);
-    TEST_CHECK(texture_destroy_calls == destroys_before + 1);
-    TEST_CHECK(fake_textures[0].destroy_count == 1);
-    texture = &fake_textures[1];
+    TEST_CHECK(window->texture == old_texture);
+    TEST_CHECK(texture_create_successes == 1);
+    TEST_CHECK(texture_destroy_calls == destroys_before);
+    TEST_CHECK(fake_textures[0].destroy_count == 0);
+    TEST_CHECK(texture_update_calls == updates_before + 2);
+    texture = &fake_textures[0];
     TEST_CHECK(pixel_equals(texture, 4, 2, 101, 102, 103, 104));
-    *refreshed_texture = &texture->handle;
+    *refreshed_texture = old_texture;
 
     attempts_before = texture_create_attempts;
     TEST_CHECK(sdl_window_prepare(window, &fake_renderer) == 0);
     TEST_CHECK(texture_create_attempts == attempts_before);
-    TEST_CHECK(texture_update_calls == 0);
+    TEST_CHECK(texture_update_calls == updates_before + 2);
+    return 0;
+}
+
+static int check_same_storage_resize(sdl_window_t *window,
+                                     RendererTexture *texture)
+{
+    SDL_Surface *old_surface = window->surface;
+    int attempts_before = texture_create_attempts;
+    int destroys_before = texture_destroy_calls;
+    int updates_before = texture_update_calls;
+
+    fail_texture_update_attempt = texture_update_calls + 1;
+    TEST_CHECK(sdl_window_resize(window, 6, 3) == -1);
+    TEST_CHECK(window->surface == old_surface);
+    TEST_CHECK(window->texture == texture);
+    TEST_CHECK(window->w == 5 && window->h == 3);
+    TEST_CHECK(texture_create_attempts == attempts_before);
+    TEST_CHECK(texture_destroy_calls == destroys_before);
+    TEST_CHECK(texture_update_calls == updates_before + 1);
+
+    fail_texture_update_attempt = 0;
+    TEST_CHECK(sdl_window_resize(window, 6, 3) == 0);
+    TEST_CHECK(window->surface != old_surface);
+    TEST_CHECK(window->surface->w == 8 && window->surface->h == 4);
+    TEST_CHECK(window->texture == texture);
+    TEST_CHECK(window->w == 6 && window->h == 3);
+    TEST_CHECK(texture_create_attempts == attempts_before);
+    TEST_CHECK(texture_destroy_calls == destroys_before);
+    TEST_CHECK(texture_update_calls == updates_before + 2);
+    TEST_CHECK(pixel_equals(
+        fake_texture_from_handle(texture), 4, 2, 101, 102, 103, 104));
     return 0;
 }
 
@@ -763,6 +826,7 @@ static int check_move_paint_and_exact_cleanup(sdl_window_t *window,
 {
     const RendererColor background = {35, 69, 103, 137};
     int destroys_before;
+    int updates_before = texture_update_calls;
 
     sdl_window_move(window, 20, 30);
     reset_paint_frame();
@@ -816,7 +880,7 @@ static int check_move_paint_and_exact_cleanup(sdl_window_t *window,
     sdl_window_destroy(window);
     TEST_CHECK(texture_destroy_calls == destroys_before + 1);
     TEST_CHECK(resource_calls_during_frame == 0);
-    TEST_CHECK(texture_update_calls == 0);
+    TEST_CHECK(texture_update_calls == updates_before);
     return 0;
 }
 
@@ -844,6 +908,8 @@ int main(void)
             &window, initial_texture, &refreshed_texture) != 0) {
         goto cleanup;
     }
+    if (check_same_storage_resize(&window, refreshed_texture) != 0)
+        goto cleanup;
     if (check_atomic_resize_and_retry(
             &window, refreshed_texture, &resized_texture) != 0) {
         goto cleanup;

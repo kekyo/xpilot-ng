@@ -3,7 +3,7 @@
 set -eu
 
 if test "${1:-}" != --inside-xvfb; then
-    for command_name in xvfb-run xdotool node; do
+    for command_name in xvfb-run xdotool xwininfo node; do
         if ! command -v "$command_name" >/dev/null 2>&1; then
             echo "Missing E2E dependency: $command_name" >&2
             exit 1
@@ -302,6 +302,26 @@ find_x11_game_window()
     test -n "$window_id"
 }
 
+find_x11_first_local_join_button()
+{
+    join_window_id=$(LC_ALL=C xwininfo -tree -id "$window_id" \
+	2>/dev/null | awk '
+$1 ~ /^0x[0-9a-f]+$/ && $6 ~ /^[0-9]+x[0-9]+\+/ {
+    split($6, geometry, /[x+]/)
+    if (geometry[2] == 23 && geometry[4] > 10 &&
+        (row_y == 0 || geometry[4] < row_y ||
+         (geometry[4] == row_y && geometry[3] > right_x))) {
+        row_y = geometry[4]
+        right_x = geometry[3]
+        candidate = $1
+    }
+}
+END {
+    if (candidate != "") print candidate
+}')
+    test -n "$join_window_id"
+}
+
 game_window_transport_visible()
 {
     game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
@@ -309,6 +329,18 @@ game_window_transport_visible()
     test "$game_window_title" = \
 	"XPilot NG 4.7.3 - 127.0.0.1 "\
 "[Gameplay: $expected_gameplay_transport]"
+}
+
+x11_local_game_window_transport_visible()
+{
+    game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
+	|| true)
+    case "$game_window_title" in
+	"XPilot NG 4.7.3 - "?*"[Gameplay: $expected_gameplay_transport]")
+	    return 0
+	    ;;
+    esac
+    return 1
 }
 
 quit_game_client()
@@ -847,6 +879,55 @@ run_x11_gameplay_title_case()
     stop_local_server
 }
 
+run_x11_local_discovery_case()
+{
+    game_case=x11-local-discovery
+    expected_contact_transport=UDP
+    expected_gameplay_transport=UDP
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-$game_case.log"
+    game_client_log="$runtime_dir/client-$game_case.log"
+    game_client_name=X11Local
+
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta -udp \
+	>"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "$game_case server readiness" 20 server_ready
+
+    "$x11_client" -geometry 800x600 -port "$port" \
+	-name "$game_client_name" >"$game_client_log" 2>&1 &
+    client_pid=$!
+    window_owner_pid=$client_pid
+    wait_until "$game_case launcher window" 20 find_x11_game_window
+
+    xdotool mousemove --window "$window_id" 55 60 click 1 \
+	>/dev/null 2>&1 \
+	|| fail "$game_case could not select local discovery"
+    wait_until "$game_case local server discovery" 10 \
+	grep -q 'Using protocol version' "$game_client_log"
+
+    wait_until "$game_case local join button" 5 \
+	find_x11_first_local_join_button
+    xdotool mousemove --window "$join_window_id" 10 10 click 1 \
+	>/dev/null 2>&1 \
+	|| fail "$game_case could not select the discovered server"
+    wait_until "$game_case local client acceptance" 20 client_accepted
+    wait_until "$game_case gameplay transport window title" 10 \
+	x11_local_game_window_transport_visible
+
+    quit_game_client "$game_case" find_x11_game_window
+    set +e
+    wait "$client_pid"
+    client_status=$?
+    set -e
+    client_pid=
+    window_id=
+    test "$client_status" -eq 0 \
+	|| fail "$game_case client returned status $client_status"
+    wait_until "$game_case server-side client departure" 5 client_departed
+    stop_local_server
+}
+
 run_transport_mismatch()
 {
     server_transport=$1
@@ -1040,6 +1121,7 @@ run_gameplay_case udp-explicit udp no default
 run_gameplay_case tcp-contact tcp no tcp
 run_gameplay_case tcp-contact-udp-game udp no tcp
 if test -x "$x11_client"; then
+    run_x11_local_discovery_case
     run_x11_gameplay_title_case
 fi
 run_transport_mismatch udp tcp

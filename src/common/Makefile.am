@@ -10,9 +10,12 @@ libxpcommon_a_SOURCES = \
 	keys.h \
 	list.c list.h \
 	math.c metaserver.h \
-	net.c net.h \
+	net.c net.h record_drain.c record_drain.h \
+	recording_input.c recording_input.h \
+	record_session.c record_session.h record_transport.c record_transport.h \
 	pack.h packet.h portability.c portability.h \
 	randommt.c rules.h \
+	session_protocol.c session_protocol.h \
 	session_token.c session_token.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \
 	strcasecmp.c strdup.c strlcpy.c \

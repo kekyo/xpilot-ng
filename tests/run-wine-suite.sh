@@ -108,10 +108,12 @@ esac
 make_program=${MAKE:-make}
 wine_program=${WINE:-wine}
 wineboot_program=${WINEBOOT:-wineboot}
+wineserver_program=${WINESERVER:-wineserver}
 
 if test "$inside_xvfb" = false; then
     for required_command in "$make_program" "$wine_program" \
-        "$wineboot_program" wineserver xvfb-run xdotool node file timeout; do
+        "$wineboot_program" "$wineserver_program" xvfb-run xdotool node file \
+        timeout; do
         command -v "$required_command" >/dev/null 2>&1 \
             || fail "required command was not found: $required_command"
     done
@@ -172,6 +174,13 @@ dump_logs()
     fi
 }
 
+stop_wine_server()
+{
+    "$wineserver_program" -k >>"$runtime_dir/wineserver.log" 2>&1 || true
+    timeout 30s "$wineserver_program" -w \
+        >>"$runtime_dir/wineserver.log" 2>&1
+}
+
 cleanup()
 {
     cleanup_deadline=$(($(date +%s) + 10))
@@ -209,6 +218,7 @@ cleanup()
             wait "$process_id" 2>/dev/null || true
         fi
     done
+    stop_wine_server || true
     case "$runtime_dir" in
         "${TMPDIR:-/tmp}"/xpilot-wine-*) rm -rf -- "$runtime_dir" ;;
     esac
@@ -666,7 +676,7 @@ cp -R "$package_dir/." "$runtime_package/"
 echo "===== initialize: Wine $architecture prefix ====="
 timeout 60s "$wineboot_program" -u >"$runtime_dir/wineboot.log" 2>&1 \
     || fail "Wine prefix initialization failed"
-timeout 30s wineserver -w >>"$runtime_dir/wineboot.log" 2>&1 \
+timeout 30s "$wineserver_program" -w >>"$runtime_dir/wineboot.log" 2>&1 \
     || fail "Wine prefix initialization did not settle"
 
 for unit_test in test-framed-stream test-game-transport test-connect-target \
@@ -684,4 +694,5 @@ for contact_transport in udp tcp; do
     done
 done
 
+stop_wine_server || fail "Wine server did not stop after tests"
 echo "Wine $architecture unit, metaserver, and UDP/TCP integration tests passed"

@@ -117,6 +117,7 @@ static int texture_create_attempts;
 static int texture_create_successes;
 static int fail_texture_create_attempt;
 static int texture_update_calls;
+static int fail_texture_update_attempt;
 static int texture_destroy_calls;
 static int resource_calls_during_frame;
 static int sprite_calls;
@@ -312,13 +313,33 @@ RendererStatus Renderer_texture_update(Renderer *renderer,
                                        const uint8_t *rgba_pixels,
                                        size_t pitch)
 {
-    (void)texture;
-    (void)region;
-    (void)rgba_pixels;
-    (void)pitch;
+    FakeTexture *record = fake_texture_from_handle(texture);
+    size_t row_bytes;
+    int row;
+
     texture_update_calls++;
-    if (renderer != NULL && renderer->frame_active)
+    if (renderer == NULL || record == NULL || rgba_pixels == NULL
+        || region.x < 0 || region.y < 0
+        || region.width <= 0 || region.height <= 0
+        || region.x > record->desc.width - region.width
+        || region.y > record->desc.height - region.height
+        || pitch < (size_t)region.width * 4) {
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    if (renderer->frame_active) {
         resource_calls_during_frame++;
+        return RENDERER_STATUS_INVALID_STATE;
+    }
+    if (texture_update_calls == fail_texture_update_attempt)
+        return RENDERER_STATUS_BACKEND_ERROR;
+
+    row_bytes = (size_t)region.width * 4;
+    for (row = 0; row < region.height; row++) {
+        memcpy(record->pixels
+                   + (size_t)(region.y + row) * record->pitch
+                   + (size_t)region.x * 4,
+               rgba_pixels + (size_t)row * pitch, row_bytes);
+    }
     return RENDERER_STATUS_OK;
 }
 
@@ -708,6 +729,39 @@ static int check_initial_prepare(GLWidget **widget_out,
     return 0;
 }
 
+static int check_same_size_update(RendererTexture *texture)
+{
+    SDL_Surface *old_surface = Radar_test_surface();
+    SDL_Rect old_bounds = Radar_test_bounds();
+    int attempts_before = texture_create_attempts;
+    int destroys_before = texture_destroy_calls;
+    int updates_before = texture_update_calls;
+    FakeTexture *record = fake_texture_from_handle(texture);
+
+    TEST_CHECK(record != NULL);
+    bgRadarColorValue = 0x00112233;
+    Radar_update();
+    fail_texture_update_attempt = texture_update_calls + 1;
+    TEST_CHECK(Radar_prepare(&fake_renderer) == -1);
+    TEST_CHECK(Radar_test_surface() == old_surface);
+    TEST_CHECK(Radar_test_texture() == texture);
+    TEST_CHECK(rect_equal(Radar_test_bounds(), old_bounds));
+    TEST_CHECK(texture_create_attempts == attempts_before);
+    TEST_CHECK(texture_destroy_calls == destroys_before);
+    TEST_CHECK(texture_update_calls == updates_before + 1);
+
+    fail_texture_update_attempt = 0;
+    TEST_CHECK(Radar_prepare(&fake_renderer) == 0);
+    TEST_CHECK(Radar_test_surface() != old_surface);
+    TEST_CHECK(Radar_test_texture() == texture);
+    TEST_CHECK(rect_equal(Radar_test_bounds(), old_bounds));
+    TEST_CHECK(texture_create_attempts == attempts_before);
+    TEST_CHECK(texture_destroy_calls == destroys_before);
+    TEST_CHECK(texture_update_calls == updates_before + 2);
+    TEST_CHECK(pixel_equals(record, 0, 0, 0x11, 0x22, 0x33, 0xff));
+    return 0;
+}
+
 static int check_atomic_update_and_resize(GLWidget *widget,
                                           RendererTexture *old_texture,
                                           RendererTexture **texture_out)
@@ -717,6 +771,7 @@ static int check_atomic_update_and_resize(GLWidget *widget,
     SDL_Rect expected_bounds = {30, 40, 12, 5};
     int attempts_before = texture_create_attempts;
     int destroys_before = texture_destroy_calls;
+    int updates_before = texture_update_calls;
     RendererTexture *texture;
     FakeTexture *record;
 
@@ -725,7 +780,7 @@ static int check_atomic_update_and_resize(GLWidget *widget,
     Radar_update();
     TEST_CHECK(set_radar_geometry("12x8+30+40"));
     TEST_CHECK(texture_create_attempts == attempts_before);
-    TEST_CHECK(texture_update_calls == 0);
+    TEST_CHECK(texture_update_calls == updates_before);
     TEST_CHECK(texture_destroy_calls == destroys_before);
     TEST_CHECK(Radar_test_surface() == old_surface);
     TEST_CHECK(Radar_test_texture() == old_texture);
@@ -754,7 +809,7 @@ static int check_atomic_update_and_resize(GLWidget *widget,
     TEST_CHECK(texture_destroy_calls == destroys_before + 1);
     record = fake_texture_from_handle(texture);
     TEST_CHECK(pixel_equals(record, 0, 0, 0x11, 0x22, 0x33, 0xff));
-    TEST_CHECK(texture_update_calls == 0);
+    TEST_CHECK(texture_update_calls == updates_before);
     *texture_out = texture;
     return 0;
 }
@@ -771,6 +826,7 @@ static int check_non_sliding_paint(GLWidget *widget,
     const RendererColor blue = {0, 0, 0x90, 0xff};
     radar_t *objects;
     int resource_calls_before = resource_calls_during_frame;
+    int updates_before = texture_update_calls;
 
     objects = malloc(2 * sizeof(*objects));
     TEST_CHECK(objects != NULL);
@@ -871,7 +927,7 @@ static int check_non_sliding_paint(GLWidget *widget,
     TEST_CHECK(color_equal(fake_strokes[1].colors[3], blue));
     TEST_CHECK(radar_ptr == NULL);
     TEST_CHECK(resource_calls_during_frame == resource_calls_before);
-    TEST_CHECK(texture_update_calls == 0);
+    TEST_CHECK(texture_update_calls == updates_before);
 
     return 0;
 }
@@ -887,6 +943,7 @@ static int check_sliding_paint_order_and_uv(GLWidget *widget,
     float v_end = 5.0f / surface->h;
     int index;
     int resource_calls_before = resource_calls_during_frame;
+    int updates_before = texture_update_calls;
 
     instruments.slidingRadar = true;
     selfPos.x = 30;
@@ -924,7 +981,7 @@ static int check_sliding_paint_order_and_uv(GLWidget *widget,
     TEST_CHECK(stroke_calls == 1);
     TEST_CHECK(colored_stroke_calls == 1);
     TEST_CHECK(resource_calls_during_frame == resource_calls_before);
-    TEST_CHECK(texture_update_calls == 0);
+    TEST_CHECK(texture_update_calls == updates_before);
 
     selfPos.x = 60;
     selfPos.y = 40;
@@ -1095,6 +1152,7 @@ static int check_cleanup_is_exact_and_idempotent(GLWidget *widget,
                                                   RendererTexture *texture)
 {
     int destroys_before = texture_destroy_calls;
+    int updates_before = texture_update_calls;
 
     widget->Close(widget);
     TEST_CHECK(fake_texture_from_handle(texture)->destroy_count == 1);
@@ -1105,7 +1163,7 @@ static int check_cleanup_is_exact_and_idempotent(GLWidget *widget,
     widget->Close(widget);
     TEST_CHECK(texture_destroy_calls == destroys_before + 1);
     TEST_CHECK(resource_calls_during_frame == 0);
-    TEST_CHECK(texture_update_calls == 0);
+    TEST_CHECK(texture_update_calls == updates_before);
     return 0;
 }
 
@@ -1144,6 +1202,8 @@ int main(void)
     decorRadarColorValue = 0x00aabbcc;
 
     if (check_initial_prepare(&widget, &initial_texture) != 0)
+        goto cleanup;
+    if (check_same_size_update(initial_texture) != 0)
         goto cleanup;
     if (check_atomic_update_and_resize(
             widget, initial_texture, &resized_texture) != 0) {

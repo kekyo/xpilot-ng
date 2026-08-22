@@ -19,14 +19,17 @@ typedef struct RendererCommand RendererCommand;
 struct RendererTexture {
     Renderer *owner;
     void *handle;
-    int width;
-    int height;
+    RendererTextureDesc desc;
+    uint8_t *pixels;
+    size_t pitch;
     RendererTexture *next;
 };
 
 struct RendererMesh {
     Renderer *owner;
     void *handle;
+    RendererVertex2D *vertices;
+    size_t vertex_count;
     RendererMesh *next;
 };
 
@@ -39,6 +42,8 @@ struct RendererCommand {
 struct Renderer {
     const RendererBackendInterface *backend;
     void *backend_context;
+    int backend_context_available;
+    int context_available;
     int frame_active;
     int frame_width;
     int frame_height;
@@ -63,8 +68,20 @@ static const RendererTransform2D identity_transform = {
 
 static int Backend_interface_valid(const RendererBackendInterface *interface)
 {
-    return interface != NULL
-        && interface->begin_frame != NULL
+    int recovery_callbacks_absent;
+    int recovery_callbacks_present;
+
+    if (interface == NULL)
+        return 0;
+    recovery_callbacks_absent = interface->context_lost == NULL
+        && interface->context_restore == NULL
+        && interface->texture_restore == NULL
+        && interface->mesh_restore == NULL;
+    recovery_callbacks_present = interface->context_lost != NULL
+        && interface->context_restore != NULL
+        && interface->texture_restore != NULL
+        && interface->mesh_restore != NULL;
+    return interface->begin_frame != NULL
         && interface->draw != NULL
         && interface->flush != NULL
         && interface->end_frame != NULL
@@ -74,6 +91,7 @@ static int Backend_interface_valid(const RendererBackendInterface *interface)
         && interface->mesh_create != NULL
         && interface->mesh_update != NULL
         && interface->mesh_destroy != NULL
+        && (recovery_callbacks_absent || recovery_callbacks_present)
         && interface->destroy != NULL;
 }
 
@@ -126,6 +144,37 @@ static int Pixel_data_valid(int width, int height, size_t pitch)
     return pitch >= row_bytes
         && (height == 1
             || pitch <= (SIZE_MAX - row_bytes) / (size_t)(height - 1));
+}
+
+static uint8_t *Copy_pixels(int width, int height,
+                            const uint8_t *pixels, size_t pitch)
+{
+    size_t row_bytes = (size_t)width * 4;
+    uint8_t *copy = malloc(row_bytes * (size_t)height);
+    int row;
+
+    if (copy == NULL)
+        return NULL;
+    for (row = 0; row < height; row++) {
+        memcpy(copy + (size_t)row * row_bytes,
+               pixels + (size_t)row * pitch, row_bytes);
+    }
+    return copy;
+}
+
+static void Copy_texture_region(RendererTexture *texture,
+                                RendererRect region,
+                                const uint8_t *pixels, size_t pitch)
+{
+    size_t row_bytes = (size_t)region.width * 4;
+    int row;
+
+    for (row = 0; row < region.height; row++) {
+        memcpy(texture->pixels
+                   + (size_t)(region.y + row) * texture->pitch
+                   + (size_t)region.x * 4,
+               pixels + (size_t)row * pitch, row_bytes);
+    }
 }
 
 static void Free_commands(Renderer *renderer)
@@ -276,6 +325,8 @@ Renderer *Renderer_backend_create(const RendererBackendInterface *interface,
         return NULL;
     renderer->backend = interface;
     renderer->backend_context = context;
+    renderer->backend_context_available = 1;
+    renderer->context_available = 1;
     renderer->transform = identity_transform;
     renderer->blend = RENDERER_BLEND_OPAQUE;
     return renderer;
@@ -314,6 +365,7 @@ void Renderer_destroy(Renderer *renderer)
 
         renderer->backend->texture_destroy(renderer->backend_context,
                                            texture->handle);
+        free(texture->pixels);
         free(texture);
         texture = next;
     }
@@ -323,11 +375,71 @@ void Renderer_destroy(Renderer *renderer)
 
         renderer->backend->mesh_destroy(renderer->backend_context,
                                         mesh->handle);
+        free(mesh->vertices);
         free(mesh);
         mesh = next;
     }
     renderer->backend->destroy(renderer->backend_context);
     free(renderer);
+}
+
+RendererStatus Renderer_notify_context_lost(Renderer *renderer)
+{
+    if (renderer == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!renderer->context_available
+        && !renderer->backend_context_available) {
+        return RENDERER_STATUS_OK;
+    }
+    if (renderer->backend->context_lost == NULL)
+        return RENDERER_STATUS_BACKEND_ERROR;
+
+    if (renderer->context_available) {
+        Free_commands(renderer);
+        renderer->frame_active = 0;
+        renderer->frame_width = 0;
+        renderer->frame_height = 0;
+    }
+    renderer->backend->context_lost(renderer->backend_context);
+    renderer->backend_context_available = 0;
+    renderer->context_available = 0;
+    return RENDERER_STATUS_OK;
+}
+
+RendererStatus Renderer_restore_context(Renderer *renderer)
+{
+    RendererTexture *texture;
+    RendererMesh *mesh;
+    RendererStatus status;
+
+    if (renderer == NULL)
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (renderer->context_available)
+        return RENDERER_STATUS_INVALID_STATE;
+
+    status = renderer->backend->context_restore(renderer->backend_context);
+    if (status != RENDERER_STATUS_OK) {
+        renderer->backend_context_available = 0;
+        return status;
+    }
+    renderer->backend_context_available = 1;
+    for (texture = renderer->textures; texture != NULL;
+         texture = texture->next) {
+        status = renderer->backend->texture_restore(
+            renderer->backend_context, texture->handle, &texture->desc,
+            texture->pixels, texture->pitch);
+        if (status != RENDERER_STATUS_OK)
+            return status;
+    }
+    for (mesh = renderer->meshes; mesh != NULL; mesh = mesh->next) {
+        status = renderer->backend->mesh_restore(
+            renderer->backend_context, mesh->handle,
+            mesh->vertices, mesh->vertex_count);
+        if (status != RENDERER_STATUS_OK)
+            return status;
+    }
+    renderer->context_available = 1;
+    return RENDERER_STATUS_OK;
 }
 
 RendererStatus Renderer_begin_frame(Renderer *renderer, int width, int height,
@@ -337,7 +449,7 @@ RendererStatus Renderer_begin_frame(Renderer *renderer, int width, int height,
 
     if (renderer == NULL || width <= 0 || height <= 0)
         return RENDERER_STATUS_INVALID_ARGUMENT;
-    if (renderer->frame_active)
+    if (!renderer->context_available || renderer->frame_active)
         return RENDERER_STATUS_INVALID_STATE;
     status = renderer->backend->begin_frame(renderer->backend_context,
                                             width, height, clear_color);
@@ -1153,6 +1265,7 @@ RendererStatus Renderer_texture_create_with_desc(
 {
     RendererTexture *created;
     RendererStatus status;
+    size_t retained_pitch;
     void *handle = NULL;
 
     if (texture == NULL)
@@ -1160,7 +1273,7 @@ RendererStatus Renderer_texture_create_with_desc(
     *texture = NULL;
     if (renderer == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
-    if (renderer->frame_active)
+    if (!renderer->context_available || renderer->frame_active)
         return RENDERER_STATUS_INVALID_STATE;
     if (desc == NULL || desc->width <= 0 || desc->height <= 0
         || (desc->filter != RENDERER_TEXTURE_FILTER_NEAREST
@@ -1174,18 +1287,27 @@ RendererStatus Renderer_texture_create_with_desc(
     created = calloc(1, sizeof(*created));
     if (created == NULL)
         return RENDERER_STATUS_OUT_OF_MEMORY;
+    retained_pitch = (size_t)desc->width * 4;
+    created->pixels = Copy_pixels(desc->width, desc->height,
+                                  rgba_pixels, pitch);
+    if (created->pixels == NULL) {
+        free(created);
+        return RENDERER_STATUS_OUT_OF_MEMORY;
+    }
     status = renderer->backend->texture_create(renderer->backend_context,
-                                               desc, rgba_pixels, pitch,
+                                               desc, created->pixels,
+                                               retained_pitch,
                                                &handle);
     if (status != RENDERER_STATUS_OK || handle == NULL) {
+        free(created->pixels);
         free(created);
         return status != RENDERER_STATUS_OK ? status
                                            : RENDERER_STATUS_BACKEND_ERROR;
     }
     created->owner = renderer;
     created->handle = handle;
-    created->width = desc->width;
-    created->height = desc->height;
+    created->desc = *desc;
+    created->pitch = retained_pitch;
     created->next = renderer->textures;
     renderer->textures = created;
     *texture = created;
@@ -1200,10 +1322,11 @@ RendererStatus Renderer_texture_update(Renderer *renderer,
 {
     int64_t right;
     int64_t bottom;
+    RendererStatus status;
 
     if (renderer == NULL || texture == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
-    if (renderer->frame_active)
+    if (!renderer->context_available || renderer->frame_active)
         return RENDERER_STATUS_INVALID_STATE;
     if (!Texture_is_owned(renderer, texture))
         return RENDERER_STATUS_RESOURCE_MISMATCH;
@@ -1211,14 +1334,17 @@ RendererStatus Renderer_texture_update(Renderer *renderer,
     bottom = (int64_t)region.y + region.height;
     if (region.x < 0 || region.y < 0
         || region.width <= 0 || region.height <= 0
-        || right > texture->width || bottom > texture->height
+        || right > texture->desc.width || bottom > texture->desc.height
         || rgba_pixels == NULL
         || !Pixel_data_valid(region.width, region.height, pitch)) {
         return RENDERER_STATUS_INVALID_ARGUMENT;
     }
-    return renderer->backend->texture_update(renderer->backend_context,
-                                             texture->handle, region,
-                                             rgba_pixels, pitch);
+    status = renderer->backend->texture_update(renderer->backend_context,
+                                               texture->handle, region,
+                                               rgba_pixels, pitch);
+    if (status == RENDERER_STATUS_OK)
+        Copy_texture_region(texture, region, rgba_pixels, pitch);
+    return status;
 }
 
 RendererStatus Renderer_texture_destroy(Renderer *renderer,
@@ -1238,6 +1364,7 @@ RendererStatus Renderer_texture_destroy(Renderer *renderer,
     renderer->backend->texture_destroy(renderer->backend_context,
                                        texture->handle);
     texture->owner = NULL;
+    free(texture->pixels);
     free(texture);
     return RENDERER_STATUS_OK;
 }
@@ -1248,6 +1375,7 @@ RendererStatus Renderer_mesh_create(Renderer *renderer,
                                     RendererMesh **mesh)
 {
     RendererMesh *created;
+    RendererVertex2D *retained_vertices;
     RendererStatus status;
     void *handle = NULL;
 
@@ -1256,22 +1384,31 @@ RendererStatus Renderer_mesh_create(Renderer *renderer,
     *mesh = NULL;
     if (renderer == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
-    if (renderer->frame_active)
+    if (!renderer->context_available || renderer->frame_active)
         return RENDERER_STATUS_INVALID_STATE;
     if (vertices == NULL || !Vertex_count_valid(vertex_count))
         return RENDERER_STATUS_INVALID_ARGUMENT;
     created = calloc(1, sizeof(*created));
     if (created == NULL)
         return RENDERER_STATUS_OUT_OF_MEMORY;
+    retained_vertices = Copy_vertices(vertices, vertex_count);
+    if (retained_vertices == NULL) {
+        free(created);
+        return RENDERER_STATUS_OUT_OF_MEMORY;
+    }
     status = renderer->backend->mesh_create(renderer->backend_context,
-                                            vertices, vertex_count, &handle);
+                                            retained_vertices, vertex_count,
+                                            &handle);
     if (status != RENDERER_STATUS_OK || handle == NULL) {
+        free(retained_vertices);
         free(created);
         return status != RENDERER_STATUS_OK ? status
                                            : RENDERER_STATUS_BACKEND_ERROR;
     }
     created->owner = renderer;
     created->handle = handle;
+    created->vertices = retained_vertices;
+    created->vertex_count = vertex_count;
     created->next = renderer->meshes;
     renderer->meshes = created;
     *mesh = created;
@@ -1282,17 +1419,31 @@ RendererStatus Renderer_mesh_update(Renderer *renderer, RendererMesh *mesh,
                                     const RendererVertex2D *vertices,
                                     size_t vertex_count)
 {
+    RendererVertex2D *replacement;
+    RendererStatus status;
+
     if (renderer == NULL || mesh == NULL)
         return RENDERER_STATUS_INVALID_ARGUMENT;
-    if (renderer->frame_active)
+    if (!renderer->context_available || renderer->frame_active)
         return RENDERER_STATUS_INVALID_STATE;
     if (!Mesh_is_owned(renderer, mesh))
         return RENDERER_STATUS_RESOURCE_MISMATCH;
     if (vertices == NULL || !Vertex_count_valid(vertex_count))
         return RENDERER_STATUS_INVALID_ARGUMENT;
-    return renderer->backend->mesh_update(renderer->backend_context,
-                                          mesh->handle, vertices,
-                                          vertex_count);
+    replacement = Copy_vertices(vertices, vertex_count);
+    if (replacement == NULL)
+        return RENDERER_STATUS_OUT_OF_MEMORY;
+    status = renderer->backend->mesh_update(renderer->backend_context,
+                                            mesh->handle, replacement,
+                                            vertex_count);
+    if (status != RENDERER_STATUS_OK) {
+        free(replacement);
+        return status;
+    }
+    free(mesh->vertices);
+    mesh->vertices = replacement;
+    mesh->vertex_count = vertex_count;
+    return RENDERER_STATUS_OK;
 }
 
 RendererStatus Renderer_mesh_destroy(Renderer *renderer, RendererMesh *mesh)
@@ -1310,6 +1461,7 @@ RendererStatus Renderer_mesh_destroy(Renderer *renderer, RendererMesh *mesh)
     *link = mesh->next;
     renderer->backend->mesh_destroy(renderer->backend_context, mesh->handle);
     mesh->owner = NULL;
+    free(mesh->vertices);
     free(mesh);
     return RENDERER_STATUS_OK;
 }
