@@ -174,4 +174,3 @@ void Record_transport_destroy(record_transport_t *transport);
 socket_handle_t Record_transport_native_handle(record_transport_t *transport);
 
 #endif /* RECORD_TRANSPORT_H */
-

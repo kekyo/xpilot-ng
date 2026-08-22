@@ -28,7 +28,7 @@ if COND_WINDOWS
 check_PROGRAMS = test-framed-stream test-game-transport \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
-	test-native-socket-handle test-session-flow \
+	test-native-socket-handle test-recording-input test-session-flow \
 	test-sdl-versions test-game-input
 TESTS =
 else
@@ -36,6 +36,7 @@ check_PROGRAMS = test-framed-stream test-game-transport \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle \
+	test-recording-input \
 	test-session-flow \
 	test-meta-environment test-sdl-versions \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
@@ -60,6 +61,7 @@ TESTS = test-framed-stream test-game-transport test-connect-target \
 	test-transport-display test-session-token \
 	test-socket-io \
 	test-native-socket-handle \
+	test-recording-input \
 	test-session-flow \
 	test-meta-environment test-sdl-versions \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
@@ -114,6 +116,9 @@ test_socket_io_LDADD = $(top_builddir)/src/common/libxpcommon.a \
 	@W32_LIBS@
 
 test_native_socket_handle_SOURCES = test_native_socket_handle.c
+
+test_recording_input_SOURCES = test_recording_input.c
+test_recording_input_LDADD = $(top_builddir)/src/common/libxpcommon.a
 
 test_session_flow_SOURCES = test_session_flow.c \
 	$(top_srcdir)/src/server/session_acceptor.c

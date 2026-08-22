@@ -11,6 +11,7 @@ libxpcommon_a_SOURCES = \
 	list.c list.h \
 	math.c metaserver.h \
 	net.c net.h record_drain.c record_drain.h \
+	recording_input.c recording_input.h \
 	record_session.c record_session.h record_transport.c record_transport.h \
 	pack.h packet.h portability.c portability.h \
 	randommt.c rules.h \
