@@ -29,10 +29,12 @@
 #include "sdlpaint.h"
 #include "glwidgets.h"
 
+#include <limits.h>
+
 /* TODO: remove these from client.h and put them in *event.h */
 bool            initialPointerControl = false;
 
-static int	mouseMovement;	/* horizontal mouse movement. */
+static float	mouseMovement;	/* accumulated SDL3 high-resolution pointer input. */
 static float	wheelMovement;	/* accumulated SDL3 high-resolution wheel input. */
 
 GLWidget *clicktarget[NUM_MOUSE_BUTTONS];
@@ -48,6 +50,7 @@ static void release_input_state(void)
     x = (int)mouse_x;
     y = (int)mouse_y;
     Key_clear_counts();
+    mouseMovement = 0.0f;
     wheelMovement = 0.0f;
 
     for (button = 1; button <= NUM_MOUSE_BUTTONS; button++) {
@@ -143,10 +146,8 @@ void Toggle_radar_and_scorelist(void)
 
 int Process_event(SDL_Event *evt)
 {
-    int button, x, y;
+    int button, mouse_movement = 0, x, y;
     float mouse_x, mouse_y, wheel_y;
-
-    mouseMovement = 0;
 
     if (Console_process(evt)) return 1;
     
@@ -179,6 +180,16 @@ int Process_event(SDL_Event *evt)
     case SDL_EVENT_MOUSE_MOTION:
 	if (clData.pointerControl) {
 	    mouseMovement += evt->motion.xrel;
+	    if (mouseMovement >= (float)INT_MAX) {
+		mouse_movement = INT_MAX;
+		mouseMovement -= (float)INT_MAX;
+	    } else if (mouseMovement <= (float)INT_MIN) {
+		mouse_movement = INT_MIN;
+		mouseMovement -= (float)INT_MIN;
+	    } else {
+		mouse_movement = (int)mouseMovement;
+		mouseMovement -= (float)mouse_movement;
+	    }
 	} else {
 	    /*xpprintf("mouse motion xrel=%i yrel=%i\n",evt->motion.xrel,evt->motion.yrel);*/
 	    /*for (i = 0;i<NUM_MOUSE_BUTTONS;++i)*/ /* dragdrop for all mouse buttons*/
@@ -251,10 +262,8 @@ int Process_event(SDL_Event *evt)
       break;
     }
     
-    if (mouseMovement) {
-	Client_pointer_move(mouseMovement);
-	Net_flush();
-    }
+    if (mouse_movement)
+	Client_pointer_move(mouse_movement);
     return 1;
 }
 

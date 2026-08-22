@@ -335,7 +335,18 @@ int main(void)
     TEST_CHECK(Process_event(&event) == 1);
     TEST_CHECK(pointer_move_count == 1);
     TEST_CHECK(last_pointer_move == 7);
-    TEST_CHECK(net_flush_count == 1);
+    TEST_CHECK(net_flush_count == 0);
+
+    /* SDL3 pointer deltas are floats.  Preserve sub-unit motion until it
+     * becomes a complete legacy pointer-control step. */
+    event.motion.xrel = 0.25f;
+    TEST_CHECK(Process_event(&event) == 1);
+    TEST_CHECK(Process_event(&event) == 1);
+    TEST_CHECK(Process_event(&event) == 1);
+    TEST_CHECK(pointer_move_count == 1);
+    TEST_CHECK(Process_event(&event) == 1);
+    TEST_CHECK(pointer_move_count == 2);
+    TEST_CHECK(last_pointer_move == 1);
 
     clData.pointerControl = false;
     memset(&event, 0, sizeof(event));
