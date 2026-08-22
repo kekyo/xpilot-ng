@@ -144,6 +144,34 @@ Contact_servers_result_t Contact_servers_detailed(
     struct Connect_param *conpar);
 
 /**
+ * Discover and optionally contact servers using UDP LAN broadcast.
+ *
+ * Unlike the legacy parallel discovery arrays, `found_servers` retains every
+ * negotiated field needed to join a selected server later.
+ *
+ * @param defaults Default contact port and expected gameplay transport.
+ * @param auto_connect Whether to request joining without an interactive prompt.
+ * @param list_servers Set to 2 to collect discovery results, or 1 to print
+ * server status; zero performs the normal contact interaction.
+ * @param auto_shutdown Whether to request server shutdown.
+ * @param shutdown_message Shutdown reason used when `auto_shutdown` is set.
+ * @param find_max Capacity of `found_servers`.
+ * @param num_found Receives the number of stored discovery results, or `NULL`.
+ * @param found_servers Optional array receiving complete negotiated connection
+ * parameters for each discovered server.
+ * @param conpar Client identity input and successful connection output.
+ * @return Nonzero after a successful join, otherwise zero. Discovery-only
+ * operation reports its result count through `num_found` and returns zero.
+ */
+int Contact_local_servers_detailed(
+    const Connect_defaults_t *defaults,
+    int auto_connect, int list_servers,
+    int auto_shutdown, char *shutdown_message,
+    int find_max, int *num_found,
+    struct Connect_param *found_servers,
+    struct Connect_param *conpar);
+
+/**
  * Return a user-facing explanation for a connection target status.
  *
  * @param status Status returned by a connection target parser.

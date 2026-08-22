@@ -1059,13 +1059,16 @@ int Contact_servers(int count, const Connect_target_t *targets,
     return result.connected;
 }
 
-int Contact_local_servers(const Connect_defaults_t *defaults,
-			  int auto_connect, int list_servers,
-			  int auto_shutdown, char *shutdown_reason,
-			  int find_max, int *num_found,
-			  char **server_addresses, char **server_names,
-			  unsigned *server_versions,
-			  Connect_param_t *conpar)
+static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
+				      int auto_connect, int list_servers,
+				      int auto_shutdown,
+				      char *shutdown_reason,
+				      int find_max, int *num_found,
+				      char **server_addresses,
+				      char **server_names,
+				      unsigned *server_versions,
+				      Connect_param_t *found_servers,
+				      Connect_param_t *conpar)
 {
     const int max_retries = 2;
     Connect_target_t target;
@@ -1125,6 +1128,8 @@ int Contact_local_servers(const Connect_defaults_t *defaults,
 	    contacted++;
 	    if (list_servers == 2) {
 		if (found_count < find_max) {
+		    if (found_servers != NULL)
+			found_servers[found_count] = attempt;
 		    if (server_names != NULL) {
 			strlcpy(server_names[found_count], attempt.server_name,
 				MAX_HOST_LEN);
@@ -1154,4 +1159,30 @@ int Contact_local_servers(const Connect_defaults_t *defaults,
     Close_contact_socket(&sbuf);
     Sockbuf_cleanup(&sbuf);
     return connected;
+}
+
+int Contact_local_servers(const Connect_defaults_t *defaults,
+			  int auto_connect, int list_servers,
+			  int auto_shutdown, char *shutdown_reason,
+			  int find_max, int *num_found,
+			  char **server_addresses, char **server_names,
+			  unsigned *server_versions,
+			  Connect_param_t *conpar)
+{
+    return Contact_local_servers_impl(
+	defaults, auto_connect, list_servers, auto_shutdown, shutdown_reason,
+	find_max, num_found, server_addresses, server_names, server_versions,
+	NULL, conpar);
+}
+
+int Contact_local_servers_detailed(const Connect_defaults_t *defaults,
+				   int auto_connect, int list_servers,
+				   int auto_shutdown, char *shutdown_reason,
+				   int find_max, int *num_found,
+				   Connect_param_t *found_servers,
+				   Connect_param_t *conpar)
+{
+    return Contact_local_servers_impl(
+	defaults, auto_connect, list_servers, auto_shutdown, shutdown_reason,
+	find_max, num_found, NULL, NULL, NULL, found_servers, conpar);
 }

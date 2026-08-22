@@ -295,11 +295,6 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
     int label;
     int label_y, label_height;
 
-    char *server_names;
-    char *server_addrs;
-    char *name_ptrs[MAX_LOCAL_SERVERS];
-    char *addr_ptrs[MAX_LOCAL_SERVERS];
-    unsigned server_versions[MAX_LOCAL_SERVERS];
     int max_width = 0;
     int button;
     int button_width;
@@ -326,22 +321,16 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 			     "Searching for XPilot servers on your local network...");
     Widget_get_dimensions(subform_widget, &subform_width, &subform_height);
 
-    server_names = (char *) malloc(MAX_LOCAL_SERVERS * MAX_HOST_LEN);
-    server_addrs = (char *) malloc(MAX_LOCAL_SERVERS * MAX_HOST_LEN);
-    if (!server_names || !server_addrs) {
+    localnet_conpars = malloc(
+	(size_t)MAX_LOCAL_SERVERS * sizeof(*localnet_conpars));
+    if (!localnet_conpars) {
         error("Not enough memory\n");
-	free(server_names);
-	free(server_addrs);
 	quitting = true;
 	return 0;
     }
-    for (i = 0; i < MAX_LOCAL_SERVERS; i++) {
-	name_ptrs[i] = &server_names[i * MAX_HOST_LEN];
-	addr_ptrs[i] = &server_addrs[i * MAX_HOST_LEN];
-    }
-    Contact_local_servers(&connectDefaults, 0, 2, 0, NULL,
-			  MAX_LOCAL_SERVERS, &n,
-			  addr_ptrs, name_ptrs, server_versions, conpar);
+    Contact_local_servers_detailed(
+	&connectDefaults, 0, 2, 0, NULL, MAX_LOCAL_SERVERS, &n,
+	localnet_conpars, conpar);
     LIMIT(n, 0, MAX_LOCAL_SERVERS);
 
     Widget_destroy_children(subform_widget);
@@ -359,41 +348,25 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
     if (n > 0) {
 	
 
-	localnet_conpars =
-	    (Connect_param_t *) malloc(n * sizeof(Connect_param_t));
 	localnet_transport_pairs = malloc(
 	    (size_t)n * sizeof(*localnet_transport_pairs));
-	if (!localnet_conpars || !localnet_transport_pairs) {
+	if (!localnet_transport_pairs) {
 	    error("Not enough memory\n");
 	    free(localnet_conpars);
 	    localnet_conpars = NULL;
-	    free(localnet_transport_pairs);
-	    localnet_transport_pairs = NULL;
-	    free(server_names);
-	    free(server_addrs);
 	    quitting = true;
 	    return 0;
 	}
 	for (i = 0; i < n; i++) {
 	    int text_width = XTextWidth(textFont,
-					name_ptrs[i],
-					(int)strlen(name_ptrs[i]));
+					localnet_conpars[i].server_name,
+					(int)strlen(
+					    localnet_conpars[i].server_name));
 	    if (text_width > max_width)
 		max_width = text_width;
 	}
 	for (i = 0; i < n; i++) {
-	    localnet_conpars[i] = *conpar;
-	    strlcpy(localnet_conpars[i].server_name, name_ptrs[i],
-		    MAX_HOST_LEN);
-	    strlcpy(localnet_conpars[i].server_addr, addr_ptrs[i],
-		    MAX_HOST_LEN);
-	    localnet_conpars[i].contact_port = connectDefaults.contact_port;
-	    localnet_conpars[i].server_version = server_versions[i];
-	    localnet_conpars[i].contact_transport = GAME_TRANSPORT_UDP;
-	    if (!Game_transport_from_protocol_version(
-		    server_versions[i],
-		    &localnet_conpars[i].game_transport)
-		|| !Transport_display_pair(
+	    if (!Transport_display_pair(
 		    localnet_transport_pairs[i],
 		    sizeof(localnet_transport_pairs[i]),
 		    localnet_conpars[i].contact_transport,
@@ -445,8 +418,6 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 	}
     }
     Widget_map_sub(subform_widget);
-    free(server_names);
-    free(server_addrs);
 
     return 0;
 }
