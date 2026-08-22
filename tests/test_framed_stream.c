@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include "xpcommon.h"
+#include "record_drain.h"
+#include "record_session.h"
 #include "record_transport.h"
 
 typedef struct {
@@ -485,6 +487,91 @@ static int test_tcp_transport_exposes_logical_records(void)
     return 0;
 }
 
+typedef struct {
+    size_t ready_remaining;
+    size_t calls;
+    record_receive_result_t terminal_result;
+} drain_source_t;
+
+static record_receive_result_t next_drain_record(void *context)
+{
+    drain_source_t *source = context;
+
+    source->calls++;
+    if (source->ready_remaining > 0) {
+        source->ready_remaining--;
+        return RECORD_RECEIVE_READY;
+    }
+    return source->terminal_result;
+}
+
+static int test_session_identity_survives_transport_replacement(void)
+{
+    static const char first_payload[] = "first";
+    static const char second_payload[] = "second";
+    char received[32];
+    size_t received_length;
+    record_session_id_t id;
+    record_session_t *session;
+    record_transport_t *first_peer;
+    record_transport_t *first_transport;
+    record_transport_t *second_peer;
+    record_transport_t *second_transport;
+
+    TEST_CHECK(Record_transport_create_memory_pair(
+                   2, 64, &first_peer, &first_transport) == 0);
+    session = Record_session_create(first_transport);
+    TEST_CHECK(session != NULL);
+    id = Record_session_id(session);
+    TEST_CHECK(id != RECORD_SESSION_ID_INVALID);
+
+    TEST_CHECK(Record_session_send(
+                   session, first_payload, sizeof(first_payload) - 1,
+                   RECORD_DELIVERY_REQUIRED) == RECORD_SEND_ACCEPTED);
+    TEST_CHECK(Record_transport_receive(
+                   first_peer, received, sizeof(received),
+                   &received_length) == RECORD_RECEIVE_READY);
+    TEST_CHECK(memcmp(received, first_payload, received_length) == 0);
+
+    TEST_CHECK(Record_transport_create_memory_pair(
+                   2, 64, &second_peer, &second_transport) == 0);
+    TEST_CHECK(Record_session_replace_transport(
+                   session, second_transport) == 0);
+    TEST_CHECK(Record_session_id(session) == id);
+    TEST_CHECK(Record_transport_receive(
+                   first_peer, received, sizeof(received),
+                   &received_length) == RECORD_RECEIVE_CLOSED);
+
+    TEST_CHECK(Record_transport_send(
+                   second_peer, second_payload, sizeof(second_payload) - 1,
+                   RECORD_DELIVERY_REQUIRED) == RECORD_SEND_ACCEPTED);
+    TEST_CHECK(Record_session_receive(
+                   session, received, sizeof(received),
+                   &received_length) == RECORD_RECEIVE_READY);
+    TEST_CHECK(received_length == sizeof(second_payload) - 1);
+    TEST_CHECK(memcmp(received, second_payload, received_length) == 0);
+
+    Record_session_destroy(session);
+    Record_transport_destroy(second_peer);
+    Record_transport_destroy(first_peer);
+    return 0;
+}
+
+static int test_record_drain_enforces_fairness_limit(void)
+{
+    drain_source_t short_burst = { 3, 0, RECORD_RECEIVE_EMPTY };
+    drain_source_t long_burst = { 65, 0, RECORD_RECEIVE_EMPTY };
+
+    TEST_CHECK(Record_drain_ready(next_drain_record, &short_burst, 64) == 3);
+    TEST_CHECK(short_burst.calls == 4);
+    TEST_CHECK(short_burst.ready_remaining == 0);
+
+    TEST_CHECK(Record_drain_ready(next_drain_record, &long_burst, 64) == 64);
+    TEST_CHECK(long_burst.calls == 64);
+    TEST_CHECK(long_burst.ready_remaining == 1);
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(sock_startup() == 0);
@@ -501,6 +588,8 @@ int main(void)
     TEST_CHECK(test_tcp_socket_connection() == 0);
     TEST_CHECK(test_memory_transport_preserves_record_boundaries() == 0);
     TEST_CHECK(test_tcp_transport_exposes_logical_records() == 0);
+    TEST_CHECK(test_session_identity_survives_transport_replacement() == 0);
+    TEST_CHECK(test_record_drain_enforces_fairness_limit() == 0);
     sock_cleanup();
     return 0;
 }
