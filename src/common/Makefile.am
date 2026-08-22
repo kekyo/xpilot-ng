@@ -14,6 +14,7 @@ libxpcommon_a_SOURCES = \
 	record_session.c record_session.h record_transport.c record_transport.h \
 	pack.h packet.h portability.c portability.h \
 	randommt.c rules.h \
+	session_protocol.c session_protocol.h \
 	session_token.c session_token.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \
 	strcasecmp.c strdup.c strlcpy.c \

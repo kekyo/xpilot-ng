@@ -5,8 +5,10 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 noinst_LIBRARIES = libxpclient.a
 libxpclient_a_SOURCES = \
 	client.c client.h \
+	client_session.c client_session.h \
 	clientcommand.c clientcommand.h clientrank.c clientrank.h \
 	configure.h connectparam.h connect_target.c connect_target.h \
+	control_session.c control_session.h \
 	datagram.c datagram.h default.c \
 	event.c \
 	gfx2d.c gfx2d.h \

@@ -17,7 +17,8 @@ xpilot_ng_server_SOURCES = \
 	race.c rank.c rank.h recwrap.c recwrap.h \
 	robot.c robot.h robotdef.c rules.c \
 	saudio.c saudio.h sched.c sched.h score.c score.h \
-	server.c server.h serverconst.h ship.c shot.c \
+	server.c server.h serverconst.h session_acceptor.c session_acceptor.h \
+	ship.c shot.c \
 	showtime.c srecord.c srecord.h suibotdef.c \
 	tag.c target.c target.h teamcup.h teamcup.c tuner.c tuner.h \
 	treasure.c update.c \

@@ -28,13 +28,15 @@ if COND_WINDOWS
 check_PROGRAMS = test-framed-stream test-game-transport \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
-	test-native-socket-handle test-sdl-versions test-game-input
+	test-native-socket-handle test-session-flow \
+	test-sdl-versions test-game-input
 TESTS =
 else
 check_PROGRAMS = test-framed-stream test-game-transport \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle \
+	test-session-flow \
 	test-meta-environment test-sdl-versions \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
@@ -58,6 +60,7 @@ TESTS = test-framed-stream test-game-transport test-connect-target \
 	test-transport-display test-session-token \
 	test-socket-io \
 	test-native-socket-handle \
+	test-session-flow \
 	test-meta-environment test-sdl-versions \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
@@ -111,6 +114,12 @@ test_socket_io_LDADD = $(top_builddir)/src/common/libxpcommon.a \
 	@W32_LIBS@
 
 test_native_socket_handle_SOURCES = test_native_socket_handle.c
+
+test_session_flow_SOURCES = test_session_flow.c \
+	$(top_srcdir)/src/server/session_acceptor.c
+test_session_flow_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src/server
+test_session_flow_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a @W32_LIBS@
 
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \

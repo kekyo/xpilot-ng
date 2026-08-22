@@ -96,6 +96,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-session-token$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-socket-io$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-native-socket-handle$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-session-flow$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
@@ -148,6 +149,7 @@ target_triplet = @target@
 @COND_WINDOWS_TRUE@	test-session-token$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-socket-io$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-native-socket-handle$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-session-flow$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-game-input$(EXEEXT)
 @COND_WINDOWS_FALSE@TESTS = test-framed-stream$(EXEEXT) \
@@ -157,6 +159,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-session-token$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-socket-io$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-native-socket-handle$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-session-flow$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
@@ -493,6 +496,13 @@ test_sdlpaint_stage_OBJECTS = $(am_test_sdlpaint_stage_OBJECTS)
 test_sdlpaint_stage_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_sdlpaint_stage_LINK = $(CCLD) $(test_sdlpaint_stage_CFLAGS) \
 	$(CFLAGS) $(test_sdlpaint_stage_LDFLAGS) $(LDFLAGS) -o $@
+am_test_session_flow_OBJECTS =  \
+	test_session_flow-test_session_flow.$(OBJEXT) \
+	test_session_flow-session_acceptor.$(OBJEXT)
+test_session_flow_OBJECTS = $(am_test_session_flow_OBJECTS)
+test_session_flow_DEPENDENCIES =  \
+	$(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a
 am_test_session_token_OBJECTS = test_session_token.$(OBJEXT)
 test_session_token_OBJECTS = $(am_test_session_token_OBJECTS)
 test_session_token_DEPENDENCIES =  \
@@ -560,22 +570,20 @@ depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/connect_target.Po ./$(DEPDIR)/gameinput.Po \
-	./$(DEPDIR)/gameloop.Po \
-	./$(DEPDIR)/gfx2d.Po ./$(DEPDIR)/image_geometry.Po \
-	./$(DEPDIR)/paint_transform.Po ./$(DEPDIR)/polygon_geometry.Po \
-	./$(DEPDIR)/renderer.Po ./$(DEPDIR)/renderer_gl_core.Po \
-	./$(DEPDIR)/sdlclipboard.Po ./$(DEPDIR)/sdlcompat.Po \
-	./$(DEPDIR)/sdlevent.Po ./$(DEPDIR)/sdlgameframe.Po \
-	./$(DEPDIR)/sdlkeys.Po ./$(DEPDIR)/sdlmetaframe.Po \
-	./$(DEPDIR)/sdlrenderer.Po ./$(DEPDIR)/sdlwindow.Po \
-	./$(DEPDIR)/surface_rgba8.Po \
+	./$(DEPDIR)/gameloop.Po ./$(DEPDIR)/gfx2d.Po \
+	./$(DEPDIR)/image_geometry.Po ./$(DEPDIR)/paint_transform.Po \
+	./$(DEPDIR)/polygon_geometry.Po ./$(DEPDIR)/renderer.Po \
+	./$(DEPDIR)/renderer_gl_core.Po ./$(DEPDIR)/sdlclipboard.Po \
+	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
+	./$(DEPDIR)/sdlgameframe.Po ./$(DEPDIR)/sdlkeys.Po \
+	./$(DEPDIR)/sdlmetaframe.Po ./$(DEPDIR)/sdlrenderer.Po \
+	./$(DEPDIR)/sdlwindow.Po ./$(DEPDIR)/surface_rgba8.Po \
 	./$(DEPDIR)/test_connect_target.Po \
 	./$(DEPDIR)/test_contact_target_probe.Po \
 	./$(DEPDIR)/test_framed_stream.Po \
 	./$(DEPDIR)/test_game_input.Po \
 	./$(DEPDIR)/test_game_transport.Po \
-	./$(DEPDIR)/test_gameloop.Po \
-	./$(DEPDIR)/test_gfx2d_picture.Po \
+	./$(DEPDIR)/test_gameloop.Po ./$(DEPDIR)/test_gfx2d_picture.Po \
 	./$(DEPDIR)/test_gl_core_resources-gl_diagnostics.Po \
 	./$(DEPDIR)/test_gl_core_resources-renderer.Po \
 	./$(DEPDIR)/test_gl_core_resources-renderer_gl_core.Po \
@@ -654,6 +662,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po \
 	./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po \
 	./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po \
+	./$(DEPDIR)/test_session_flow-session_acceptor.Po \
+	./$(DEPDIR)/test_session_flow-test_session_flow.Po \
 	./$(DEPDIR)/test_session_token.Po \
 	./$(DEPDIR)/test_socket_io.Po \
 	./$(DEPDIR)/test_surface_rgba8.Po \
@@ -720,9 +730,10 @@ SOURCES = $(test_connect_target_SOURCES) \
 	$(test_sdlgui_polygons_SOURCES) $(test_sdlgui_ships_SOURCES) \
 	$(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlmeta_primitives_SOURCES) \
-	$(test_sdlpaint_stage_SOURCES) $(test_session_token_SOURCES) \
-	$(test_socket_io_SOURCES) $(test_surface_rgba8_SOURCES) \
-	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
+	$(test_sdlpaint_stage_SOURCES) $(test_session_flow_SOURCES) \
+	$(test_session_token_SOURCES) $(test_socket_io_SOURCES) \
+	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
+	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES) \
 	$(test_transport_display_SOURCES)
@@ -759,9 +770,10 @@ DIST_SOURCES = $(test_connect_target_SOURCES) \
 	$(test_sdlgui_polygons_SOURCES) $(test_sdlgui_ships_SOURCES) \
 	$(test_sdlgui_sparks_SOURCES) \
 	$(test_sdlmeta_primitives_SOURCES) \
-	$(test_sdlpaint_stage_SOURCES) $(test_session_token_SOURCES) \
-	$(test_socket_io_SOURCES) $(test_surface_rgba8_SOURCES) \
-	$(test_text_atlas_SOURCES) $(test_text_cache_adapter_SOURCES) \
+	$(test_sdlpaint_stage_SOURCES) $(test_session_flow_SOURCES) \
+	$(test_session_token_SOURCES) $(test_socket_io_SOURCES) \
+	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
+	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES) \
 	$(test_transport_display_SOURCES)
@@ -1179,6 +1191,13 @@ test_socket_io_LDADD = $(top_builddir)/src/common/libxpcommon.a \
 	@W32_LIBS@
 
 test_native_socket_handle_SOURCES = test_native_socket_handle.c
+test_session_flow_SOURCES = test_session_flow.c \
+	$(top_srcdir)/src/server/session_acceptor.c
+
+test_session_flow_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src/server
+test_session_flow_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a @W32_LIBS@
+
 test_meta_environment_SOURCES = test_meta_environment.c \
 	$(top_srcdir)/src/client/meta.c \
 	$(top_srcdir)/src/client/meta_test_support.h \
@@ -1829,6 +1848,10 @@ test-sdlpaint-stage$(EXEEXT): $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_sta
 	@rm -f test-sdlpaint-stage$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdlpaint_stage_LINK) $(test_sdlpaint_stage_OBJECTS) $(test_sdlpaint_stage_LDADD) $(LIBS)
 
+test-session-flow$(EXEEXT): $(test_session_flow_OBJECTS) $(test_session_flow_DEPENDENCIES) $(EXTRA_test_session_flow_DEPENDENCIES)
+	@rm -f test-session-flow$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_session_flow_OBJECTS) $(test_session_flow_LDADD) $(LIBS)
+
 test-session-token$(EXEEXT): $(test_session_token_OBJECTS) $(test_session_token_DEPENDENCIES) $(EXTRA_test_session_token_DEPENDENCIES)
 	@rm -f test-session-token$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_session_token_OBJECTS) $(test_session_token_LDADD) $(LIBS)
@@ -1976,6 +1999,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_session_flow-session_acceptor.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_session_flow-test_session_flow.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_session_token.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_socket_io.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_rgba8.Po@am__quote@ # am--include-marker
@@ -3149,6 +3174,34 @@ test_sdlpaint_stage-sdlpaint.obj: $(top_srcdir)/src/client/sdl/sdlpaint.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_sdlpaint_stage_CPPFLAGS) $(CPPFLAGS) $(test_sdlpaint_stage_CFLAGS) $(CFLAGS) -c -o test_sdlpaint_stage-sdlpaint.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlpaint.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlpaint.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlpaint.c'; fi`
 
+test_session_flow-test_session_flow.o: test_session_flow.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_session_flow_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_session_flow-test_session_flow.o -MD -MP -MF $(DEPDIR)/test_session_flow-test_session_flow.Tpo -c -o test_session_flow-test_session_flow.o `test -f 'test_session_flow.c' || echo '$(srcdir)/'`test_session_flow.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_session_flow-test_session_flow.Tpo $(DEPDIR)/test_session_flow-test_session_flow.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_session_flow.c' object='test_session_flow-test_session_flow.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_session_flow_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_session_flow-test_session_flow.o `test -f 'test_session_flow.c' || echo '$(srcdir)/'`test_session_flow.c
+
+test_session_flow-test_session_flow.obj: test_session_flow.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_session_flow_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_session_flow-test_session_flow.obj -MD -MP -MF $(DEPDIR)/test_session_flow-test_session_flow.Tpo -c -o test_session_flow-test_session_flow.obj `if test -f 'test_session_flow.c'; then $(CYGPATH_W) 'test_session_flow.c'; else $(CYGPATH_W) '$(srcdir)/test_session_flow.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_session_flow-test_session_flow.Tpo $(DEPDIR)/test_session_flow-test_session_flow.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_session_flow.c' object='test_session_flow-test_session_flow.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_session_flow_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_session_flow-test_session_flow.obj `if test -f 'test_session_flow.c'; then $(CYGPATH_W) 'test_session_flow.c'; else $(CYGPATH_W) '$(srcdir)/test_session_flow.c'; fi`
+
+test_session_flow-session_acceptor.o: $(top_srcdir)/src/server/session_acceptor.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_session_flow_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_session_flow-session_acceptor.o -MD -MP -MF $(DEPDIR)/test_session_flow-session_acceptor.Tpo -c -o test_session_flow-session_acceptor.o `test -f '$(top_srcdir)/src/server/session_acceptor.c' || echo '$(srcdir)/'`$(top_srcdir)/src/server/session_acceptor.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_session_flow-session_acceptor.Tpo $(DEPDIR)/test_session_flow-session_acceptor.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/server/session_acceptor.c' object='test_session_flow-session_acceptor.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_session_flow_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_session_flow-session_acceptor.o `test -f '$(top_srcdir)/src/server/session_acceptor.c' || echo '$(srcdir)/'`$(top_srcdir)/src/server/session_acceptor.c
+
+test_session_flow-session_acceptor.obj: $(top_srcdir)/src/server/session_acceptor.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_session_flow_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_session_flow-session_acceptor.obj -MD -MP -MF $(DEPDIR)/test_session_flow-session_acceptor.Tpo -c -o test_session_flow-session_acceptor.obj `if test -f '$(top_srcdir)/src/server/session_acceptor.c'; then $(CYGPATH_W) '$(top_srcdir)/src/server/session_acceptor.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/server/session_acceptor.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_session_flow-session_acceptor.Tpo $(DEPDIR)/test_session_flow-session_acceptor.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/server/session_acceptor.c' object='test_session_flow-session_acceptor.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_session_flow_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_session_flow-session_acceptor.obj `if test -f '$(top_srcdir)/src/server/session_acceptor.c'; then $(CYGPATH_W) '$(top_srcdir)/src/server/session_acceptor.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/server/session_acceptor.c'; fi`
+
 surface_rgba8.o: $(top_srcdir)/src/client/sdl/surface_rgba8.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT surface_rgba8.o -MD -MP -MF $(DEPDIR)/surface_rgba8.Tpo -c -o surface_rgba8.o `test -f '$(top_srcdir)/src/client/sdl/surface_rgba8.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/surface_rgba8.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/surface_rgba8.Tpo $(DEPDIR)/surface_rgba8.Po
@@ -3527,6 +3580,13 @@ test-socket-io.log: test-socket-io$(EXEEXT)
 test-native-socket-handle.log: test-native-socket-handle$(EXEEXT)
 	@p='test-native-socket-handle$(EXEEXT)'; \
 	b='test-native-socket-handle'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-session-flow.log: test-session-flow$(EXEEXT)
+	@p='test-session-flow$(EXEEXT)'; \
+	b='test-session-flow'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -4014,6 +4074,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
+	-rm -f ./$(DEPDIR)/test_session_flow-session_acceptor.Po
+	-rm -f ./$(DEPDIR)/test_session_flow-test_session_flow.Po
 	-rm -f ./$(DEPDIR)/test_session_token.Po
 	-rm -f ./$(DEPDIR)/test_socket_io.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
@@ -4182,6 +4244,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdlmeta_primitives-test_sdlmeta_primitives.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-sdlpaint.Po
 	-rm -f ./$(DEPDIR)/test_sdlpaint_stage-test_sdlpaint_stage.Po
+	-rm -f ./$(DEPDIR)/test_session_flow-session_acceptor.Po
+	-rm -f ./$(DEPDIR)/test_session_flow-test_session_flow.Po
 	-rm -f ./$(DEPDIR)/test_session_token.Po
 	-rm -f ./$(DEPDIR)/test_socket_io.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
