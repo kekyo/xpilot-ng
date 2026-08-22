@@ -323,7 +323,7 @@ record_transport_t *Record_transport_create(
 
     if (operations == NULL || context == NULL
         || operations->receive == NULL || operations->send == NULL
-        || operations->flush == NULL || operations->close == NULL
+        || operations->flush == NULL || operations->close_backend == NULL
         || operations->destroy == NULL) {
         errno = EINVAL;
         return NULL;
@@ -472,14 +472,14 @@ record_flush_result_t Record_transport_flush(record_transport_t *transport)
 void Record_transport_close(record_transport_t *transport)
 {
     if (transport != NULL)
-        transport->operations.close(transport->context);
+        transport->operations.close_backend(transport->context);
 }
 
 void Record_transport_destroy(record_transport_t *transport)
 {
     if (transport == NULL)
         return;
-    transport->operations.close(transport->context);
+    transport->operations.close_backend(transport->context);
     transport->operations.destroy(transport->context);
     free(transport);
 }

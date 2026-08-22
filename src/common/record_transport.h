@@ -96,7 +96,7 @@ typedef struct {
     /** Advance previously accepted output without blocking. */
     record_transport_flush_fn flush;
     /** Close the backend. This operation must be idempotent. */
-    record_transport_close_fn close;
+    record_transport_close_fn close_backend;
     /** Release the backend context after close has been called. */
     record_transport_destroy_fn destroy;
     /** Return a native handle, or SOCK_FD_INVALID when unavailable. */
