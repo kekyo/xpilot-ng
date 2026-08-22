@@ -351,11 +351,23 @@ meta_tcp_transport_reported()
 reserve_contact_port()
 {
     node -e '
-const socket = require("dgram").createSocket("udp4");
-socket.bind(0, "127.0.0.1", () => {
-  process.stdout.write(String(socket.address().port));
-  socket.close();
-});'
+const dgram = require("dgram");
+const net = require("net");
+const reserve = () => {
+  const tcp = net.createServer();
+  tcp.once("error", reserve);
+  tcp.listen(0, "127.0.0.1", () => {
+    const port = tcp.address().port;
+    const udp = dgram.createSocket("udp4");
+    udp.once("error", () => tcp.close(reserve));
+    udp.bind(port, "127.0.0.1", () => {
+      process.stdout.write(String(port));
+      udp.close();
+      tcp.close();
+    });
+  });
+};
+reserve();'
 }
 
 run_wine_unit_test()

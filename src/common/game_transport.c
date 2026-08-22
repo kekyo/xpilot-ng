@@ -75,6 +75,15 @@ unsigned Game_transport_protocol_version(game_transport_t transport,
     }
 }
 
+unsigned Game_transport_session_protocol_version(game_transport_t transport,
+                                                 bool polygon_map)
+{
+    if (transport != GAME_TRANSPORT_TCP)
+        return 0;
+    return polygon_map ? GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION
+                       : GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION;
+}
+
 bool Game_transport_from_protocol_version(unsigned version,
                                           game_transport_t *transport)
 {
@@ -83,6 +92,8 @@ bool Game_transport_from_protocol_version(unsigned version,
 
     if (version == GAME_PROTOCOL_TCP_POLYGON_VERSION
         || version == GAME_PROTOCOL_TCP_LEGACY_VERSION
+        || version == GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION
+        || version == GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION
         || version == GAME_PROTOCOL_TCP_POLYGON_PRE_RECONNECT_VERSION
         || version == GAME_PROTOCOL_TCP_LEGACY_PRE_RECONNECT_VERSION) {
         *transport = GAME_TRANSPORT_TCP;
@@ -100,6 +111,12 @@ bool Game_transport_protocol_supports_reconnect(unsigned version)
 {
     return version == GAME_PROTOCOL_TCP_POLYGON_VERSION
         || version == GAME_PROTOCOL_TCP_LEGACY_VERSION;
+}
+
+bool Game_transport_protocol_uses_session(unsigned version)
+{
+    return version == GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION
+        || version == GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION;
 }
 
 bool Game_transport_format_meta_version(char *output, size_t output_size,

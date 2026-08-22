@@ -26,6 +26,8 @@
  */
 
 #include "xpclient.h"
+#include "session_connection.h"
+#include "tcp_transport.h"
 #include "transport_display.h"
 
 
@@ -913,6 +915,152 @@ int Connect_to_server(int auto_connect, int list_servers,
     return result;
 }
 
+typedef struct {
+    bool failed;
+    bool list_servers;
+    const Connect_param_t *connection;
+} direct_control_output_t;
+
+static bool Print_direct_control_reply(
+    const session_control_reply_t *reply, void *context)
+{
+    direct_control_output_t *output = context;
+    char payload[MSG_LEN];
+
+    if (reply->status != SUCCESS) {
+	warn("Fixed-endpoint control request failed: %s", reply->payload);
+	output->failed = true;
+	return true;
+    }
+    strlcpy(payload, reply->payload, sizeof(payload));
+    Clean_string(payload);
+    if (reply->command == REPORT_STATUS_pack) {
+	if (output->list_servers && payload[0] != '\0') {
+	    printf("SERVER HOST......: %s\n",
+		   output->connection->server_name);
+	    printf("TRANSPORTS.......: %s -> %s "
+		   "(Contact/Lobby -> Gameplay)\n",
+		   Transport_display_name(
+		       output->connection->contact_transport),
+		   Transport_display_name(
+		       output->connection->game_transport));
+	    output->list_servers = false;
+	}
+	if (payload[0] != '\0')
+	    printf("%s", payload);
+    } else if (reply->command == OPTION_LIST_pack
+	       && payload[0] != '\0')
+	printf("%s\n", payload);
+    else if (!reply->more && payload[0] != '\0')
+	printf("%s\n", payload);
+    return true;
+}
+
+static Contact_servers_result_t Contact_session_target(
+    const Connect_target_t *target, int auto_connect, int list_servers,
+    int auto_shutdown, const char *shutdown_reason,
+    Connect_param_t *connection)
+{
+    Contact_servers_result_t result = { false, false };
+    Connect_param_t attempt = *connection;
+    record_transport_t *transport;
+    int source_start = clientPortStart;
+    int source_end = clientPortEnd;
+    char error_text[MSG_LEN];
+
+    if (!clientPortStart || !clientPortEnd
+	|| clientPortStart > clientPortEnd) {
+	source_start = 0;
+	source_end = 0;
+    }
+    printf("Contacting server %s.\n", target->address);
+    transport = Client_tcp_transport_connect(
+	target->address, target->contact_port, source_start, source_end,
+	CONTACT_CONNECT_TIMEOUT);
+    if (transport == NULL)
+	return result;
+    result.contacted = true;
+
+    attempt.contact_port = target->contact_port;
+    attempt.server_port = target->contact_port;
+    attempt.login_port = target->contact_port;
+    attempt.contact_transport = GAME_TRANSPORT_TCP;
+    attempt.game_transport = GAME_TRANSPORT_TCP;
+    strlcpy(attempt.server_addr, target->address,
+	    sizeof(attempt.server_addr));
+    strlcpy(attempt.server_name, target->address,
+	    sizeof(attempt.server_name));
+
+    if (list_servers || auto_shutdown) {
+	session_control_request_t request;
+	direct_control_output_t output;
+	int control_status;
+
+	memset(&request, 0, sizeof(request));
+	request.polygon_version =
+	    GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION;
+	request.legacy_version = GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION;
+	strlcpy(request.user, attempt.user_name, sizeof(request.user));
+	request.command = list_servers ? REPORT_STATUS_pack : SHUTDOWN_pack;
+	if (auto_shutdown && shutdown_reason != NULL)
+	    strlcpy(request.argument, shutdown_reason,
+		    sizeof(request.argument));
+	output.failed = false;
+	output.list_servers = list_servers != 0;
+	output.connection = &attempt;
+	control_status = Session_connection_run_control(
+	    transport, &request, CONTACT_CONNECT_TIMEOUT,
+	    Print_direct_control_reply, &output,
+	    error_text, sizeof(error_text));
+	if (control_status == -1)
+	    warn("Fixed-endpoint control failed: %s", error_text);
+	return result;
+    }
+
+    if (auto_connect) {
+	session_game_request_t request;
+	record_session_t *session = NULL;
+	char confirmation[CLIENT_RECV_SIZE];
+	size_t confirmation_length = 0;
+	unsigned selected_version = 0;
+
+	memset(&request, 0, sizeof(request));
+	request.polygon_version =
+	    GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION;
+	request.legacy_version = GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION;
+	strlcpy(request.user, attempt.user_name, sizeof(request.user));
+	strlcpy(request.nick, attempt.nick_name, sizeof(request.nick));
+	strlcpy(request.display, attempt.disp_name, sizeof(request.display));
+	strlcpy(request.host, attempt.host_name, sizeof(request.host));
+	request.team = attempt.team;
+	if (Session_connection_admit_game(
+		transport, &request, CONTACT_CONNECT_TIMEOUT,
+		&session, confirmation, sizeof(confirmation),
+		&confirmation_length, &selected_version,
+		error_text, sizeof(error_text)) == -1) {
+	    warn("Fixed-endpoint gameplay admission failed: %s", error_text);
+	    return result;
+	}
+	if (Session_connection_stage_game(
+		session, confirmation, confirmation_length) == -1) {
+	    warn("Cannot stage admitted gameplay session");
+	    return result;
+	}
+	attempt.server_version = selected_version;
+	printf("*** Connected to %s "
+	       "[Contact/Lobby: TCP, Gameplay: TCP]\n",
+	       attempt.server_name);
+	printf("*** Login allowed.\n");
+	*connection = attempt;
+	result.connected = true;
+	return result;
+    }
+
+    Record_transport_destroy(transport);
+    warn("Interactive commands are unavailable on fixed TCP sessions");
+    return result;
+}
+
 
 /* Keep all attempt-specific state local so a failed endpoint cannot alter the
  * defaults or the established connection selected by the caller. */
@@ -933,6 +1081,12 @@ static Contact_servers_result_t Contact_target(
     int retries = 0;
     int ret;
     sockbuf_t sbuf;
+
+    if (target->contact_transport == GAME_TRANSPORT_TCP
+	&& target->game_transport == GAME_TRANSPORT_TCP)
+	return Contact_session_target(
+	    target, auto_connect, list_servers, auto_shutdown,
+	    shutdown_reason, conpar);
 
     attempt.contact_port = target->contact_port;
     attempt.contact_transport = target->contact_transport;

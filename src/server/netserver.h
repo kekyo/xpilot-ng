@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -31,12 +31,35 @@
 #include "player.h"
 #endif
 
+#include "record_session.h"
+
 int Setup_net_server(void);
 void Conn_change_nick(connection_t *connp, const char *nick);
 void Destroy_connection(connection_t *connp, const char *reason);
 int Check_connection(char *real, char *nick, char *dpy, char *addr);
 int Setup_connection(char *real, char *nick, char *dpy, int team,
 		     char *addr, char *host, unsigned version);
+/**
+ * Promote an admitted fixed-endpoint session to a gameplay connection.
+ *
+ * @param session Session whose ownership is transferred.
+ * @param real Operating-system user identity.
+ * @param nick Requested in-game nickname.
+ * @param dpy Client display identifier.
+ * @param team Requested team, or TEAM_NOT_SET.
+ * @param addr Observed peer address.
+ * @param host Client-reported host identifier.
+ * @param version Negotiated fixed-endpoint protocol version.
+ * @param peer_port Observed peer source port.
+ * @return Zero on success, otherwise -1.
+ */
+int Setup_session_connection(record_session_t *session, char *real,
+			     char *nick, char *dpy, int team,
+			     char *addr, char *host, unsigned version,
+			     int peer_port);
+
+/** Return the maximum number of simultaneous gameplay connections. */
+int Net_server_connection_limit(void);
 int Input(void);
 int Send_reply(connection_t *connp, int replyto, int result);
 int Send_self(connection_t *connp, player_t *pl,

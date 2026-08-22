@@ -1,0 +1,36 @@
+/*
+ * XPilot NG, a multiplayer space war game.
+ *
+ * Copyright (C) 2026 XPilot NG contributors.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ */
+
+#ifndef CLIENT_TCP_TRANSPORT_H
+#define CLIENT_TCP_TRANSPORT_H
+
+#include "record_transport.h"
+
+/**
+ * Connect a native TCP socket and adapt it to logical records.
+ *
+ * @param server Numeric address or hostname.
+ * @param port Destination port in the range 1 through 65535.
+ * @param source_port_start First requested source port, or zero to let the
+ * operating system select a source port.
+ * @param source_port_end Last requested source port, or zero together with
+ * source_port_start.
+ * @param timeout_seconds Positive connection timeout.
+ * @return Owned transport, or NULL on failure.
+ *
+ * @remarks The returned transport owns the connected socket and closes it
+ * when Record_transport_destroy() is called.
+ */
+record_transport_t *Client_tcp_transport_connect(
+    const char *server, int port, int source_port_start,
+    int source_port_end, int timeout_seconds);
+
+#endif /* CLIENT_TCP_TRANSPORT_H */

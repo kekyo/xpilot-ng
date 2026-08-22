@@ -1,11 +1,13 @@
 /*
- * TCP proxy fixture for the gameplay reconnection E2E scenario.
+ * UDP contact and TCP gameplay proxy for the reconnection E2E scenario.
  *
- * The contact reply is rewritten to point at a gameplay proxy.  Once the
- * caller creates the trigger file, the first gameplay stream is severed and
- * new gameplay connections are held off briefly before forwarding resumes.
+ * The datagram contact reply is rewritten to point at a TCP gameplay proxy.
+ * Once the caller creates the trigger file, the first gameplay stream is
+ * severed and new gameplay connections are held off briefly before
+ * forwarding resumes.
  */
 
+import dgram from "node:dgram";
 import fs from "node:fs";
 import net from "node:net";
 
@@ -31,9 +33,12 @@ if (
 const sockets = new Set();
 let gameplayServer;
 let actualGameplayPort;
+let proxyGameplayPort;
 let gameplayConnections = 0;
 let reconnectAllowedAt = 0;
 let triggerTimer;
+let contactPeer;
+let pendingContactReply;
 
 const recordState = (state) => {
   fs.appendFileSync(stateFile, `${state}\n`);
@@ -80,23 +85,32 @@ const relayGameplay = (client) => {
   }, 25);
 };
 
-const processContactReply = (replyRecord, contactClient) => {
-  const payloadLength = replyRecord.readUInt16BE(0);
-  if (payloadLength < 6 || replyRecord.length !== payloadLength + 2) {
-    contactClient.destroy(new Error("invalid framed contact reply"));
-    return;
+const sendContactReply = (reply) => {
+  if (contactPeer === undefined) return;
+  contactSocket.send(reply, contactPeer.port, contactPeer.address);
+};
+
+const processContactReply = (replyRecord) => {
+  if (replyRecord.length < 6) {
+    throw new Error("invalid datagram contact reply");
   }
-  const replyType = replyRecord[6];
-  const status = replyRecord[7];
+  const replyType = replyRecord[4];
+  const status = replyRecord[5];
   if (replyType !== 0 || status !== 0) {
-    contactClient.end(replyRecord);
+    sendContactReply(replyRecord);
     return;
   }
-  if (payloadLength < 8) {
-    contactClient.destroy(new Error("incomplete enter-game reply"));
+  if (replyRecord.length < 8) {
+    throw new Error("incomplete enter-game reply");
+  }
+  actualGameplayPort = replyRecord.readUInt16BE(6);
+  if (proxyGameplayPort !== undefined) {
+    replyRecord.writeUInt16BE(proxyGameplayPort, 6);
+    sendContactReply(replyRecord);
     return;
   }
-  actualGameplayPort = replyRecord.readUInt16BE(8);
+  pendingContactReply = replyRecord;
+  if (gameplayServer !== undefined) return;
   gameplayServer = net.createServer(relayGameplay);
   gameplayServer.on("error", (error) => {
     process.stderr.write(`${error.stack}\n`);
@@ -105,48 +119,36 @@ const processContactReply = (replyRecord, contactClient) => {
   gameplayServer.listen(0, proxyHost, () => {
     const address = gameplayServer.address();
     if (typeof address === "string" || address === null) {
-      contactClient.destroy(new Error("gameplay proxy has no TCP address"));
-      return;
+      throw new Error("gameplay proxy has no TCP address");
     }
-    replyRecord.writeUInt16BE(address.port, 8);
-    contactClient.end(replyRecord);
+    proxyGameplayPort = address.port;
+    pendingContactReply.writeUInt16BE(proxyGameplayPort, 6);
+    sendContactReply(pendingContactReply);
+    pendingContactReply = undefined;
     recordState("ready");
   });
 };
 
-const contactServer = net.createServer((contactClient) => {
-  trackSocket(contactClient);
-  const upstream = trackSocket(
-    net.createConnection({
-      host: actualHost,
-      port: contactPort,
-      localAddress: proxyHost,
-    }),
-  );
-  contactClient.pipe(upstream);
-
-  let response = Buffer.alloc(0);
-  upstream.on("data", (chunk) => {
-    response = Buffer.concat([response, chunk]);
-    if (response.length < 2) return;
-    const recordLength = response.readUInt16BE(0) + 2;
-    if (response.length < recordLength) return;
-    upstream.destroy();
-    processContactReply(Buffer.from(response.subarray(0, recordLength)), contactClient);
-  });
+const contactSocket = dgram.createSocket("udp4");
+contactSocket.on("message", (message, remote) => {
+  if (remote.address === actualHost && remote.port === contactPort) {
+    processContactReply(Buffer.from(message));
+    return;
+  }
+  contactPeer = remote;
+  contactSocket.send(message, contactPort, actualHost);
 });
-
-contactServer.on("error", (error) => {
+contactSocket.on("error", (error) => {
   process.stderr.write(`${error.stack}\n`);
   process.exitCode = 1;
 });
-contactServer.listen(contactPort, proxyHost, () => recordState("contact-ready"));
+contactSocket.bind(contactPort, proxyHost, () => recordState("contact-ready"));
 
 const stop = () => {
   if (triggerTimer !== undefined) clearInterval(triggerTimer);
   for (const socket of sockets) socket.destroy();
   if (gameplayServer !== undefined) gameplayServer.close();
-  contactServer.close(() => process.exit(process.exitCode ?? 0));
+  contactSocket.close(() => process.exit(process.exitCode ?? 0));
 };
 
 process.on("SIGTERM", stop);

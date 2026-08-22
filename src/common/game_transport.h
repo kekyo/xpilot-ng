@@ -27,6 +27,10 @@
 #define GAME_PROTOCOL_TCP_POLYGON_VERSION 0x4F17
 /** Legacy-map TCP protocol version with session resumption. */
 #define GAME_PROTOCOL_TCP_LEGACY_VERSION 0x4503
+/** Fixed-endpoint TCP session protocol version for polygon maps. */
+#define GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION 0x4F18
+/** Fixed-endpoint TCP session protocol version for legacy maps. */
+#define GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION 0x4504
 
 /** TCP gameplay reconnection grace period shared by client and server. */
 #define GAME_TCP_RECONNECT_GRACE_SECONDS 30
@@ -77,6 +81,17 @@ unsigned Game_transport_protocol_version(game_transport_t transport,
                                          bool polygon_map);
 
 /**
+ * Return the fixed-endpoint session protocol version for a transport.
+ *
+ * @param transport Selected gameplay transport.
+ * @param polygon_map Whether the server uses the polygon map format.
+ * @return Session protocol version, or zero when the transport has no
+ *         fixed-endpoint session protocol.
+ */
+unsigned Game_transport_session_protocol_version(game_transport_t transport,
+                                                 bool polygon_map);
+
+/**
  * Determine the gameplay transport represented by a protocol version.
  *
  * Historical protocol versions are classified as UDP. The two framed TCP
@@ -96,6 +111,14 @@ bool Game_transport_from_protocol_version(unsigned version,
  * @return `true` only for TCP protocol versions carrying resumption tokens.
  */
 bool Game_transport_protocol_supports_reconnect(unsigned version);
+
+/**
+ * Determine whether a protocol version uses session admission and records.
+ *
+ * @param version Protocol version negotiated during session admission.
+ * @return `true` for fixed-endpoint session protocol versions.
+ */
+bool Game_transport_protocol_uses_session(unsigned version);
 
 /**
  * Append contact and gameplay transport metadata to a version string.

@@ -48,6 +48,14 @@ static int check_protocol_versions(void)
                == GAME_PROTOCOL_TCP_LEGACY_VERSION);
     TEST_CHECK(Game_transport_protocol_version((game_transport_t)-1, true)
                == 0);
+    TEST_CHECK(Game_transport_session_protocol_version(
+                   GAME_TRANSPORT_TCP, true)
+               == GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION);
+    TEST_CHECK(Game_transport_session_protocol_version(
+                   GAME_TRANSPORT_TCP, false)
+               == GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION);
+    TEST_CHECK(Game_transport_session_protocol_version(
+                   GAME_TRANSPORT_UDP, true) == 0);
 
     TEST_CHECK(Game_transport_from_protocol_version(
                    GAME_PROTOCOL_UDP_POLYGON_VERSION, &transport));
@@ -57,6 +65,12 @@ static int check_protocol_versions(void)
     TEST_CHECK(transport == GAME_TRANSPORT_UDP);
     TEST_CHECK(Game_transport_from_protocol_version(
                    GAME_PROTOCOL_TCP_POLYGON_VERSION, &transport));
+    TEST_CHECK(transport == GAME_TRANSPORT_TCP);
+    TEST_CHECK(Game_transport_from_protocol_version(
+                   GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION, &transport));
+    TEST_CHECK(transport == GAME_TRANSPORT_TCP);
+    TEST_CHECK(Game_transport_from_protocol_version(
+                   GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION, &transport));
     TEST_CHECK(transport == GAME_TRANSPORT_TCP);
     TEST_CHECK(Game_transport_from_protocol_version(
                    GAME_PROTOCOL_TCP_LEGACY_VERSION, &transport));
@@ -77,6 +91,12 @@ static int check_protocol_versions(void)
                    GAME_PROTOCOL_TCP_POLYGON_PRE_RECONNECT_VERSION));
     TEST_CHECK(!Game_transport_protocol_supports_reconnect(
                    GAME_PROTOCOL_UDP_POLYGON_VERSION));
+    TEST_CHECK(Game_transport_protocol_uses_session(
+                   GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION));
+    TEST_CHECK(Game_transport_protocol_uses_session(
+                   GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION));
+    TEST_CHECK(!Game_transport_protocol_uses_session(
+                   GAME_PROTOCOL_TCP_POLYGON_VERSION));
     TEST_CHECK(!Game_transport_from_protocol_version(0, &transport));
     TEST_CHECK(!Game_transport_from_protocol_version(
                    GAME_PROTOCOL_UDP_POLYGON_VERSION, NULL));
