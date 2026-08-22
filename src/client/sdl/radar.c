@@ -505,30 +505,63 @@ static int Radar_create_texture(Renderer *renderer, SDL_Surface *surface,
     return 0;
 }
 
+static int Radar_update_texture(Renderer *renderer,
+				RendererTexture *texture,
+				SDL_Surface *surface)
+{
+    RendererRect region;
+
+    if (renderer == NULL || texture == NULL || surface == NULL
+	|| surface->pixels == NULL || surface->pitch <= 0) {
+	return -1;
+    }
+    region = (RendererRect){0, 0, surface->w, surface->h};
+    if (Renderer_texture_update(
+	    renderer, texture, region, surface->pixels,
+	    (size_t)surface->pitch) != RENDERER_STATUS_OK) {
+	warn("Could not update radar texture");
+	return -1;
+    }
+    return 0;
+}
+
 static int Radar_replace(Renderer *renderer, const SDL_Rect *bounds)
 {
     SDL_Surface *candidate_surface;
     RendererTexture *candidate_texture = NULL;
+    int reuse_texture;
 
     candidate_surface = Radar_create_surface(bounds);
     if (candidate_surface == NULL)
 	return -1;
-    if (Radar_create_texture(
-	    renderer, candidate_surface, &candidate_texture) != 0) {
-	SDL_DestroySurface(candidate_surface);
-	return -1;
-    }
-
-    if (radar_texture != NULL
-	&& Renderer_texture_destroy(radar_renderer, radar_texture)
-	   != RENDERER_STATUS_OK) {
-	warn("Could not replace radar texture");
-	if (Renderer_texture_destroy(renderer, candidate_texture)
-	    != RENDERER_STATUS_OK) {
-	    warn("Could not release replacement radar texture");
+    reuse_texture = radar_texture != NULL && radar_surface != NULL
+	&& radar_surface->w == candidate_surface->w
+	&& radar_surface->h == candidate_surface->h;
+    if (reuse_texture) {
+	if (Radar_update_texture(
+		renderer, radar_texture, candidate_surface) != 0) {
+	    SDL_DestroySurface(candidate_surface);
+	    return -1;
 	}
-	SDL_DestroySurface(candidate_surface);
-	return -1;
+	candidate_texture = radar_texture;
+    } else {
+	if (Radar_create_texture(
+		renderer, candidate_surface, &candidate_texture) != 0) {
+	    SDL_DestroySurface(candidate_surface);
+	    return -1;
+	}
+
+	if (radar_texture != NULL
+	    && Renderer_texture_destroy(radar_renderer, radar_texture)
+	       != RENDERER_STATUS_OK) {
+	    warn("Could not replace radar texture");
+	    if (Renderer_texture_destroy(renderer, candidate_texture)
+		!= RENDERER_STATUS_OK) {
+		warn("Could not release replacement radar texture");
+	    }
+	    SDL_DestroySurface(candidate_surface);
+	    return -1;
+	}
     }
 
     SDL_DestroySurface(radar_surface);

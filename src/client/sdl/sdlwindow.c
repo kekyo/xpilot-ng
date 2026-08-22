@@ -98,6 +98,25 @@ static int create_texture(Renderer *renderer, SDL_Surface *surface,
     return 0;
 }
 
+static int update_texture(Renderer *renderer, RendererTexture *texture,
+			  SDL_Surface *surface)
+{
+    RendererRect region;
+
+    if (renderer == NULL || texture == NULL || surface == NULL
+	|| surface->pixels == NULL || surface->pitch <= 0) {
+	return -1;
+    }
+    region = (RendererRect){0, 0, surface->w, surface->h};
+    if (Renderer_texture_update(
+	    renderer, texture, region, surface->pixels,
+	    (size_t)surface->pitch) != RENDERER_STATUS_OK) {
+	warn("failed to update off-screen window texture");
+	return -1;
+    }
+    return 0;
+}
+
 static int replace_texture(sdl_window_t *win, Renderer *renderer,
 			   SDL_Surface *surface,
 			   RendererTexture **replacement)
@@ -156,6 +175,13 @@ int sdl_window_prepare(sdl_window_t *win, Renderer *renderer)
     if (win->texture != NULL && !win->dirty)
 	return 0;
 
+    if (win->texture != NULL) {
+	if (update_texture(renderer, win->texture, win->surface) != 0)
+	    return -1;
+	win->dirty = 0;
+	return 0;
+    }
+
     if (replace_texture(win, renderer, win->surface, &replacement) != 0)
 	return -1;
 
@@ -191,10 +217,20 @@ int sdl_window_resize(sdl_window_t *win, int width, int height)
 	return -1;
     }
 
-    if (win->texture != NULL
-	&& replace_texture(win, win->renderer, surface, &replacement) != 0) {
-	SDL_DestroySurface(surface);
-	return -1;
+    if (win->texture != NULL) {
+	if (win->surface != NULL
+	    && win->surface->w == surface->w
+	    && win->surface->h == surface->h) {
+	    if (update_texture(win->renderer, win->texture, surface) != 0) {
+		SDL_DestroySurface(surface);
+		return -1;
+	    }
+	    replacement = win->texture;
+	} else if (replace_texture(
+		       win, win->renderer, surface, &replacement) != 0) {
+	    SDL_DestroySurface(surface);
+	    return -1;
+	}
     }
 
     if (win->surface != NULL)

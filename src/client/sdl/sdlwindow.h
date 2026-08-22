@@ -31,7 +31,7 @@ typedef struct sdl_window_t {
     SDL_Surface *surface;
     /** Renderer that owns @ref texture after the first successful prepare. */
     Renderer *renderer;
-    /** Current immutable renderer texture, or NULL before preparation. */
+    /** Current renderer texture, or NULL before preparation. */
     RendererTexture *texture;
     /** Left position in top-left-origin HUD coordinates. */
     int x;
@@ -58,7 +58,7 @@ typedef struct sdl_window_t {
 int sdl_window_init(sdl_window_t *win, int x, int y, int w, int h);
 
 /**
- * Create or replace the texture for dirty surface contents.
+ * Create, update, or replace the texture for dirty surface contents.
  *
  * @param win Initialized off-screen window.
  * @param renderer Renderer that owns the resulting texture.
@@ -86,7 +86,8 @@ void sdl_window_move(sdl_window_t *win, int x, int y);
  * @return Zero on success, or -1 with the old surface and texture preserved.
  *
  * @remarks If the window has a texture, this function must be called outside
- * an active renderer frame.
+ * an active renderer frame. The texture is reused when its power-of-two
+ * storage dimensions remain unchanged.
  */
 int sdl_window_resize(sdl_window_t *win, int w, int h);
 
