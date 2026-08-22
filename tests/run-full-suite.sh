@@ -125,4 +125,9 @@ run_configuration vendored-sdl-only \
     --enable-sdl-client --disable-x11-client --disable-replay \
     --disable-xp-mapedit
 
-echo "All system and vendored out-of-tree SDL3 configurations passed"
+echo "===== build and test: MinGW Windows targets ====="
+"$build_source_dir/build.sh" \
+    --target windows --arch all --test \
+    --build-root "$suite_dir/windows" --jobs "$test_jobs"
+
+echo "All native and MinGW out-of-tree configurations passed"
