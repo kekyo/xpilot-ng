@@ -22,6 +22,7 @@
 #define XPCLIENT_SDL_H
 
 #include "xpclient.h"
+#include "gameloop.h"
 #ifdef _WINDOWS
 # include <windows.h>
 #endif
@@ -43,7 +44,6 @@
 #define AMASK 0xff000000
 #endif
 
-extern void Game_loop(void);
 extern void Options_cleanup(void);
 extern void Store_sdlinit_options(void);
 extern void Store_sdlgui_options(void);
