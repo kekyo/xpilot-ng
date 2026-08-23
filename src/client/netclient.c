@@ -957,9 +957,80 @@ session_failure:
     return -1;
 }
 
+#define CLEANUP_FLUSH_ATTEMPTS 10
+#define CLEANUP_FLUSH_WAIT_USEC 100000
+
+static int Wait_for_cleanup_output(socket_handle_t handle)
+{
+    fd_set write_fds;
+    struct timeval timeout;
+    int status;
+
+    if (handle == SOCK_FD_INVALID)
+	return -1;
+    FD_ZERO(&write_fds);
+    FD_SET(handle, &write_fds);
+    timeout.tv_sec = 0;
+    timeout.tv_usec = CLEANUP_FLUSH_WAIT_USEC;
+#ifdef _WINDOWS
+    status = select(0, NULL, &write_fds, NULL, &timeout);
+#else
+    status = select(handle + 1, NULL, &write_fds, NULL, &timeout);
+#endif
+    if (status <= 0)
+	return status;
+    return FD_ISSET(handle, &write_fds) ? 1 : -1;
+}
+
+static void Flush_session_quit(void)
+{
+    record_flush_result_t flush_result;
+    socket_handle_t handle;
+    int attempt;
+
+    Sockbuf_clear(&wbuf);
+    if (Packet_printf(&wbuf, "%c", PKT_QUIT) <= 0)
+	return;
+    handle = Record_session_native_handle(gameplay_session);
+    for (attempt = 0; attempt < CLEANUP_FLUSH_ATTEMPTS; attempt++) {
+	if (Net_send_output(RECORD_DELIVERY_REQUIRED) < 0)
+	    return;
+	flush_result = Record_session_flush(gameplay_session);
+	if (flush_result == RECORD_FLUSH_ERROR
+	    || flush_result == RECORD_FLUSH_CLOSED)
+	    return;
+	if (wbuf.len == 0 && flush_result == RECORD_FLUSH_IDLE)
+	    return;
+	if (Wait_for_cleanup_output(handle) < 0)
+	    return;
+    }
+}
+
+static void Flush_framed_quit(void)
+{
+    int attempt;
+
+    /* Preserve the quit record while any partially written gameplay record
+     * ahead of it is drained. */
+    wbuf.state |= SOCKBUF_ORDERED;
+    Sockbuf_clear(&wbuf);
+    if (Packet_printf(&wbuf, "%c", PKT_QUIT) <= 0)
+	return;
+    for (attempt = 0; attempt < CLEANUP_FLUSH_ATTEMPTS; attempt++) {
+	if (Sockbuf_flush(&wbuf) < 0)
+	    return;
+	if (wbuf.len == 0
+	    && wbuf.frame_output_offset >= wbuf.frame_output_len)
+	    return;
+	if (Wait_for_cleanup_output(wbuf.sock.fd) < 0)
+	    return;
+    }
+}
+
 /*
- * Cleanup all network buffers and close the gameplay socket.  TCP sends one
- * framed quit packet; UDP retains the repeated best-effort quit packets.
+ * Cleanup all network buffers and close the gameplay socket.  TCP and session
+ * transports drain one required quit record; UDP retains the repeated
+ * best-effort quit packets.
  */
 void Net_cleanup(void)
 {
@@ -971,18 +1042,13 @@ void Net_cleanup(void)
 
     gameplay_started = false;
     reconnecting = false;
-    if (gameplay_connected && session_transport) {
-	Sockbuf_clear(&wbuf);
-	if (Packet_printf(&wbuf, "%c", PKT_QUIT) > 0)
-	    Net_send_output(RECORD_DELIVERY_REQUIRED);
-	Record_session_flush(gameplay_session);
-    } else if (gameplay_connected && sock.fd != SOCK_FD_INVALID
+    if (gameplay_connected && session_transport)
+	Flush_session_quit();
+    else if (gameplay_connected && sock.fd != SOCK_FD_INVALID
 	       && sock.fd > 2) {
-	if (tcp_transport) {
-	    Sockbuf_clear(&wbuf);
-	    if (Packet_printf(&wbuf, "%c", PKT_QUIT) > 0)
-		Sockbuf_flush(&wbuf);
-	} else {
+	if (tcp_transport)
+	    Flush_framed_quit();
+	else {
 	    ch = PKT_QUIT;
 	    if (sock_write(&sock, &ch, 1) != 1) {
 		sock_get_error(&sock);
