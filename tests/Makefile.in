@@ -101,6 +101,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-session-flow$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-randommt$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-ppm-image$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-gameloop$(EXEEXT) \
@@ -157,6 +158,7 @@ target_triplet = @target@
 @COND_WINDOWS_TRUE@	test-recording-input$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-session-flow$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-randommt$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-ppm-image$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-game-input$(EXEEXT)
 @COND_WINDOWS_FALSE@TESTS = test-framed-stream$(EXEEXT) \
@@ -171,6 +173,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-session-flow$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-randommt$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-ppm-image$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-gameloop$(EXEEXT) \
@@ -337,6 +340,10 @@ am_test_polygon_geometry_OBJECTS = test_polygon_geometry.$(OBJEXT) \
 test_polygon_geometry_OBJECTS = $(am_test_polygon_geometry_OBJECTS)
 test_polygon_geometry_DEPENDENCIES =  \
 	$(top_builddir)/src/client/sdl/libxp_libtess2.a
+am_test_ppm_image_OBJECTS = test_ppm_image-test_ppm_image.$(OBJEXT) \
+	test_ppm_image-ppm_image.$(OBJEXT)
+test_ppm_image_OBJECTS = $(am_test_ppm_image_OBJECTS)
+test_ppm_image_LDADD = $(LDADD)
 am_test_radar_renderer_OBJECTS =  \
 	test_radar_renderer-test_radar_renderer.$(OBJEXT) \
 	test_radar_renderer-radar.$(OBJEXT)
@@ -644,6 +651,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po \
 	./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po \
 	./$(DEPDIR)/test_polygon_geometry.Po \
+	./$(DEPDIR)/test_ppm_image-ppm_image.Po \
+	./$(DEPDIR)/test_ppm_image-test_ppm_image.Po \
 	./$(DEPDIR)/test_radar_renderer-radar.Po \
 	./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po \
 	./$(DEPDIR)/test_randommt.Po \
@@ -744,7 +753,7 @@ SOURCES = $(test_connect_target_SOURCES) \
 	$(test_native_socket_handle_SOURCES) \
 	$(test_paint_transform_SOURCES) \
 	$(test_paintmap_vdecor_SOURCES) \
-	$(test_polygon_geometry_SOURCES) \
+	$(test_polygon_geometry_SOURCES) $(test_ppm_image_SOURCES) \
 	$(test_radar_renderer_SOURCES) $(test_randommt_SOURCES) \
 	$(test_recording_input_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
@@ -787,7 +796,7 @@ DIST_SOURCES = $(test_connect_target_SOURCES) \
 	$(test_native_socket_handle_SOURCES) \
 	$(test_paint_transform_SOURCES) \
 	$(test_paintmap_vdecor_SOURCES) \
-	$(test_polygon_geometry_SOURCES) \
+	$(test_polygon_geometry_SOURCES) $(test_ppm_image_SOURCES) \
 	$(test_radar_renderer_SOURCES) $(test_randommt_SOURCES) \
 	$(test_recording_input_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
@@ -1208,6 +1217,10 @@ test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
 test_randommt_SOURCES = test_randommt.c
 test_randommt_LDADD = $(top_builddir)/src/common/libxpcommon.a
+test_ppm_image_SOURCES = test_ppm_image.c \
+	$(top_srcdir)/src/replay/ppm_image.c
+
+test_ppm_image_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src/replay
 test_session_token_SOURCES = test_session_token.c
 test_session_token_LDADD = $(top_builddir)/src/common/libxpcommon.a
 test_connect_target_SOURCES = test_connect_target.c \
@@ -1796,6 +1809,10 @@ test-polygon-geometry$(EXEEXT): $(test_polygon_geometry_OBJECTS) $(test_polygon_
 	@rm -f test-polygon-geometry$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_polygon_geometry_OBJECTS) $(test_polygon_geometry_LDADD) $(LIBS)
 
+test-ppm-image$(EXEEXT): $(test_ppm_image_OBJECTS) $(test_ppm_image_DEPENDENCIES) $(EXTRA_test_ppm_image_DEPENDENCIES)
+	@rm -f test-ppm-image$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_ppm_image_OBJECTS) $(test_ppm_image_LDADD) $(LIBS)
+
 test-radar-renderer$(EXEEXT): $(test_radar_renderer_OBJECTS) $(test_radar_renderer_DEPENDENCIES) $(EXTRA_test_radar_renderer_DEPENDENCIES)
 	@rm -f test-radar-renderer$(EXEEXT)
 	$(AM_V_CCLD)$(test_radar_renderer_LINK) $(test_radar_renderer_OBJECTS) $(test_radar_renderer_LDADD) $(LIBS)
@@ -2019,6 +2036,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_polygon_geometry.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_ppm_image-ppm_image.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_ppm_image-test_ppm_image.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_radar_renderer-radar.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_randommt.Po@am__quote@ # am--include-marker
@@ -2588,6 +2607,34 @@ polygon_geometry.obj: $(top_srcdir)/src/client/sdl/polygon_geometry.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/polygon_geometry.c' object='polygon_geometry.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o polygon_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/polygon_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/polygon_geometry.c'; fi`
+
+test_ppm_image-test_ppm_image.o: test_ppm_image.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_ppm_image_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_ppm_image-test_ppm_image.o -MD -MP -MF $(DEPDIR)/test_ppm_image-test_ppm_image.Tpo -c -o test_ppm_image-test_ppm_image.o `test -f 'test_ppm_image.c' || echo '$(srcdir)/'`test_ppm_image.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_ppm_image-test_ppm_image.Tpo $(DEPDIR)/test_ppm_image-test_ppm_image.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_ppm_image.c' object='test_ppm_image-test_ppm_image.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_ppm_image_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_ppm_image-test_ppm_image.o `test -f 'test_ppm_image.c' || echo '$(srcdir)/'`test_ppm_image.c
+
+test_ppm_image-test_ppm_image.obj: test_ppm_image.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_ppm_image_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_ppm_image-test_ppm_image.obj -MD -MP -MF $(DEPDIR)/test_ppm_image-test_ppm_image.Tpo -c -o test_ppm_image-test_ppm_image.obj `if test -f 'test_ppm_image.c'; then $(CYGPATH_W) 'test_ppm_image.c'; else $(CYGPATH_W) '$(srcdir)/test_ppm_image.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_ppm_image-test_ppm_image.Tpo $(DEPDIR)/test_ppm_image-test_ppm_image.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_ppm_image.c' object='test_ppm_image-test_ppm_image.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_ppm_image_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_ppm_image-test_ppm_image.obj `if test -f 'test_ppm_image.c'; then $(CYGPATH_W) 'test_ppm_image.c'; else $(CYGPATH_W) '$(srcdir)/test_ppm_image.c'; fi`
+
+test_ppm_image-ppm_image.o: $(top_srcdir)/src/replay/ppm_image.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_ppm_image_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_ppm_image-ppm_image.o -MD -MP -MF $(DEPDIR)/test_ppm_image-ppm_image.Tpo -c -o test_ppm_image-ppm_image.o `test -f '$(top_srcdir)/src/replay/ppm_image.c' || echo '$(srcdir)/'`$(top_srcdir)/src/replay/ppm_image.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_ppm_image-ppm_image.Tpo $(DEPDIR)/test_ppm_image-ppm_image.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/replay/ppm_image.c' object='test_ppm_image-ppm_image.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_ppm_image_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_ppm_image-ppm_image.o `test -f '$(top_srcdir)/src/replay/ppm_image.c' || echo '$(srcdir)/'`$(top_srcdir)/src/replay/ppm_image.c
+
+test_ppm_image-ppm_image.obj: $(top_srcdir)/src/replay/ppm_image.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_ppm_image_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_ppm_image-ppm_image.obj -MD -MP -MF $(DEPDIR)/test_ppm_image-ppm_image.Tpo -c -o test_ppm_image-ppm_image.obj `if test -f '$(top_srcdir)/src/replay/ppm_image.c'; then $(CYGPATH_W) '$(top_srcdir)/src/replay/ppm_image.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/replay/ppm_image.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_ppm_image-ppm_image.Tpo $(DEPDIR)/test_ppm_image-ppm_image.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/replay/ppm_image.c' object='test_ppm_image-ppm_image.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_ppm_image_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_ppm_image-ppm_image.obj `if test -f '$(top_srcdir)/src/replay/ppm_image.c'; then $(CYGPATH_W) '$(top_srcdir)/src/replay/ppm_image.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/replay/ppm_image.c'; fi`
 
 test_radar_renderer-test_radar_renderer.o: test_radar_renderer.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_radar_renderer_CPPFLAGS) $(CPPFLAGS) $(test_radar_renderer_CFLAGS) $(CFLAGS) -MT test_radar_renderer-test_radar_renderer.o -MD -MP -MF $(DEPDIR)/test_radar_renderer-test_radar_renderer.Tpo -c -o test_radar_renderer-test_radar_renderer.o `test -f 'test_radar_renderer.c' || echo '$(srcdir)/'`test_radar_renderer.c
@@ -3706,6 +3753,13 @@ test-randommt.log: test-randommt$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-ppm-image.log: test-ppm-image$(EXEEXT)
+	@p='test-ppm-image$(EXEEXT)'; \
+	b='test-ppm-image'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdl-versions.log: test-sdl-versions$(EXEEXT)
 	@p='test-sdl-versions$(EXEEXT)'; \
 	b='test-sdl-versions'; \
@@ -4141,6 +4195,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po
 	-rm -f ./$(DEPDIR)/test_polygon_geometry.Po
+	-rm -f ./$(DEPDIR)/test_ppm_image-ppm_image.Po
+	-rm -f ./$(DEPDIR)/test_ppm_image-test_ppm_image.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-radar.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
 	-rm -f ./$(DEPDIR)/test_randommt.Po
@@ -4316,6 +4372,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po
 	-rm -f ./$(DEPDIR)/test_polygon_geometry.Po
+	-rm -f ./$(DEPDIR)/test_ppm_image-ppm_image.Po
+	-rm -f ./$(DEPDIR)/test_ppm_image-test_ppm_image.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-radar.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
 	-rm -f ./$(DEPDIR)/test_randommt.Po

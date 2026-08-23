@@ -20,20 +20,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-/*
- * The scaling and gamma correction subroutines are adaptations from pbmplus:
- *
- * Copyright (C) 1989, 1991 by Jef Poskanzer.
- *
- * Permission to use, copy, modify, and distribute this software and its
- * documentation for any purpose and without fee is hereby granted, provided
- * that the above copyright notice appear in all copies and that both that
- * copyright notice and this permission notice appear in supporting
- * documentation.  This software is provided "as is" without express or
- * implied warranty.
- */
-
 #include "xp-replay.h"
+#include "ppm_image.h"
 
 #include "items/itemRocketPack.xbm"
 #include "items/itemCloakingDevice.xbm"
@@ -2188,208 +2176,6 @@ static void redrawError(struct errorwin *ewin)
     }
 }
 
-static void BuildGamma(unsigned char tbl[256], double gamma_val)
-{
-    int			i, v;
-    double		one_over_gamma, ind;
-    /* extern double	pow(double, double); */
-
-    one_over_gamma = 1.0 / gamma_val;
-    for (i = 0 ; i <= 255; i++) {
-	ind = (double) i / 255.0;
-	v = (int)((255.0 * pow(ind, one_over_gamma)) + 0.5);
-	tbl[i] = (v > 255) ? 255 : v;
-    }
-    if (debug) {
-	printf("gamma table for gamma correction factor %f:\n", gamma_val);
-	for (i = 0 ; i <= 255; i++) {
-	    printf("%02x  ", tbl[i]);
-	    if (!((i + 1) & 0x0F))
-		printf("\n");
-	}
-    }
-}
-
-static void GammaCorrect(unsigned char *data, int size, unsigned char tbl[256])
-{
-    while (size) {
-	*data = tbl[*data];
-	size--;
-	data++;
-    }
-}
-
-static void ScalePPM(unsigned char *rgbdata, unsigned cols, unsigned rows,
-		     double scale, double gamma_val, FILE *fp)
-{
-#define SCALE		4096
-#define HALFSCALE	2048
-
-    unsigned char	*xelrow;
-    unsigned char	*tempxelrow;
-    unsigned char	*newxelrow;
-    unsigned char	*xP;
-    unsigned char	*nxP;
-    size_t		rowsread, newrows, newcols;
-    unsigned		row, col;
-    int			needtoreadrow;
-    double		xscale, yscale;
-    long		sxscale, syscale;
-    long		fracrowtofill, fracrowleft;
-    long		*rs;
-    long		*gs;
-    long		*bs;
-    long		r, g, b;
-    long		fraccoltofill, fraccolleft;
-    int			needcol;
-    size_t		size_tempxelrow, size_newxelrow, size_rsgsbs;
-    unsigned char	gammatbl[256];
-
-    if (gamma_val > 0)
-	BuildGamma(gammatbl, gamma_val);
-
-    newcols = (size_t) (cols * scale + 0.999);
-    newrows = (size_t) (rows * scale + 0.999);
-    xscale = (double) newcols / (double) cols;
-    yscale = (double) newrows / (double) rows;
-    sxscale = (long) (xscale * SCALE);
-    syscale = (long) (yscale * SCALE);
-    size_newxelrow = 3 * newcols;
-    size_tempxelrow = 3 * cols;
-    size_rsgsbs = cols * sizeof(long);
-    newxelrow = (unsigned char *)MyMalloc(size_newxelrow, MEM_MISC);
-    tempxelrow = (unsigned char *)MyMalloc(size_tempxelrow, MEM_MISC);
-    rs = (long *)MyMalloc(size_rsgsbs, MEM_MISC);
-    gs = (long *)MyMalloc(size_rsgsbs, MEM_MISC);
-    bs = (long *)MyMalloc(size_rsgsbs, MEM_MISC);
-    fracrowtofill = SCALE;
-    fracrowleft = syscale;
-    for (col = 0; col < cols; col++)
-	rs[col] = gs[col] = bs[col] = HALFSCALE;
-
-    fprintf(fp, "P6\n");
-    fprintf(fp, "%d %d\n", newcols, newrows);
-    fprintf(fp, "%d\n", 255);
-
-    xelrow = rgbdata;
-    rowsread = 1;
-    needtoreadrow = 0;
-    for (row = 0; row < newrows; row++) {
-	while (fracrowleft < fracrowtofill) {
-	    if (needtoreadrow) {
-		if (rowsread < rows) {
-		    xelrow = &rgbdata[3 * rowsread * cols];
-		    rowsread++;
-		}
-	    }
-	    for (col = 0, xP = xelrow; col < cols; col++) {
-		rs[col] += fracrowleft * *xP++;
-		gs[col] += fracrowleft * *xP++;
-		bs[col] += fracrowleft * *xP++;
-	    }
-	    fracrowtofill -= fracrowleft;
-	    fracrowleft = syscale;
-	    needtoreadrow = 1;
-	}
-
-	/* Now fracrowleft is >= fracrowtofill, so we can produce a row. */
-	if (needtoreadrow) {
-	    if (rowsread < rows) {
-		xelrow = &rgbdata[3 * rowsread * cols];
-		rowsread++;
-		needtoreadrow = 0;
-	    }
-	}
-	for (col = 0, xP = xelrow, nxP = tempxelrow; col < cols; col++) {
-	    r = rs[col] + fracrowtofill * *xP++;
-	    g = gs[col] + fracrowtofill * *xP++;
-	    b = bs[col] + fracrowtofill * *xP++;
-	    r /= SCALE;
-	    if (r > 255) r = 255;
-	    g /= SCALE;
-	    if (g > 255) g = 255;
-	    b /= SCALE;
-	    if (b > 255) b = 255;
-	    *nxP++ = r;
-	    *nxP++ = g;
-	    *nxP++ = b;
-	    rs[col] = gs[col] = bs[col] = HALFSCALE;
-	}
-	fracrowleft -= fracrowtofill;
-	if (fracrowleft == 0) {
-	    fracrowleft = syscale;
-	    needtoreadrow = 1;
-	}
-	fracrowtofill = SCALE;
-
-	/* Now scale X from tempxelrow into newxelrow and write it out. */
-	nxP = newxelrow;
-	fraccoltofill = SCALE;
-	r = g = b = HALFSCALE;
-	needcol = 0;
-	for (col = 0, xP = tempxelrow; col < cols; col++, xP += 3) {
-	    fraccolleft = sxscale;
-	    while (fraccolleft >= fraccoltofill) {
-		if (needcol)
-		    r = g = b = HALFSCALE;
-		r += fraccoltofill * xP[0];
-		g += fraccoltofill * xP[1];
-		b += fraccoltofill * xP[2];
-		r /= SCALE;
-		if (r > 255) r = 255;
-		g /= SCALE;
-		if (g > 255) g = 255;
-		b /= SCALE;
-		if (b > 255) b = 255;
-		*nxP++ = r;
-		*nxP++ = g;
-		*nxP++ = b;
-		fraccolleft -= fraccoltofill;
-		fraccoltofill = SCALE;
-		needcol = 1;
-	    }
-	    if (fraccolleft > 0) {
-		if (needcol) {
-		    r = g = b = HALFSCALE;
-		    needcol = 0;
-		}
-		r += fraccolleft * xP[0];
-		g += fraccolleft * xP[1];
-		b += fraccolleft * xP[2];
-		fraccoltofill -= fraccolleft;
-	    }
-	}
-	if (!needcol) {
-	    if (fraccoltofill > 0) {
-		xP -= 3;
-		r += fraccoltofill * *xP++;
-		g += fraccoltofill * *xP++;
-		b += fraccoltofill * *xP++;
-	    }
-	    r /= SCALE;
-	    if (r > 255) r = 255;
-	    g /= SCALE;
-	    if (g > 255) g = 255;
-	    b /= SCALE;
-	    if (b > 255) b = 255;
-	    *nxP++ = r;
-	    *nxP++ = g;
-	    *nxP++ = b;
-	}
-	if (gamma_val > 0)
-	    GammaCorrect(newxelrow, (int)(3 * newcols), gammatbl);
-	fwrite(newxelrow, 1, 3 * newcols, fp);
-    }
-
-    fflush(fp);
-
-    MyFree(newxelrow, size_newxelrow, MEM_MISC);
-    MyFree(tempxelrow, size_tempxelrow, MEM_MISC);
-    MyFree(rs, size_rsgsbs, MEM_MISC);
-    MyFree(gs, size_rsgsbs, MEM_MISC);
-    MyFree(bs, size_rsgsbs, MEM_MISC);
-}
-
 static void SaveFramesPPM(struct xprc *rc)
 {
     struct frame	*begin = rc->save_first;
@@ -2512,8 +2298,9 @@ static void SaveFramesPPM(struct xprc *rc)
 		    save->number - begin->number + 1,
 		    end->number - begin->number + 1);
 	    OverWriteMsg(rc, buf);
-	    ScalePPM(rgbdata, rc->view_width, rc->view_height,
-		     rc->scale, rc->gamma, fp);
+	    if (Ppm_write_scaled_rgb(fp, rgbdata, rc->view_width,
+			     rc->view_height, rc->scale, rc->gamma) != 0)
+		perror("Unable to write scaled PPM frame");
 	}
 
 	if (!compress)
