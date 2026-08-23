@@ -820,6 +820,40 @@ run_gameplay_case()
     wait_until "$game_case game window teardown" 5 process_window_absent \
 	"$finished_client_pid"
     wait_until "$game_case server-side client departure" 5 client_departed
+    if test "$game_case" = websocket; then
+	game_client_name=SDL3WSRejoin
+	game_client_log="$runtime_dir/client-$game_case-rejoin.log"
+	"$client" -geometry 800x600 -join -texturedWalls no \
+	    -name "$game_client_name" \
+	    "ws://127.0.0.1:$port" >"$game_client_log" 2>&1 &
+	client_pid=$!
+	window_owner_pid=$client_pid
+	wait_until "$game_case rejoin SDL game window" 20 find_game_window
+	wait_until "$game_case rejoin gameplay transport window title" 10 \
+	    game_window_transport_visible
+	wait_until "$game_case rejoin local client acceptance" 20 \
+	    client_accepted
+	wait_until "$game_case rejoin connection transport banner" 10 \
+	    client_transport_banner_reported
+	wait_until "$game_case rejoin semantic game frame presentation" 20 \
+	    game_frame_ready
+
+	quit_game_client "$game_case rejoin"
+	finished_client_pid=$client_pid
+	set +e
+	wait "$client_pid"
+	client_status=$?
+	set -e
+	client_pid=
+	window_id=
+	if test "$client_status" -ne 0; then
+	    fail "$game_case rejoin client returned status $client_status"
+	fi
+	wait_until "$game_case rejoin game window teardown" 5 \
+	    process_window_absent "$finished_client_pid"
+	wait_until "$game_case rejoin server-side client departure" 5 \
+	    client_departed
+    fi
     stop_local_server
     if test "$game_case" != tcp-contact \
 	&& test "$game_case" != websocket; then
