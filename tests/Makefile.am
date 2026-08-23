@@ -31,7 +31,7 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle test-recording-input test-session-flow \
 	test-randommt test-ppm-image test-micro-delay \
-	test-sdl-versions test-game-input
+	test-sdl-versions test-score-font test-game-input
 TESTS =
 else
 check_PROGRAMS = test-framed-stream test-websocket-transport \
@@ -42,7 +42,7 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 	test-recording-input \
 	test-session-flow \
 	test-meta-environment test-randommt test-ppm-image test-micro-delay \
-	test-sdl-versions \
+	test-sdl-versions test-score-font \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
 	test-surface-rgba8 test-surface-primitives test-sdl-window \
@@ -69,7 +69,7 @@ TESTS = test-framed-stream test-websocket-transport \
 	test-recording-input \
 	test-session-flow \
 	test-meta-environment test-randommt test-ppm-image test-micro-delay \
-	test-sdl-versions \
+	test-sdl-versions test-score-font \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
 	test-surface-rgba8 test-surface-primitives test-sdl-window \
@@ -168,6 +168,13 @@ test_meta_environment_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 
 test_sdl_versions_SOURCES = test_sdl_versions.c
 test_sdl_versions_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
+
+test_score_font_SOURCES = test_score_font.c \
+	$(top_srcdir)/src/client/sdl/score_font.c
+test_score_font_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_TEST_SCORE_FONT_PATH=\"$(top_srcdir)/lib/fonts/VeraMoBd.ttf\" \
+	-DXPILOT_TEST_SCORE_FALLBACK_FONT_PATH=\"$(top_srcdir)/vendor/sdl3/SDL_ttf/external/harfbuzz/test/api/fonts/Mplus1p-Regular.ttf\"
+test_score_font_LDADD = $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
 
 test_game_input_SOURCES = test_game_input.c \
 	$(top_srcdir)/src/client/sdl/gameinput.c

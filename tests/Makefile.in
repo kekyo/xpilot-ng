@@ -105,6 +105,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-ppm-image$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-micro-delay$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-score-font$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-gameloop$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-keys$(EXEEXT) \
@@ -164,6 +165,7 @@ target_triplet = @target@
 @COND_WINDOWS_TRUE@	test-ppm-image$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-micro-delay$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-score-font$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-game-input$(EXEEXT)
 @COND_WINDOWS_FALSE@TESTS = test-framed-stream$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-websocket-transport$(EXEEXT) \
@@ -181,6 +183,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-ppm-image$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-micro-delay$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-score-font$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-gameloop$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-keys$(EXEEXT) \
@@ -393,6 +396,12 @@ am_test_renderer_gl_core_OBJECTS = test_renderer_gl_core.$(OBJEXT) \
 	text_geometry.$(OBJEXT)
 test_renderer_gl_core_OBJECTS = $(am_test_renderer_gl_core_OBJECTS)
 test_renderer_gl_core_DEPENDENCIES = $(am__DEPENDENCIES_1)
+am_test_score_font_OBJECTS =  \
+	test_score_font-test_score_font.$(OBJEXT) \
+	test_score_font-score_font.$(OBJEXT)
+test_score_font_OBJECTS = $(am_test_score_font_OBJECTS)
+test_score_font_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_test_sdl_clipboard_OBJECTS = test_sdl_clipboard.$(OBJEXT) \
 	sdlclipboard.$(OBJEXT)
 test_sdl_clipboard_OBJECTS = $(am_test_sdl_clipboard_OBJECTS)
@@ -678,6 +687,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_renderer_context_recovery.Po \
 	./$(DEPDIR)/test_renderer_geometry.Po \
 	./$(DEPDIR)/test_renderer_gl_core.Po \
+	./$(DEPDIR)/test_score_font-score_font.Po \
+	./$(DEPDIR)/test_score_font-test_score_font.Po \
 	./$(DEPDIR)/test_sdl_clipboard.Po \
 	./$(DEPDIR)/test_sdl_console.Po ./$(DEPDIR)/test_sdl_event.Po \
 	./$(DEPDIR)/test_sdl_game_frame.Po \
@@ -776,9 +787,9 @@ SOURCES = $(test_checknames_SOURCES) $(test_connect_target_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_context_recovery_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
-	$(test_renderer_gl_core_SOURCES) $(test_sdl_clipboard_SOURCES) \
-	$(test_sdl_console_SOURCES) $(test_sdl_event_SOURCES) \
-	$(test_sdl_game_frame_SOURCES) \
+	$(test_renderer_gl_core_SOURCES) $(test_score_font_SOURCES) \
+	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
+	$(test_sdl_event_SOURCES) $(test_sdl_game_frame_SOURCES) \
 	$(test_sdl_init_core_profile_SOURCES) $(test_sdl_keys_SOURCES) \
 	$(test_sdl_meta_frame_SOURCES) \
 	$(test_sdl_renderer_core_context_SOURCES) \
@@ -820,9 +831,9 @@ DIST_SOURCES = $(test_checknames_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_context_recovery_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
-	$(test_renderer_gl_core_SOURCES) $(test_sdl_clipboard_SOURCES) \
-	$(test_sdl_console_SOURCES) $(test_sdl_event_SOURCES) \
-	$(test_sdl_game_frame_SOURCES) \
+	$(test_renderer_gl_core_SOURCES) $(test_score_font_SOURCES) \
+	$(test_sdl_clipboard_SOURCES) $(test_sdl_console_SOURCES) \
+	$(test_sdl_event_SOURCES) $(test_sdl_game_frame_SOURCES) \
 	$(test_sdl_init_core_profile_SOURCES) $(test_sdl_keys_SOURCES) \
 	$(test_sdl_meta_frame_SOURCES) \
 	$(test_sdl_renderer_core_context_SOURCES) \
@@ -1303,6 +1314,14 @@ test_meta_environment_CFLAGS = $(AM_CFLAGS) \
 test_meta_environment_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdl_versions_SOURCES = test_sdl_versions.c
 test_sdl_versions_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
+test_score_font_SOURCES = test_score_font.c \
+	$(top_srcdir)/src/client/sdl/score_font.c
+
+test_score_font_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_TEST_SCORE_FONT_PATH=\"$(top_srcdir)/lib/fonts/VeraMoBd.ttf\" \
+	-DXPILOT_TEST_SCORE_FALLBACK_FONT_PATH=\"$(top_srcdir)/vendor/sdl3/SDL_ttf/external/harfbuzz/test/api/fonts/Mplus1p-Regular.ttf\"
+
+test_score_font_LDADD = $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
 test_game_input_SOURCES = test_game_input.c \
 	$(top_srcdir)/src/client/sdl/gameinput.c
 
@@ -1876,6 +1895,10 @@ test-renderer-gl-core$(EXEEXT): $(test_renderer_gl_core_OBJECTS) $(test_renderer
 	@rm -f test-renderer-gl-core$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_renderer_gl_core_OBJECTS) $(test_renderer_gl_core_LDADD) $(LIBS)
 
+test-score-font$(EXEEXT): $(test_score_font_OBJECTS) $(test_score_font_DEPENDENCIES) $(EXTRA_test_score_font_DEPENDENCIES)
+	@rm -f test-score-font$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_score_font_OBJECTS) $(test_score_font_LDADD) $(LIBS)
+
 test-sdl-clipboard$(EXEEXT): $(test_sdl_clipboard_OBJECTS) $(test_sdl_clipboard_DEPENDENCIES) $(EXTRA_test_sdl_clipboard_DEPENDENCIES)
 	@rm -f test-sdl-clipboard$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_clipboard_OBJECTS) $(test_sdl_clipboard_LDADD) $(LIBS)
@@ -2084,6 +2107,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_context_recovery.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_gl_core.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_score_font-score_font.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_score_font-test_score_font.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_clipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_console.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_event.Po@am__quote@ # am--include-marker
@@ -2771,6 +2796,34 @@ text_geometry.obj: $(top_srcdir)/src/client/sdl/text_geometry.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/text_geometry.c' object='text_geometry.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o text_geometry.obj `if test -f '$(top_srcdir)/src/client/sdl/text_geometry.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/text_geometry.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/text_geometry.c'; fi`
+
+test_score_font-test_score_font.o: test_score_font.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_score_font_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_score_font-test_score_font.o -MD -MP -MF $(DEPDIR)/test_score_font-test_score_font.Tpo -c -o test_score_font-test_score_font.o `test -f 'test_score_font.c' || echo '$(srcdir)/'`test_score_font.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_score_font-test_score_font.Tpo $(DEPDIR)/test_score_font-test_score_font.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_score_font.c' object='test_score_font-test_score_font.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_score_font_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_score_font-test_score_font.o `test -f 'test_score_font.c' || echo '$(srcdir)/'`test_score_font.c
+
+test_score_font-test_score_font.obj: test_score_font.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_score_font_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_score_font-test_score_font.obj -MD -MP -MF $(DEPDIR)/test_score_font-test_score_font.Tpo -c -o test_score_font-test_score_font.obj `if test -f 'test_score_font.c'; then $(CYGPATH_W) 'test_score_font.c'; else $(CYGPATH_W) '$(srcdir)/test_score_font.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_score_font-test_score_font.Tpo $(DEPDIR)/test_score_font-test_score_font.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_score_font.c' object='test_score_font-test_score_font.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_score_font_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_score_font-test_score_font.obj `if test -f 'test_score_font.c'; then $(CYGPATH_W) 'test_score_font.c'; else $(CYGPATH_W) '$(srcdir)/test_score_font.c'; fi`
+
+test_score_font-score_font.o: $(top_srcdir)/src/client/sdl/score_font.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_score_font_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_score_font-score_font.o -MD -MP -MF $(DEPDIR)/test_score_font-score_font.Tpo -c -o test_score_font-score_font.o `test -f '$(top_srcdir)/src/client/sdl/score_font.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/score_font.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_score_font-score_font.Tpo $(DEPDIR)/test_score_font-score_font.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/score_font.c' object='test_score_font-score_font.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_score_font_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_score_font-score_font.o `test -f '$(top_srcdir)/src/client/sdl/score_font.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/score_font.c
+
+test_score_font-score_font.obj: $(top_srcdir)/src/client/sdl/score_font.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_score_font_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_score_font-score_font.obj -MD -MP -MF $(DEPDIR)/test_score_font-score_font.Tpo -c -o test_score_font-score_font.obj `if test -f '$(top_srcdir)/src/client/sdl/score_font.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/score_font.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/score_font.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_score_font-score_font.Tpo $(DEPDIR)/test_score_font-score_font.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/score_font.c' object='test_score_font-score_font.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_score_font_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_score_font-score_font.obj `if test -f '$(top_srcdir)/src/client/sdl/score_font.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/score_font.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/score_font.c'; fi`
 
 sdlclipboard.o: $(top_srcdir)/src/client/sdl/sdlclipboard.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlclipboard.o -MD -MP -MF $(DEPDIR)/sdlclipboard.Tpo -c -o sdlclipboard.o `test -f '$(top_srcdir)/src/client/sdl/sdlclipboard.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlclipboard.c
@@ -3847,6 +3900,13 @@ test-sdl-versions.log: test-sdl-versions$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-score-font.log: test-score-font$(EXEEXT)
+	@p='test-score-font$(EXEEXT)'; \
+	b='test-score-font'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-game-input.log: test-game-input$(EXEEXT)
 	@p='test-game-input$(EXEEXT)'; \
 	b='test-game-input'; \
@@ -4288,6 +4348,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_renderer_context_recovery.Po
 	-rm -f ./$(DEPDIR)/test_renderer_geometry.Po
 	-rm -f ./$(DEPDIR)/test_renderer_gl_core.Po
+	-rm -f ./$(DEPDIR)/test_score_font-score_font.Po
+	-rm -f ./$(DEPDIR)/test_score_font-test_score_font.Po
 	-rm -f ./$(DEPDIR)/test_sdl_clipboard.Po
 	-rm -f ./$(DEPDIR)/test_sdl_console.Po
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po
@@ -4468,6 +4530,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_renderer_context_recovery.Po
 	-rm -f ./$(DEPDIR)/test_renderer_geometry.Po
 	-rm -f ./$(DEPDIR)/test_renderer_gl_core.Po
+	-rm -f ./$(DEPDIR)/test_score_font-score_font.Po
+	-rm -f ./$(DEPDIR)/test_score_font-test_score_font.Po
 	-rm -f ./$(DEPDIR)/test_sdl_clipboard.Po
 	-rm -f ./$(DEPDIR)/test_sdl_console.Po
 	-rm -f ./$(DEPDIR)/test_sdl_event.Po

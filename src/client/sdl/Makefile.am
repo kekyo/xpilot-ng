@@ -54,6 +54,7 @@ xpilot_ng_sdl_SOURCES = \
 	polygon_geometry.c polygon_geometry.h \
 	renderer.c renderer.h renderer_backend.h \
 	renderer_gl.h renderer_gl_core.c renderer_gl_core.h \
+	score_font.c score_font.h \
 	sdlclipboard.c sdlclipboard.h \
 	sdlcompat.c sdlcompat.h \
 	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h \
