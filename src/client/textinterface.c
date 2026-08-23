@@ -972,7 +972,7 @@ static record_transport_t *Open_direct_session(
     }
     return Client_session_transport_connect(
 	target->contact_transport, target->address, target->contact_port,
-	source_start, source_end, CONTACT_CONNECT_TIMEOUT);
+	source_start, source_end, CONTACT_CONNECT_TIMEOUT, true);
 }
 
 static void Init_direct_control_request(

@@ -29,7 +29,8 @@ static int Client_session_open_source(sock_t *socket, int start, int end)
 
 record_transport_t *Client_session_transport_connect(
     game_transport_t transport_kind, const char *server, int port,
-    int source_port_start, int source_port_end, int timeout_seconds)
+    int source_port_start, int source_port_end, int timeout_seconds,
+    bool report_errors)
 {
     record_transport_t *transport;
     sock_t socket;
@@ -47,20 +48,23 @@ record_transport_t *Client_session_transport_connect(
     sock_init(&socket);
     if (Client_session_open_source(
             &socket, source_port_start, source_port_end) == SOCK_IS_ERROR) {
-        error("Cannot create a TCP socket in the requested source range");
+        if (report_errors)
+            error("Cannot create a TCP socket in the requested source range");
         return NULL;
     }
     if (sock_connect_with_timeout(
             &socket, (char *)server, port,
             timeout_seconds) == SOCK_IS_ERROR) {
-        error("Can't contact %s on port %d", server, port);
+        if (report_errors)
+            error("Can't contact %s on port %d", server, port);
         sock_close(&socket);
         return NULL;
     }
     if (sock_set_tcp_nodelay(&socket, 1) == SOCK_IS_ERROR
         || sock_set_non_blocking(&socket, 1) == SOCK_IS_ERROR) {
-        error("Can't configure %s session socket",
-              Game_transport_name(transport_kind));
+        if (report_errors)
+            error("Can't configure %s session socket",
+                  Game_transport_name(transport_kind));
         sock_close(&socket);
         return NULL;
     }

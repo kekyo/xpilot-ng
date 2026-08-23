@@ -133,6 +133,7 @@ static int Suspend_connection(connection_t *connp, const char *reason);
 static connection_t	*Conn = NULL;
 typedef struct {
     record_session_t *session;
+    record_session_id_t resume_claim_id;
 } connection_io_t;
 static connection_io_t *Conn_io = NULL;
 static int		max_connections = 0;
@@ -413,7 +414,7 @@ static void Conn_set_state(connection_t *connp, int state, int drain_state)
     else if (connp->state == CONN_LISTENING)
 	connp->timeout = LISTEN_TIMEOUT;
     else if (connp->state == CONN_RECONNECT)
-	connp->timeout = GAME_TCP_RECONNECT_GRACE_SECONDS;
+	connp->timeout = GAME_RECONNECT_GRACE_SECONDS;
     else if (connp->state == CONN_FREE) {
 	num_conn_busy--;
 	connp->timeout = IDLE_TIMEOUT;
@@ -654,13 +655,35 @@ static void Release_held_keys(connection_t *connp)
 
 static int Suspend_connection(connection_t *connp, const char *reason)
 {
+    connection_io_t *io = Connection_io(connp);
     sock_t disconnected = connp->w.sock;
     sock_t listener;
     sock_t invalid;
 
     if (connp->state != CONN_PLAYING
-	|| BIT(connp->w.state, SOCKBUF_FRAMED) == 0
 	|| !Game_transport_protocol_supports_reconnect(connp->version)) {
+	Destroy_connection(connp, reason);
+	return -1;
+    }
+
+    if (io->session != NULL) {
+	game_transport_t transport;
+
+	Record_session_close(io->session);
+	io->resume_claim_id = RECORD_SESSION_ID_INVALID;
+	Sockbuf_clear(&connp->r);
+	Sockbuf_clear(&connp->w);
+	Release_held_keys(connp);
+	Conn_set_state(connp, CONN_RECONNECT, CONN_FREE);
+	Game_transport_from_protocol_version(connp->version, &transport);
+	xpprintf("%s %s gameplay session suspended for %s (%s); "
+		 "waiting %d seconds.\n", showtime(),
+		 Game_transport_name(transport), connp->nick, reason,
+		 GAME_RECONNECT_GRACE_SECONDS);
+	return 0;
+    }
+
+    if (BIT(connp->w.state, SOCKBUF_FRAMED) == 0) {
 	Destroy_connection(connp, reason);
 	return -1;
     }
@@ -683,8 +706,86 @@ static int Suspend_connection(connection_t *connp, const char *reason)
     Conn_set_state(connp, CONN_RECONNECT, CONN_FREE);
     xpprintf("%s TCP gameplay connection suspended for %s (%s); "
 	     "waiting %d seconds.\n", showtime(), connp->nick, reason,
-	     GAME_TCP_RECONNECT_GRACE_SECONDS);
+	     GAME_RECONNECT_GRACE_SECONDS);
     return 0;
+}
+
+int Net_server_claim_session_resume(
+    const session_token_t *token, const char *address,
+    record_session_id_t claim_id, int *connection_index)
+{
+    int i;
+
+    if (token == NULL || address == NULL
+	|| claim_id == RECORD_SESSION_ID_INVALID
+	|| connection_index == NULL)
+	return E_INVAL;
+    for (i = 0; i < max_connections; i++) {
+	connection_t *connp = &Conn[i];
+	connection_io_t *io = &Conn_io[i];
+
+	if (connp->state != CONN_RECONNECT || io->session == NULL
+	    || !Game_transport_protocol_supports_reconnect(connp->version)
+	    || strcmp(connp->addr, address) != 0
+	    || !Session_token_equal(token, &connp->resume_token))
+	    continue;
+	if (io->resume_claim_id != RECORD_SESSION_ID_INVALID)
+	    return E_IN_USE;
+	io->resume_claim_id = claim_id;
+	*connection_index = i;
+	return SUCCESS;
+    }
+    return E_NOT_FOUND;
+}
+
+int Net_server_complete_session_resume(
+    int connection_index, record_session_id_t claim_id,
+    record_session_t *replacement, int peer_port)
+{
+    connection_t *connp;
+    connection_io_t *io;
+    game_transport_t transport;
+
+    if (connection_index < 0 || connection_index >= max_connections
+	|| claim_id == RECORD_SESSION_ID_INVALID || replacement == NULL
+	|| peer_port < 0 || peer_port > 65535) {
+	errno = EINVAL;
+	return -1;
+    }
+    connp = &Conn[connection_index];
+    io = &Conn_io[connection_index];
+    if (connp->state != CONN_RECONNECT || io->session == NULL
+	|| io->resume_claim_id != claim_id) {
+	errno = EINVAL;
+	return -1;
+    }
+    if (Record_session_replace_from(io->session, replacement) == -1)
+	return -1;
+
+    io->resume_claim_id = RECORD_SESSION_ID_INVALID;
+    connp->his_port = peer_port;
+    connp->last_send_loops = 0;
+    connp->retransmit_at_loop = main_loops;
+    Sockbuf_clear(&connp->r);
+    Sockbuf_clear(&connp->w);
+    Conn_set_state(connp, CONN_PLAYING, CONN_FREE);
+    Game_transport_from_protocol_version(connp->version, &transport);
+    xpprintf("%s %s gameplay session resumed for %s.\n",
+	     showtime(), Game_transport_name(transport), connp->nick);
+    return 0;
+}
+
+void Net_server_cancel_session_resume(
+    int connection_index, record_session_id_t claim_id)
+{
+    connection_io_t *io;
+
+    if (connection_index < 0 || connection_index >= max_connections
+	|| claim_id == RECORD_SESSION_ID_INVALID)
+	return;
+    io = &Conn_io[connection_index];
+    if (io->resume_claim_id == claim_id)
+	io->resume_claim_id = RECORD_SESSION_ID_INVALID;
 }
 
 
@@ -1068,12 +1169,25 @@ int Setup_session_connection(record_session_t *session, char *user,
 	Destroy_connection(connp, "no memory");
 	return -1;
     }
+    if (Game_transport_protocol_supports_reconnect(version)
+	&& !Session_token_generate(&connp->resume_token)) {
+	error("Cannot generate gameplay session resumption token");
+	Destroy_connection(connp, "no secure session token");
+	return -1;
+    }
 
     xpprintf("%s Gameplay session established on contact port %d.\n",
 	     showtime(), options.contactPort);
     xpprintf("%s Welcome %s=%s@%s|%s (%s/%d) (version %04x)\n",
 	     showtime(), nick, user, host, dpy, addr, peer_port, version);
     if (Packet_printf(&connp->c, "%c%u", PKT_MAGIC, connp->magic) <= 0
+	|| (Game_transport_protocol_supports_reconnect(version)
+	    && Packet_printf(&connp->c, "%c%u%u%u%u",
+			     PKT_SESSION_TOKEN,
+			     connp->resume_token.words[0],
+			     connp->resume_token.words[1],
+			     connp->resume_token.words[2],
+			     connp->resume_token.words[3]) <= 0)
 	|| Send_reliable(connp) < 0) {
 	Destroy_connection(connp, "session confirmation failed");
 	return -1;
@@ -1888,7 +2002,7 @@ static record_receive_result_t Handle_session_input(void *context)
 	(size_t)connp->r.size, &record_length);
     if (receive_result == RECORD_RECEIVE_ERROR
 	|| receive_result == RECORD_RECEIVE_CLOSED) {
-	Destroy_connection(connp, "session input error");
+	Suspend_connection(connp, "session input error");
 	return receive_result;
     }
     if (receive_result == RECORD_RECEIVE_EMPTY)
@@ -1928,20 +2042,23 @@ int Input(void)
 	playback = (connp->rectype == 1);
 	if (connp->state == CONN_FREE)
 	    continue;
-	if (Connection_uses_session(connp)) {
-	    if (Connection_flush_session(connp) == -1) {
-		Destroy_connection(connp, "session output error");
-		continue;
-	    }
+	if (Connection_uses_session(connp)
+	    && connp->state != CONN_RECONNECT) {
 	    if (Record_drain_ready(
 		    Handle_session_input, connp,
 		    MAX_INPUT_RECORDS_PER_TICK) == -1
-		&& connp->state != CONN_FREE) {
-		Destroy_connection(connp, "session input dispatch error");
+		&& connp->state != CONN_FREE
+		&& connp->state != CONN_RECONNECT) {
+		Suspend_connection(connp, "session input dispatch error");
 		continue;
 	    }
-	    if (connp->state == CONN_FREE)
+	    if (connp->state == CONN_FREE
+		|| connp->state == CONN_RECONNECT)
 		continue;
+	    if (Connection_flush_session(connp) == -1) {
+		Suspend_connection(connp, "session output error");
+		continue;
+	    }
 	}
 	if ((!(playback && recOpt)
 	     && connp->start + connp->timeout * FPS < main_loops)
@@ -1959,9 +2076,8 @@ int Input(void)
 	     */
 	    if (connp->state == CONN_RECONNECT
 		|| ((connp->state & (CONN_PLAYING | CONN_READY)) != 0
-		    && (BIT(connp->w.state, SOCKBUF_FRAMED) == 0
-			|| !Game_transport_protocol_supports_reconnect(
-			    connp->version))))
+		    && !Game_transport_protocol_supports_reconnect(
+			connp->version)))
 		Set_message_f("%s mysteriously disappeared!?", connp->nick);
 
 	    snprintf(msg, sizeof(msg), "timeout %02x", connp->state);

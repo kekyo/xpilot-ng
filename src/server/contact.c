@@ -39,6 +39,7 @@
 typedef enum {
     PENDING_READING,
     PENDING_GAME_REPLY,
+    PENDING_RESUME_REPLY,
     PENDING_CONTROL_REPLY,
     PENDING_CONTROL_CLOSE
 } pending_state_t;
@@ -60,6 +61,9 @@ typedef struct {
     session_game_request_t game;
     unsigned selected_version;
     bool promote_game;
+    bool promote_resume;
+    int resume_connection;
+    record_session_id_t resume_claim_id;
     session_control_request_t control;
     control_response_t control_response;
     unsigned char control_status;
@@ -101,6 +105,7 @@ static int Contact_stream_request(sockbuf_t *request, sockbuf_t *reply,
 			  const char *peer_address, int peer_port);
 static void Contact_accept_session(socket_handle_t fd, void *arg);
 static void Contact_session_poll(void);
+static void Pending_cleanup(pending_session_t *pending);
 
 static bool Contact_uses_session(void)
 {
@@ -123,12 +128,8 @@ void Contact_cleanup(void)
 	return;
     if (session_listener) {
 	for (i = 0; i < MAX_PENDING_SESSIONS; i++) {
-	    if (pending_sessions[i].active) {
-		Session_acceptor_destroy(pending_sessions[i].acceptor);
-		Record_session_destroy(pending_sessions[i].session);
-		memset(&pending_sessions[i], 0,
-		       sizeof(pending_sessions[i]));
-	    }
+	    if (pending_sessions[i].active)
+		Pending_cleanup(&pending_sessions[i]);
 	}
 	remove_input(contactSocket.fd);
 	sock_close(&contactSocket);
@@ -388,6 +389,9 @@ static int Check_names(char *nick_name, char *user_name, char *host_name)
 
 static void Pending_cleanup(pending_session_t *pending)
 {
+    if (pending->resume_claim_id != RECORD_SESSION_ID_INVALID)
+	Net_server_cancel_session_resume(
+	    pending->resume_connection, pending->resume_claim_id);
     Session_acceptor_destroy(pending->acceptor);
     Record_session_destroy(pending->session);
     memset(pending, 0, sizeof(*pending));
@@ -448,6 +452,7 @@ int Contact_attach_transport(record_transport_t *transport,
     }
     pending->active = true;
     pending->state = PENDING_READING;
+    pending->resume_connection = -1;
     pending->opened_at = time(NULL);
     pending->peer_port = peer_port;
     strlcpy(pending->address, address, sizeof(pending->address));
@@ -639,6 +644,26 @@ static int Queue_session_game_reply(pending_session_t *pending, int status)
     pending->output_accepted = false;
     pending->state = PENDING_GAME_REPLY;
     pending->promote_game = status == SUCCESS;
+    return 0;
+}
+
+static int Queue_session_resume_reply(pending_session_t *pending, int status)
+{
+    session_resume_reply_t reply;
+    const char *reason;
+
+    memset(&reply, 0, sizeof(reply));
+    reply.status = (unsigned char)status;
+    reason = status == E_NOT_FOUND || status == E_IN_USE
+	? "session unavailable" : Session_status_reason(status);
+    strlcpy(reply.reason, reason, sizeof(reply.reason));
+    if (Session_protocol_encode_resume_reply(
+	    pending->output, sizeof(pending->output),
+	    &pending->output_length, &reply) == -1)
+	return -1;
+    pending->output_accepted = false;
+    pending->state = PENDING_RESUME_REPLY;
+    pending->promote_resume = status == SUCCESS;
     return 0;
 }
 
@@ -891,6 +916,20 @@ static void Promote_session_game(pending_session_t *pending)
 	Contact_session_protocol_version(is_polygon_map), peer_port);
 }
 
+static void Promote_session_resume(pending_session_t *pending)
+{
+    record_session_t *replacement = pending->session;
+
+    if (Net_server_complete_session_resume(
+	    pending->resume_connection, pending->resume_claim_id,
+	    replacement, pending->peer_port) == -1) {
+	Pending_cleanup(pending);
+	return;
+    }
+    pending->session = NULL;
+    memset(pending, 0, sizeof(*pending));
+}
+
 static void Process_pending_session(pending_session_t *pending)
 {
     session_acceptor_result_t accept_result;
@@ -938,9 +977,23 @@ static void Process_pending_session(pending_session_t *pending)
 		Pending_cleanup(pending);
 		return;
 	    }
-	} else {
+	} else if (accept_result == SESSION_ACCEPTOR_CONTROL_READY) {
 	    pending->control = open.request.control;
 	    if (Execute_session_control(pending) == -1) {
+		Pending_cleanup(pending);
+		return;
+	    }
+	} else {
+	    record_session_id_t claim_id = Record_session_id(
+		pending->session);
+
+	    pending->resume_connection = -1;
+	    status = Net_server_claim_session_resume(
+		&open.request.resume.token, pending->address,
+		claim_id, &pending->resume_connection);
+	    if (status == SUCCESS)
+		pending->resume_claim_id = claim_id;
+	    if (Queue_session_resume_reply(pending, status) == -1) {
 		Pending_cleanup(pending);
 		return;
 	    }
@@ -957,6 +1010,13 @@ static void Process_pending_session(pending_session_t *pending)
     if (pending->state == PENDING_GAME_REPLY) {
 	if (pending->promote_game)
 	    Promote_session_game(pending);
+	else
+	    Pending_cleanup(pending);
+	return;
+    }
+    if (pending->state == PENDING_RESUME_REPLY) {
+	if (pending->promote_resume)
+	    Promote_session_resume(pending);
 	else
 	    Pending_cleanup(pending);
 	return;

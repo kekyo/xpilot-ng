@@ -124,8 +124,12 @@ cleanup()
 
 dump_logs()
 {
+    if test -n "$game_server_log" && test -f "$game_server_log"; then
+        echo "===== $game_server_log =====" >&2
+        sed -n '1,240p' "$game_server_log" >&2
+    fi
     for log_file in "$runtime_dir"/*.log; do
-        if test -f "$log_file"; then
+        if test -f "$log_file" && test "$log_file" != "$game_server_log"; then
             echo "===== $log_file =====" >&2
             sed -n '1,240p' "$log_file" >&2
         fi
@@ -941,7 +945,9 @@ run_tcp_reconnection_case()
     touch "$proxy_trigger"
     wait_until "$game_case forced transport loss" 10 \
 	grep -q '^dropped$' "$proxy_state"
-    sleep 1
+    wait_until "$game_case server gameplay suspension" 10 \
+	grep -q "TCP gameplay connection suspended.*$game_client_name" \
+	    "$game_server_log"
     kill -0 "$server_pid" 2>/dev/null \
 	|| fail "$game_case server exited during the reconnection grace period"
     kill -0 "$client_pid" 2>/dev/null \
@@ -957,6 +963,111 @@ run_tcp_reconnection_case()
     if grep -q "Goodbye .*$game_client_name" "$game_server_log"; then
 	fail "$game_case removed the player before graceful quit"
     fi
+
+    quit_game_client "$game_case"
+    set +e
+    wait "$client_pid"
+    client_status=$?
+    set -e
+    client_pid=
+    window_id=
+    test "$client_status" -eq 0 \
+	|| fail "$game_case client returned status $client_status"
+    wait_until "$game_case graceful server shutdown" 10 \
+	process_stopped "$server_pid"
+    wait "$server_pid" 2>/dev/null || true
+    server_pid=
+    grep -q "Goodbye .*$game_client_name.*client quit" "$game_server_log" \
+	|| fail "$game_case graceful quit was not handled immediately"
+
+    kill -TERM "$tcp_proxy_pid" 2>/dev/null || true
+    wait "$tcp_proxy_pid" 2>/dev/null || true
+    tcp_proxy_pid=
+}
+
+run_fixed_session_reconnection_case()
+{
+    session_transport=$1
+    case "$session_transport" in
+    tcp)
+	game_case=fixed-tcp-reconnect
+	server_transport_option=-tcp
+	target_scheme=tcp
+	game_client_name=FixedTCPResume
+	;;
+    websocket)
+	game_case=websocket-reconnect
+	server_transport_option=-websocket
+	target_scheme=ws
+	game_client_name=WebSockResume
+	;;
+    *)
+	fail "unsupported fixed-session reconnect transport: $session_transport"
+	;;
+    esac
+    port=$(reserve_contact_port)
+    proxy_host=127.0.0.2
+    proxy_state="$runtime_dir/$game_case-proxy.state"
+    proxy_trigger="$runtime_dir/$game_case.trigger"
+    game_server_log="$runtime_dir/server-$game_case.log"
+    game_client_log="$runtime_dir/client-$game_case.log"
+
+    "$server" -map "$map" -port "$port" +reportMeta \
+	-serverHost 127.0.0.1 "$server_transport_option" \
+	>"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "$game_case server readiness" 20 server_ready
+
+    node "$(dirname "$0")/session-reconnect-proxy.mjs" \
+	127.0.0.1 "$proxy_host" "$port" "$proxy_trigger" "$proxy_state" \
+	"$session_transport" \
+	>"$runtime_dir/$game_case-proxy.log" 2>&1 &
+    tcp_proxy_pid=$!
+    wait_until "$game_case proxy readiness" 10 \
+	grep -q '^ready$' "$proxy_state"
+
+    "$client" -geometry 800x600 -join -name "$game_client_name" \
+	"$target_scheme://$proxy_host:$port" >"$game_client_log" 2>&1 &
+    client_pid=$!
+    window_owner_pid=$client_pid
+    wait_until "$game_case SDL game window" 20 find_game_window
+    wait_until "$game_case local client acceptance" 20 client_accepted
+    wait_until "$game_case semantic game frame presentation" 20 \
+	game_frame_ready
+
+    touch "$proxy_trigger"
+    wait_until "$game_case forced transport loss" 10 \
+	grep -q '^dropped$' "$proxy_state"
+    wait_until "$game_case server session suspension" 10 \
+	grep -q "$session_transport gameplay session suspended.*$game_client_name" \
+	    "$game_server_log"
+    kill -0 "$server_pid" 2>/dev/null \
+	|| fail "$game_case server exited during the reconnection grace period"
+    kill -0 "$client_pid" 2>/dev/null \
+	|| fail "$game_case client exited instead of reconnecting"
+    if test "$session_transport" = tcp; then
+	wait_until "$game_case invalid resume rejection" 10 \
+	    grep -q '^invalid-rejected$' "$proxy_state"
+	kill -0 "$server_pid" 2>/dev/null \
+	    || fail "$game_case invalid resume stopped the server"
+	kill -0 "$client_pid" 2>/dev/null \
+	    || fail "$game_case invalid resume removed the active player"
+    fi
+
+    wait_until "$game_case replacement session stream" 15 \
+	grep -q '^resumed$' "$proxy_state"
+    wait_until "$game_case server session resumption" 15 \
+	grep -q "$session_transport gameplay session resumed.*$game_client_name" \
+	    "$game_server_log"
+    test "$(grep -c "Welcome .*$game_client_name" "$game_server_log")" -eq 1 \
+	|| fail "$game_case created a second player session"
+    if grep -q "Goodbye .*$game_client_name" "$game_server_log"; then
+	fail "$game_case removed the player before graceful quit"
+    fi
+    xdotool key --window "$window_id" Up >/dev/null 2>&1 \
+	|| fail "could not send gameplay input after $game_case resumption"
+    kill -0 "$client_pid" 2>/dev/null \
+	|| fail "$game_case client stopped after resuming gameplay"
 
     quit_game_client "$game_case"
     set +e
@@ -1282,6 +1393,8 @@ run_connection_failure_notification
 run_gameplay_case tcp tcp no default
 run_gameplay_case websocket websocket no websocket
 run_tcp_reconnection_case
+run_fixed_session_reconnection_case tcp
+run_fixed_session_reconnection_case websocket
 run_gameplay_case udp-default default yes default
 run_gameplay_case udp-explicit udp no default
 run_gameplay_case tcp-contact tcp no tcp

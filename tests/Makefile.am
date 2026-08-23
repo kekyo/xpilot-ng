@@ -546,7 +546,7 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_VENDOR_ZLIB_SOURCE;
 
 EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
-	tcp-reconnect-proxy.mjs \
+	tcp-reconnect-proxy.mjs session-reconnect-proxy.mjs \
 	run-gl-core-resources.sh \
 	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
 	run-sdl-renderer-core-context.sh run-vendored-zlib.sh \

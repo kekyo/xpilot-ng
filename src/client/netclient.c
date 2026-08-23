@@ -29,6 +29,7 @@
 
 #include "record_session.h"
 #include "session_connection.h"
+#include "session_transport.h"
 #include "session_token.h"
 
 #define TALK_RETRY	2
@@ -402,20 +403,66 @@ cleanup:
     return authenticated;
 }
 
-static int Reconnect_gameplay(const char *reason)
+static void Reset_session_gameplay_buffers(void)
 {
-    time_t deadline;
+    int i;
 
-    if (!gameplay_started || reconnecting || !resume_token_received
-	|| gameplay_transport != GAME_TRANSPORT_TCP
-	|| !Game_transport_protocol_supports_reconnect(version))
-	return -1;
+    Sockbuf_clear(&wbuf);
+    for (i = 0; i < receive_window_size; i++) {
+	Frames[i].loops = 0;
+	Sockbuf_clear(&Frames[i].sbuf);
+    }
+    rbuf = Frames[0].sbuf;
+}
 
-    reconnecting = true;
-    xpprintf("TCP gameplay connection lost (%s); reconnecting.\n", reason);
-    Close_gameplay_socket_without_quit();
-    deadline = time(NULL) + GAME_TCP_RECONNECT_GRACE_SECONDS;
+static bool Reconnect_fixed_session_gameplay(time_t deadline)
+{
+    int source_start = clientPortStart;
+    int source_end = clientPortEnd;
 
+    if (!clientPortStart || !clientPortEnd
+	|| clientPortStart > clientPortEnd) {
+	source_start = 0;
+	source_end = 0;
+    }
+    while (time(NULL) <= deadline) {
+	record_transport_t *candidate = Client_session_transport_connect(
+	    gameplay_transport, gameplay_server, gameplay_port,
+	    source_start, source_end, 1, false);
+
+	if (candidate == NULL) {
+	    micro_delay((unsigned)100 * 1000);
+	    continue;
+	}
+	if (Record_session_replace_transport(
+		gameplay_session, candidate) == -1) {
+	    Record_transport_destroy(candidate);
+	    micro_delay((unsigned)100 * 1000);
+	    continue;
+	}
+	if (Session_connection_resume_game(
+		gameplay_session, &resume_token, 1, NULL, 0) == -1) {
+	    micro_delay((unsigned)100 * 1000);
+	    continue;
+	}
+
+	Reset_session_gameplay_buffers();
+	gameplay_connected = true;
+	last_send_anything = time(NULL);
+	last_keyboard_change++;
+	if (Key_update() == -1) {
+	    Record_session_close(gameplay_session);
+	    gameplay_connected = false;
+	    micro_delay((unsigned)100 * 1000);
+	    continue;
+	}
+	return true;
+    }
+    return false;
+}
+
+static bool Reconnect_split_tcp_gameplay(time_t deadline)
+{
     while (time(NULL) <= deadline) {
 	sock_t candidate;
 
@@ -452,14 +499,47 @@ static int Reconnect_gameplay(const char *reason)
 	    micro_delay((unsigned)100 * 1000);
 	    continue;
 	}
-	reconnecting = false;
-	xpprintf("TCP gameplay connection resumed.\n");
-	return 0;
+	return true;
     }
+    return false;
+}
+
+static int Reconnect_gameplay(const char *reason)
+{
+    const char *transport_label;
+    bool session_transport;
+    bool resumed;
+    time_t deadline;
+
+    if (!gameplay_started || reconnecting || !resume_token_received
+	|| !Game_transport_protocol_supports_reconnect(version))
+	return -1;
+
+    session_transport = gameplay_session != NULL;
+    transport_label = gameplay_transport == GAME_TRANSPORT_WEBSOCKET
+	? "WebSocket" : "TCP";
+    reconnecting = true;
+    xpprintf("%s gameplay connection lost (%s); reconnecting.\n",
+	     transport_label, reason);
+    if (session_transport) {
+	Record_session_close(gameplay_session);
+	gameplay_connected = false;
+    } else
+	Close_gameplay_socket_without_quit();
+    deadline = time(NULL) + GAME_RECONNECT_GRACE_SECONDS;
+
+    resumed = session_transport
+	? Reconnect_fixed_session_gameplay(deadline)
+	: Reconnect_split_tcp_gameplay(deadline);
 
     reconnecting = false;
-    error("TCP gameplay reconnection grace period expired");
-    return -1;
+    if (!resumed) {
+	error("%s gameplay reconnection grace period expired",
+	      transport_label);
+	return -1;
+    }
+    xpprintf("%s gameplay connection resumed.\n", transport_label);
+    return 0;
 }
 
 /*
@@ -706,7 +786,9 @@ int Net_verify(char *user_name, char *nick_name, char *disp)
 	if (rbuf.len <= 0 || rbuf.ptr[0] != PKT_RELIABLE
 	    || Receive_reliable() == -1
 	    || Net_send_output(RECORD_DELIVERY_REQUIRED) < 0
-	    || cbuf.len == 0 || Receive_magic() <= 0) {
+	    || cbuf.len == 0 || Receive_magic() <= 0
+	    || (Game_transport_protocol_supports_reconnect(version)
+		&& Receive_session_token() <= 0)) {
 	    error("Can't complete fixed-endpoint session confirmation");
 	    return -1;
 	}
@@ -777,7 +859,7 @@ int Net_verify(char *user_name, char *nick_name, char *disp)
 	}
 	if (Game_transport_protocol_supports_reconnect(version)
 	    && Receive_session_token() <= 0) {
-	    error("Can't receive TCP gameplay resumption token after verify");
+	    error("Can't receive gameplay resumption token after verify");
 	    return -1;
 	}
 	break;
@@ -959,6 +1041,7 @@ session_failure:
 
 #define CLEANUP_FLUSH_ATTEMPTS 10
 #define CLEANUP_FLUSH_WAIT_USEC 100000
+#define CLEANUP_QUIT_REPLY_ATTEMPTS 20
 
 static int Wait_for_cleanup_output(socket_handle_t handle)
 {
@@ -982,6 +1065,54 @@ static int Wait_for_cleanup_output(socket_handle_t handle)
     return FD_ISSET(handle, &write_fds) ? 1 : -1;
 }
 
+static int Wait_for_cleanup_input(socket_handle_t handle)
+{
+    fd_set read_fds;
+    struct timeval timeout;
+    int status;
+
+    if (handle == SOCK_FD_INVALID)
+	return -1;
+    FD_ZERO(&read_fds);
+    FD_SET(handle, &read_fds);
+    timeout.tv_sec = 0;
+    timeout.tv_usec = CLEANUP_FLUSH_WAIT_USEC;
+#ifdef _WINDOWS
+    status = select(0, &read_fds, NULL, NULL, &timeout);
+#else
+    status = select(handle + 1, &read_fds, NULL, NULL, &timeout);
+#endif
+    if (status <= 0)
+	return status;
+    return FD_ISSET(handle, &read_fds) ? 1 : -1;
+}
+
+static void Await_session_quit_reply(socket_handle_t handle)
+{
+    record_receive_result_t receive_result;
+    size_t length;
+    int attempt;
+
+    /* Reading the server's quit reply also drains pending gameplay data, so
+     * closing a WebSocket cannot reset the TCP stream before PKT_QUIT is
+     * processed by the server. */
+    for (attempt = 0; attempt < CLEANUP_QUIT_REPLY_ATTEMPTS; attempt++) {
+	if (Wait_for_cleanup_input(handle) < 0)
+	    return;
+	length = 0;
+	receive_result = Record_session_receive(
+	    gameplay_session, rbuf.buf, (size_t)rbuf.size, &length);
+	if (receive_result == RECORD_RECEIVE_READY) {
+	    if (length > 0 && (unsigned char)rbuf.buf[0] == PKT_QUIT)
+		return;
+	    continue;
+	}
+	if (receive_result == RECORD_RECEIVE_EMPTY)
+	    continue;
+	return;
+    }
+}
+
 static void Flush_session_quit(void)
 {
     record_flush_result_t flush_result;
@@ -999,8 +1130,10 @@ static void Flush_session_quit(void)
 	if (flush_result == RECORD_FLUSH_ERROR
 	    || flush_result == RECORD_FLUSH_CLOSED)
 	    return;
-	if (wbuf.len == 0 && flush_result == RECORD_FLUSH_IDLE)
+	if (wbuf.len == 0 && flush_result == RECORD_FLUSH_IDLE) {
+	    Await_session_quit_reply(handle);
 	    return;
+	}
 	if (Wait_for_cleanup_output(handle) < 0)
 	    return;
     }
@@ -1109,8 +1242,11 @@ void Net_key_change(void)
 int Net_flush(void)
 {
     if (gameplay_session != NULL) {
-	if (Net_advance_session_output() < 0)
-	    return -1;
+	if (Net_advance_session_output() < 0) {
+	    if (Reconnect_gameplay("write error") == -1)
+		return -1;
+	    return 0;
+	}
 	if (wbuf.len == 0) {
 	    wbuf.ptr = wbuf.buf;
 	    return 0;
@@ -1119,8 +1255,11 @@ int Net_flush(void)
 	    && last_keyboard_update != last_loops)
 	    return Key_update();
 	Send_talk();
-	if (Net_send_output(RECORD_DELIVERY_TRANSIENT) < 0)
-	    return -1;
+	if (Net_send_output(RECORD_DELIVERY_TRANSIENT) < 0) {
+	    if (Reconnect_gameplay("write error") == -1)
+		return -1;
+	    return 0;
+	}
 	last_send_anything = time(NULL);
 	return 1;
     }
@@ -1544,10 +1683,6 @@ static int Net_read(frame_buf_t *frame)
     for (;;) {
 	Sockbuf_clear(&frame->sbuf);
 	if (Net_receive_record(&frame->sbuf) == -1) {
-	    if (gameplay_session != NULL) {
-		error("Net session input error");
-		return -1;
-	    }
 	    if (Reconnect_gameplay("read error") == -1) {
 		error("Net input error");
 		return -1;
@@ -2874,10 +3009,6 @@ int Send_keyboard(u_byte *keyboard_vector)
     Net_keyboard_track();
     Send_talk();
     if (Net_send_output(RECORD_DELIVERY_TRANSIENT) == -1) {
-	if (gameplay_session != NULL) {
-	    error("Can't send keyboard update");
-	    return -1;
-	}
 	if (Reconnect_gameplay("keyboard write error") == -1) {
 	    error("Can't send keyboard update");
 	    return -1;
