@@ -1,8 +1,8 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
-	-I$(srcdir)/third_party/wslay/include \
-	-I$(srcdir)/third_party/wslay \
+	-I$(top_srcdir)/vendor/wslay/lib/includes \
+	-I$(top_srcdir)/vendor/wslay/lib \
 	-DWSLAY_VERSION=\"1.1.1\"
 
 if COND_WINDOWS
@@ -32,14 +32,18 @@ libxpcommon_a_SOURCES = \
 	websocket_transport.c websocket_transport.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \
 	strcasecmp.c strdup.c strlcpy.c \
-	third_party/wslay/wslay_event.c third_party/wslay/wslay_event.h \
-	third_party/wslay/wslay_frame.c third_party/wslay/wslay_frame.h \
-	third_party/wslay/wslay_net.c third_party/wslay/wslay_net.h \
-	third_party/wslay/wslay_queue.c third_party/wslay/wslay_queue.h \
-	third_party/wslay/include/wslay/wslay.h \
+	$(top_srcdir)/vendor/wslay/lib/wslay_event.c \
+	$(top_srcdir)/vendor/wslay/lib/wslay_event.h \
+	$(top_srcdir)/vendor/wslay/lib/wslay_frame.c \
+	$(top_srcdir)/vendor/wslay/lib/wslay_frame.h \
+	$(top_srcdir)/vendor/wslay/lib/wslay_net.c \
+	$(top_srcdir)/vendor/wslay/lib/wslay_net.h \
+	$(top_srcdir)/vendor/wslay/lib/wslay_queue.c \
+	$(top_srcdir)/vendor/wslay/lib/wslay_queue.h \
+	$(top_srcdir)/vendor/wslay/lib/includes/wslay/wslay.h \
 	types.h win32.h \
 	version.h \
 	wreckshape.h \
 	xpcommon.h xpconfig.h xpmap.h xpmemory.c
 
-EXTRA_DIST = third_party/wslay/LICENSE third_party/wslay/UPSTREAM.md
+EXTRA_DIST = $(top_srcdir)/vendor/wslay/COPYING

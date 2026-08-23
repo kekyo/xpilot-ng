@@ -120,10 +120,12 @@ am_libxpcommon_a_OBJECTS = arraylist.$(OBJEXT) checknames.$(OBJEXT) \
 	session_token.$(OBJEXT) websocket_http.$(OBJEXT) \
 	websocket_transport.$(OBJEXT) shipshape.$(OBJEXT) \
 	socklib.$(OBJEXT) strcasecmp.$(OBJEXT) strdup.$(OBJEXT) \
-	strlcpy.$(OBJEXT) third_party/wslay/wslay_event.$(OBJEXT) \
-	third_party/wslay/wslay_frame.$(OBJEXT) \
-	third_party/wslay/wslay_net.$(OBJEXT) \
-	third_party/wslay/wslay_queue.$(OBJEXT) xpmemory.$(OBJEXT)
+	strlcpy.$(OBJEXT) \
+	$(top_builddir)/vendor/wslay/lib/wslay_event.$(OBJEXT) \
+	$(top_builddir)/vendor/wslay/lib/wslay_frame.$(OBJEXT) \
+	$(top_builddir)/vendor/wslay/lib/wslay_net.$(OBJEXT) \
+	$(top_builddir)/vendor/wslay/lib/wslay_queue.$(OBJEXT) \
+	xpmemory.$(OBJEXT)
 libxpcommon_a_OBJECTS = $(am_libxpcommon_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -140,10 +142,15 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/arraylist.Po \
-	./$(DEPDIR)/checknames.Po ./$(DEPDIR)/config.Po \
-	./$(DEPDIR)/error.Po ./$(DEPDIR)/game_transport.Po \
-	./$(DEPDIR)/list.Po ./$(DEPDIR)/math.Po ./$(DEPDIR)/net.Po \
+am__depfiles_remade =  \
+	$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_event.Po \
+	$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_frame.Po \
+	$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_net.Po \
+	$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_queue.Po \
+	./$(DEPDIR)/arraylist.Po ./$(DEPDIR)/checknames.Po \
+	./$(DEPDIR)/config.Po ./$(DEPDIR)/error.Po \
+	./$(DEPDIR)/game_transport.Po ./$(DEPDIR)/list.Po \
+	./$(DEPDIR)/math.Po ./$(DEPDIR)/net.Po \
 	./$(DEPDIR)/portability.Po ./$(DEPDIR)/randommt.Po \
 	./$(DEPDIR)/record_drain.Po ./$(DEPDIR)/record_session.Po \
 	./$(DEPDIR)/record_transport.Po ./$(DEPDIR)/recording_input.Po \
@@ -152,11 +159,7 @@ am__depfiles_remade = ./$(DEPDIR)/arraylist.Po \
 	./$(DEPDIR)/socklib.Po ./$(DEPDIR)/strcasecmp.Po \
 	./$(DEPDIR)/strdup.Po ./$(DEPDIR)/strlcpy.Po \
 	./$(DEPDIR)/websocket_http.Po \
-	./$(DEPDIR)/websocket_transport.Po ./$(DEPDIR)/xpmemory.Po \
-	third_party/wslay/$(DEPDIR)/wslay_event.Po \
-	third_party/wslay/$(DEPDIR)/wslay_frame.Po \
-	third_party/wslay/$(DEPDIR)/wslay_net.Po \
-	third_party/wslay/$(DEPDIR)/wslay_queue.Po
+	./$(DEPDIR)/websocket_transport.Po ./$(DEPDIR)/xpmemory.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -337,8 +340,8 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
-	-I$(srcdir)/third_party/wslay/include \
-	-I$(srcdir)/third_party/wslay -DWSLAY_VERSION=\"1.1.1\" \
+	-I$(top_srcdir)/vendor/wslay/lib/includes \
+	-I$(top_srcdir)/vendor/wslay/lib -DWSLAY_VERSION=\"1.1.1\" \
 	$(am__append_1)
 noinst_LIBRARIES = libxpcommon.a
 libxpcommon_a_SOURCES = \
@@ -363,17 +366,21 @@ libxpcommon_a_SOURCES = \
 	websocket_transport.c websocket_transport.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \
 	strcasecmp.c strdup.c strlcpy.c \
-	third_party/wslay/wslay_event.c third_party/wslay/wslay_event.h \
-	third_party/wslay/wslay_frame.c third_party/wslay/wslay_frame.h \
-	third_party/wslay/wslay_net.c third_party/wslay/wslay_net.h \
-	third_party/wslay/wslay_queue.c third_party/wslay/wslay_queue.h \
-	third_party/wslay/include/wslay/wslay.h \
+	$(top_srcdir)/vendor/wslay/lib/wslay_event.c \
+	$(top_srcdir)/vendor/wslay/lib/wslay_event.h \
+	$(top_srcdir)/vendor/wslay/lib/wslay_frame.c \
+	$(top_srcdir)/vendor/wslay/lib/wslay_frame.h \
+	$(top_srcdir)/vendor/wslay/lib/wslay_net.c \
+	$(top_srcdir)/vendor/wslay/lib/wslay_net.h \
+	$(top_srcdir)/vendor/wslay/lib/wslay_queue.c \
+	$(top_srcdir)/vendor/wslay/lib/wslay_queue.h \
+	$(top_srcdir)/vendor/wslay/lib/includes/wslay/wslay.h \
 	types.h win32.h \
 	version.h \
 	wreckshape.h \
 	xpcommon.h xpconfig.h xpmap.h xpmemory.c
 
-EXTRA_DIST = third_party/wslay/LICENSE third_party/wslay/UPSTREAM.md
+EXTRA_DIST = $(top_srcdir)/vendor/wslay/COPYING
 all: all-am
 
 .SUFFIXES:
@@ -412,24 +419,24 @@ version.h: $(top_builddir)/config.status $(srcdir)/version.h.in
 
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
-third_party/wslay/$(am__dirstamp):
-	@$(MKDIR_P) third_party/wslay
-	@: > third_party/wslay/$(am__dirstamp)
-third_party/wslay/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) third_party/wslay/$(DEPDIR)
-	@: > third_party/wslay/$(DEPDIR)/$(am__dirstamp)
-third_party/wslay/wslay_event.$(OBJEXT):  \
-	third_party/wslay/$(am__dirstamp) \
-	third_party/wslay/$(DEPDIR)/$(am__dirstamp)
-third_party/wslay/wslay_frame.$(OBJEXT):  \
-	third_party/wslay/$(am__dirstamp) \
-	third_party/wslay/$(DEPDIR)/$(am__dirstamp)
-third_party/wslay/wslay_net.$(OBJEXT):  \
-	third_party/wslay/$(am__dirstamp) \
-	third_party/wslay/$(DEPDIR)/$(am__dirstamp)
-third_party/wslay/wslay_queue.$(OBJEXT):  \
-	third_party/wslay/$(am__dirstamp) \
-	third_party/wslay/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/wslay/lib/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/vendor/wslay/lib
+	@: > $(top_builddir)/vendor/wslay/lib/$(am__dirstamp)
+$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/vendor/wslay/lib/$(DEPDIR)
+	@: > $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/wslay/lib/wslay_event.$(OBJEXT):  \
+	$(top_builddir)/vendor/wslay/lib/$(am__dirstamp) \
+	$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/wslay/lib/wslay_frame.$(OBJEXT):  \
+	$(top_builddir)/vendor/wslay/lib/$(am__dirstamp) \
+	$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/wslay/lib/wslay_net.$(OBJEXT):  \
+	$(top_builddir)/vendor/wslay/lib/$(am__dirstamp) \
+	$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/wslay/lib/wslay_queue.$(OBJEXT):  \
+	$(top_builddir)/vendor/wslay/lib/$(am__dirstamp) \
+	$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/$(am__dirstamp)
 
 libxpcommon.a: $(libxpcommon_a_OBJECTS) $(libxpcommon_a_DEPENDENCIES) $(EXTRA_libxpcommon_a_DEPENDENCIES)
 	$(AM_V_at)-rm -f libxpcommon.a
@@ -438,11 +445,15 @@ libxpcommon.a: $(libxpcommon_a_OBJECTS) $(libxpcommon_a_DEPENDENCIES) $(EXTRA_li
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
-	-rm -f third_party/wslay/*.$(OBJEXT)
+	-rm -f $(top_builddir)/vendor/wslay/lib/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_event.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_frame.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_net.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_queue.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arraylist.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/checknames.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/config.Po@am__quote@ # am--include-marker
@@ -468,10 +479,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/websocket_http.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/websocket_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xpmemory.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@third_party/wslay/$(DEPDIR)/wslay_event.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@third_party/wslay/$(DEPDIR)/wslay_frame.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@third_party/wslay/$(DEPDIR)/wslay_net.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@third_party/wslay/$(DEPDIR)/wslay_queue.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -609,8 +616,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-rm -f third_party/wslay/$(DEPDIR)/$(am__dirstamp)
-	-rm -f third_party/wslay/$(am__dirstamp)
+	-test -z "$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/$(am__dirstamp)" || rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/$(am__dirstamp)
+	-test -z "$(top_builddir)/vendor/wslay/lib/$(am__dirstamp)" || rm -f $(top_builddir)/vendor/wslay/lib/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -620,7 +627,11 @@ clean: clean-am
 clean-am: clean-generic clean-noinstLIBRARIES mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/arraylist.Po
+		-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_event.Po
+	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_frame.Po
+	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_net.Po
+	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_queue.Po
+	-rm -f ./$(DEPDIR)/arraylist.Po
 	-rm -f ./$(DEPDIR)/checknames.Po
 	-rm -f ./$(DEPDIR)/config.Po
 	-rm -f ./$(DEPDIR)/error.Po
@@ -645,10 +656,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/websocket_http.Po
 	-rm -f ./$(DEPDIR)/websocket_transport.Po
 	-rm -f ./$(DEPDIR)/xpmemory.Po
-	-rm -f third_party/wslay/$(DEPDIR)/wslay_event.Po
-	-rm -f third_party/wslay/$(DEPDIR)/wslay_frame.Po
-	-rm -f third_party/wslay/$(DEPDIR)/wslay_net.Po
-	-rm -f third_party/wslay/$(DEPDIR)/wslay_queue.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -694,7 +701,11 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/arraylist.Po
+		-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_event.Po
+	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_frame.Po
+	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_net.Po
+	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_queue.Po
+	-rm -f ./$(DEPDIR)/arraylist.Po
 	-rm -f ./$(DEPDIR)/checknames.Po
 	-rm -f ./$(DEPDIR)/config.Po
 	-rm -f ./$(DEPDIR)/error.Po
@@ -719,10 +730,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/websocket_http.Po
 	-rm -f ./$(DEPDIR)/websocket_transport.Po
 	-rm -f ./$(DEPDIR)/xpmemory.Po
-	-rm -f third_party/wslay/$(DEPDIR)/wslay_event.Po
-	-rm -f third_party/wslay/$(DEPDIR)/wslay_frame.Po
-	-rm -f third_party/wslay/$(DEPDIR)/wslay_net.Po
-	-rm -f third_party/wslay/$(DEPDIR)/wslay_queue.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

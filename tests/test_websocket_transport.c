@@ -388,6 +388,60 @@ static int check_server_accepts_browser_style_frames(void)
     return 0;
 }
 
+static int check_server_rejects_unmasked_client_frame(void)
+{
+    static const char request[] =
+        "GET /xpilot HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: Upgrade\r\n"
+        "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+        "Sec-WebSocket-Version: 13\r\n"
+        "Sec-WebSocket-Protocol: xpilot-ng-v1\r\n\r\n";
+    static const unsigned char unmasked_frame[] = { 0x82, 0x01, 0x2a };
+    sock_t raw_client;
+    sock_t server_socket;
+    record_transport_t *server;
+    char response[1024];
+    char received[64];
+    unsigned char close_frame[32];
+    size_t received_length;
+    size_t close_length = 0;
+    int step;
+
+    TEST_CHECK(open_connected_sockets(&raw_client, &server_socket) == 0);
+    server = Record_transport_create_websocket_server(
+        &server_socket, sizeof(received), sizeof(received));
+    TEST_CHECK(server != NULL);
+    TEST_CHECK(drive_server_handshake(
+                   server, &raw_client, request,
+                   response, sizeof(response)) == 0);
+    TEST_CHECK(write_all(&raw_client, unmasked_frame,
+                         sizeof(unmasked_frame)) == 0);
+
+    for (step = 0; step < 100 && close_length == 0; step++) {
+        record_receive_result_t receive_result = Record_transport_receive(
+            server, received, sizeof(received), &received_length);
+        record_flush_result_t flush_result = Record_transport_flush(server);
+
+        TEST_CHECK(receive_result == RECORD_RECEIVE_EMPTY
+                   || receive_result == RECORD_RECEIVE_CLOSED);
+        TEST_CHECK(flush_result == RECORD_FLUSH_IDLE
+                   || flush_result == RECORD_FLUSH_CLOSED);
+        TEST_CHECK(read_available(&raw_client, close_frame,
+                                  sizeof(close_frame), &close_length) == 0);
+    }
+    TEST_CHECK(close_length == 4);
+    TEST_CHECK(close_frame[0] == 0x88);
+    TEST_CHECK(close_frame[1] == 2);
+    TEST_CHECK(close_frame[2] == 0x03);
+    TEST_CHECK(close_frame[3] == 0xea);
+
+    Record_transport_destroy(server);
+    sock_close(&raw_client);
+    return 0;
+}
+
 static int find_header_value(const char *headers, const char *name,
                              char *value, size_t capacity)
 {
@@ -581,6 +635,7 @@ int main(void)
     TEST_CHECK(check_native_client_and_server_exchange_records() == 0);
     TEST_CHECK(check_native_client_receives_buffered_record_burst() == 0);
     TEST_CHECK(check_server_accepts_browser_style_frames() == 0);
+    TEST_CHECK(check_server_rejects_unmasked_client_frame() == 0);
     TEST_CHECK(check_native_client_masks_frames() == 0);
     TEST_CHECK(check_text_and_close_are_handled() == 0);
     TEST_CHECK(check_wrong_resource_is_rejected() == 0);

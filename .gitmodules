@@ -13,3 +13,6 @@
 [submodule "vendor/expat"]
 	path = vendor/expat
 	url = https://github.com/libexpat/libexpat.git
+[submodule "vendor/wslay"]
+	path = vendor/wslay
+	url = https://github.com/tatsuhiro-t/wslay
