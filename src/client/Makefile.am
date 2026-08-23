@@ -22,7 +22,7 @@ libxpclient_a_SOURCES = \
 	session_connection.c session_connection.h \
 	session_transport.c session_transport.h \
 	talk.h talkmacros.c textinterface.c \
-	usleep.c \
+	micro_delay.c micro_delay.h micro_delay_test_support.h \
 	xpclient.h
 
 if COND_SOUND

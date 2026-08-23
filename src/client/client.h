@@ -942,11 +942,6 @@ extern int Contact_local_servers(const Connect_defaults_t *defaults,
 				 Connect_param_t *conpar);
 
 /*
- * usleep.c
- */
-extern int micro_delay(unsigned usec);
-
-/*
  * welcome.c
  */
 extern int Welcome_screen(Connect_param_t *conpar);

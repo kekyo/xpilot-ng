@@ -102,6 +102,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-randommt$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-ppm-image$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-micro-delay$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-gameloop$(EXEEXT) \
@@ -159,6 +160,7 @@ target_triplet = @target@
 @COND_WINDOWS_TRUE@	test-session-flow$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-randommt$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-ppm-image$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-micro-delay$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-game-input$(EXEEXT)
 @COND_WINDOWS_FALSE@TESTS = test-framed-stream$(EXEEXT) \
@@ -174,6 +176,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-randommt$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-ppm-image$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-micro-delay$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-gameloop$(EXEEXT) \
@@ -319,6 +322,11 @@ test_meta_environment_OBJECTS = $(am_test_meta_environment_OBJECTS)
 test_meta_environment_LDADD = $(LDADD)
 test_meta_environment_LINK = $(CCLD) $(test_meta_environment_CFLAGS) \
 	$(CFLAGS) $(test_meta_environment_LDFLAGS) $(LDFLAGS) -o $@
+am_test_micro_delay_OBJECTS =  \
+	test_micro_delay-test_micro_delay.$(OBJEXT) \
+	test_micro_delay-micro_delay.$(OBJEXT)
+test_micro_delay_OBJECTS = $(am_test_micro_delay_OBJECTS)
+test_micro_delay_DEPENDENCIES =
 am_test_native_socket_handle_OBJECTS =  \
 	test_native_socket_handle.$(OBJEXT)
 test_native_socket_handle_OBJECTS =  \
@@ -646,6 +654,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_meta_environment-strlcpy.Po \
 	./$(DEPDIR)/test_meta_environment-test_meta_environment.Po \
 	./$(DEPDIR)/test_meta_environment-transport_display.Po \
+	./$(DEPDIR)/test_micro_delay-micro_delay.Po \
+	./$(DEPDIR)/test_micro_delay-test_micro_delay.Po \
 	./$(DEPDIR)/test_native_socket_handle.Po \
 	./$(DEPDIR)/test_paint_transform.Po \
 	./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po \
@@ -749,7 +759,7 @@ SOURCES = $(test_connect_target_SOURCES) \
 	$(test_glwidgets_primitives_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
-	$(test_meta_environment_SOURCES) \
+	$(test_meta_environment_SOURCES) $(test_micro_delay_SOURCES) \
 	$(test_native_socket_handle_SOURCES) \
 	$(test_paint_transform_SOURCES) \
 	$(test_paintmap_vdecor_SOURCES) \
@@ -792,7 +802,7 @@ DIST_SOURCES = $(test_connect_target_SOURCES) \
 	$(test_glwidgets_primitives_SOURCES) \
 	$(test_glwidgets_scissor_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
-	$(test_meta_environment_SOURCES) \
+	$(test_meta_environment_SOURCES) $(test_micro_delay_SOURCES) \
 	$(test_native_socket_handle_SOURCES) \
 	$(test_paint_transform_SOURCES) \
 	$(test_paintmap_vdecor_SOURCES) \
@@ -1221,6 +1231,13 @@ test_ppm_image_SOURCES = test_ppm_image.c \
 	$(top_srcdir)/src/replay/ppm_image.c
 
 test_ppm_image_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src/replay
+test_micro_delay_SOURCES = test_micro_delay.c \
+	$(top_srcdir)/src/client/micro_delay.c
+
+test_micro_delay_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_MICRO_DELAY_TEST_HOOKS
+
+test_micro_delay_LDADD = @W32_LIBS@
 test_session_token_SOURCES = test_session_token.c
 test_session_token_LDADD = $(top_builddir)/src/common/libxpcommon.a
 test_connect_target_SOURCES = test_connect_target.c \
@@ -1793,6 +1810,10 @@ test-meta-environment$(EXEEXT): $(test_meta_environment_OBJECTS) $(test_meta_env
 	@rm -f test-meta-environment$(EXEEXT)
 	$(AM_V_CCLD)$(test_meta_environment_LINK) $(test_meta_environment_OBJECTS) $(test_meta_environment_LDADD) $(LIBS)
 
+test-micro-delay$(EXEEXT): $(test_micro_delay_OBJECTS) $(test_micro_delay_DEPENDENCIES) $(EXTRA_test_micro_delay_DEPENDENCIES)
+	@rm -f test-micro-delay$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_micro_delay_OBJECTS) $(test_micro_delay_LDADD) $(LIBS)
+
 test-native-socket-handle$(EXEEXT): $(test_native_socket_handle_OBJECTS) $(test_native_socket_handle_DEPENDENCIES) $(EXTRA_test_native_socket_handle_DEPENDENCIES)
 	@rm -f test-native-socket-handle$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_native_socket_handle_OBJECTS) $(test_native_socket_handle_LDADD) $(LIBS)
@@ -2031,6 +2052,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-strlcpy.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-test_meta_environment.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_meta_environment-transport_display.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_micro_delay-micro_delay.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_micro_delay-test_micro_delay.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_native_socket_handle.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paint_transform.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po@am__quote@ # am--include-marker
@@ -2551,6 +2574,34 @@ test_meta_environment-strlcpy.obj: $(top_srcdir)/src/common/strlcpy.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/common/strlcpy.c' object='test_meta_environment-strlcpy.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_meta_environment_CPPFLAGS) $(CPPFLAGS) $(test_meta_environment_CFLAGS) $(CFLAGS) -c -o test_meta_environment-strlcpy.obj `if test -f '$(top_srcdir)/src/common/strlcpy.c'; then $(CYGPATH_W) '$(top_srcdir)/src/common/strlcpy.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/common/strlcpy.c'; fi`
+
+test_micro_delay-test_micro_delay.o: test_micro_delay.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_micro_delay_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_micro_delay-test_micro_delay.o -MD -MP -MF $(DEPDIR)/test_micro_delay-test_micro_delay.Tpo -c -o test_micro_delay-test_micro_delay.o `test -f 'test_micro_delay.c' || echo '$(srcdir)/'`test_micro_delay.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_micro_delay-test_micro_delay.Tpo $(DEPDIR)/test_micro_delay-test_micro_delay.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_micro_delay.c' object='test_micro_delay-test_micro_delay.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_micro_delay_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_micro_delay-test_micro_delay.o `test -f 'test_micro_delay.c' || echo '$(srcdir)/'`test_micro_delay.c
+
+test_micro_delay-test_micro_delay.obj: test_micro_delay.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_micro_delay_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_micro_delay-test_micro_delay.obj -MD -MP -MF $(DEPDIR)/test_micro_delay-test_micro_delay.Tpo -c -o test_micro_delay-test_micro_delay.obj `if test -f 'test_micro_delay.c'; then $(CYGPATH_W) 'test_micro_delay.c'; else $(CYGPATH_W) '$(srcdir)/test_micro_delay.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_micro_delay-test_micro_delay.Tpo $(DEPDIR)/test_micro_delay-test_micro_delay.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_micro_delay.c' object='test_micro_delay-test_micro_delay.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_micro_delay_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_micro_delay-test_micro_delay.obj `if test -f 'test_micro_delay.c'; then $(CYGPATH_W) 'test_micro_delay.c'; else $(CYGPATH_W) '$(srcdir)/test_micro_delay.c'; fi`
+
+test_micro_delay-micro_delay.o: $(top_srcdir)/src/client/micro_delay.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_micro_delay_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_micro_delay-micro_delay.o -MD -MP -MF $(DEPDIR)/test_micro_delay-micro_delay.Tpo -c -o test_micro_delay-micro_delay.o `test -f '$(top_srcdir)/src/client/micro_delay.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/micro_delay.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_micro_delay-micro_delay.Tpo $(DEPDIR)/test_micro_delay-micro_delay.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/micro_delay.c' object='test_micro_delay-micro_delay.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_micro_delay_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_micro_delay-micro_delay.o `test -f '$(top_srcdir)/src/client/micro_delay.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/micro_delay.c
+
+test_micro_delay-micro_delay.obj: $(top_srcdir)/src/client/micro_delay.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_micro_delay_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_micro_delay-micro_delay.obj -MD -MP -MF $(DEPDIR)/test_micro_delay-micro_delay.Tpo -c -o test_micro_delay-micro_delay.obj `if test -f '$(top_srcdir)/src/client/micro_delay.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/micro_delay.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/micro_delay.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_micro_delay-micro_delay.Tpo $(DEPDIR)/test_micro_delay-micro_delay.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/micro_delay.c' object='test_micro_delay-micro_delay.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_micro_delay_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_micro_delay-micro_delay.obj `if test -f '$(top_srcdir)/src/client/micro_delay.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/micro_delay.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/micro_delay.c'; fi`
 
 paint_transform.o: $(top_srcdir)/src/client/sdl/paint_transform.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT paint_transform.o -MD -MP -MF $(DEPDIR)/paint_transform.Tpo -c -o paint_transform.o `test -f '$(top_srcdir)/src/client/sdl/paint_transform.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/paint_transform.c
@@ -3760,6 +3811,13 @@ test-ppm-image.log: test-ppm-image$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-micro-delay.log: test-micro-delay$(EXEEXT)
+	@p='test-micro-delay$(EXEEXT)'; \
+	b='test-micro-delay'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdl-versions.log: test-sdl-versions$(EXEEXT)
 	@p='test-sdl-versions$(EXEEXT)'; \
 	b='test-sdl-versions'; \
@@ -4190,6 +4248,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_meta_environment-strlcpy.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-test_meta_environment.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-transport_display.Po
+	-rm -f ./$(DEPDIR)/test_micro_delay-micro_delay.Po
+	-rm -f ./$(DEPDIR)/test_micro_delay-test_micro_delay.Po
 	-rm -f ./$(DEPDIR)/test_native_socket_handle.Po
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
@@ -4367,6 +4427,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_meta_environment-strlcpy.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-test_meta_environment.Po
 	-rm -f ./$(DEPDIR)/test_meta_environment-transport_display.Po
+	-rm -f ./$(DEPDIR)/test_micro_delay-micro_delay.Po
+	-rm -f ./$(DEPDIR)/test_micro_delay-test_micro_delay.Po
 	-rm -f ./$(DEPDIR)/test_native_socket_handle.Po
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po

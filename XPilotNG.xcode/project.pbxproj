@@ -898,7 +898,7 @@
 			fileEncoding = 30;
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.c.c;
-			path = usleep.c;
+			path = micro_delay.c;
 			refType = 4;
 			sourceTree = "<group>";
 		};

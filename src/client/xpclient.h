@@ -61,6 +61,7 @@ extern bool threadedDraw; /* default.c */
 #include "guimap.h"
 #include "guiobjects.h"
 #include "meta.h"
+#include "micro_delay.h"
 #include "netclient.h"
 #include "option.h"
 #include "paint.h"
