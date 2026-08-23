@@ -349,9 +349,9 @@ test_renderer_commands_OBJECTS = $(am_test_renderer_commands_OBJECTS)
 test_renderer_commands_LDADD = $(LDADD)
 test_renderer_commands_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(test_renderer_commands_LDFLAGS) $(LDFLAGS) -o $@
-am_test_renderer_context_recovery_OBJECTS = \
+am_test_renderer_context_recovery_OBJECTS =  \
 	test_renderer_context_recovery.$(OBJEXT) renderer.$(OBJEXT)
-test_renderer_context_recovery_OBJECTS = \
+test_renderer_context_recovery_OBJECTS =  \
 	$(am_test_renderer_context_recovery_OBJECTS)
 test_renderer_context_recovery_LDADD = $(LDADD)
 am_test_renderer_geometry_OBJECTS = test_renderer_geometry.$(OBJEXT) \
@@ -1180,7 +1180,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/src/client/sdl \
-	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
+	-I$(top_srcdir)/vendor/libtess2/Include \
 	$(XP_SDL3_CFLAGS) $(XP_SDL3_IMAGE_CFLAGS) $(XP_SDL3_TTF_CFLAGS) \
 	@GL_CFLAGS@
 

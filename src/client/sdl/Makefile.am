@@ -24,25 +24,25 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-DSDL_DISABLE_OLD_NAMES \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/client \
-	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
+	-I$(top_srcdir)/vendor/libtess2/Include \
 	$(XP_SDL3_CFLAGS) $(XP_SDL3_IMAGE_CFLAGS) $(XP_SDL3_TTF_CFLAGS) \
 	@GL_CFLAGS@
 libxp_libtess2_a_SOURCES = \
-	third_party/libtess2/Include/tesselator.h \
-	third_party/libtess2/Source/bucketalloc.c \
-	third_party/libtess2/Source/bucketalloc.h \
-	third_party/libtess2/Source/dict.c \
-	third_party/libtess2/Source/dict.h \
-	third_party/libtess2/Source/geom.c \
-	third_party/libtess2/Source/geom.h \
-	third_party/libtess2/Source/mesh.c \
-	third_party/libtess2/Source/mesh.h \
-	third_party/libtess2/Source/priorityq.c \
-	third_party/libtess2/Source/priorityq.h \
-	third_party/libtess2/Source/sweep.c \
-	third_party/libtess2/Source/sweep.h \
-	third_party/libtess2/Source/tess.c \
-	third_party/libtess2/Source/tess.h
+	$(top_srcdir)/vendor/libtess2/Include/tesselator.h \
+	$(top_srcdir)/vendor/libtess2/Source/bucketalloc.c \
+	$(top_srcdir)/vendor/libtess2/Source/bucketalloc.h \
+	$(top_srcdir)/vendor/libtess2/Source/dict.c \
+	$(top_srcdir)/vendor/libtess2/Source/dict.h \
+	$(top_srcdir)/vendor/libtess2/Source/geom.c \
+	$(top_srcdir)/vendor/libtess2/Source/geom.h \
+	$(top_srcdir)/vendor/libtess2/Source/mesh.c \
+	$(top_srcdir)/vendor/libtess2/Source/mesh.h \
+	$(top_srcdir)/vendor/libtess2/Source/priorityq.c \
+	$(top_srcdir)/vendor/libtess2/Source/priorityq.h \
+	$(top_srcdir)/vendor/libtess2/Source/sweep.c \
+	$(top_srcdir)/vendor/libtess2/Source/sweep.h \
+	$(top_srcdir)/vendor/libtess2/Source/tess.c \
+	$(top_srcdir)/vendor/libtess2/Source/tess.h
 xpilot_ng_sdl_SOURCES = \
 	asteroid_data.h DT_drawtext.c DT_drawtext.h \
 	SDL_console.c SDL_console.h SDL_gfxPrimitives.c SDL_gfxPrimitives.h \
@@ -77,6 +77,5 @@ if COND_WINDOWS
   xpilot_ng_sdl_SOURCES += win32hacks.c
 endif
 
-EXTRA_DIST = third_party/libtess2/LICENSE.txt \
-	third_party/libtess2/README.md \
-	third_party/libtess2/UPSTREAM.md
+EXTRA_DIST = $(top_srcdir)/vendor/libtess2/LICENSE.txt \
+	$(top_srcdir)/vendor/libtess2/README.md

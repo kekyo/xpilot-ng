@@ -16,3 +16,6 @@
 [submodule "vendor/wslay"]
 	path = vendor/wslay
 	url = https://github.com/tatsuhiro-t/wslay
+[submodule "vendor/libtess2"]
+	path = vendor/libtess2
+	url = https://github.com/memononen/libtess2
