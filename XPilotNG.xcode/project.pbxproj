@@ -1054,19 +1054,11 @@
 			refType = 4;
 			sourceTree = "<group>";
 		};
-		E34F6A2808F83A53007373A1 = {
-			fileEncoding = 30;
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.c.h;
-			path = SDL_gfxPrimitives_font.h;
-			refType = 4;
-			sourceTree = "<group>";
-		};
 		E34F6A2908F83A53007373A1 = {
 			fileEncoding = 30;
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.c.c;
-			path = SDL_gfxPrimitives.c;
+			path = surface_primitives.c;
 			refType = 4;
 			sourceTree = "<group>";
 		};
@@ -1074,7 +1066,7 @@
 			fileEncoding = 30;
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.c.h;
-			path = SDL_gfxPrimitives.h;
+			path = surface_primitives.h;
 			refType = 4;
 			sourceTree = "<group>";
 		};
@@ -3440,7 +3432,6 @@
 				E34F6A2508F83A53007373A1,
 				E34F6A2608F83A53007373A1,
 				E34F6A2708F83A53007373A1,
-				E34F6A2808F83A53007373A1,
 				E34F6A2908F83A53007373A1,
 				E34F6A2A08F83A53007373A1,
 				E34F6A2B08F83A53007373A1,
