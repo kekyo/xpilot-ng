@@ -67,6 +67,37 @@ int Record_session_replace_transport(record_session_t *session,
     return 0;
 }
 
+int Record_session_replace_from(record_session_t *session,
+                                record_session_t *replacement)
+{
+    record_transport_t *transport;
+
+    if (session == NULL || replacement == NULL || session == replacement
+        || replacement->transport == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    transport = replacement->transport;
+    replacement->transport = NULL;
+    if (Record_session_replace_transport(session, transport) == -1) {
+        replacement->transport = transport;
+        return -1;
+    }
+    Record_session_destroy(replacement);
+    return 0;
+}
+
+void Record_session_close(record_session_t *session)
+{
+    record_transport_t *transport;
+
+    if (session == NULL)
+        return;
+    transport = session->transport;
+    session->transport = NULL;
+    Record_transport_destroy(transport);
+}
+
 record_receive_result_t Record_session_receive(
     record_session_t *session, char *destination, size_t capacity,
     size_t *length)
@@ -113,6 +144,6 @@ void Record_session_destroy(record_session_t *session)
 {
     if (session == NULL)
         return;
-    Record_transport_destroy(session->transport);
+    Record_session_close(session);
     free(session);
 }

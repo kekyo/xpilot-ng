@@ -137,6 +137,52 @@ failure:
     return -1;
 }
 
+int Session_connection_resume_game(
+    record_session_t *session, const session_token_t *token,
+    int timeout_seconds, char *error_text, size_t error_capacity)
+{
+    client_resume_result_t result;
+    client_resume_t *resume;
+    time_t deadline;
+
+    if (session == NULL || token == NULL || timeout_seconds <= 0
+        || (error_text == NULL && error_capacity != 0)) {
+        errno = EINVAL;
+        return -1;
+    }
+    Session_connection_set_error(error_text, error_capacity, "");
+    resume = Client_resume_create(session, token);
+    if (resume == NULL) {
+        Session_connection_set_error(
+            error_text, error_capacity,
+            "cannot initialize session resumption");
+        return -1;
+    }
+    deadline = time(NULL) + timeout_seconds;
+
+    for (;;) {
+        result = Client_resume_step(resume);
+        if (result == CLIENT_RESUME_ACCEPTED) {
+            Client_resume_destroy(resume);
+            return 0;
+        }
+        if (result == CLIENT_RESUME_ERROR) {
+            Session_connection_set_error(
+                error_text, error_capacity, Client_resume_error(resume));
+            Client_resume_destroy(resume);
+            return -1;
+        }
+        if (Session_connection_wait(session, deadline) == -1) {
+            Session_connection_set_error(
+                error_text, error_capacity,
+                errno == ETIMEDOUT ? "session resumption timed out"
+                                   : "session resumption wait failed");
+            Client_resume_destroy(resume);
+            return -1;
+        }
+    }
+}
+
 int Session_connection_run_control(
     record_transport_t *transport, const session_control_request_t *request,
     int timeout_seconds, session_control_reply_fn receive_reply,

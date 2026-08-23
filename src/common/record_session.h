@@ -55,6 +55,26 @@ record_session_id_t Record_session_id(const record_session_t *session);
 int Record_session_replace_transport(record_session_t *session,
                                      record_transport_t *transport);
 
+/**
+ * Move a replacement session's transport into an existing stable session.
+ *
+ * @param session Stable destination session.
+ * @param replacement Session providing the replacement transport.
+ * @return Zero on success, otherwise -1.
+ *
+ * @remarks On success replacement is consumed and its session identifier is
+ *          discarded. On failure both sessions retain their ownership.
+ */
+int Record_session_replace_from(record_session_t *session,
+                                record_session_t *replacement);
+
+/**
+ * Close and discard the current transport while retaining session identity.
+ *
+ * @param session Session to detach. NULL is accepted.
+ */
+void Record_session_close(record_session_t *session);
+
 /** Receive at most one logical record without waiting. */
 record_receive_result_t Record_session_receive(
     record_session_t *session, char *destination, size_t capacity,

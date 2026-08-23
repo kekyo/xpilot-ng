@@ -22,7 +22,9 @@ typedef enum {
     /** A gameplay admission request was returned. */
     SESSION_ACCEPTOR_GAME_READY = 1,
     /** A one-shot control request was returned. */
-    SESSION_ACCEPTOR_CONTROL_READY = 2
+    SESSION_ACCEPTOR_CONTROL_READY = 2,
+    /** A gameplay resumption request was returned. */
+    SESSION_ACCEPTOR_RESUME_READY = 3
 } session_acceptor_result_t;
 
 /** Opaque owner of a session awaiting its first control-plane record. */

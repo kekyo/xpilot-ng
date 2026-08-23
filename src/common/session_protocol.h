@@ -15,6 +15,7 @@
 #include "const.h"
 #include "net.h"
 #include "pack.h"
+#include "session_token.h"
 
 /** Current version of the backend-neutral session control protocol. */
 #define SESSION_PROTOCOL_VERSION 1
@@ -27,7 +28,9 @@ typedef enum {
     /** Admit the session as a gameplay connection. */
     SESSION_PURPOSE_GAME = 1,
     /** Execute one control request and return one or more replies. */
-    SESSION_PURPOSE_CONTROL = 2
+    SESSION_PURPOSE_CONTROL = 2,
+    /** Reattach a replacement transport to an active gameplay session. */
+    SESSION_PURPOSE_RESUME = 3
 } session_purpose_t;
 
 /** Gameplay admission request carried by a session-open record. */
@@ -62,6 +65,12 @@ typedef struct {
     char argument[MSG_LEN];
 } session_control_request_t;
 
+/** Gameplay resumption request carried by a session-open record. */
+typedef struct {
+    /** Bearer token issued when the original gameplay session was admitted. */
+    session_token_t token;
+} session_resume_request_t;
+
 /** Decoded first record of a newly attached session. */
 typedef struct {
     /** Declared purpose selecting the active union member. */
@@ -72,6 +81,8 @@ typedef struct {
         session_game_request_t game;
         /** Control request data when purpose is SESSION_PURPOSE_CONTROL. */
         session_control_request_t control;
+        /** Resumption data when purpose is SESSION_PURPOSE_RESUME. */
+        session_resume_request_t resume;
     } request;
 } session_open_t;
 
@@ -96,6 +107,14 @@ typedef struct {
     /** Command-specific response data. */
     char payload[MSG_LEN];
 } session_control_reply_t;
+
+/** Result of attempting to resume an existing gameplay session. */
+typedef struct {
+    /** SUCCESS or an E_* resumption error from pack.h. */
+    unsigned char status;
+    /** Human-readable result description. */
+    char reason[MSG_LEN];
+} session_resume_reply_t;
 
 /**
  * Encode a gameplay admission request as one complete logical record.
@@ -122,6 +141,19 @@ int Session_protocol_encode_game_open(
 int Session_protocol_encode_control_open(
     char *destination, size_t capacity, size_t *length,
     const session_control_request_t *request);
+
+/**
+ * Encode a gameplay resumption request as one complete logical record.
+ *
+ * @param destination Buffer receiving the encoded record.
+ * @param capacity Size of destination in bytes.
+ * @param length Receives the encoded record length.
+ * @param request Request to encode.
+ * @return Zero on success, otherwise -1.
+ */
+int Session_protocol_encode_resume_open(
+    char *destination, size_t capacity, size_t *length,
+    const session_resume_request_t *request);
 
 /**
  * Decode and validate a complete session-open logical record.
@@ -182,5 +214,29 @@ int Session_protocol_encode_control_reply(
  */
 int Session_protocol_decode_control_reply(
     const char *payload, size_t length, session_control_reply_t *reply);
+
+/**
+ * Encode one gameplay resumption reply as a complete logical record.
+ *
+ * @param destination Buffer receiving the encoded record.
+ * @param capacity Size of destination in bytes.
+ * @param length Receives the encoded record length.
+ * @param reply Reply to encode.
+ * @return Zero on success, otherwise -1.
+ */
+int Session_protocol_encode_resume_reply(
+    char *destination, size_t capacity, size_t *length,
+    const session_resume_reply_t *reply);
+
+/**
+ * Decode and validate one complete gameplay resumption reply.
+ *
+ * @param payload Complete record payload.
+ * @param length Payload size in bytes.
+ * @param reply Receives the decoded reply.
+ * @return Zero on success, otherwise -1.
+ */
+int Session_protocol_decode_resume_reply(
+    const char *payload, size_t length, session_resume_reply_t *reply);
 
 #endif /* SESSION_PROTOCOL_H */

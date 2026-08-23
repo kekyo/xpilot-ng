@@ -27,17 +27,25 @@
 #define GAME_PROTOCOL_TCP_POLYGON_VERSION 0x4F17
 /** Legacy-map TCP protocol version with session resumption. */
 #define GAME_PROTOCOL_TCP_LEGACY_VERSION 0x4503
+/** Fixed TCP session protocol before gameplay session resumption. */
+#define GAME_PROTOCOL_TCP_SESSION_POLYGON_PRE_RECONNECT_VERSION 0x4F18
+/** Legacy-map fixed TCP protocol before gameplay session resumption. */
+#define GAME_PROTOCOL_TCP_SESSION_LEGACY_PRE_RECONNECT_VERSION 0x4504
+/** WebSocket session protocol before gameplay session resumption. */
+#define GAME_PROTOCOL_WEBSOCKET_SESSION_POLYGON_PRE_RECONNECT_VERSION 0x4F19
+/** Legacy-map WebSocket protocol before gameplay session resumption. */
+#define GAME_PROTOCOL_WEBSOCKET_SESSION_LEGACY_PRE_RECONNECT_VERSION 0x4505
 /** Fixed-endpoint TCP session protocol version for polygon maps. */
-#define GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION 0x4F18
+#define GAME_PROTOCOL_TCP_SESSION_POLYGON_VERSION 0x4F1A
 /** Fixed-endpoint TCP session protocol version for legacy maps. */
-#define GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION 0x4504
+#define GAME_PROTOCOL_TCP_SESSION_LEGACY_VERSION 0x4506
 /** WebSocket session protocol version for polygon maps. */
-#define GAME_PROTOCOL_WEBSOCKET_SESSION_POLYGON_VERSION 0x4F19
+#define GAME_PROTOCOL_WEBSOCKET_SESSION_POLYGON_VERSION 0x4F1B
 /** WebSocket session protocol version for legacy maps. */
-#define GAME_PROTOCOL_WEBSOCKET_SESSION_LEGACY_VERSION 0x4505
+#define GAME_PROTOCOL_WEBSOCKET_SESSION_LEGACY_VERSION 0x4507
 
-/** TCP gameplay reconnection grace period shared by client and server. */
-#define GAME_TCP_RECONNECT_GRACE_SECONDS 30
+/** Gameplay reconnection grace period shared by client and server. */
+#define GAME_RECONNECT_GRACE_SECONDS 30
 
 /** Gameplay network transport selected at process startup. */
 typedef enum {
@@ -125,10 +133,10 @@ bool Game_transport_from_protocol_version(unsigned version,
                                           game_transport_t *transport);
 
 /**
- * Determine whether a protocol version supports TCP session resumption.
+ * Determine whether a protocol version supports gameplay session resumption.
  *
  * @param version Protocol version negotiated during contact.
- * @return `true` only for TCP protocol versions carrying resumption tokens.
+ * @return `true` only for protocol versions carrying resumption tokens.
  */
 bool Game_transport_protocol_supports_reconnect(unsigned version);
 

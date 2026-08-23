@@ -31,6 +31,22 @@ struct client_session {
     char error[MSG_LEN];
 };
 
+typedef enum {
+    CLIENT_RESUME_SEND_OPEN,
+    CLIENT_RESUME_WAIT_REPLY,
+    CLIENT_RESUME_FINISHED,
+    CLIENT_RESUME_FAILED
+} client_resume_state_t;
+
+struct client_resume {
+    record_session_t *session;
+    client_resume_state_t state;
+    size_t open_length;
+    char open_record[SESSION_PROTOCOL_MAX_RECORD_SIZE];
+    char reply_record[SESSION_PROTOCOL_MAX_RECORD_SIZE];
+    char error[MSG_LEN];
+};
+
 static client_session_result_t Client_session_fail(
     client_session_t *session, const char *reason)
 {
@@ -198,4 +214,131 @@ const char *Client_session_error(const client_session_t *session)
 void Client_session_destroy(client_session_t *session)
 {
     free(session);
+}
+
+static client_resume_result_t Client_resume_fail(
+    client_resume_t *resume, const char *reason)
+{
+    resume->state = CLIENT_RESUME_FAILED;
+    strlcpy(resume->error, reason, sizeof(resume->error));
+    return CLIENT_RESUME_ERROR;
+}
+
+static int Client_resume_flush(client_resume_t *resume)
+{
+    record_flush_result_t result = Record_session_flush(resume->session);
+
+    if (result == RECORD_FLUSH_ERROR) {
+        Client_resume_fail(resume, "transport output failed");
+        return -1;
+    }
+    if (result == RECORD_FLUSH_CLOSED) {
+        Client_resume_fail(resume, "transport closed");
+        return -1;
+    }
+    return result == RECORD_FLUSH_PENDING ? 0 : 1;
+}
+
+static client_resume_result_t Client_resume_send_open(
+    client_resume_t *resume)
+{
+    record_send_result_t result = Record_session_send(
+        resume->session, resume->open_record, resume->open_length,
+        RECORD_DELIVERY_REQUIRED);
+
+    if (result == RECORD_SEND_BACKPRESSURED)
+        return CLIENT_RESUME_PENDING;
+    if (result == RECORD_SEND_ERROR)
+        return Client_resume_fail(resume, "resumption request send failed");
+    if (result == RECORD_SEND_CLOSED)
+        return Client_resume_fail(resume, "transport closed");
+    if (result != RECORD_SEND_ACCEPTED)
+        return Client_resume_fail(resume, "invalid required-send result");
+    resume->state = CLIENT_RESUME_WAIT_REPLY;
+    return CLIENT_RESUME_PENDING;
+}
+
+static client_resume_result_t Client_resume_receive_reply(
+    client_resume_t *resume)
+{
+    record_receive_result_t receive_result;
+    session_resume_reply_t reply;
+    size_t length;
+
+    receive_result = Record_session_receive(
+        resume->session, resume->reply_record,
+        sizeof(resume->reply_record), &length);
+    if (receive_result == RECORD_RECEIVE_EMPTY)
+        return CLIENT_RESUME_PENDING;
+    if (receive_result == RECORD_RECEIVE_ERROR)
+        return Client_resume_fail(resume, "resumption response read failed");
+    if (receive_result == RECORD_RECEIVE_CLOSED)
+        return Client_resume_fail(resume, "transport closed");
+    if (Session_protocol_decode_resume_reply(
+            resume->reply_record, length, &reply) == -1)
+        return Client_resume_fail(resume, "invalid resumption response");
+    if (reply.status != SUCCESS)
+        return Client_resume_fail(
+            resume, reply.reason[0] != '\0' ? reply.reason
+                                             : "resumption rejected");
+    resume->state = CLIENT_RESUME_FINISHED;
+    return CLIENT_RESUME_ACCEPTED;
+}
+
+client_resume_t *Client_resume_create(record_session_t *record_session,
+                                      const session_token_t *token)
+{
+    client_resume_t *resume;
+    session_resume_request_t request;
+
+    if (record_session == NULL || token == NULL) {
+        errno = EINVAL;
+        return NULL;
+    }
+    resume = calloc(1, sizeof(*resume));
+    if (resume == NULL)
+        return NULL;
+    request.token = *token;
+    if (Session_protocol_encode_resume_open(
+            resume->open_record, sizeof(resume->open_record),
+            &resume->open_length, &request) == -1) {
+        free(resume);
+        return NULL;
+    }
+    resume->session = record_session;
+    resume->state = CLIENT_RESUME_SEND_OPEN;
+    return resume;
+}
+
+client_resume_result_t Client_resume_step(client_resume_t *resume)
+{
+    int flush_result;
+
+    if (resume == NULL) {
+        errno = EINVAL;
+        return CLIENT_RESUME_ERROR;
+    }
+    if (resume->state == CLIENT_RESUME_FAILED
+        || resume->state == CLIENT_RESUME_FINISHED) {
+        errno = EALREADY;
+        return CLIENT_RESUME_ERROR;
+    }
+    flush_result = Client_resume_flush(resume);
+    if (flush_result < 0)
+        return CLIENT_RESUME_ERROR;
+    if (flush_result == 0)
+        return CLIENT_RESUME_PENDING;
+    if (resume->state == CLIENT_RESUME_SEND_OPEN)
+        return Client_resume_send_open(resume);
+    return Client_resume_receive_reply(resume);
+}
+
+const char *Client_resume_error(const client_resume_t *resume)
+{
+    return resume != NULL ? resume->error : "invalid resumption exchange";
+}
+
+void Client_resume_destroy(client_resume_t *resume)
+{
+    free(resume);
 }

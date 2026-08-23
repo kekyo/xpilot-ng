@@ -45,6 +45,20 @@ int Session_connection_admit_game(
     char *error_text, size_t error_capacity);
 
 /**
+ * Authenticate a replacement transport already installed in a game session.
+ *
+ * @param session Stable gameplay session with its replacement transport.
+ * @param token Bearer token issued during original admission.
+ * @param timeout_seconds Positive total exchange timeout.
+ * @param error_text Optional storage receiving a stable diagnostic.
+ * @param error_capacity Size of error_text, or zero when it is NULL.
+ * @return Zero when the server accepts resumption, otherwise -1.
+ */
+int Session_connection_resume_game(
+    record_session_t *session, const session_token_t *token,
+    int timeout_seconds, char *error_text, size_t error_capacity);
+
+/**
  * Execute one control exchange over a connected logical transport.
  *
  * @param transport Connected transport whose ownership is transferred.

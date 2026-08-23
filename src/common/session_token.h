@@ -15,15 +15,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/** Packet carrying the TCP gameplay resumption token to the client. */
+/** Packet carrying the gameplay resumption token to the client. */
 #define PKT_SESSION_TOKEN 64
-/** Packet used to authenticate a replacement TCP gameplay stream. */
+/** Packet used to authenticate a replacement split TCP gameplay stream. */
 #define PKT_RESUME 65
 
-/** Number of 32-bit words in a TCP gameplay resumption token. */
+/** Number of 32-bit words in a gameplay resumption token. */
 #define SESSION_TOKEN_WORDS 4
 
-/** Opaque bearer token used to resume one TCP gameplay session. */
+/** Opaque bearer token used to resume one gameplay session. */
 typedef struct {
     /** Token words serialized in network byte order by the packet layer. */
     uint32_t words[SESSION_TOKEN_WORDS];
