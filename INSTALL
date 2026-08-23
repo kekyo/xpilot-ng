@@ -15,6 +15,13 @@ Additional requirements for the SDL client are:
     SDL3_image version 3.2.0 or newer
     OpenGL 3.3 core profile
 
+WSLAY DEPENDENCY
+
+The WebSocket transport builds wslay 1.1.1 directly from its pinned git
+submodule. Initialize it before configuring XPilot NG:
+
+    git submodule update --init vendor/wslay
+
 SDL3 DEPENDENCY PROVIDERS
 
 By default, configure finds SDL3, SDL3_image, and SDL3_ttf through the
