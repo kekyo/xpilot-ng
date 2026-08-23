@@ -92,7 +92,7 @@ const probeInvalidResume = () => {
 
   invalidToken[0] ^= 1;
   payload.writeUInt16BE(0xf4ed, 0);
-  payload[2] = 1;
+  payload[2] = 2;
   payload[3] = 1;
   payload[4] = 3;
   invalidToken.copy(payload, 5);
@@ -119,7 +119,7 @@ const probeInvalidResume = () => {
       if (
         reply.length >= 6 &&
         reply.readUInt16BE(0) === 0xf4ed &&
-        reply[2] === 1 &&
+        reply[2] === 2 &&
         reply[3] === 4 &&
         reply[4] === 7
       ) {

@@ -91,6 +91,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@check_PROGRAMS = test-framed-stream$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-websocket-transport$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-transport$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-checknames$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-connect-target$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-contact-target-probe$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-transport-display$(EXEEXT) \
@@ -150,6 +151,7 @@ target_triplet = @target@
 @COND_WINDOWS_TRUE@check_PROGRAMS = test-framed-stream$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-websocket-transport$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-game-transport$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-checknames$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-connect-target$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-contact-target-probe$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-transport-display$(EXEEXT) \
@@ -166,6 +168,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@TESTS = test-framed-stream$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-websocket-transport$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-transport$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-checknames$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-connect-target$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-transport-display$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-session-token$(EXEEXT) \
@@ -234,6 +237,10 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+am_test_checknames_OBJECTS = test_checknames.$(OBJEXT)
+test_checknames_OBJECTS = $(am_test_checknames_OBJECTS)
+test_checknames_DEPENDENCIES =  \
+	$(top_builddir)/src/common/libxpcommon.a
 am_test_connect_target_OBJECTS = test_connect_target.$(OBJEXT) \
 	connect_target.$(OBJEXT)
 test_connect_target_OBJECTS = $(am_test_connect_target_OBJECTS)
@@ -622,7 +629,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/sdlgameframe.Po ./$(DEPDIR)/sdlkeys.Po \
 	./$(DEPDIR)/sdlmetaframe.Po ./$(DEPDIR)/sdlrenderer.Po \
 	./$(DEPDIR)/sdlwindow.Po ./$(DEPDIR)/surface_primitives.Po \
-	./$(DEPDIR)/surface_rgba8.Po \
+	./$(DEPDIR)/surface_rgba8.Po ./$(DEPDIR)/test_checknames.Po \
 	./$(DEPDIR)/test_connect_target.Po \
 	./$(DEPDIR)/test_contact_target_probe.Po \
 	./$(DEPDIR)/test_framed_stream.Po \
@@ -750,7 +757,7 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
-SOURCES = $(test_connect_target_SOURCES) \
+SOURCES = $(test_checknames_SOURCES) $(test_connect_target_SOURCES) \
 	$(test_contact_target_probe_SOURCES) \
 	$(test_framed_stream_SOURCES) $(test_game_input_SOURCES) \
 	$(test_game_transport_SOURCES) $(test_gameloop_SOURCES) \
@@ -793,7 +800,8 @@ SOURCES = $(test_connect_target_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES) \
 	$(test_transport_display_SOURCES) \
 	$(test_websocket_transport_SOURCES)
-DIST_SOURCES = $(test_connect_target_SOURCES) \
+DIST_SOURCES = $(test_checknames_SOURCES) \
+	$(test_connect_target_SOURCES) \
 	$(test_contact_target_probe_SOURCES) \
 	$(test_framed_stream_SOURCES) $(test_game_input_SOURCES) \
 	$(test_game_transport_SOURCES) $(test_gameloop_SOURCES) \
@@ -1225,6 +1233,8 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
+test_checknames_SOURCES = test_checknames.c
+test_checknames_LDADD = $(top_builddir)/src/common/libxpcommon.a
 test_randommt_SOURCES = test_randommt.c
 test_randommt_LDADD = $(top_builddir)/src/common/libxpcommon.a
 test_ppm_image_SOURCES = test_ppm_image.c \
@@ -1758,6 +1768,10 @@ $(am__aclocal_m4_deps):
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
 
+test-checknames$(EXEEXT): $(test_checknames_OBJECTS) $(test_checknames_DEPENDENCIES) $(EXTRA_test_checknames_DEPENDENCIES)
+	@rm -f test-checknames$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_checknames_OBJECTS) $(test_checknames_LDADD) $(LIBS)
+
 test-connect-target$(EXEEXT): $(test_connect_target_OBJECTS) $(test_connect_target_DEPENDENCIES) $(EXTRA_test_connect_target_DEPENDENCIES)
 	@rm -f test-connect-target$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_connect_target_OBJECTS) $(test_connect_target_LDADD) $(LIBS)
@@ -2020,6 +2034,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlwindow.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/surface_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/surface_rgba8.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_checknames.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_connect_target.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_contact_target_probe.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_framed_stream.Po@am__quote@ # am--include-marker
@@ -3741,6 +3756,13 @@ test-game-transport.log: test-game-transport$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-checknames.log: test-checknames$(EXEEXT)
+	@p='test-checknames$(EXEEXT)'; \
+	b='test-checknames'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-connect-target.log: test-connect-target$(EXEEXT)
 	@p='test-connect-target$(EXEEXT)'; \
 	b='test-connect-target'; \
@@ -4216,6 +4238,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sdlwindow.Po
 	-rm -f ./$(DEPDIR)/surface_primitives.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
+	-rm -f ./$(DEPDIR)/test_checknames.Po
 	-rm -f ./$(DEPDIR)/test_connect_target.Po
 	-rm -f ./$(DEPDIR)/test_contact_target_probe.Po
 	-rm -f ./$(DEPDIR)/test_framed_stream.Po
@@ -4395,6 +4418,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sdlwindow.Po
 	-rm -f ./$(DEPDIR)/surface_primitives.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
+	-rm -f ./$(DEPDIR)/test_checknames.Po
 	-rm -f ./$(DEPDIR)/test_connect_target.Po
 	-rm -f ./$(DEPDIR)/test_contact_target_probe.Po
 	-rm -f ./$(DEPDIR)/test_framed_stream.Po

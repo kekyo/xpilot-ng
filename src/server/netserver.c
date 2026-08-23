@@ -1641,13 +1641,13 @@ static int Handle_login(connection_t *connp, char *errmsg, size_t errsize)
     strlcpy(pl->username, connp->user, MAX_CHARS);
     strlcpy(pl->hostname, connp->host, MAX_CHARS);
 
+    pl->version = connp->version;
     LegalizeName(pl->name, true);
-    LegalizeName(pl->username, false);
+    if (!Game_transport_protocol_uses_session(pl->version))
+	LegalizeName(pl->username, false);
     LegalizeHost(pl->hostname);
 
     pl->team = connp->team;
-    pl->version = connp->version;
-
     if (pl->rectype < 2) {
 	if (BIT(world->rules->mode, TEAM_PLAY) && pl->team == TEAM_NOT_SET) {
 	    Player_set_state(pl, PL_STATE_PAUSED);

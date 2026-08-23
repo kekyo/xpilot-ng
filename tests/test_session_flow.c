@@ -19,9 +19,9 @@ static session_game_request_t make_game_request(void)
     memset(&request, 0, sizeof(request));
     request.polygon_version = GAME_PROTOCOL_TCP_POLYGON_VERSION;
     request.legacy_version = GAME_PROTOCOL_TCP_LEGACY_VERSION;
-    strlcpy(request.user, "test-user", sizeof(request.user));
+    strlcpy(request.user, "Jos\xc3\xa9", sizeof(request.user));
     strlcpy(request.nick, "test-nick", sizeof(request.nick));
-    strlcpy(request.display, "test-display", sizeof(request.display));
+    strlcpy(request.display, "\xe6\x97\xa5\xe6\x9c\xac", sizeof(request.display));
     strlcpy(request.host, "test-host", sizeof(request.host));
     request.team = TEAM_NOT_SET;
     return request;

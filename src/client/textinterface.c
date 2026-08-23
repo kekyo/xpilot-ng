@@ -26,6 +26,8 @@
  */
 
 #include "xpclient.h"
+
+#include "utf8_names.h"
 #include "session_connection.h"
 #include "session_transport.h"
 #include "transport_display.h"
@@ -1259,6 +1261,11 @@ static Contact_servers_result_t Contact_session_target(
     Contact_servers_result_t result = { false, false };
     Connect_param_t attempt = *connection;
 
+    if (Check_utf8_user_name(attempt.user_name) == NAME_ERROR
+	|| Check_utf8_disp_name(attempt.disp_name) == NAME_ERROR) {
+	warn("Cannot use invalid UTF-8 player metadata for a session");
+	return result;
+    }
     printf("Contacting server %s.\n", target->address);
     attempt.contact_port = target->contact_port;
     attempt.server_port = target->contact_port;
@@ -1320,6 +1327,10 @@ static Contact_servers_result_t Contact_target(
 	    target, auto_connect, list_servers, auto_shutdown,
 	    shutdown_reason, conpar);
 
+    /* Legacy contact and gameplay packets expose byte-oriented names to old
+     * peers, so preserve their exact printable-ASCII normalization. */
+    Fix_user_name(attempt.user_name);
+    Fix_disp_name(attempt.disp_name);
     attempt.contact_port = target->contact_port;
     attempt.contact_transport = target->contact_transport;
     attempt.game_transport = target->game_transport;
@@ -1457,6 +1468,7 @@ static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
 				      Connect_param_t *conpar)
 {
     const int max_retries = 2;
+    Connect_param_t legacy_connection;
     Connect_target_t target;
     int connected = false;
     int contacted = 0;
@@ -1474,6 +1486,10 @@ static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
 	return false;
     }
 
+    legacy_connection = *conpar;
+    Fix_user_name(legacy_connection.user_name);
+    Fix_disp_name(legacy_connection.disp_name);
+
     memset(&target, 0, sizeof(target));
     target.contact_port = defaults->contact_port;
     target.contact_transport = GAME_TRANSPORT_UDP;
@@ -1488,7 +1504,8 @@ static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
 	Sockbuf_clear(&sbuf);
 	Packet_printf(&sbuf, "%u%s%hu%c",
 		      Client_contact_magic(target.game_transport, false),
-		      conpar->user_name, sock_get_port(&sbuf.sock), CONTACT_pack);
+		      legacy_connection.user_name,
+		      sock_get_port(&sbuf.sock), CONTACT_pack);
 	assert(sbuf.len >= 0);
 	if (Query_all(&sbuf.sock, target.contact_port,
 		      sbuf.buf, (size_t)sbuf.len) == -1) {
@@ -1504,7 +1521,7 @@ static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
 	    IFWINDOWS( Progress("Searching once more...") );
 	}
 	for (;;) {
-	    Connect_param_t attempt = *conpar;
+	    Connect_param_t attempt = legacy_connection;
 	    Contact_message_result_t message_result = Get_contact_message(
 		&sbuf, "", &target, &attempt);
 	    int ret = message_result.status;

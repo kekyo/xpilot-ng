@@ -27,6 +27,8 @@
 
 #include "xpclient.h"
 
+#include "utf8_names.h"
+
 static double	hudScale;	/* Scale for HUD drawing */
 
 static bool Set_nickName(xp_option_t *opt, const char *value)
@@ -65,27 +67,31 @@ static bool Set_nickName(xp_option_t *opt, const char *value)
 
 static bool Set_userName(xp_option_t *opt, const char *value)
 {
+    char candidate[MAX_CHARS];
     char *cp = getenv("XPILOTUSER");
 
     UNUSED_PARAM(opt);
     assert(value);
 
+    candidate[0] = '\0';
     if (cp)
-	strlcpy(connectParam.user_name, cp, sizeof(connectParam.user_name));
+	strlcpy(candidate, cp, sizeof(candidate));
     else
-	Get_login_name(connectParam.user_name, sizeof(connectParam.user_name));
+	Get_login_name(candidate, sizeof(candidate));
 
     if (strlen(value) > 0)
-	strlcpy(connectParam.user_name, value, sizeof(connectParam.user_name));
+	strlcpy(candidate, value, sizeof(candidate));
 
-    if (Check_user_name(connectParam.user_name) == NAME_ERROR) {
-	char user[MAX_NAME_LEN];
+    if (Check_utf8_user_name(candidate) == NAME_ERROR) {
+	char user[MAX_CHARS];
 
-	strlcpy(user, connectParam.user_name, sizeof(user));
-	Fix_user_name(connectParam.user_name);
+	strlcpy(user, candidate, sizeof(user));
+	Fix_utf8_user_name(candidate);
 	warn("Fixing username from \"%s\" to \"%s\".\n",
-	     user, connectParam.user_name);
+	     user, candidate);
     }
+    strlcpy(connectParam.user_name, candidate,
+	    sizeof(connectParam.user_name));
 
     /* hack - if nickname is not set, set nickname to username */
     if (strlen(connectParam.nick_name) == 0)

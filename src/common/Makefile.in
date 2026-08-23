@@ -118,10 +118,10 @@ am_libxpcommon_a_OBJECTS = arraylist.$(OBJEXT) checknames.$(OBJEXT) \
 	portability.$(OBJEXT) randommt.$(OBJEXT) \
 	$(top_builddir)/vendor/mtwister/mtwister.$(OBJEXT) \
 	secure_random.$(OBJEXT) session_protocol.$(OBJEXT) \
-	session_token.$(OBJEXT) websocket_http.$(OBJEXT) \
-	websocket_transport.$(OBJEXT) shipshape.$(OBJEXT) \
-	socklib.$(OBJEXT) strcasecmp.$(OBJEXT) strdup.$(OBJEXT) \
-	strlcpy.$(OBJEXT) \
+	session_token.$(OBJEXT) utf8_names.$(OBJEXT) \
+	websocket_http.$(OBJEXT) websocket_transport.$(OBJEXT) \
+	shipshape.$(OBJEXT) socklib.$(OBJEXT) strcasecmp.$(OBJEXT) \
+	strdup.$(OBJEXT) strlcpy.$(OBJEXT) \
 	$(top_builddir)/vendor/wslay/lib/wslay_event.$(OBJEXT) \
 	$(top_builddir)/vendor/wslay/lib/wslay_frame.$(OBJEXT) \
 	$(top_builddir)/vendor/wslay/lib/wslay_net.$(OBJEXT) \
@@ -160,7 +160,7 @@ am__depfiles_remade =  \
 	./$(DEPDIR)/session_token.Po ./$(DEPDIR)/shipshape.Po \
 	./$(DEPDIR)/socklib.Po ./$(DEPDIR)/strcasecmp.Po \
 	./$(DEPDIR)/strdup.Po ./$(DEPDIR)/strlcpy.Po \
-	./$(DEPDIR)/websocket_http.Po \
+	./$(DEPDIR)/utf8_names.Po ./$(DEPDIR)/websocket_http.Po \
 	./$(DEPDIR)/websocket_transport.Po ./$(DEPDIR)/xpmemory.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
@@ -368,6 +368,7 @@ libxpcommon_a_SOURCES = \
 	secure_random.c secure_random.h \
 	session_protocol.c session_protocol.h \
 	session_token.c session_token.h \
+	utf8_names.c utf8_names.h \
 	websocket_http.c websocket_http.h \
 	websocket_transport.c websocket_transport.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \
@@ -495,6 +496,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/strcasecmp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/strdup.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/strlcpy.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/utf8_names.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/websocket_http.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/websocket_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xpmemory.Po@am__quote@ # am--include-marker
@@ -675,6 +677,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/strcasecmp.Po
 	-rm -f ./$(DEPDIR)/strdup.Po
 	-rm -f ./$(DEPDIR)/strlcpy.Po
+	-rm -f ./$(DEPDIR)/utf8_names.Po
 	-rm -f ./$(DEPDIR)/websocket_http.Po
 	-rm -f ./$(DEPDIR)/websocket_transport.Po
 	-rm -f ./$(DEPDIR)/xpmemory.Po
@@ -750,6 +753,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/strcasecmp.Po
 	-rm -f ./$(DEPDIR)/strdup.Po
 	-rm -f ./$(DEPDIR)/strlcpy.Po
+	-rm -f ./$(DEPDIR)/utf8_names.Po
 	-rm -f ./$(DEPDIR)/websocket_http.Po
 	-rm -f ./$(DEPDIR)/websocket_transport.Po
 	-rm -f ./$(DEPDIR)/xpmemory.Po

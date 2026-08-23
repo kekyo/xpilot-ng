@@ -26,7 +26,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 
 if COND_WINDOWS
 check_PROGRAMS = test-framed-stream test-websocket-transport \
-	test-game-transport \
+	test-game-transport test-checknames \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle test-recording-input test-session-flow \
@@ -35,7 +35,7 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 TESTS =
 else
 check_PROGRAMS = test-framed-stream test-websocket-transport \
-	test-game-transport \
+	test-game-transport test-checknames \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle \
@@ -62,7 +62,7 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 	test-text-geometry test-text-atlas \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
 TESTS = test-framed-stream test-websocket-transport \
-	test-game-transport test-connect-target \
+	test-game-transport test-checknames test-connect-target \
 	test-transport-display test-session-token \
 	test-socket-io \
 	test-native-socket-handle \
@@ -96,6 +96,9 @@ endif
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
+
+test_checknames_SOURCES = test_checknames.c
+test_checknames_LDADD = $(top_builddir)/src/common/libxpcommon.a
 
 test_randommt_SOURCES = test_randommt.c
 test_randommt_LDADD = $(top_builddir)/src/common/libxpcommon.a

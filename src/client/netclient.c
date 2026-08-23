@@ -27,6 +27,8 @@
 
 #include "xpclient.h"
 
+#include "utf8_names.h"
+
 #include "record_session.h"
 #include "session_connection.h"
 #include "session_transport.h"
@@ -2653,7 +2655,11 @@ int Receive_player(void)
 			  shape)) <= 0)
 	return n;
     nick_name[MAX_NAME_LEN - 1] = '\0';
-    user_name[MAX_NAME_LEN - 1] = '\0';
+    if (Game_transport_protocol_uses_session(version)) {
+	if (Check_utf8_user_name(user_name) == NAME_ERROR)
+	    return -1;
+    } else
+	user_name[MAX_NAME_LEN - 1] = '\0';
     host_name[MAX_HOST_LEN - 1] = '\0';
 
     if (version < 0x4F10)

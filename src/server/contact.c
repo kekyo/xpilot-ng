@@ -25,6 +25,8 @@
 
 #include "xpserver.h"
 
+#include "utf8_names.h"
+
 #include "contact_stream.h"
 #include "contact_session.h"
 #include "record_session.h"
@@ -529,10 +531,12 @@ static int Admit_session_game(pending_session_t *pending)
     int reserved;
     int status;
 
-    Fix_user_name(game->user);
     Fix_nick_name(game->nick);
-    Fix_disp_name(game->display);
     Fix_host_name(game->host);
+    if (Check_utf8_user_name(game->user) == NAME_ERROR
+	|| Check_utf8_disp_name(game->display) == NAME_ERROR) {
+	return E_INVAL;
+    }
     if (game->team < 0 || game->team >= MAX_TEAMS)
 	game->team = TEAM_NOT_SET;
 
@@ -769,7 +773,8 @@ static int Execute_session_control(pending_session_t *pending)
     char *separator;
     int status = SUCCESS;
 
-    Fix_user_name(control->user);
+    if (Check_utf8_user_name(control->user) == NAME_ERROR)
+	return Queue_simple_session_control_reply(pending, E_INVAL);
     if (control->polygon_version
 	    != Contact_session_protocol_version(true)
 	|| control->legacy_version

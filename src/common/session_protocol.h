@@ -18,7 +18,7 @@
 #include "session_token.h"
 
 /** Current version of the backend-neutral session control protocol. */
-#define SESSION_PROTOCOL_VERSION 1
+#define SESSION_PROTOCOL_VERSION 2
 
 /** Largest control-plane record accepted by the session protocol. */
 #define SESSION_PROTOCOL_MAX_RECORD_SIZE SERVER_RECV_SIZE

@@ -32,6 +32,7 @@ libxpcommon_a_SOURCES = \
 	secure_random.c secure_random.h \
 	session_protocol.c session_protocol.h \
 	session_token.c session_token.h \
+	utf8_names.c utf8_names.h \
 	websocket_http.c websocket_http.h \
 	websocket_transport.c websocket_transport.h \
 	setup.h shipshape.c shipshape.h socklib.c socklib.h \
