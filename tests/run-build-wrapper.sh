@@ -178,6 +178,7 @@ chmod +x "$fixture_source/vendor/sdl3/build.sh" \
 XPILOT_BUILD_TEST_LOG=$fixture_log \
 PATH="$fixture_tools:$PATH" \
     "$fixture_source/build.sh" \
+    --target native \
     --build-root "$fixture_output" \
     --jobs 3 \
     --build-type Debug \
@@ -218,6 +219,23 @@ grep -Fx "make.cwd=$fixture_output/xpilot-ng" "$fixture_log" >/dev/null \
     || fail "XPilot NG was not built out of tree"
 grep -Fx "make.arg=-j3" "$fixture_log" >/dev/null \
     || fail "parallel build count was not passed to make"
+
+: > "$fixture_log"
+default_output="$wrapper_test_dir/default-output"
+XPILOT_BUILD_TEST_LOG=$fixture_log \
+PATH="$fixture_tools:$PATH" \
+    "$fixture_source/build.sh" \
+    --build-root "$default_output" \
+    --jobs 1
+
+for target_build_dir in \
+    "$default_output/xpilot-ng" \
+    "$default_output/windows/x86" \
+    "$default_output/windows/x86_64"
+do
+    test "$(grep -Fxc "configure.cwd=$target_build_dir" "$fixture_log")" -eq 1 \
+        || fail "default build did not configure every target exactly once: $target_build_dir"
+done
 
 : > "$fixture_log"
 XPILOT_BUILD_TEST_LOG=$fixture_log \

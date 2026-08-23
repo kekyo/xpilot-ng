@@ -11,7 +11,7 @@ Configure and build XPilot NG and its pinned dependencies in one command.
 Build products are kept out of the source tree under ./build by default.
 
 Options:
-  --target TARGET          native or windows (default: native)
+  --target TARGET          all, native, or windows (default: all)
   --arch ARCH              Windows x86, x86_64, or all (default: all)
   --test                   Run the target's complete supported test suite
   --build-root PATH        Root for all build output (default: ./build)
@@ -23,7 +23,8 @@ Options:
 Arguments after -- are forwarded to XPilot NG's configure script.  Native
 builds use the vendored SDL3 provider.  Windows builds run on Linux with
 MinGW and delegate dependency builds, packaging, and Wine tests to the
-configured Makefiles for x86 and/or x86_64.
+configured Makefiles for x86 and/or x86_64.  The default builds native and
+both Windows architectures.
 EOF
 }
 
@@ -39,7 +40,7 @@ build_root="$source_dir/build"
 jobs=
 build_type=Release
 toolchain_file=
-target=native
+target=all
 architecture=
 run_tests=false
 
@@ -118,25 +119,31 @@ while test "$#" -gt 0; do
 done
 
 case "$target" in
-    native|windows) ;;
-    *) fail "--target must be native or windows" ;;
-esac
-
-if test "$target" = native; then
-    test -z "$architecture" \
-        || fail "--arch is only valid with --target windows"
-else
-    if test -z "$architecture"; then
+    all)
+        test -z "$architecture" \
+            || fail "--arch is only valid with --target windows"
+        test -z "$toolchain_file" \
+            || fail "--toolchain-file requires a single target"
         architecture=all
-    fi
-    case "$architecture" in
-        x86|x86_64|all) ;;
-        *) fail "--arch must be x86, x86_64, or all" ;;
-    esac
-    if test "$architecture" = all && test -n "$toolchain_file"; then
-        fail "--toolchain-file requires a single Windows architecture"
-    fi
-fi
+        ;;
+    native)
+        test -z "$architecture" \
+            || fail "--arch is only valid with --target windows"
+        ;;
+    windows)
+        if test -z "$architecture"; then
+            architecture=all
+        fi
+        case "$architecture" in
+            x86|x86_64|all) ;;
+            *) fail "--arch must be x86, x86_64, or all" ;;
+        esac
+        if test "$architecture" = all && test -n "$toolchain_file"; then
+            fail "--toolchain-file requires a single Windows architecture"
+        fi
+        ;;
+    *) fail "--target must be all, native, or windows" ;;
+esac
 
 test -n "$build_root" || fail "--build-root requires a nonempty path"
 test -n "$build_type" || fail "--build-type requires a nonempty value"
@@ -267,9 +274,8 @@ build_windows_architecture()
     echo "XPilot NG Windows package completed in $architecture_root/package"
 )
 
-if test "$target" = native; then
-    build_native "$@"
-else
+build_windows()
+{
     case "$architecture" in
         all)
             build_windows_architecture x86 "$@"
@@ -279,4 +285,17 @@ else
             build_windows_architecture "$architecture" "$@"
             ;;
     esac
-fi
+}
+
+case "$target" in
+    all)
+        build_native "$@"
+        build_windows "$@"
+        ;;
+    native)
+        build_native "$@"
+        ;;
+    windows)
+        build_windows "$@"
+        ;;
+esac

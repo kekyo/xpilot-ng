@@ -71,6 +71,8 @@ sequence for both architectures:
 ./build.sh --target windows --arch all --test
 ```
 
+Running `./build.sh` without `--target` builds these two Windows architectures
+after the native target.  Use `--target windows` to omit the native build.
 Use `--arch x86` or `--arch x86_64` to select one architecture.  The wrapper
 does not build dependencies, package executables, or invoke Wine itself;
 those operations remain Makefile targets in each configured tree.  `--jobs`,
