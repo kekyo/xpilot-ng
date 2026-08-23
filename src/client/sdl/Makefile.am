@@ -45,8 +45,7 @@ libxp_libtess2_a_SOURCES = \
 	$(top_srcdir)/vendor/libtess2/Source/tess.h
 xpilot_ng_sdl_SOURCES = \
 	asteroid_data.h DT_drawtext.c DT_drawtext.h \
-	SDL_console.c SDL_console.h SDL_gfxPrimitives.c SDL_gfxPrimitives.h \
-	SDL_gfxPrimitives_font.h console.c console.h glwidgets.c glwidgets.h \
+	SDL_console.c SDL_console.h console.c console.h glwidgets.c glwidgets.h \
 	gameinput.c gameinput.h gameloop.c gameloop.h \
 	gl_diagnostics.c gl_diagnostics.h \
 	image_geometry.c image_geometry.h images.c images.h images_test_support.h \
@@ -61,7 +60,8 @@ xpilot_ng_sdl_SOURCES = \
 	sdlgameframe.c sdlgameframe.h \
 	sdlmetaframe.c sdlmetaframe.h sdlrenderer.c sdlrenderer.h \
 	sdluiimage.c sdluiimage.h \
-	sdlpaint.c surface_rgba8.c surface_rgba8.h \
+	sdlpaint.c surface_primitives.c surface_primitives.h \
+	surface_rgba8.c surface_rgba8.h \
 	sdlpaint.h sdlwindow.c sdlwindow.h text.c text.h \
 	text_atlas.c text_atlas.h text_geometry.c text_geometry.h \
 	text_renderer.c text_renderer.h \

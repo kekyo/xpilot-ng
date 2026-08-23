@@ -107,6 +107,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-sdl-console$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-surface$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-surface-rgba8$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-surface-primitives$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-window$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-clipboard$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-event$(EXEEXT) \
@@ -174,6 +175,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-sdl-console$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-surface$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-surface-rgba8$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-surface-primitives$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-window$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-clipboard$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-event$(EXEEXT) \
@@ -521,6 +523,11 @@ am_test_socket_io_OBJECTS = test_socket_io.$(OBJEXT)
 test_socket_io_OBJECTS = $(am_test_socket_io_OBJECTS)
 test_socket_io_DEPENDENCIES =  \
 	$(top_builddir)/src/common/libxpcommon.a
+am_test_surface_primitives_OBJECTS =  \
+	test_surface_primitives.$(OBJEXT) surface_primitives.$(OBJEXT)
+test_surface_primitives_OBJECTS =  \
+	$(am_test_surface_primitives_OBJECTS)
+test_surface_primitives_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_test_surface_rgba8_OBJECTS = test_surface_rgba8.$(OBJEXT) \
 	surface_rgba8.$(OBJEXT) sdlcompat.$(OBJEXT)
 test_surface_rgba8_OBJECTS = $(am_test_surface_rgba8_OBJECTS)
@@ -593,7 +600,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
 	./$(DEPDIR)/sdlgameframe.Po ./$(DEPDIR)/sdlkeys.Po \
 	./$(DEPDIR)/sdlmetaframe.Po ./$(DEPDIR)/sdlrenderer.Po \
-	./$(DEPDIR)/sdlwindow.Po ./$(DEPDIR)/surface_rgba8.Po \
+	./$(DEPDIR)/sdlwindow.Po ./$(DEPDIR)/surface_primitives.Po \
+	./$(DEPDIR)/surface_rgba8.Po \
 	./$(DEPDIR)/test_connect_target.Po \
 	./$(DEPDIR)/test_contact_target_probe.Po \
 	./$(DEPDIR)/test_framed_stream.Po \
@@ -683,6 +691,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_session_flow-test_session_flow.Po \
 	./$(DEPDIR)/test_session_token.Po \
 	./$(DEPDIR)/test_socket_io.Po \
+	./$(DEPDIR)/test_surface_primitives.Po \
 	./$(DEPDIR)/test_surface_rgba8.Po \
 	./$(DEPDIR)/test_text_atlas.Po \
 	./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po \
@@ -750,6 +759,7 @@ SOURCES = $(test_connect_target_SOURCES) \
 	$(test_sdlmeta_primitives_SOURCES) \
 	$(test_sdlpaint_stage_SOURCES) $(test_session_flow_SOURCES) \
 	$(test_session_token_SOURCES) $(test_socket_io_SOURCES) \
+	$(test_surface_primitives_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
 	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
@@ -791,6 +801,7 @@ DIST_SOURCES = $(test_connect_target_SOURCES) \
 	$(test_sdlmeta_primitives_SOURCES) \
 	$(test_sdlpaint_stage_SOURCES) $(test_session_flow_SOURCES) \
 	$(test_session_token_SOURCES) $(test_socket_io_SOURCES) \
+	$(test_surface_primitives_SOURCES) \
 	$(test_surface_rgba8_SOURCES) $(test_text_atlas_SOURCES) \
 	$(test_text_cache_adapter_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
@@ -1266,6 +1277,10 @@ test_surface_rgba8_SOURCES = test_surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/sdlcompat.c
 
 test_surface_rgba8_LDADD = $(XP_SDL3_LIBS)
+test_surface_primitives_SOURCES = test_surface_primitives.c \
+	$(top_srcdir)/src/client/sdl/surface_primitives.c
+
+test_surface_primitives_LDADD = $(XP_SDL3_LIBS)
 test_sdl_window_SOURCES = test_sdl_window.c \
 	$(top_srcdir)/src/client/sdl/sdlwindow.c
 
@@ -1890,6 +1905,10 @@ test-socket-io$(EXEEXT): $(test_socket_io_OBJECTS) $(test_socket_io_DEPENDENCIES
 	@rm -f test-socket-io$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_socket_io_OBJECTS) $(test_socket_io_LDADD) $(LIBS)
 
+test-surface-primitives$(EXEEXT): $(test_surface_primitives_OBJECTS) $(test_surface_primitives_DEPENDENCIES) $(EXTRA_test_surface_primitives_DEPENDENCIES)
+	@rm -f test-surface-primitives$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_surface_primitives_OBJECTS) $(test_surface_primitives_LDADD) $(LIBS)
+
 test-surface-rgba8$(EXEEXT): $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_DEPENDENCIES) $(EXTRA_test_surface_rgba8_DEPENDENCIES)
 	@rm -f test-surface-rgba8$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_surface_rgba8_OBJECTS) $(test_surface_rgba8_LDADD) $(LIBS)
@@ -1946,6 +1965,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlmetaframe.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlrenderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlwindow.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/surface_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_connect_target.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_contact_target_probe.Po@am__quote@ # am--include-marker
@@ -2038,6 +2058,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_session_flow-test_session_flow.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_session_token.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_socket_io.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po@am__quote@ # am--include-marker
@@ -3238,6 +3259,20 @@ test_session_flow-session_acceptor.obj: $(top_srcdir)/src/server/session_accepto
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_session_flow_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_session_flow-session_acceptor.obj `if test -f '$(top_srcdir)/src/server/session_acceptor.c'; then $(CYGPATH_W) '$(top_srcdir)/src/server/session_acceptor.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/server/session_acceptor.c'; fi`
 
+surface_primitives.o: $(top_srcdir)/src/client/sdl/surface_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT surface_primitives.o -MD -MP -MF $(DEPDIR)/surface_primitives.Tpo -c -o surface_primitives.o `test -f '$(top_srcdir)/src/client/sdl/surface_primitives.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/surface_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/surface_primitives.Tpo $(DEPDIR)/surface_primitives.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/surface_primitives.c' object='surface_primitives.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o surface_primitives.o `test -f '$(top_srcdir)/src/client/sdl/surface_primitives.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/surface_primitives.c
+
+surface_primitives.obj: $(top_srcdir)/src/client/sdl/surface_primitives.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT surface_primitives.obj -MD -MP -MF $(DEPDIR)/surface_primitives.Tpo -c -o surface_primitives.obj `if test -f '$(top_srcdir)/src/client/sdl/surface_primitives.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/surface_primitives.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/surface_primitives.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/surface_primitives.Tpo $(DEPDIR)/surface_primitives.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/surface_primitives.c' object='surface_primitives.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o surface_primitives.obj `if test -f '$(top_srcdir)/src/client/sdl/surface_primitives.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/surface_primitives.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/surface_primitives.c'; fi`
+
 surface_rgba8.o: $(top_srcdir)/src/client/sdl/surface_rgba8.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT surface_rgba8.o -MD -MP -MF $(DEPDIR)/surface_rgba8.Tpo -c -o surface_rgba8.o `test -f '$(top_srcdir)/src/client/sdl/surface_rgba8.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/surface_rgba8.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/surface_rgba8.Tpo $(DEPDIR)/surface_rgba8.Po
@@ -3697,6 +3732,13 @@ test-surface-rgba8.log: test-surface-rgba8$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-surface-primitives.log: test-surface-primitives$(EXEEXT)
+	@p='test-surface-primitives$(EXEEXT)'; \
+	b='test-surface-primitives'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdl-window.log: test-sdl-window$(EXEEXT)
 	@p='test-sdl-window$(EXEEXT)'; \
 	b='test-sdl-window'; \
@@ -4037,6 +4079,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sdlmetaframe.Po
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/sdlwindow.Po
+	-rm -f ./$(DEPDIR)/surface_primitives.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_connect_target.Po
 	-rm -f ./$(DEPDIR)/test_contact_target_probe.Po
@@ -4129,6 +4172,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_session_flow-test_session_flow.Po
 	-rm -f ./$(DEPDIR)/test_session_token.Po
 	-rm -f ./$(DEPDIR)/test_socket_io.Po
+	-rm -f ./$(DEPDIR)/test_surface_primitives.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po
@@ -4209,6 +4253,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sdlmetaframe.Po
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/sdlwindow.Po
+	-rm -f ./$(DEPDIR)/surface_primitives.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_connect_target.Po
 	-rm -f ./$(DEPDIR)/test_contact_target_probe.Po
@@ -4301,6 +4346,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_session_flow-test_session_flow.Po
 	-rm -f ./$(DEPDIR)/test_session_token.Po
 	-rm -f ./$(DEPDIR)/test_socket_io.Po
+	-rm -f ./$(DEPDIR)/test_surface_primitives.Po
 	-rm -f ./$(DEPDIR)/test_surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/test_text_atlas.Po
 	-rm -f ./$(DEPDIR)/test_text_cache_adapter-test_text_cache_adapter.Po

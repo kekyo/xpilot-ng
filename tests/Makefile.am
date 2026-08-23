@@ -43,7 +43,7 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 	test-meta-environment test-sdl-versions \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
-	test-surface-rgba8 test-sdl-window \
+	test-surface-rgba8 test-surface-primitives test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-gl-core-resources \
 	test-renderer-commands test-renderer-context-recovery \
 	test-renderer-geometry \
@@ -69,7 +69,7 @@ TESTS = test-framed-stream test-websocket-transport \
 	test-meta-environment test-sdl-versions \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
-	test-surface-rgba8 test-sdl-window \
+	test-surface-rgba8 test-surface-primitives test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
 	test-renderer-context-recovery test-renderer-geometry \
 	test-paint-transform run-gl-core-resources.sh \
@@ -174,6 +174,10 @@ test_surface_rgba8_SOURCES = test_surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/sdlcompat.c
 test_surface_rgba8_LDADD = $(XP_SDL3_LIBS)
+
+test_surface_primitives_SOURCES = test_surface_primitives.c \
+	$(top_srcdir)/src/client/sdl/surface_primitives.c
+test_surface_primitives_LDADD = $(XP_SDL3_LIBS)
 
 test_sdl_window_SOURCES = test_sdl_window.c \
 	$(top_srcdir)/src/client/sdl/sdlwindow.c

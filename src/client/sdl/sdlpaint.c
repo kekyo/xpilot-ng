@@ -31,7 +31,7 @@
 
 #include "xpclient_sdl.h"
 
-#include "SDL_gfxPrimitives.h"
+#include "surface_primitives.h"
 #include "sdlcompat.h"
 #include "sdlinit.h"
 #include "sdlpaint.h"
@@ -826,11 +826,12 @@ void Paint_score_start(void)
     if (Sdl_blit_surface_unblended(header, NULL, scoreListWin.surface,
 				   &scoreEntryRect) < 0)
 	warn("Could not draw scorelist header: %s", SDL_GetError());
-    lineRGBA(scoreListWin.surface, SCORE_BORDER,
-	     scoreEntryRect.y + header->h + 2,
-	     scoreListWin.w - SCORE_BORDER,
-	     scoreEntryRect.y + header->h + 2,
-	     0, 128, 0, 255);
+    Sdl_surface_draw_line_rgba(
+        scoreListWin.surface, SCORE_BORDER,
+        scoreEntryRect.y + header->h + 2,
+        scoreListWin.w - SCORE_BORDER,
+        scoreEntryRect.y + header->h + 2,
+        0, 128, 0, 255);
     SDL_DestroySurface(header);
 }
 
@@ -950,11 +951,12 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
      * Underline the teams
      */
     if (is_team) {
-	lineRGBA(scoreListWin.surface, scoreEntryRect.x, 
-		 scoreEntryRect.y + line->h - 1,
-		 scoreEntryRect.x + scoreEntryRect.w,
-		 scoreEntryRect.y + line->h - 1,
-		 fg.r, fg.g, fg.b, 255);
+	Sdl_surface_draw_line_rgba(
+	    scoreListWin.surface, scoreEntryRect.x,
+	    scoreEntryRect.y + line->h - 1,
+	    scoreEntryRect.x + scoreEntryRect.w,
+	    scoreEntryRect.y + line->h - 1,
+	    fg.r, fg.g, fg.b, 255);
     }
 
     SDL_DestroySurface(line);
