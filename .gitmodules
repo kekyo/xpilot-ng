@@ -19,3 +19,6 @@
 [submodule "vendor/libtess2"]
 	path = vendor/libtess2
 	url = https://github.com/memononen/libtess2
+[submodule "vendor/mtwister"]
+	path = vendor/mtwister
+	url = https://github.com/ESultanik/mtwister

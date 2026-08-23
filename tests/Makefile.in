@@ -100,6 +100,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-recording-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-session-flow$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-randommt$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-gameloop$(EXEEXT) \
@@ -155,6 +156,7 @@ target_triplet = @target@
 @COND_WINDOWS_TRUE@	test-native-socket-handle$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-recording-input$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-session-flow$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-randommt$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-game-input$(EXEEXT)
 @COND_WINDOWS_FALSE@TESTS = test-framed-stream$(EXEEXT) \
@@ -168,6 +170,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-recording-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-session-flow$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-meta-environment$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-randommt$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-gameloop$(EXEEXT) \
@@ -341,6 +344,9 @@ test_radar_renderer_OBJECTS = $(am_test_radar_renderer_OBJECTS)
 test_radar_renderer_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_radar_renderer_LINK = $(CCLD) $(test_radar_renderer_CFLAGS) \
 	$(CFLAGS) $(test_radar_renderer_LDFLAGS) $(LDFLAGS) -o $@
+am_test_randommt_OBJECTS = test_randommt.$(OBJEXT)
+test_randommt_OBJECTS = $(am_test_randommt_OBJECTS)
+test_randommt_DEPENDENCIES = $(top_builddir)/src/common/libxpcommon.a
 am_test_recording_input_OBJECTS = test_recording_input.$(OBJEXT)
 test_recording_input_OBJECTS = $(am_test_recording_input_OBJECTS)
 test_recording_input_DEPENDENCIES =  \
@@ -640,6 +646,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_polygon_geometry.Po \
 	./$(DEPDIR)/test_radar_renderer-radar.Po \
 	./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po \
+	./$(DEPDIR)/test_randommt.Po \
 	./$(DEPDIR)/test_recording_input.Po \
 	./$(DEPDIR)/test_renderer_commands.Po \
 	./$(DEPDIR)/test_renderer_context_recovery.Po \
@@ -738,7 +745,8 @@ SOURCES = $(test_connect_target_SOURCES) \
 	$(test_paint_transform_SOURCES) \
 	$(test_paintmap_vdecor_SOURCES) \
 	$(test_polygon_geometry_SOURCES) \
-	$(test_radar_renderer_SOURCES) $(test_recording_input_SOURCES) \
+	$(test_radar_renderer_SOURCES) $(test_randommt_SOURCES) \
+	$(test_recording_input_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_context_recovery_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
@@ -780,7 +788,8 @@ DIST_SOURCES = $(test_connect_target_SOURCES) \
 	$(test_paint_transform_SOURCES) \
 	$(test_paintmap_vdecor_SOURCES) \
 	$(test_polygon_geometry_SOURCES) \
-	$(test_radar_renderer_SOURCES) $(test_recording_input_SOURCES) \
+	$(test_radar_renderer_SOURCES) $(test_randommt_SOURCES) \
+	$(test_recording_input_SOURCES) \
 	$(test_renderer_commands_SOURCES) \
 	$(test_renderer_context_recovery_SOURCES) \
 	$(test_renderer_geometry_SOURCES) \
@@ -1197,6 +1206,8 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
+test_randommt_SOURCES = test_randommt.c
+test_randommt_LDADD = $(top_builddir)/src/common/libxpcommon.a
 test_session_token_SOURCES = test_session_token.c
 test_session_token_LDADD = $(top_builddir)/src/common/libxpcommon.a
 test_connect_target_SOURCES = test_connect_target.c \
@@ -1789,6 +1800,10 @@ test-radar-renderer$(EXEEXT): $(test_radar_renderer_OBJECTS) $(test_radar_render
 	@rm -f test-radar-renderer$(EXEEXT)
 	$(AM_V_CCLD)$(test_radar_renderer_LINK) $(test_radar_renderer_OBJECTS) $(test_radar_renderer_LDADD) $(LIBS)
 
+test-randommt$(EXEEXT): $(test_randommt_OBJECTS) $(test_randommt_DEPENDENCIES) $(EXTRA_test_randommt_DEPENDENCIES)
+	@rm -f test-randommt$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_randommt_OBJECTS) $(test_randommt_LDADD) $(LIBS)
+
 test-recording-input$(EXEEXT): $(test_recording_input_OBJECTS) $(test_recording_input_DEPENDENCIES) $(EXTRA_test_recording_input_DEPENDENCIES)
 	@rm -f test-recording-input$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_recording_input_OBJECTS) $(test_recording_input_LDADD) $(LIBS)
@@ -2006,6 +2021,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_polygon_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_radar_renderer-radar.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_randommt.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_recording_input.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_commands.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_renderer_context_recovery.Po@am__quote@ # am--include-marker
@@ -3683,6 +3699,13 @@ test-meta-environment.log: test-meta-environment$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-randommt.log: test-randommt$(EXEEXT)
+	@p='test-randommt$(EXEEXT)'; \
+	b='test-randommt'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdl-versions.log: test-sdl-versions$(EXEEXT)
 	@p='test-sdl-versions$(EXEEXT)'; \
 	b='test-sdl-versions'; \
@@ -4120,6 +4143,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-radar.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
+	-rm -f ./$(DEPDIR)/test_randommt.Po
 	-rm -f ./$(DEPDIR)/test_recording_input.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
 	-rm -f ./$(DEPDIR)/test_renderer_context_recovery.Po
@@ -4294,6 +4318,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-radar.Po
 	-rm -f ./$(DEPDIR)/test_radar_renderer-test_radar_renderer.Po
+	-rm -f ./$(DEPDIR)/test_randommt.Po
 	-rm -f ./$(DEPDIR)/test_recording_input.Po
 	-rm -f ./$(DEPDIR)/test_renderer_commands.Po
 	-rm -f ./$(DEPDIR)/test_renderer_context_recovery.Po

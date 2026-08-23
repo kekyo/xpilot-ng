@@ -29,6 +29,13 @@ submodule. Initialize it before configuring XPilot NG:
 
     git submodule update --init vendor/libtess2
 
+MT19937 DEPENDENCY
+
+The process-global random number wrapper builds MTwister directly from its
+pinned git submodule. Initialize it before configuring XPilot NG:
+
+    git submodule update --init vendor/mtwister
+
 SDL3 DEPENDENCY PROVIDERS
 
 By default, configure finds SDL3, SDL3_image, and SDL3_ttf through the

@@ -30,7 +30,7 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle test-recording-input test-session-flow \
-	test-sdl-versions test-game-input
+	test-randommt test-sdl-versions test-game-input
 TESTS =
 else
 check_PROGRAMS = test-framed-stream test-websocket-transport \
@@ -40,7 +40,7 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 	test-native-socket-handle \
 	test-recording-input \
 	test-session-flow \
-	test-meta-environment test-sdl-versions \
+	test-meta-environment test-randommt test-sdl-versions \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
 	test-surface-rgba8 test-surface-primitives test-sdl-window \
@@ -66,7 +66,7 @@ TESTS = test-framed-stream test-websocket-transport \
 	test-native-socket-handle \
 	test-recording-input \
 	test-session-flow \
-	test-meta-environment test-sdl-versions \
+	test-meta-environment test-randommt test-sdl-versions \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
 	test-surface-rgba8 test-surface-primitives test-sdl-window \
@@ -93,6 +93,9 @@ endif
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
+
+test_randommt_SOURCES = test_randommt.c
+test_randommt_LDADD = $(top_builddir)/src/common/libxpcommon.a
 
 test_session_token_SOURCES = test_session_token.c
 test_session_token_LDADD = $(top_builddir)/src/common/libxpcommon.a

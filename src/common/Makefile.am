@@ -3,6 +3,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_srcdir)/vendor/wslay/lib/includes \
 	-I$(top_srcdir)/vendor/wslay/lib \
+	-I$(top_srcdir)/vendor/mtwister \
 	-DWSLAY_VERSION=\"1.1.1\"
 
 if COND_WINDOWS
@@ -24,7 +25,10 @@ libxpcommon_a_SOURCES = \
 	recording_input.c recording_input.h \
 	record_session.c record_session.h record_transport.c record_transport.h \
 	pack.h packet.h portability.c portability.h \
-	randommt.c rules.h \
+	randommt.c \
+	$(top_srcdir)/vendor/mtwister/mtwister.c \
+	$(top_srcdir)/vendor/mtwister/mtwister.h \
+	rules.h \
 	secure_random.c secure_random.h \
 	session_protocol.c session_protocol.h \
 	session_token.c session_token.h \
@@ -46,4 +50,5 @@ libxpcommon_a_SOURCES = \
 	wreckshape.h \
 	xpcommon.h xpconfig.h xpmap.h xpmemory.c
 
-EXTRA_DIST = $(top_srcdir)/vendor/wslay/COPYING
+EXTRA_DIST = $(top_srcdir)/vendor/wslay/COPYING \
+	$(top_srcdir)/vendor/mtwister/README.md

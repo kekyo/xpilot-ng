@@ -116,6 +116,7 @@ am_libxpcommon_a_OBJECTS = arraylist.$(OBJEXT) checknames.$(OBJEXT) \
 	record_drain.$(OBJEXT) recording_input.$(OBJEXT) \
 	record_session.$(OBJEXT) record_transport.$(OBJEXT) \
 	portability.$(OBJEXT) randommt.$(OBJEXT) \
+	$(top_builddir)/vendor/mtwister/mtwister.$(OBJEXT) \
 	secure_random.$(OBJEXT) session_protocol.$(OBJEXT) \
 	session_token.$(OBJEXT) websocket_http.$(OBJEXT) \
 	websocket_transport.$(OBJEXT) shipshape.$(OBJEXT) \
@@ -143,6 +144,7 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade =  \
+	$(top_builddir)/vendor/mtwister/$(DEPDIR)/mtwister.Po \
 	$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_event.Po \
 	$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_frame.Po \
 	$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_net.Po \
@@ -341,7 +343,8 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_srcdir)/vendor/wslay/lib/includes \
-	-I$(top_srcdir)/vendor/wslay/lib -DWSLAY_VERSION=\"1.1.1\" \
+	-I$(top_srcdir)/vendor/wslay/lib \
+	-I$(top_srcdir)/vendor/mtwister -DWSLAY_VERSION=\"1.1.1\" \
 	$(am__append_1)
 noinst_LIBRARIES = libxpcommon.a
 libxpcommon_a_SOURCES = \
@@ -358,7 +361,10 @@ libxpcommon_a_SOURCES = \
 	recording_input.c recording_input.h \
 	record_session.c record_session.h record_transport.c record_transport.h \
 	pack.h packet.h portability.c portability.h \
-	randommt.c rules.h \
+	randommt.c \
+	$(top_srcdir)/vendor/mtwister/mtwister.c \
+	$(top_srcdir)/vendor/mtwister/mtwister.h \
+	rules.h \
 	secure_random.c secure_random.h \
 	session_protocol.c session_protocol.h \
 	session_token.c session_token.h \
@@ -380,7 +386,9 @@ libxpcommon_a_SOURCES = \
 	wreckshape.h \
 	xpcommon.h xpconfig.h xpmap.h xpmemory.c
 
-EXTRA_DIST = $(top_srcdir)/vendor/wslay/COPYING
+EXTRA_DIST = $(top_srcdir)/vendor/wslay/COPYING \
+	$(top_srcdir)/vendor/mtwister/README.md
+
 all: all-am
 
 .SUFFIXES:
@@ -419,6 +427,15 @@ version.h: $(top_builddir)/config.status $(srcdir)/version.h.in
 
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+$(top_builddir)/vendor/mtwister/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/vendor/mtwister
+	@: > $(top_builddir)/vendor/mtwister/$(am__dirstamp)
+$(top_builddir)/vendor/mtwister/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/vendor/mtwister/$(DEPDIR)
+	@: > $(top_builddir)/vendor/mtwister/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/mtwister/mtwister.$(OBJEXT):  \
+	$(top_builddir)/vendor/mtwister/$(am__dirstamp) \
+	$(top_builddir)/vendor/mtwister/$(DEPDIR)/$(am__dirstamp)
 $(top_builddir)/vendor/wslay/lib/$(am__dirstamp):
 	@$(MKDIR_P) $(top_builddir)/vendor/wslay/lib
 	@: > $(top_builddir)/vendor/wslay/lib/$(am__dirstamp)
@@ -445,11 +462,13 @@ libxpcommon.a: $(libxpcommon_a_OBJECTS) $(libxpcommon_a_DEPENDENCIES) $(EXTRA_li
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f $(top_builddir)/vendor/mtwister/*.$(OBJEXT)
 	-rm -f $(top_builddir)/vendor/wslay/lib/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/mtwister/$(DEPDIR)/mtwister.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_event.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_frame.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_net.Po@am__quote@ # am--include-marker
@@ -616,6 +635,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-test -z "$(top_builddir)/vendor/mtwister/$(DEPDIR)/$(am__dirstamp)" || rm -f $(top_builddir)/vendor/mtwister/$(DEPDIR)/$(am__dirstamp)
+	-test -z "$(top_builddir)/vendor/mtwister/$(am__dirstamp)" || rm -f $(top_builddir)/vendor/mtwister/$(am__dirstamp)
 	-test -z "$(top_builddir)/vendor/wslay/lib/$(DEPDIR)/$(am__dirstamp)" || rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/$(am__dirstamp)
 	-test -z "$(top_builddir)/vendor/wslay/lib/$(am__dirstamp)" || rm -f $(top_builddir)/vendor/wslay/lib/$(am__dirstamp)
 
@@ -627,7 +648,8 @@ clean: clean-am
 clean-am: clean-generic clean-noinstLIBRARIES mostlyclean-am
 
 distclean: distclean-am
-		-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_event.Po
+		-rm -f $(top_builddir)/vendor/mtwister/$(DEPDIR)/mtwister.Po
+	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_event.Po
 	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_frame.Po
 	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_net.Po
 	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_queue.Po
@@ -701,7 +723,8 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_event.Po
+		-rm -f $(top_builddir)/vendor/mtwister/$(DEPDIR)/mtwister.Po
+	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_event.Po
 	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_frame.Po
 	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_net.Po
 	-rm -f $(top_builddir)/vendor/wslay/lib/$(DEPDIR)/wslay_queue.Po
