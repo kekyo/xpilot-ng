@@ -39,7 +39,8 @@
 typedef enum {
     PENDING_READING,
     PENDING_GAME_REPLY,
-    PENDING_CONTROL_REPLY
+    PENDING_CONTROL_REPLY,
+    PENDING_CONTROL_CLOSE
 } pending_state_t;
 
 typedef enum {
@@ -643,7 +644,8 @@ static int Queue_session_game_reply(pending_session_t *pending, int status)
 
 static bool Session_control_is_public(unsigned char command)
 {
-    return command == REPORT_STATUS_pack || command == OPTION_LIST_pack;
+    return command == CONTACT_pack || command == REPORT_STATUS_pack
+	|| command == OPTION_LIST_pack;
 }
 
 static bool Session_control_is_owner(const pending_session_t *pending)
@@ -753,6 +755,8 @@ static int Execute_session_control(pending_session_t *pending)
 	return Queue_simple_session_control_reply(pending, E_NOT_OWNER);
 
     switch (control->command) {
+    case CONTACT_pack:
+	return Queue_simple_session_control_reply(pending, SUCCESS);
     case REPORT_STATUS_pack:
 	xpprintf("%s %s@%s asked for info about current game.\n",
 		 showtime(), control->user, pending->address);
@@ -890,11 +894,24 @@ static void Promote_session_game(pending_session_t *pending)
 static void Process_pending_session(pending_session_t *pending)
 {
     session_acceptor_result_t accept_result;
+    record_receive_result_t receive_result;
     session_open_t open;
+    char ignored[SESSION_PROTOCOL_MAX_RECORD_SIZE];
+    size_t ignored_length;
     int status;
 
-    if (pending->state == PENDING_READING
+    if ((pending->state == PENDING_READING
+	 || pending->state == PENDING_CONTROL_CLOSE)
 	&& time(NULL) >= pending->opened_at + SESSION_ADMISSION_TIMEOUT) {
+	Pending_cleanup(pending);
+	return;
+    }
+
+    if (pending->state == PENDING_CONTROL_CLOSE) {
+	receive_result = Record_session_receive(
+	    pending->session, ignored, sizeof(ignored), &ignored_length);
+	if (receive_result == RECORD_RECEIVE_EMPTY)
+	    return;
 	Pending_cleanup(pending);
 	return;
     }
@@ -945,6 +962,13 @@ static void Process_pending_session(pending_session_t *pending)
 	return;
     }
     if (pending->control_response == CONTROL_RESPONSE_DONE) {
+	/* A WebSocket endpoint must let the client consume the final response
+	 * and start the close handshake before the server releases the stream. */
+	if (contactTransport == GAME_TRANSPORT_WEBSOCKET) {
+	    pending->state = PENDING_CONTROL_CLOSE;
+	    pending->opened_at = time(NULL);
+	    return;
+	}
 	Pending_cleanup(pending);
 	return;
     }

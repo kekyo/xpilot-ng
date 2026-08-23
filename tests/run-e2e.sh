@@ -551,6 +551,49 @@ run_contact_target_failover()
     stop_local_server
 }
 
+run_interactive_prompt_case()
+{
+    prompt_transport=$1
+    prompt_scheme=$2
+    case "$prompt_transport" in
+    udp) prompt_display=UDP ;;
+    tcp) prompt_display=TCP ;;
+    websocket) prompt_display=WebSocket ;;
+    *) fail "unsupported interactive prompt transport: $prompt_transport" ;;
+    esac
+
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-interactive-$prompt_transport.log"
+    prompt_log="$runtime_dir/client-interactive-$prompt_transport.log"
+    prompt_input="$runtime_dir/client-interactive-$prompt_transport.input"
+
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	-transport "$prompt_transport" >"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "$prompt_transport interactive server readiness" 20 \
+	server_ready
+
+    printf 'S\nJ\n' >"$prompt_input"
+    "$contact_target_probe" --interactive \
+	"$prompt_scheme://127.0.0.1:$port" \
+	<"$prompt_input" >"$prompt_log" 2>&1 \
+	|| fail "$prompt_transport interactive status then join failed"
+
+    test "$(grep -Fc 'Enter command>' "$prompt_log")" -ge 2 \
+	|| fail "$prompt_transport interaction did not return to the prompt"
+    if test "$prompt_transport" = udp; then
+	grep -Fq '*** Login allowed.' "$prompt_log" \
+	    || fail "UDP interactive join was not admitted"
+    else
+	grep -Fq "[Contact/Lobby: $prompt_display, "\
+"Gameplay: $prompt_display]" "$prompt_log" \
+	    || fail "$prompt_transport interactive join omitted its transports"
+    fi
+    wait_until "$prompt_transport interactive status request" 5 \
+	grep -q 'asked for info about current game' "$game_server_log"
+    stop_local_server
+}
+
 run_connection_failure_notification()
 {
     port=$(reserve_contact_port)
@@ -1232,6 +1275,9 @@ wait_until "metaserver window teardown" 5 process_window_absent \
 run_invalid_target_rejection
 run_server_transport_option_help
 run_contact_target_failover
+run_interactive_prompt_case tcp tcp
+run_interactive_prompt_case websocket ws
+run_interactive_prompt_case udp udp
 run_connection_failure_notification
 run_gameplay_case tcp tcp no default
 run_gameplay_case websocket websocket no websocket
