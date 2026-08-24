@@ -1,6 +1,7 @@
 #include "test_helpers.h"
 
 #include "xpcommon.h"
+#include "xpclient.h"
 #include "utf8_names.h"
 
 static int test_utf8_names_are_valid(void)
@@ -81,11 +82,20 @@ static int test_player_identity_display(void)
     return 0;
 }
 
+static int test_player_alliance_display(void)
+{
+    TEST_CHECK(Player_alliance_display_char('\0') == ' ');
+    TEST_CHECK(Player_alliance_display_char('3') == '3');
+    TEST_CHECK(Player_alliance_display_char('+') == '+');
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(test_utf8_names_are_valid() == 0);
     TEST_CHECK(test_utf8_name_boundaries_and_invalid_input() == 0);
     TEST_CHECK(test_legacy_names_remain_ascii() == 0);
     TEST_CHECK(test_player_identity_display() == 0);
+    TEST_CHECK(test_player_alliance_display() == 0);
     return 0;
 }

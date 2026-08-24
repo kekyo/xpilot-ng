@@ -886,8 +886,10 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 	}
 	if (BIT(Setup->mode, TEAM_PLAY))
 	    teamStr[0] = other->team + '0';
-	else
-	    sprintf(teamStr, "%c", other->alliance);
+	else {
+	    teamStr[0] = (char)Player_alliance_display_char(other->alliance);
+	    teamStr[1] = '\0';
+	}
 
 	if (BIT(Setup->mode, LIMITED_LIVES))
 	    sprintf(lifeStr, " %3d", other->life);

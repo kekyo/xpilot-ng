@@ -1374,6 +1374,9 @@ int Handle_player(int id, int player_team, int mychar,
 	self = other;
     }
     memset(other, 0, sizeof(other_t));
+    /* PKT_SCORE follows PKT_PLAYER and supplies the alliance marker. Keep
+     * its fixed-width score-list column occupied until that packet arrives. */
+    other->alliance = ' ';
     other->id = id;
     other->team = player_team;
     other->mychar = mychar;

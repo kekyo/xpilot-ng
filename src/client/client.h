@@ -219,6 +219,18 @@ typedef struct {
     char	id_string[MAX_CHARS];
 } other_t;
 
+/**
+ * Return the printable marker occupying a player's alliance column.
+ *
+ * @param alliance Alliance marker from score metadata, or NUL before the
+ * first score packet has arrived.
+ * @return The character to place in the fixed-width alliance column.
+ */
+static inline int Player_alliance_display_char(int alliance)
+{
+    return alliance == '\0' ? ' ' : alliance;
+}
+
 typedef struct {
     int		pos;		/* Block index */
     double	fuel;		/* Amount of fuel available */
