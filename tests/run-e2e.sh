@@ -526,6 +526,24 @@ run_server_transport_option_help()
 	|| fail "server help did not list -transport"
 }
 
+run_server_default_fps()
+{
+    default_fps_dump_log="$runtime_dir/server-default-fps-dump.log"
+    "$server" -dump >"$default_fps_dump_log" 2>&1 || true
+    grep -Eq '^framesPerSecond:[[:space:]]+60$' "$default_fps_dump_log" \
+	|| fail "server option dump did not report the default FPS as 60"
+
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-default-fps.log"
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta \
+	-serverHost 127.0.0.1 >"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "default-FPS server readiness" 20 server_ready
+    grep -Fq 'Server runs at 60 frames per second' "$game_server_log" \
+	|| fail "server did not run at the default FPS of 60"
+    stop_local_server
+}
+
 run_contact_target_failover()
 {
     port=$(reserve_contact_port)
@@ -815,8 +833,6 @@ run_gameplay_case()
     wait_until "$game_case gameplay transport window title" 10 \
 	game_window_transport_visible
     wait_until "$game_case local client acceptance" 20 client_accepted
-    wait_until "$game_case first-player entry announcement" 10 \
-	client_entry_reported
     wait_until "$game_case connection transport banner" 10 \
 	client_transport_banner_reported
     if test "$game_transport" = tcp \
@@ -880,6 +896,8 @@ run_gameplay_case()
     if test "$client_status" -ne 0; then
 	fail "$game_case client returned status $client_status"
     fi
+    client_entry_reported \
+	|| fail "$game_case client did not report the first-player entry announcement"
     wait_until "$game_case game window teardown" 5 process_window_absent \
 	"$finished_client_pid"
     wait_until "$game_case server-side client departure" 5 client_departed
@@ -1401,6 +1419,7 @@ wait_until "metaserver window teardown" 5 process_window_absent \
 
 run_invalid_target_rejection
 run_server_transport_option_help
+run_server_default_fps
 run_contact_target_failover
 run_interactive_prompt_case tcp tcp
 run_interactive_prompt_case websocket ws

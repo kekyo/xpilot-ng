@@ -1999,7 +1999,7 @@ static option_desc opts[] = {
     {
 	"framesPerSecond",
 	"FPS",
-	"50",
+	"60",
 	&options.framesPerSecond,
 	valInt,
 	Timing_setup,

@@ -33,7 +33,7 @@ allowClusters:          no
 allowModifiers:         yes
 
 # Set the frames per second
-framesPerSecond:	50
+framesPerSecond:	60
 gameSpeed:		12.5
 
 # Gameplay uses UDP by default.  Select tcp here and on connecting clients
