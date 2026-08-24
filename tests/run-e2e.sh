@@ -57,6 +57,7 @@ window_owner_pid=
 game_server_log=
 game_client_log=
 game_client_name=
+game_client_user=EntryUser
 
 capture_window()
 {
@@ -239,6 +240,12 @@ client_transport_banner_reported()
     grep -Fq "*** Connected to 127.0.0.1 "\
 "[Contact/Lobby: $expected_contact_transport, "\
 "Gameplay: $expected_gameplay_transport]" "$game_client_log" 2>/dev/null
+}
+
+client_entry_reported()
+{
+    grep -Fq "$game_client_name ($game_client_user) has entered" \
+	"$game_client_log" 2>/dev/null
 }
 
 client_departed()
@@ -770,28 +777,35 @@ run_gameplay_case()
 
     if test "$game_case" = udp-explicit; then
 	"$client" -geometry 800x600 -join \
-	    -name "$game_client_name" \
+	    -name "$game_client_name" -user "$game_client_user" \
+	    -messagesToStdout 2 \
 	    -contactTransport tcp -gameTransport tcp \
 	    "udp://127.0.0.1:$port" >"$game_client_log" 2>&1 &
     elif test "$game_case" = tcp-contact; then
 	"$client" -geometry 800x600 -join \
-	    -name "$game_client_name" \
+	    -name "$game_client_name" -user "$game_client_user" \
+	    -messagesToStdout 2 \
 	    "tcp://127.0.0.1:$port" >"$game_client_log" 2>&1 &
     elif test "$game_case" = websocket; then
 	"$client" -geometry 800x600 -join \
-	    -name "$game_client_name" \
+	    -name "$game_client_name" -user "$game_client_user" \
+	    -messagesToStdout 2 \
 	    "ws://127.0.0.1:$port" >"$game_client_log" 2>&1 &
     elif test "$game_transport" = default \
 	&& test "$contact_transport" = default; then
 	"$client" -geometry 800x600 -join -port "$port" \
-	    -name "$game_client_name" 127.0.0.1 >"$game_client_log" 2>&1 &
+	    -name "$game_client_name" -user "$game_client_user" \
+	    -messagesToStdout 2 \
+	    127.0.0.1 >"$game_client_log" 2>&1 &
     elif test "$contact_transport" = default; then
 	"$client" -geometry 800x600 -join -port "$port" \
-	    -name "$game_client_name" -gameTransport "$game_transport" \
+	    -name "$game_client_name" -user "$game_client_user" \
+	    -messagesToStdout 2 -gameTransport "$game_transport" \
 	    127.0.0.1 >"$game_client_log" 2>&1 &
     else
 	"$client" -geometry 800x600 -join -port "$port" \
-	    -name "$game_client_name" -gameTransport "$game_transport" \
+	    -name "$game_client_name" -user "$game_client_user" \
+	    -messagesToStdout 2 -gameTransport "$game_transport" \
 	    -contactTransport "$contact_transport" \
 	    127.0.0.1 >"$game_client_log" 2>&1 &
     fi
@@ -801,6 +815,8 @@ run_gameplay_case()
     wait_until "$game_case gameplay transport window title" 10 \
 	game_window_transport_visible
     wait_until "$game_case local client acceptance" 20 client_accepted
+    wait_until "$game_case first-player entry announcement" 10 \
+	client_entry_reported
     wait_until "$game_case connection transport banner" 10 \
 	client_transport_banner_reported
     if test "$game_transport" = tcp \

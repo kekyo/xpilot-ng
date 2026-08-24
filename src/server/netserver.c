@@ -1742,10 +1742,7 @@ static int Handle_login(connection_t *connp, char *errmsg, size_t errsize)
     }
 
     if (pl->rectype < 2) {
-	if (NumPlayers == 1)
-	    Set_message_f("Welcome to \"%s\", made by %s.",
-			  world->name, world->author);
-	else if (BIT(world->rules->mode, TEAM_PLAY))
+	if (BIT(world->rules->mode, TEAM_PLAY))
 	    Set_message_f("%s (%s, team %d) has entered \"%s\", made by %s.",
 			  pl->name, pl->username, pl->team,
 			  world->name, world->author);

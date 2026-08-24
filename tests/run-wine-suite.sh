@@ -561,6 +561,7 @@ run_gameplay_case()
 {
     contact_transport=$1
     gameplay_transport=$2
+    client_user=EntryUser
     expected_contact_transport=$(printf '%s' "$contact_transport" \
 	| tr '[:lower:]' '[:upper:]')
     expected_gameplay_transport=$(printf '%s' "$gameplay_transport" \
@@ -628,23 +629,27 @@ run_gameplay_case()
         tcp:tcp)
             exec "$wine_program" ./xpilot-ng-sdl.exe \
                 -geometry 800x600 -join -name "$client_name" \
+                -user "$client_user" -messagesToStdout 2 \
                 "tcp://127.0.0.1:$contact_port"
             ;;
         websocket:websocket)
             exec "$wine_program" ./xpilot-ng-sdl.exe \
                 -geometry 800x600 -join -name "$client_name" \
+                -user "$client_user" -messagesToStdout 2 \
                 "ws://127.0.0.1:$contact_port"
             ;;
         udp:udp)
             exec "$wine_program" ./xpilot-ng-sdl.exe \
                 -geometry 800x600 -join -name "$client_name" \
+                -user "$client_user" -messagesToStdout 2 \
                 -contactTransport tcp -gameTransport tcp \
                 "udp://127.0.0.1:$contact_port"
             ;;
         *)
             exec "$wine_program" ./xpilot-ng-sdl.exe \
                 -geometry 800x600 -join -port "$contact_port" \
-                -name "$client_name" \
+                -name "$client_name" -user "$client_user" \
+                -messagesToStdout 2 \
                 -contactTransport "$contact_transport" \
                 -gameTransport "$gameplay_transport" \
                 127.0.0.1
@@ -654,6 +659,8 @@ run_gameplay_case()
     client_pid=$!
 
     wait_until "$transport_case client login" 30 client_joined
+    wait_until "$transport_case first-player entry announcement" 15 \
+	grep -Fq "$client_name ($client_user) has entered" "$client_log"
     wait_until "$transport_case connection transport banner" 15 \
 	client_transport_banner_reported
     wait_until "$transport_case SDL window" 30 find_game_window
