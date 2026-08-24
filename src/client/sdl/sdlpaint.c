@@ -48,6 +48,7 @@
 #include "sdlrenderer.h"
 #include "score_font.h"
 #include "text_config.h"
+#include "utf8_names.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -838,6 +839,7 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
     static char		raceStr[16], teamStr[4], lifeStr[8], label[MSG_LEN];
     static int		lineSpacing = -1, firstLine;
     char		scoreStr[16];
+    char		playerName[2 * MAX_CHARS + 4];
     SDL_Surface         *line;
 	SDL_Color fg;
     int     	    	color;
@@ -864,8 +866,13 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
      */
     if (showUserName)
 	sprintf(label, "%s=%s@%s",
-		other->nick_name, other->user_name, other->host_name);
+	    other->nick_name, other->user_name, other->host_name);
     else {
+	if (!Format_player_identity(
+		playerName, sizeof(playerName),
+		other->nick_name, other->user_name)) {
+	    strlcpy(playerName, other->nick_name, sizeof(playerName));
+	}
 	if (BIT(Setup->mode, TIMING)) {
 	    strlcpy(raceStr, "  ", sizeof(raceStr));
 	    if ((other->mychar == ' ' || other->mychar == 'R')
@@ -897,12 +904,12 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 
 	if (BIT(Setup->mode, TEAM_PLAY))
 	    sprintf(label, "%c%s %-15s%s",
-		    other->mychar, scoreStr, other->nick_name, lifeStr);
+		    other->mychar, scoreStr, playerName, lifeStr);
 	else
 	    sprintf(label, "%c %s%s%s%s  %s",
 		    other->mychar, raceStr, teamStr,
 		    scoreStr, lifeStr,
-		    other->nick_name);
+		    playerName);
     }
 
     /*

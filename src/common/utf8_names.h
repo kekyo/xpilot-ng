@@ -1,7 +1,9 @@
-/* UTF-8 validation for player metadata used by session transports. */
+/* UTF-8 player metadata validation and display helpers. */
 
 #ifndef UTF8_NAMES_H
 #define UTF8_NAMES_H
+
+#include <stddef.h>
 
 /**
  * Validate a UTF-8 operating-system user name.
@@ -38,5 +40,22 @@ int Check_utf8_disp_name(const char *name);
  *        truncated at a UTF-8 boundary; an invalid value becomes empty.
  */
 void Fix_utf8_disp_name(char *name);
+
+/**
+ * Format the player identity shown by clients.
+ *
+ * @param destination Writable output buffer.
+ * @param destination_size Size of destination in bytes.
+ * @param nick_name NUL-terminated in-game display name.
+ * @param user_name NUL-terminated operating-system user name.
+ * @return Nonzero when the complete identity was written; zero for invalid
+ *         arguments or an insufficient destination, which is cleared when
+ *         possible.
+ *
+ * @remarks The user name is omitted when empty or identical to the display
+ * name. Output is never partially written, so a UTF-8 sequence is not split.
+ */
+int Format_player_identity(char *destination, size_t destination_size,
+			   const char *nick_name, const char *user_name);
 
 #endif

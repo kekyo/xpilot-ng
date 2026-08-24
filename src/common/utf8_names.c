@@ -1,4 +1,4 @@
-/* UTF-8 validation for player metadata used by session transports. */
+/* UTF-8 player metadata validation and display helpers. */
 
 #include "xpcommon.h"
 
@@ -138,4 +138,44 @@ int Check_utf8_disp_name(const char *name)
 void Fix_utf8_disp_name(char *name)
 {
     Fix_utf8_name(name, MAX_DISP_LEN - 1, 1, "");
+}
+
+int Format_player_identity(char *destination, size_t destination_size,
+			   const char *nick_name, const char *user_name)
+{
+    size_t nick_length;
+    size_t user_length;
+    size_t required_size;
+    char *cursor;
+
+    if (destination == NULL || destination_size == 0
+	|| nick_name == NULL || user_name == NULL) {
+	return 0;
+    }
+    destination[0] = '\0';
+    nick_length = strlen(nick_name);
+    if (user_name[0] == '\0' || strcmp(nick_name, user_name) == 0) {
+	if (nick_length >= destination_size)
+	    return 0;
+	memcpy(destination, nick_name, nick_length + 1);
+	return 1;
+    }
+    user_length = strlen(user_name);
+    if (nick_length > SIZE_MAX - user_length
+	|| nick_length + user_length > SIZE_MAX - 4) {
+	return 0;
+    }
+    required_size = nick_length + user_length + 4;
+    if (required_size > destination_size)
+	return 0;
+    cursor = destination;
+    memcpy(cursor, nick_name, nick_length);
+    cursor += nick_length;
+    *cursor++ = ' ';
+    *cursor++ = '(';
+    memcpy(cursor, user_name, user_length);
+    cursor += user_length;
+    *cursor++ = ')';
+    *cursor = '\0';
+    return 1;
 }

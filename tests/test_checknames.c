@@ -57,10 +57,35 @@ static int test_legacy_names_remain_ascii(void)
     return 0;
 }
 
+static int test_player_identity_display(void)
+{
+    static const char japanese_user[] =
+	"\xe3\x81\x91\xe3\x81\x8d\xe3\x82\x87";
+    char identity[2 * MAX_CHARS + 4];
+    char too_small[8] = "changed";
+
+    TEST_CHECK(Format_player_identity(
+	identity, sizeof(identity), "Kouji", japanese_user));
+    TEST_CHECK(strcmp(identity,
+	"Kouji (\xe3\x81\x91\xe3\x81\x8d\xe3\x82\x87)") == 0);
+    TEST_CHECK(Format_player_identity(
+	identity, sizeof(identity), "Kouji", "Kouji"));
+    TEST_CHECK(strcmp(identity, "Kouji") == 0);
+    TEST_CHECK(Format_player_identity(
+	identity, sizeof(identity), "Kouji", ""));
+    TEST_CHECK(strcmp(identity, "Kouji") == 0);
+    TEST_CHECK(!Format_player_identity(
+	too_small, sizeof(too_small), "Kouji", japanese_user));
+    TEST_CHECK(too_small[0] == '\0');
+    TEST_CHECK(!Format_player_identity(NULL, 0, "Kouji", japanese_user));
+    return 0;
+}
+
 int main(void)
 {
     TEST_CHECK(test_utf8_names_are_valid() == 0);
     TEST_CHECK(test_utf8_name_boundaries_and_invalid_input() == 0);
     TEST_CHECK(test_legacy_names_remain_ascii() == 0);
+    TEST_CHECK(test_player_identity_display() == 0);
     return 0;
 }

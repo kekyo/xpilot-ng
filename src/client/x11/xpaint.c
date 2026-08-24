@@ -3,12 +3,12 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
  *
- * Copyright (C) 2003 Kristian Söderblom <kps@users.sourceforge.net>
+ * Copyright (C) 2003 Kristian SÃ¶derblom <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,8 @@
  */
 
 #include "xpclient_x11.h"
+
+#include "utf8_names.h"
 
 /*
  * Globals.
@@ -359,6 +361,7 @@ void Paint_score_entry(int entry_num, other_t* other, bool is_team)
     static int		lineSpacing = -1, firstLine;
     int			thisLine, color;
     char		scoreStr[16];
+    char		playerName[2 * MAX_CHARS + 4];
 
     /*
      * First time we're here, set up miscellaneous strings for
@@ -383,8 +386,13 @@ void Paint_score_entry(int entry_num, other_t* other, bool is_team)
      */
     if (showUserName)
 	sprintf(label, "%s=%s@%s",
-		other->nick_name, other->user_name, other->host_name);
+	    other->nick_name, other->user_name, other->host_name);
     else {
+	if (!Format_player_identity(
+		playerName, sizeof(playerName),
+		other->nick_name, other->user_name)) {
+	    strlcpy(playerName, other->nick_name, sizeof(playerName));
+	}
 	if (BIT(Setup->mode, TIMING)) {
 	    raceStr[0] = ' ';
 	    raceStr[1] = ' ';
@@ -417,12 +425,12 @@ void Paint_score_entry(int entry_num, other_t* other, bool is_team)
 
 	if (BIT(Setup->mode, TEAM_PLAY))
 	    sprintf(label, "%c %s  %-18s%s",
-		    other->mychar, scoreStr, other->nick_name, lifeStr);
+		    other->mychar, scoreStr, playerName, lifeStr);
 	else
 	    sprintf(label, "%c %s%s%s%s  %s",
 		    other->mychar, raceStr, teamStr,
 		    scoreStr, lifeStr,
-		    other->nick_name);
+		    playerName);
     }
 
     /*

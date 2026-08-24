@@ -133,7 +133,7 @@ int	packet_lag;		/* approximate lag in frames */
 char	*packet_measure;	/* packet measurement in a second */
 long	packet_loop;		/* start of measurement */
 
-bool	showUserName = false;	/* Show user name instead of nick name */
+bool	showUserName = false;	/* Show nick=user@host details */
 char	servername[MAX_CHARS];	/* Name of server connecting to */
 unsigned	version;	/* Version of the server */
 bool	toggle_shield;		/* Are shields toggled by a press? */

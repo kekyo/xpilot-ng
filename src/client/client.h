@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -555,7 +555,7 @@ extern int	packet_lag;		/* approximate lag in frames */
 extern char	*packet_measure;	/* packet measurement in a second */
 extern long	packet_loop;		/* start of measurement */
 
-extern bool	showUserName;		/* Show username instead of nickname */
+extern bool	showUserName;		/* Show nick=user@host details */
 extern char	servername[MAX_CHARS];	/* Name of server connecting to */
 extern unsigned	version;		/* Version of the server */
 extern bool	scoresChanged;
