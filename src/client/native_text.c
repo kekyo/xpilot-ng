@@ -185,7 +185,6 @@ static XpTextStatus Family_list_build(const XpTextFontRequest *request,
 {
     static const char *fallbacks[] = {
 	"Noto Sans Mono CJK JP",
-	"Noto Mono",
 	"Noto Sans Mono"
     };
     XpTextStatus status;

@@ -17,7 +17,7 @@ static xp_option_t text_options[] = {
 	sizeof(font_families),
 	NULL, NULL, NULL,
 	XP_OPTFLAG_DEFAULT,
-	"Comma-separated preferred font family names. Installed Noto Mono "
+	"Comma-separated preferred font family names. Installed Noto Sans Mono "
 	"and other system fallbacks are appended automatically.\n"),
 
     XP_STRING_OPTION(
@@ -28,7 +28,7 @@ static xp_option_t text_options[] = {
 	NULL, NULL, NULL,
 	XP_OPTFLAG_DEFAULT,
 	"Comma-separated preferred monospace font family names. Installed "
-	"Noto Mono and other system fallbacks are appended automatically.\n")
+	"Noto Sans Mono and other system fallbacks are appended automatically.\n")
 };
 
 void Store_text_options(void)

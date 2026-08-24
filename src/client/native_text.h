@@ -147,9 +147,9 @@ void Xp_text_system_destroy(XpTextSystem **system);
  * @param font Empty destination receiving the font set.
  * @return Operation status.
  *
- * @remarks The preferred families are followed by built-in Noto CJK,
- * Noto Mono, Noto Sans Mono, and platform generic candidates. Missing faces
- * are skipped, and later system fallbacks continue to supply new glyphs.
+ * @remarks The preferred families are followed by built-in Noto Sans Mono
+ * CJK JP, Noto Sans Mono, and platform generic candidates. Missing faces are
+ * skipped, and later system fallbacks continue to supply new glyphs.
  */
 XpTextStatus Xp_text_font_open(XpTextSystem *system,
 			       const XpTextFontRequest *request,

@@ -117,7 +117,7 @@ RendererStatus font_text_renderer_attach(font_data *ft_font,
  * @return Operation status.
  *
  * @remarks The preferred list is resolved by name and followed by built-in
- * Noto Mono/CJK and generic system fallbacks. The native font and UTF-8
+ * Noto Sans Mono/CJK and generic system fallbacks. The native font and UTF-8
  * renderer are created atomically. RTL layout remains unsupported, while
  * direction and language are represented by the underlying layout API.
  */
