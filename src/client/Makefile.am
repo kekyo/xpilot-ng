@@ -1,6 +1,17 @@
 
+if COND_MINGW_VENDORED
+-include $(top_builddir)/mingw-deps.mk
+XP_TEXT_SDL3_CFLAGS = $(MINGW_SDL3_CFLAGS)
+XP_TEXT_SDL3_TTF_CFLAGS = $(MINGW_SDL3_TTF_CFLAGS)
+else
+XP_TEXT_SDL3_CFLAGS = @SDL3_CFLAGS@
+XP_TEXT_SDL3_TTF_CFLAGS = @SDL3_TTF_CFLAGS@
+endif
+
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
-	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common
+	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
+	$(XP_TEXT_SDL3_CFLAGS) $(XP_TEXT_SDL3_TTF_CFLAGS) \
+	@NATIVE_TEXT_CFLAGS@
 
 noinst_LIBRARIES = libxpclient.a
 libxpclient_a_SOURCES = \
@@ -23,6 +34,8 @@ libxpclient_a_SOURCES = \
 	session_transport.c session_transport.h \
 	talk.h talkmacros.c textinterface.c \
 	micro_delay.c micro_delay.h micro_delay_test_support.h \
+	native_text.c native_text.h native_text_internal.h \
+	text_config.c text_config.h \
 	xpclient.h
 
 if COND_SOUND

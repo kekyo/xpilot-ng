@@ -22,7 +22,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_srcdir)/src/client/sdl \
 	-I$(top_srcdir)/vendor/libtess2/Include \
 	$(XP_SDL3_CFLAGS) $(XP_SDL3_IMAGE_CFLAGS) $(XP_SDL3_TTF_CFLAGS) \
-	@GL_CFLAGS@
+	@NATIVE_TEXT_CFLAGS@ @GL_CFLAGS@
 
 if COND_WINDOWS
 check_PROGRAMS = test-framed-stream test-websocket-transport \
@@ -31,7 +31,7 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle test-recording-input test-session-flow \
 	test-randommt test-ppm-image test-micro-delay \
-	test-sdl-versions test-score-font test-game-input
+	test-sdl-versions test-score-font test-native-text test-game-input
 TESTS =
 else
 check_PROGRAMS = test-framed-stream test-websocket-transport \
@@ -42,7 +42,7 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 	test-recording-input \
 	test-session-flow \
 	test-meta-environment test-randommt test-ppm-image test-micro-delay \
-	test-sdl-versions test-score-font \
+	test-sdl-versions test-score-font test-native-text \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
 	test-surface-rgba8 test-surface-primitives test-sdl-window \
@@ -59,7 +59,8 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 	test-sdlmeta-primitives test-sdlgui-appearing \
 	test-sdlgui-hud-primitives test-sdlgui-asteroids \
 	test-sdlgui-polygons test-sdlgui-sparks test-sdlgui-ships \
-	test-text-geometry test-text-atlas \
+	test-text-geometry test-text-atlas test-unicode-text-renderer \
+	test-x11-text \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
 TESTS = test-framed-stream test-websocket-transport \
 	test-game-transport test-checknames test-connect-target \
@@ -69,7 +70,7 @@ TESTS = test-framed-stream test-websocket-transport \
 	test-recording-input \
 	test-session-flow \
 	test-meta-environment test-randommt test-ppm-image test-micro-delay \
-	test-sdl-versions test-score-font \
+	test-sdl-versions test-score-font test-native-text \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
 	test-surface-rgba8 test-surface-primitives test-sdl-window \
@@ -88,8 +89,10 @@ TESTS = test-framed-stream test-websocket-transport \
 	test-sdlgui-asteroids test-sdlgui-polygons test-sdlgui-sparks \
 	test-sdlgui-ships \
 	test-text-geometry \
-	test-text-atlas test-text-ttf-atlas test-text-renderer \
+	test-text-atlas test-unicode-text-renderer \
+	test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
+	run-x11-text.sh \
 	run-renderer-gl-core.sh run-sdl-renderer-core-context.sh \
 	run-build-wrapper.sh run-vendored-zlib.sh run-e2e.sh
 endif
@@ -172,9 +175,16 @@ test_sdl_versions_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LI
 test_score_font_SOURCES = test_score_font.c \
 	$(top_srcdir)/src/client/sdl/score_font.c
 test_score_font_CPPFLAGS = $(AM_CPPFLAGS) \
-	-DXPILOT_TEST_SCORE_FONT_PATH=\"$(top_srcdir)/lib/fonts/VeraMoBd.ttf\" \
-	-DXPILOT_TEST_SCORE_FALLBACK_FONT_PATH=\"$(top_srcdir)/vendor/sdl3/SDL_ttf/external/harfbuzz/test/api/fonts/Mplus1p-Regular.ttf\"
-test_score_font_LDADD = $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
+	-DXPILOT_TEST_FONT_DIR=\"$(top_srcdir)/lib/fonts\"
+test_score_font_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) @NATIVE_TEXT_LIBS@
+
+test_native_text_SOURCES = test_native_text.c
+test_native_text_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_TEST_FONT_DIR=\"$(top_srcdir)/lib/fonts\"
+test_native_text_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a \
+	$(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) @NATIVE_TEXT_LIBS@
 
 test_game_input_SOURCES = test_game_input.c \
 	$(top_srcdir)/src/client/sdl/gameinput.c
@@ -525,6 +535,21 @@ test_text_renderer_SOURCES = test_text_renderer.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.h
 test_text_renderer_LDFLAGS = $(AM_LDFLAGS) -Wl,--wrap=malloc
 
+test_unicode_text_renderer_SOURCES = test_unicode_text_renderer.c \
+	$(top_srcdir)/src/client/sdl/unicode_text_renderer.c \
+	$(top_srcdir)/src/client/sdl/unicode_text_renderer.h
+
+test_x11_text_SOURCES = test_x11_text.c \
+	$(top_srcdir)/src/client/x11/x11_text.c \
+	$(top_srcdir)/src/client/x11/x11_text.h
+test_x11_text_CPPFLAGS = $(AM_CPPFLAGS) \
+	-I$(top_srcdir)/src/client/x11 \
+	-DXPILOT_TEST_FONT_DIR=\"$(top_srcdir)/lib/fonts\"
+test_x11_text_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a \
+	$(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) @NATIVE_TEXT_LIBS@ \
+	@XRENDER_LIBS@ -lX11
+
 test_text_cache_adapter_SOURCES = test_text_cache_adapter.c \
 	$(top_srcdir)/src/client/sdl/text.c
 test_text_cache_adapter_CFLAGS = $(AM_CFLAGS) \
@@ -546,6 +571,8 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_RENDERER_GL_CORE_TEST_BINARY; \
 	XPILOT_SDL_CORE_CONTEXT_TEST_BINARY='$(abs_builddir)/test-sdl-renderer-core-context'; \
 	export XPILOT_SDL_CORE_CONTEXT_TEST_BINARY; \
+	XPILOT_X11_TEXT_TEST_BINARY='$(abs_builddir)/test-x11-text'; \
+	export XPILOT_X11_TEXT_TEST_BINARY; \
 	XPILOT_SDL_OBJECT_DIR='$(abs_top_builddir)/src/client/sdl'; \
 	export XPILOT_SDL_OBJECT_DIR; \
 	XPILOT_SDL_BINARY='$(abs_top_builddir)/src/client/sdl/xpilot-ng-sdl'; \

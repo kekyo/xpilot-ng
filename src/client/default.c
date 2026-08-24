@@ -28,6 +28,7 @@
 #include "xpclient.h"
 
 #include "utf8_names.h"
+#include "text_config.h"
 
 static double	hudScale;	/* Scale for HUD drawing */
 
@@ -1411,4 +1412,5 @@ xp_option_t default_options[] = {
 void Store_default_options(void)
 {
     STORE_OPTIONS(default_options);
+    Store_text_options();
 }

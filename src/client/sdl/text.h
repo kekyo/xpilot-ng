@@ -26,6 +26,7 @@
 #include "sdlpaint.h"
 #include "text_atlas.h"
 #include "text_renderer.h"
+#include "unicode_text_renderer.h"
 
 #define LEFT 0
 #define DOWN 0
@@ -41,12 +42,18 @@ typedef struct {
     TextAtlas *atlas;
     /** Owned semantic text facade borrowing this font's atlas renderer. */
     TextRenderer *text_renderer;
+    /** Owned installed-font set used for non-ASCII UTF-8 text. */
+    XpTextFont *unicode_font;
+    /** Owned UTF-8 layout and texture cache borrowing unicode_font. */
+    UnicodeTextRenderer *unicode_renderer;
 } font_data;
 
 /** CPU-side cached text and its semantic renderer identity. */
 typedef struct {
     /** Borrowed text renderer that owns the cache's font identity. */
     TextRenderer *text_renderer;
+    /** Borrowed UTF-8 renderer used when this cache contains non-ASCII. */
+    UnicodeTextRenderer *unicode_renderer;
     /** Owned CPU-side byte-string cache. */
     TextRendererCache *cache;
     /** Owned NUL-terminated copy of the normalized byte string. */
@@ -101,6 +108,24 @@ RendererStatus font_text_renderer_attach(font_data *ft_font,
 					 SdlRenderer *sdl_renderer);
 
 /**
+ * Attach installed-font UTF-8 rendering to a fully initialized font.
+ *
+ * @param ft_font Font with an attached ASCII text renderer.
+ * @param text_system Native installed-font service.
+ * @param sdl_renderer SDL renderer used by the font.
+ * @param family_list Comma-separated preferred family names.
+ * @return Operation status.
+ *
+ * @remarks The preferred list is resolved by name and followed by built-in
+ * Noto Mono/CJK and generic system fallbacks. The native font and UTF-8
+ * renderer are created atomically. RTL layout remains unsupported, while
+ * direction and language are represented by the underlying layout API.
+ */
+RendererStatus font_unicode_renderer_attach(
+    font_data *ft_font, XpTextSystem *text_system,
+    SdlRenderer *sdl_renderer, const char *family_list);
+
+/**
  * Free all resources associated with a font.
  *
  * @param ft_font Font to clean; an already-empty font is valid.
@@ -123,8 +148,9 @@ RendererStatus fontclean(font_data *ft_font);
  * @return Operation status.
  *
  * @remarks This operation requires an active renderer frame. Formatting is
- * limited to 1023 bytes before @p length is applied. Bytes unavailable in
- * the printable-ASCII atlas use the font's fallback glyph.
+ * limited to 1023 UTF-8 bytes before @p length is applied. An incomplete
+ * final UTF-8 sequence is omitted. Non-ASCII text uses installed-font
+ * fallback; ASCII retains the legacy atlas path.
  */
 RendererStatus nprintsize(font_data *ft_font, int length,
 			  fontbounds *bounds, const char *fmt, ...);
@@ -139,8 +165,8 @@ RendererStatus nprintsize(font_data *ft_font, int length,
  * @return Operation status.
  *
  * @remarks This operation requires an active renderer frame. Formatting is
- * limited to 1023 bytes. Bytes unavailable in the printable-ASCII atlas use
- * the font's fallback glyph.
+ * limited to 1023 UTF-8 bytes. Non-ASCII text uses installed-font fallback;
+ * ASCII retains the legacy atlas path.
  */
 RendererStatus printsize(font_data *ft_font, fontbounds *bounds,
 			 const char *fmt, ...);
@@ -159,9 +185,9 @@ RendererStatus printsize(font_data *ft_font, fontbounds *bounds,
  * @return Operation status.
  *
  * @remarks This operation requires an active renderer frame. Formatting is
- * limited to 1023 bytes before @p length is applied. Bytes unavailable in
- * the printable-ASCII atlas use the font's fallback glyph. Any failure is
- * retained so the incomplete frame is not presented.
+ * limited to 1023 UTF-8 bytes before @p length is applied. An incomplete
+ * final sequence is omitted. Any failure is retained so the incomplete
+ * frame is not presented.
  */
 RendererStatus HUDnprint(font_data *ft_font, int color, int XALIGN,
 			 int YALIGN, int x, int y, int length,
@@ -230,7 +256,7 @@ RendererStatus mapprint(font_data *ft_font, int color, int XALIGN,
 			int YALIGN, int x, int y, const char *fmt, ...);
 
 /**
- * Cache and draw one byte string through the semantic text renderer.
+ * Cache and draw one UTF-8 string through the semantic text renderer.
  *
  * @param ft_font Font with an attached semantic text renderer.
  * @param color Unpremultiplied RGBA value.
@@ -238,7 +264,7 @@ RendererStatus mapprint(font_data *ft_font, int color, int XALIGN,
  * @param YALIGN Legacy vertical alignment value.
  * @param x Legacy horizontal anchor.
  * @param y Legacy vertical anchor.
- * @param text NUL-terminated byte string.
+ * @param text NUL-terminated UTF-8 string.
  * @param savetex Whether to retain @p string_tex after drawing.
  * @param string_tex Optional zero-initialized or previously populated cache.
  * @param onHUD Whether the anchor uses legacy HUD coordinates.
@@ -249,10 +275,10 @@ bool draw_text(font_data *ft_font, int color, int XALIGN, int YALIGN,
 	       string_tex_t *string_tex, bool onHUD);
 
 /**
- * Atomically replace a cached byte string without allocating GPU resources.
+ * Atomically replace a cached UTF-8 string.
  *
  * @param ft_font Font with an attached semantic text renderer.
- * @param text NUL-terminated byte string. Empty input is normalized to one
+ * @param text NUL-terminated UTF-8 string. Empty input is normalized to one
  *        space for legacy layout compatibility.
  * @param string_tex Zero-initialized or previously populated destination.
  * @return True on success. Failure leaves the destination unchanged.

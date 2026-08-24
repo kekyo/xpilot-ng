@@ -1,7 +1,7 @@
 /* 
  * XPilot NG, a multiplayer space war game.
  *
- * Copyright (C) 2003 Kristian Söderblom <kps@users.sourceforge.net>
+ * Copyright (C) 2003 Kristian SÃ¶derblom <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,6 +45,10 @@
 #  include <X11/Xmd.h>
 #endif
 
+/* Preserve the Xlib API shape while routing non-ASCII text through the
+ * shared installed-font UTF-8 renderer. */
+#include "x11_text.h"
+
 /* X client specific headers */
 #include "bitmaps.h"
 #include "dbuff.h"
@@ -57,4 +61,3 @@
 #include "xpaint.h"
 
 #endif /* XPCLIENT_X11_H */
-

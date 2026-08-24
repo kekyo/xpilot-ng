@@ -352,8 +352,9 @@ if test x$enable_xp_mapedit = xyes; then
 	AC_DEFINE([XP_MAPEDIT], 1, [enable xp-mapedit program])
 fi
 
-dnl Libraries needed by the SDL client.
-if test x$enable_sdl_client = xyes; then
+dnl SDL3 and SDL_ttf provide the shared native text implementation used by
+dnl both graphical clients. SDL_image and OpenGL remain SDL-client-only.
+if test x$enable_sdl_client = xyes || test x$enable_x11_client = xyes; then
 	if test x$mingw_vendored_deps = xyes; then
 		SDL3_CFLAGS=
 		SDL3_LIBS=
@@ -378,11 +379,15 @@ if test x$enable_sdl_client = xyes; then
 			if test ! -d "$with_sdl3_prefix/lib/pkgconfig"; then
 				AC_MSG_ERROR([vendored SDL3 pkg-config directory not found: $with_sdl3_prefix/lib/pkgconfig])
 			fi
-			for sdl3_pc_file in sdl3.pc sdl3-image.pc sdl3-ttf.pc; do
+			for sdl3_pc_file in sdl3.pc sdl3-ttf.pc; do
 				if test ! -f "$with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file"; then
 					AC_MSG_ERROR([vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file])
 				fi
 			done
+			if test x$enable_sdl_client = xyes \
+				&& test ! -f "$with_sdl3_prefix/lib/pkgconfig/sdl3-image.pc"; then
+				AC_MSG_ERROR([vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/sdl3-image.pc])
+			fi
 
 			if test "${PKG_CONFIG_PATH+set}" = set; then
 				saved_sdl3_pkg_config_path=$PKG_CONFIG_PATH
@@ -396,8 +401,16 @@ if test x$enable_sdl_client = xyes; then
 		fi
 
 		PKG_CHECK_MODULES([SDL3], [sdl3 >= 3.2.0])
-		PKG_CHECK_MODULES([SDL3_IMAGE], [sdl3-image >= 3.2.0])
 		PKG_CHECK_MODULES([SDL3_TTF], [sdl3-ttf >= 3.2.0])
+		if test x$enable_sdl_client = xyes; then
+			PKG_CHECK_MODULES([SDL3_IMAGE], [sdl3-image >= 3.2.0])
+			PKG_CHECK_MODULES([GL], [gl])
+		else
+			SDL3_IMAGE_CFLAGS=
+			SDL3_IMAGE_LIBS=
+			GL_CFLAGS=
+			GL_LIBS=
+		fi
 
 		if test x$with_sdl3 = xvendored; then
 			AC_MSG_CHECKING([for static vendored SDL3 linker flags])
@@ -405,13 +418,15 @@ if test x$enable_sdl_client = xyes; then
 			if test $? -ne 0; then
 				AC_MSG_ERROR([could not resolve static SDL3 linker flags])
 			fi
-			SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
-			if test $? -ne 0; then
-				AC_MSG_ERROR([could not resolve static SDL3_image linker flags])
-			fi
 			SDL3_TTF_LIBS=`$PKG_CONFIG --static --libs sdl3-ttf`
 			if test $? -ne 0; then
 				AC_MSG_ERROR([could not resolve static SDL3_ttf linker flags])
+			fi
+			if test x$enable_sdl_client = xyes; then
+				SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
+				if test $? -ne 0; then
+					AC_MSG_ERROR([could not resolve static SDL3_image linker flags])
+				fi
 			fi
 			AC_MSG_RESULT([yes])
 
@@ -422,11 +437,30 @@ if test x$enable_sdl_client = xyes; then
 				unset PKG_CONFIG_PATH
 			fi
 		fi
-		PKG_CHECK_MODULES([GL], [gl])
 	fi
 	AC_MSG_NOTICE([SDL3 dependency provider: $with_sdl3])
+	if test x$enable_sdl_client = xyes; then
 	AC_DEFINE([HAVE_SDL_IMAGE], 1,
 		  [Define to 1 if you have the SDL_image library.])
+	fi
+fi
+
+NATIVE_TEXT_CFLAGS=
+NATIVE_TEXT_LIBS=
+if test x$enable_sdl_client = xyes || test x$enable_x11_client = xyes; then
+	if test x$windows_target = xyes; then
+		NATIVE_TEXT_LIBS="-lgdi32"
+	else
+		PKG_CHECK_MODULES([FONTCONFIG], [fontconfig >= 2.8.0])
+		NATIVE_TEXT_CFLAGS=$FONTCONFIG_CFLAGS
+		NATIVE_TEXT_LIBS=$FONTCONFIG_LIBS
+	fi
+fi
+
+XRENDER_CFLAGS=
+XRENDER_LIBS=
+if test x$enable_x11_client = xyes; then
+	PKG_CHECK_MODULES([XRENDER], [xrender >= 0.9.0])
 fi
 
 AC_SUBST([SDL3_CFLAGS])
@@ -435,6 +469,10 @@ AC_SUBST([SDL3_IMAGE_CFLAGS])
 AC_SUBST([SDL3_IMAGE_LIBS])
 AC_SUBST([SDL3_TTF_CFLAGS])
 AC_SUBST([SDL3_TTF_LIBS])
+AC_SUBST([NATIVE_TEXT_CFLAGS])
+AC_SUBST([NATIVE_TEXT_LIBS])
+AC_SUBST([XRENDER_CFLAGS])
+AC_SUBST([XRENDER_LIBS])
 AC_SUBST([GL_CFLAGS])
 AC_SUBST([GL_LIBS])
 

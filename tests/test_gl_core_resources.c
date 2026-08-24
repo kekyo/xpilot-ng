@@ -104,6 +104,20 @@ int Text_renderer_matches(const TextRenderer *text_renderer,
         && text_renderer->atlas == atlas;
 }
 
+RendererStatus Unicode_text_renderer_destroy(
+    UnicodeTextRenderer **text_renderer)
+{
+    if (text_renderer != NULL)
+        *text_renderer = NULL;
+    return RENDERER_STATUS_OK;
+}
+
+void Xp_text_font_close(XpTextFont **font)
+{
+    if (font != NULL)
+        *font = NULL;
+}
+
 extern TTF_Font *__real_TTF_OpenFont(const char *file, float ptsize);
 extern void __real_TTF_CloseFont(TTF_Font *font);
 
@@ -181,7 +195,8 @@ static void *load_font_gl_proc(void *userdata, const char *name)
 static int font_state_is_empty(const font_data *font)
 {
     return font->requested_height == 0 && font->atlas == NULL
-        && font->text_renderer == NULL;
+        && font->text_renderer == NULL && font->unicode_font == NULL
+        && font->unicode_renderer == NULL;
 }
 
 static void check_font_renderer_lifecycle(Renderer *renderer)

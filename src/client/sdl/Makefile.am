@@ -26,7 +26,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/vendor/libtess2/Include \
 	$(XP_SDL3_CFLAGS) $(XP_SDL3_IMAGE_CFLAGS) $(XP_SDL3_TTF_CFLAGS) \
-	@GL_CFLAGS@
+	@NATIVE_TEXT_CFLAGS@ @GL_CFLAGS@
 libxp_libtess2_a_SOURCES = \
 	$(top_srcdir)/vendor/libtess2/Include/tesselator.h \
 	$(top_srcdir)/vendor/libtess2/Source/bucketalloc.c \
@@ -66,13 +66,14 @@ xpilot_ng_sdl_SOURCES = \
 	sdlpaint.h sdlwindow.c sdlwindow.h text.c text.h \
 	text_atlas.c text_atlas.h text_geometry.c text_geometry.h \
 	text_renderer.c text_renderer.h \
+	unicode_text_renderer.c unicode_text_renderer.h \
 	text_ttf_atlas.c text_ttf_atlas.h todo.c \
 	sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h
 xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	libxp_libtess2.a \
 	$(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) \
-	@GL_LIBS@ @SOUND_LIBS@ @W32_LIBS@
+	@NATIVE_TEXT_LIBS@ @GL_LIBS@ @SOUND_LIBS@ @W32_LIBS@
 
 if COND_WINDOWS
   xpilot_ng_sdl_SOURCES += win32hacks.c

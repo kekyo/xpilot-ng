@@ -22,6 +22,7 @@
 #define SDLINIT_H
 
 #include "sdlrenderer.h"
+#include "native_text.h"
 
 /**
  * Initialize SDL3, the application window, and an OpenGL 3.3 core context.
@@ -37,6 +38,13 @@ int Init_window(void);
  * cleanup.
  */
 SdlRenderer *Get_sdl_renderer(void);
+
+/**
+ * Return the shared native text service.
+ *
+ * @return Borrowed service, or NULL outside window-system lifetime.
+ */
+XpTextSystem *Get_text_system(void);
 
 /**
  * Request a new application window size.

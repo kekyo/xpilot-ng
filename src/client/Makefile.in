@@ -120,8 +120,9 @@ am__libxpclient_a_SOURCES_DIST = client.c client.h client_session.c \
 	transport_display.c transport_display.h session_connection.c \
 	session_connection.h session_transport.c session_transport.h \
 	talk.h talkmacros.c textinterface.c micro_delay.c \
-	micro_delay.h micro_delay_test_support.h xpclient.h caudio.c \
-	caudio.h oalaudio.c
+	micro_delay.h micro_delay_test_support.h native_text.c \
+	native_text.h native_text_internal.h text_config.c \
+	text_config.h xpclient.h caudio.c caudio.h oalaudio.c
 @COND_SOUND_TRUE@am__objects_1 = caudio.$(OBJEXT) oalaudio.$(OBJEXT)
 am_libxpclient_a_OBJECTS = client.$(OBJEXT) client_session.$(OBJEXT) \
 	clientcommand.$(OBJEXT) clientrank.$(OBJEXT) \
@@ -133,7 +134,8 @@ am_libxpclient_a_OBJECTS = client.$(OBJEXT) client_session.$(OBJEXT) \
 	query.$(OBJEXT) transport_display.$(OBJEXT) \
 	session_connection.$(OBJEXT) session_transport.$(OBJEXT) \
 	talkmacros.$(OBJEXT) textinterface.$(OBJEXT) \
-	micro_delay.$(OBJEXT) $(am__objects_1)
+	micro_delay.$(OBJEXT) native_text.$(OBJEXT) \
+	text_config.$(OBJEXT) $(am__objects_1)
 libxpclient_a_OBJECTS = $(am_libxpclient_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -157,13 +159,14 @@ am__depfiles_remade = ./$(DEPDIR)/caudio.Po ./$(DEPDIR)/client.Po \
 	./$(DEPDIR)/default.Po ./$(DEPDIR)/event.Po \
 	./$(DEPDIR)/gfx2d.Po ./$(DEPDIR)/mapdata.Po \
 	./$(DEPDIR)/messages.Po ./$(DEPDIR)/meta.Po \
-	./$(DEPDIR)/micro_delay.Po ./$(DEPDIR)/netclient.Po \
-	./$(DEPDIR)/oalaudio.Po ./$(DEPDIR)/option.Po \
-	./$(DEPDIR)/paint.Po ./$(DEPDIR)/paintmap.Po \
-	./$(DEPDIR)/paintobjects.Po ./$(DEPDIR)/query.Po \
-	./$(DEPDIR)/session_connection.Po \
+	./$(DEPDIR)/micro_delay.Po ./$(DEPDIR)/native_text.Po \
+	./$(DEPDIR)/netclient.Po ./$(DEPDIR)/oalaudio.Po \
+	./$(DEPDIR)/option.Po ./$(DEPDIR)/paint.Po \
+	./$(DEPDIR)/paintmap.Po ./$(DEPDIR)/paintobjects.Po \
+	./$(DEPDIR)/query.Po ./$(DEPDIR)/session_connection.Po \
 	./$(DEPDIR)/session_transport.Po ./$(DEPDIR)/talkmacros.Po \
-	./$(DEPDIR)/textinterface.Po ./$(DEPDIR)/transport_display.Po
+	./$(DEPDIR)/text_config.Po ./$(DEPDIR)/textinterface.Po \
+	./$(DEPDIR)/transport_display.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -269,6 +272,8 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
+FONTCONFIG_CFLAGS = @FONTCONFIG_CFLAGS@
+FONTCONFIG_LIBS = @FONTCONFIG_LIBS@
 GL_CFLAGS = @GL_CFLAGS@
 GL_LIBS = @GL_LIBS@
 INSTALL = @INSTALL@
@@ -291,6 +296,8 @@ MINGW_PACKAGE_DIR = @MINGW_PACKAGE_DIR@
 MINGW_TOOLCHAIN_FILE = @MINGW_TOOLCHAIN_FILE@
 MINGW_WINE_PREFIX = @MINGW_WINE_PREFIX@
 MKDIR_P = @MKDIR_P@
+NATIVE_TEXT_CFLAGS = @NATIVE_TEXT_CFLAGS@
+NATIVE_TEXT_LIBS = @NATIVE_TEXT_LIBS@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -323,6 +330,8 @@ XP_COPYRIGHT = @XP_COPYRIGHT@
 XP_COPYRIGHTDATE = @XP_COPYRIGHTDATE@
 XP_DATADIR = @XP_DATADIR@
 XP_RELEASEDATE = @XP_RELEASEDATE@
+XRENDER_CFLAGS = @XRENDER_CFLAGS@
+XRENDER_LIBS = @XRENDER_LIBS@
 X_CFLAGS = @X_CFLAGS@
 X_EXTENSIONS_LIB = @X_EXTENSIONS_LIB@
 X_EXTRA_LIBS = @X_EXTRA_LIBS@
@@ -383,8 +392,14 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+@COND_MINGW_VENDORED_FALSE@XP_TEXT_SDL3_CFLAGS = @SDL3_CFLAGS@
+@COND_MINGW_VENDORED_TRUE@XP_TEXT_SDL3_CFLAGS = $(MINGW_SDL3_CFLAGS)
+@COND_MINGW_VENDORED_FALSE@XP_TEXT_SDL3_TTF_CFLAGS = @SDL3_TTF_CFLAGS@
+@COND_MINGW_VENDORED_TRUE@XP_TEXT_SDL3_TTF_CFLAGS = $(MINGW_SDL3_TTF_CFLAGS)
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
-	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common
+	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
+	$(XP_TEXT_SDL3_CFLAGS) $(XP_TEXT_SDL3_TTF_CFLAGS) \
+	@NATIVE_TEXT_CFLAGS@
 
 noinst_LIBRARIES = libxpclient.a
 libxpclient_a_SOURCES = client.c client.h client_session.c \
@@ -398,8 +413,9 @@ libxpclient_a_SOURCES = client.c client.h client_session.c \
 	transport_display.c transport_display.h session_connection.c \
 	session_connection.h session_transport.c session_transport.h \
 	talk.h talkmacros.c textinterface.c micro_delay.c \
-	micro_delay.h micro_delay_test_support.h xpclient.h \
-	$(am__append_1)
+	micro_delay.h micro_delay_test_support.h native_text.c \
+	native_text.h native_text_internal.h text_config.c \
+	text_config.h xpclient.h $(am__append_1)
 @COND_SDL_CLIENT_FALSE@MAYBE_SDL =
 
 # From section Conditional subdirectories with AM_CONDITIONAL
@@ -474,6 +490,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/messages.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/meta.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/micro_delay.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/native_text.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/netclient.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/oalaudio.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/option.Po@am__quote@ # am--include-marker
@@ -484,6 +501,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session_connection.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session_transport.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/talkmacros.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_config.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/textinterface.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/transport_display.Po@am__quote@ # am--include-marker
 
@@ -718,6 +736,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/messages.Po
 	-rm -f ./$(DEPDIR)/meta.Po
 	-rm -f ./$(DEPDIR)/micro_delay.Po
+	-rm -f ./$(DEPDIR)/native_text.Po
 	-rm -f ./$(DEPDIR)/netclient.Po
 	-rm -f ./$(DEPDIR)/oalaudio.Po
 	-rm -f ./$(DEPDIR)/option.Po
@@ -728,6 +747,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/session_connection.Po
 	-rm -f ./$(DEPDIR)/session_transport.Po
 	-rm -f ./$(DEPDIR)/talkmacros.Po
+	-rm -f ./$(DEPDIR)/text_config.Po
 	-rm -f ./$(DEPDIR)/textinterface.Po
 	-rm -f ./$(DEPDIR)/transport_display.Po
 	-rm -f Makefile
@@ -790,6 +810,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/messages.Po
 	-rm -f ./$(DEPDIR)/meta.Po
 	-rm -f ./$(DEPDIR)/micro_delay.Po
+	-rm -f ./$(DEPDIR)/native_text.Po
 	-rm -f ./$(DEPDIR)/netclient.Po
 	-rm -f ./$(DEPDIR)/oalaudio.Po
 	-rm -f ./$(DEPDIR)/option.Po
@@ -800,6 +821,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/session_connection.Po
 	-rm -f ./$(DEPDIR)/session_transport.Po
 	-rm -f ./$(DEPDIR)/talkmacros.Po
+	-rm -f ./$(DEPDIR)/text_config.Po
 	-rm -f ./$(DEPDIR)/textinterface.Po
 	-rm -f ./$(DEPDIR)/transport_display.Po
 	-rm -f Makefile
@@ -837,6 +859,8 @@ uninstall-am:
 
 .PRECIOUS: Makefile
 
+
+@COND_MINGW_VENDORED_TRUE@-include $(top_builddir)/mingw-deps.mk
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

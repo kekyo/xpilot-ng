@@ -77,14 +77,10 @@ esac
 
 server_executable="$build_dir/src/server/xpilot-ng-server.exe"
 client_executable="$build_dir/src/client/sdl/xpilot-ng-sdl.exe"
-score_fallback_font_name=Mplus1p-Regular.ttf
-score_fallback_font_source="$source_dir/vendor/sdl3/SDL_ttf/external/harfbuzz/test/api/fonts/$score_fallback_font_name"
 test -f "$server_executable" \
     || fail "Windows server executable is missing: $server_executable"
 test -f "$client_executable" \
     || fail "Windows SDL client executable is missing: $client_executable"
-test -f "$score_fallback_font_source" \
-    || fail "score fallback font is missing: $score_fallback_font_source"
 
 package_work_dir="$package_dir.tmp"
 for output_dir in "$package_dir" "$package_work_dir"; do
@@ -102,8 +98,6 @@ for data_directory in fonts maps textures sound; do
             "$package_work_dir/lib/$data_directory"
     fi
 done
-cp "$score_fallback_font_source" \
-    "$package_work_dir/lib/fonts/$score_fallback_font_name"
 for data_file in defaults.txt password.txt robots.txt shipshapes.txt; do
     test -f "$source_dir/lib/$data_file" \
         || fail "required game data is missing: lib/$data_file"

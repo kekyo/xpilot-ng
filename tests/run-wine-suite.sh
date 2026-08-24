@@ -130,6 +130,8 @@ if test "$inside_xvfb" = false; then
         test-transport-display.exe \
         test-socket-io.exe \
         test-sdl-versions.exe \
+        test-score-font.exe \
+        test-native-text.exe \
         test-native-socket-handle.exe
 
     mkdir -p "$(dirname -- "$wine_prefix")"
@@ -713,7 +715,7 @@ timeout 30s "$wineserver_program" -w >>"$runtime_dir/wineboot.log" 2>&1 \
 for unit_test in test-framed-stream test-websocket-transport \
     test-game-transport test-connect-target \
     test-transport-display test-socket-io test-sdl-versions \
-    test-native-socket-handle; do
+    test-score-font test-native-text test-native-socket-handle; do
     run_wine_unit_test "$unit_test"
 done
 

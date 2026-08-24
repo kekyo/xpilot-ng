@@ -106,6 +106,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-micro-delay$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-score-font$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-native-text$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-gameloop$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-keys$(EXEEXT) \
@@ -146,6 +147,8 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-sdlgui-ships$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-geometry$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-atlas$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-unicode-text-renderer$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-x11-text$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-ttf-atlas$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-renderer$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-cache-adapter$(EXEEXT)
@@ -166,6 +169,7 @@ target_triplet = @target@
 @COND_WINDOWS_TRUE@	test-micro-delay$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-score-font$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-native-text$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-game-input$(EXEEXT)
 @COND_WINDOWS_FALSE@TESTS = test-framed-stream$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-websocket-transport$(EXEEXT) \
@@ -184,6 +188,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-micro-delay$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-score-font$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-native-text$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-input$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-gameloop$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-keys$(EXEEXT) \
@@ -223,10 +228,11 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-sdlgui-ships$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-geometry$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-atlas$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-unicode-text-renderer$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-ttf-atlas$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-renderer$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-cache-adapter$(EXEEXT) \
-@COND_WINDOWS_FALSE@	run-renderer-gl-core.sh \
+@COND_WINDOWS_FALSE@	run-x11-text.sh run-renderer-gl-core.sh \
 @COND_WINDOWS_FALSE@	run-sdl-renderer-core-context.sh \
 @COND_WINDOWS_FALSE@	run-build-wrapper.sh run-vendored-zlib.sh \
 @COND_WINDOWS_FALSE@	run-e2e.sh
@@ -342,6 +348,13 @@ am_test_native_socket_handle_OBJECTS =  \
 test_native_socket_handle_OBJECTS =  \
 	$(am_test_native_socket_handle_OBJECTS)
 test_native_socket_handle_LDADD = $(LDADD)
+am_test_native_text_OBJECTS =  \
+	test_native_text-test_native_text.$(OBJEXT)
+test_native_text_OBJECTS = $(am_test_native_text_OBJECTS)
+test_native_text_DEPENDENCIES =  \
+	$(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_test_paint_transform_OBJECTS = test_paint_transform.$(OBJEXT) \
 	paint_transform.$(OBJEXT)
 test_paint_transform_OBJECTS = $(am_test_paint_transform_OBJECTS)
@@ -400,7 +413,8 @@ am_test_score_font_OBJECTS =  \
 	test_score_font-test_score_font.$(OBJEXT) \
 	test_score_font-score_font.$(OBJEXT)
 test_score_font_OBJECTS = $(am_test_score_font_OBJECTS)
-test_score_font_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+test_score_font_DEPENDENCIES =  \
+	$(top_builddir)/src/client/libxpclient.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 am_test_sdl_clipboard_OBJECTS = test_sdl_clipboard.$(OBJEXT) \
 	sdlclipboard.$(OBJEXT)
@@ -607,12 +621,24 @@ am_test_transport_display_OBJECTS = test_transport_display.$(OBJEXT) \
 	transport_display.$(OBJEXT)
 test_transport_display_OBJECTS = $(am_test_transport_display_OBJECTS)
 test_transport_display_LDADD = $(LDADD)
+am_test_unicode_text_renderer_OBJECTS =  \
+	test_unicode_text_renderer.$(OBJEXT) \
+	unicode_text_renderer.$(OBJEXT)
+test_unicode_text_renderer_OBJECTS =  \
+	$(am_test_unicode_text_renderer_OBJECTS)
+test_unicode_text_renderer_LDADD = $(LDADD)
 am_test_websocket_transport_OBJECTS =  \
 	test_websocket_transport.$(OBJEXT)
 test_websocket_transport_OBJECTS =  \
 	$(am_test_websocket_transport_OBJECTS)
 test_websocket_transport_DEPENDENCIES =  \
 	$(top_builddir)/src/common/libxpcommon.a
+am_test_x11_text_OBJECTS = test_x11_text-test_x11_text.$(OBJEXT) \
+	test_x11_text-x11_text.$(OBJEXT)
+test_x11_text_OBJECTS = $(am_test_x11_text_OBJECTS)
+test_x11_text_DEPENDENCIES = $(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -673,6 +699,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_micro_delay-micro_delay.Po \
 	./$(DEPDIR)/test_micro_delay-test_micro_delay.Po \
 	./$(DEPDIR)/test_native_socket_handle.Po \
+	./$(DEPDIR)/test_native_text-test_native_text.Po \
 	./$(DEPDIR)/test_paint_transform.Po \
 	./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po \
 	./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po \
@@ -747,10 +774,13 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po \
 	./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po \
 	./$(DEPDIR)/test_transport_display.Po \
+	./$(DEPDIR)/test_unicode_text_renderer.Po \
 	./$(DEPDIR)/test_websocket_transport.Po \
+	./$(DEPDIR)/test_x11_text-test_x11_text.Po \
+	./$(DEPDIR)/test_x11_text-x11_text.Po \
 	./$(DEPDIR)/text_atlas.Po ./$(DEPDIR)/text_geometry.Po \
 	./$(DEPDIR)/text_renderer.Po ./$(DEPDIR)/transport_display.Po \
-	./$(DEPDIR)/win32hacks.Po
+	./$(DEPDIR)/unicode_text_renderer.Po ./$(DEPDIR)/win32hacks.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -779,7 +809,7 @@ SOURCES = $(test_checknames_SOURCES) $(test_connect_target_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
 	$(test_meta_environment_SOURCES) $(test_micro_delay_SOURCES) \
 	$(test_native_socket_handle_SOURCES) \
-	$(test_paint_transform_SOURCES) \
+	$(test_native_text_SOURCES) $(test_paint_transform_SOURCES) \
 	$(test_paintmap_vdecor_SOURCES) \
 	$(test_polygon_geometry_SOURCES) $(test_ppm_image_SOURCES) \
 	$(test_radar_renderer_SOURCES) $(test_randommt_SOURCES) \
@@ -810,7 +840,8 @@ SOURCES = $(test_checknames_SOURCES) $(test_connect_target_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES) \
 	$(test_transport_display_SOURCES) \
-	$(test_websocket_transport_SOURCES)
+	$(test_unicode_text_renderer_SOURCES) \
+	$(test_websocket_transport_SOURCES) $(test_x11_text_SOURCES)
 DIST_SOURCES = $(test_checknames_SOURCES) \
 	$(test_connect_target_SOURCES) \
 	$(test_contact_target_probe_SOURCES) \
@@ -823,7 +854,7 @@ DIST_SOURCES = $(test_checknames_SOURCES) \
 	$(test_image_geometry_SOURCES) $(test_images_SOURCES) \
 	$(test_meta_environment_SOURCES) $(test_micro_delay_SOURCES) \
 	$(test_native_socket_handle_SOURCES) \
-	$(test_paint_transform_SOURCES) \
+	$(test_native_text_SOURCES) $(test_paint_transform_SOURCES) \
 	$(test_paintmap_vdecor_SOURCES) \
 	$(test_polygon_geometry_SOURCES) $(test_ppm_image_SOURCES) \
 	$(test_radar_renderer_SOURCES) $(test_randommt_SOURCES) \
@@ -854,7 +885,8 @@ DIST_SOURCES = $(test_checknames_SOURCES) \
 	$(test_text_geometry_SOURCES) $(test_text_renderer_SOURCES) \
 	$(test_text_ttf_atlas_SOURCES) \
 	$(test_transport_display_SOURCES) \
-	$(test_websocket_transport_SOURCES)
+	$(test_unicode_text_renderer_SOURCES) \
+	$(test_websocket_transport_SOURCES) $(test_x11_text_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -1107,6 +1139,8 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
+FONTCONFIG_CFLAGS = @FONTCONFIG_CFLAGS@
+FONTCONFIG_LIBS = @FONTCONFIG_LIBS@
 GL_CFLAGS = @GL_CFLAGS@
 GL_LIBS = @GL_LIBS@
 INSTALL = @INSTALL@
@@ -1129,6 +1163,8 @@ MINGW_PACKAGE_DIR = @MINGW_PACKAGE_DIR@
 MINGW_TOOLCHAIN_FILE = @MINGW_TOOLCHAIN_FILE@
 MINGW_WINE_PREFIX = @MINGW_WINE_PREFIX@
 MKDIR_P = @MKDIR_P@
+NATIVE_TEXT_CFLAGS = @NATIVE_TEXT_CFLAGS@
+NATIVE_TEXT_LIBS = @NATIVE_TEXT_LIBS@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -1161,6 +1197,8 @@ XP_COPYRIGHT = @XP_COPYRIGHT@
 XP_COPYRIGHTDATE = @XP_COPYRIGHTDATE@
 XP_DATADIR = @XP_DATADIR@
 XP_RELEASEDATE = @XP_RELEASEDATE@
+XRENDER_CFLAGS = @XRENDER_CFLAGS@
+XRENDER_LIBS = @XRENDER_LIBS@
 X_CFLAGS = @X_CFLAGS@
 X_EXTENSIONS_LIB = @X_EXTENSIONS_LIB@
 X_EXTRA_LIBS = @X_EXTRA_LIBS@
@@ -1240,7 +1278,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_srcdir)/src/client/sdl \
 	-I$(top_srcdir)/vendor/libtess2/Include \
 	$(XP_SDL3_CFLAGS) $(XP_SDL3_IMAGE_CFLAGS) $(XP_SDL3_TTF_CFLAGS) \
-	@GL_CFLAGS@
+	@NATIVE_TEXT_CFLAGS@ @GL_CFLAGS@
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
@@ -1318,10 +1356,19 @@ test_score_font_SOURCES = test_score_font.c \
 	$(top_srcdir)/src/client/sdl/score_font.c
 
 test_score_font_CPPFLAGS = $(AM_CPPFLAGS) \
-	-DXPILOT_TEST_SCORE_FONT_PATH=\"$(top_srcdir)/lib/fonts/VeraMoBd.ttf\" \
-	-DXPILOT_TEST_SCORE_FALLBACK_FONT_PATH=\"$(top_srcdir)/vendor/sdl3/SDL_ttf/external/harfbuzz/test/api/fonts/Mplus1p-Regular.ttf\"
+	-DXPILOT_TEST_FONT_DIR=\"$(top_srcdir)/lib/fonts\"
 
-test_score_font_LDADD = $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
+test_score_font_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) @NATIVE_TEXT_LIBS@
+
+test_native_text_SOURCES = test_native_text.c
+test_native_text_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_TEST_FONT_DIR=\"$(top_srcdir)/lib/fonts\"
+
+test_native_text_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a \
+	$(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) @NATIVE_TEXT_LIBS@
+
 test_game_input_SOURCES = test_game_input.c \
 	$(top_srcdir)/src/client/sdl/gameinput.c
 
@@ -1712,6 +1759,23 @@ test_text_renderer_SOURCES = test_text_renderer.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.h
 
 test_text_renderer_LDFLAGS = $(AM_LDFLAGS) -Wl,--wrap=malloc
+test_unicode_text_renderer_SOURCES = test_unicode_text_renderer.c \
+	$(top_srcdir)/src/client/sdl/unicode_text_renderer.c \
+	$(top_srcdir)/src/client/sdl/unicode_text_renderer.h
+
+test_x11_text_SOURCES = test_x11_text.c \
+	$(top_srcdir)/src/client/x11/x11_text.c \
+	$(top_srcdir)/src/client/x11/x11_text.h
+
+test_x11_text_CPPFLAGS = $(AM_CPPFLAGS) \
+	-I$(top_srcdir)/src/client/x11 \
+	-DXPILOT_TEST_FONT_DIR=\"$(top_srcdir)/lib/fonts\"
+
+test_x11_text_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a \
+	$(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) @NATIVE_TEXT_LIBS@ \
+	@XRENDER_LIBS@ -lX11
+
 test_text_cache_adapter_SOURCES = test_text_cache_adapter.c \
 	$(top_srcdir)/src/client/sdl/text.c
 
@@ -1734,6 +1798,8 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_RENDERER_GL_CORE_TEST_BINARY; \
 	XPILOT_SDL_CORE_CONTEXT_TEST_BINARY='$(abs_builddir)/test-sdl-renderer-core-context'; \
 	export XPILOT_SDL_CORE_CONTEXT_TEST_BINARY; \
+	XPILOT_X11_TEXT_TEST_BINARY='$(abs_builddir)/test-x11-text'; \
+	export XPILOT_X11_TEXT_TEST_BINARY; \
 	XPILOT_SDL_OBJECT_DIR='$(abs_top_builddir)/src/client/sdl'; \
 	export XPILOT_SDL_OBJECT_DIR; \
 	XPILOT_SDL_BINARY='$(abs_top_builddir)/src/client/sdl/xpilot-ng-sdl'; \
@@ -1850,6 +1916,10 @@ test-micro-delay$(EXEEXT): $(test_micro_delay_OBJECTS) $(test_micro_delay_DEPEND
 test-native-socket-handle$(EXEEXT): $(test_native_socket_handle_OBJECTS) $(test_native_socket_handle_DEPENDENCIES) $(EXTRA_test_native_socket_handle_DEPENDENCIES)
 	@rm -f test-native-socket-handle$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_native_socket_handle_OBJECTS) $(test_native_socket_handle_LDADD) $(LIBS)
+
+test-native-text$(EXEEXT): $(test_native_text_OBJECTS) $(test_native_text_DEPENDENCIES) $(EXTRA_test_native_text_DEPENDENCIES)
+	@rm -f test-native-text$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_native_text_OBJECTS) $(test_native_text_LDADD) $(LIBS)
 
 test-paint-transform$(EXEEXT): $(test_paint_transform_OBJECTS) $(test_paint_transform_DEPENDENCIES) $(EXTRA_test_paint_transform_DEPENDENCIES)
 	@rm -f test-paint-transform$(EXEEXT)
@@ -2027,9 +2097,17 @@ test-transport-display$(EXEEXT): $(test_transport_display_OBJECTS) $(test_transp
 	@rm -f test-transport-display$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_transport_display_OBJECTS) $(test_transport_display_LDADD) $(LIBS)
 
+test-unicode-text-renderer$(EXEEXT): $(test_unicode_text_renderer_OBJECTS) $(test_unicode_text_renderer_DEPENDENCIES) $(EXTRA_test_unicode_text_renderer_DEPENDENCIES)
+	@rm -f test-unicode-text-renderer$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_unicode_text_renderer_OBJECTS) $(test_unicode_text_renderer_LDADD) $(LIBS)
+
 test-websocket-transport$(EXEEXT): $(test_websocket_transport_OBJECTS) $(test_websocket_transport_DEPENDENCIES) $(EXTRA_test_websocket_transport_DEPENDENCIES)
 	@rm -f test-websocket-transport$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_websocket_transport_OBJECTS) $(test_websocket_transport_LDADD) $(LIBS)
+
+test-x11-text$(EXEEXT): $(test_x11_text_OBJECTS) $(test_x11_text_DEPENDENCIES) $(EXTRA_test_x11_text_DEPENDENCIES)
+	@rm -f test-x11-text$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_x11_text_OBJECTS) $(test_x11_text_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -2093,6 +2171,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_micro_delay-micro_delay.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_micro_delay-test_micro_delay.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_native_socket_handle.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_native_text-test_native_text.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paint_transform.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po@am__quote@ # am--include-marker
@@ -2168,11 +2247,15 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_transport_display.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_unicode_text_renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_websocket_transport.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_x11_text-test_x11_text.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_x11_text-x11_text.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/transport_display.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unicode_text_renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/win32hacks.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -2642,6 +2725,20 @@ test_micro_delay-micro_delay.obj: $(top_srcdir)/src/client/micro_delay.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/micro_delay.c' object='test_micro_delay-micro_delay.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_micro_delay_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_micro_delay-micro_delay.obj `if test -f '$(top_srcdir)/src/client/micro_delay.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/micro_delay.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/micro_delay.c'; fi`
+
+test_native_text-test_native_text.o: test_native_text.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_native_text_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_native_text-test_native_text.o -MD -MP -MF $(DEPDIR)/test_native_text-test_native_text.Tpo -c -o test_native_text-test_native_text.o `test -f 'test_native_text.c' || echo '$(srcdir)/'`test_native_text.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_native_text-test_native_text.Tpo $(DEPDIR)/test_native_text-test_native_text.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_native_text.c' object='test_native_text-test_native_text.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_native_text_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_native_text-test_native_text.o `test -f 'test_native_text.c' || echo '$(srcdir)/'`test_native_text.c
+
+test_native_text-test_native_text.obj: test_native_text.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_native_text_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_native_text-test_native_text.obj -MD -MP -MF $(DEPDIR)/test_native_text-test_native_text.Tpo -c -o test_native_text-test_native_text.obj `if test -f 'test_native_text.c'; then $(CYGPATH_W) 'test_native_text.c'; else $(CYGPATH_W) '$(srcdir)/test_native_text.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_native_text-test_native_text.Tpo $(DEPDIR)/test_native_text-test_native_text.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_native_text.c' object='test_native_text-test_native_text.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_native_text_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_native_text-test_native_text.obj `if test -f 'test_native_text.c'; then $(CYGPATH_W) 'test_native_text.c'; else $(CYGPATH_W) '$(srcdir)/test_native_text.c'; fi`
 
 paint_transform.o: $(top_srcdir)/src/client/sdl/paint_transform.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT paint_transform.o -MD -MP -MF $(DEPDIR)/paint_transform.Tpo -c -o paint_transform.o `test -f '$(top_srcdir)/src/client/sdl/paint_transform.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/paint_transform.c
@@ -3595,6 +3692,48 @@ transport_display.obj: $(top_srcdir)/src/client/transport_display.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o transport_display.obj `if test -f '$(top_srcdir)/src/client/transport_display.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/transport_display.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/transport_display.c'; fi`
 
+unicode_text_renderer.o: $(top_srcdir)/src/client/sdl/unicode_text_renderer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT unicode_text_renderer.o -MD -MP -MF $(DEPDIR)/unicode_text_renderer.Tpo -c -o unicode_text_renderer.o `test -f '$(top_srcdir)/src/client/sdl/unicode_text_renderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/unicode_text_renderer.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/unicode_text_renderer.Tpo $(DEPDIR)/unicode_text_renderer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/unicode_text_renderer.c' object='unicode_text_renderer.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o unicode_text_renderer.o `test -f '$(top_srcdir)/src/client/sdl/unicode_text_renderer.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/unicode_text_renderer.c
+
+unicode_text_renderer.obj: $(top_srcdir)/src/client/sdl/unicode_text_renderer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT unicode_text_renderer.obj -MD -MP -MF $(DEPDIR)/unicode_text_renderer.Tpo -c -o unicode_text_renderer.obj `if test -f '$(top_srcdir)/src/client/sdl/unicode_text_renderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/unicode_text_renderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/unicode_text_renderer.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/unicode_text_renderer.Tpo $(DEPDIR)/unicode_text_renderer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/unicode_text_renderer.c' object='unicode_text_renderer.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o unicode_text_renderer.obj `if test -f '$(top_srcdir)/src/client/sdl/unicode_text_renderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/unicode_text_renderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/unicode_text_renderer.c'; fi`
+
+test_x11_text-test_x11_text.o: test_x11_text.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_x11_text_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_x11_text-test_x11_text.o -MD -MP -MF $(DEPDIR)/test_x11_text-test_x11_text.Tpo -c -o test_x11_text-test_x11_text.o `test -f 'test_x11_text.c' || echo '$(srcdir)/'`test_x11_text.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_x11_text-test_x11_text.Tpo $(DEPDIR)/test_x11_text-test_x11_text.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_x11_text.c' object='test_x11_text-test_x11_text.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_x11_text_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_x11_text-test_x11_text.o `test -f 'test_x11_text.c' || echo '$(srcdir)/'`test_x11_text.c
+
+test_x11_text-test_x11_text.obj: test_x11_text.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_x11_text_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_x11_text-test_x11_text.obj -MD -MP -MF $(DEPDIR)/test_x11_text-test_x11_text.Tpo -c -o test_x11_text-test_x11_text.obj `if test -f 'test_x11_text.c'; then $(CYGPATH_W) 'test_x11_text.c'; else $(CYGPATH_W) '$(srcdir)/test_x11_text.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_x11_text-test_x11_text.Tpo $(DEPDIR)/test_x11_text-test_x11_text.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_x11_text.c' object='test_x11_text-test_x11_text.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_x11_text_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_x11_text-test_x11_text.obj `if test -f 'test_x11_text.c'; then $(CYGPATH_W) 'test_x11_text.c'; else $(CYGPATH_W) '$(srcdir)/test_x11_text.c'; fi`
+
+test_x11_text-x11_text.o: $(top_srcdir)/src/client/x11/x11_text.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_x11_text_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_x11_text-x11_text.o -MD -MP -MF $(DEPDIR)/test_x11_text-x11_text.Tpo -c -o test_x11_text-x11_text.o `test -f '$(top_srcdir)/src/client/x11/x11_text.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/x11/x11_text.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_x11_text-x11_text.Tpo $(DEPDIR)/test_x11_text-x11_text.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/x11/x11_text.c' object='test_x11_text-x11_text.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_x11_text_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_x11_text-x11_text.o `test -f '$(top_srcdir)/src/client/x11/x11_text.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/x11/x11_text.c
+
+test_x11_text-x11_text.obj: $(top_srcdir)/src/client/x11/x11_text.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_x11_text_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_x11_text-x11_text.obj -MD -MP -MF $(DEPDIR)/test_x11_text-x11_text.Tpo -c -o test_x11_text-x11_text.obj `if test -f '$(top_srcdir)/src/client/x11/x11_text.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/x11/x11_text.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/x11/x11_text.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_x11_text-x11_text.Tpo $(DEPDIR)/test_x11_text-x11_text.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/x11/x11_text.c' object='test_x11_text-x11_text.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(test_x11_text_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_x11_text-x11_text.obj `if test -f '$(top_srcdir)/src/client/x11/x11_text.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/x11/x11_text.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/x11/x11_text.c'; fi`
+
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
 tags: tags-am
@@ -3907,6 +4046,13 @@ test-score-font.log: test-score-font$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-native-text.log: test-native-text$(EXEEXT)
+	@p='test-native-text$(EXEEXT)'; \
+	b='test-native-text'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-game-input.log: test-game-input$(EXEEXT)
 	@p='test-game-input$(EXEEXT)'; \
 	b='test-game-input'; \
@@ -4166,6 +4312,13 @@ test-text-atlas.log: test-text-atlas$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-unicode-text-renderer.log: test-unicode-text-renderer$(EXEEXT)
+	@p='test-unicode-text-renderer$(EXEEXT)'; \
+	b='test-unicode-text-renderer'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-text-ttf-atlas.log: test-text-ttf-atlas$(EXEEXT)
 	@p='test-text-ttf-atlas$(EXEEXT)'; \
 	b='test-text-ttf-atlas'; \
@@ -4334,6 +4487,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_micro_delay-micro_delay.Po
 	-rm -f ./$(DEPDIR)/test_micro_delay-test_micro_delay.Po
 	-rm -f ./$(DEPDIR)/test_native_socket_handle.Po
+	-rm -f ./$(DEPDIR)/test_native_text-test_native_text.Po
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po
@@ -4409,11 +4563,15 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po
 	-rm -f ./$(DEPDIR)/test_transport_display.Po
+	-rm -f ./$(DEPDIR)/test_unicode_text_renderer.Po
 	-rm -f ./$(DEPDIR)/test_websocket_transport.Po
+	-rm -f ./$(DEPDIR)/test_x11_text-test_x11_text.Po
+	-rm -f ./$(DEPDIR)/test_x11_text-x11_text.Po
 	-rm -f ./$(DEPDIR)/text_atlas.Po
 	-rm -f ./$(DEPDIR)/text_geometry.Po
 	-rm -f ./$(DEPDIR)/text_renderer.Po
 	-rm -f ./$(DEPDIR)/transport_display.Po
+	-rm -f ./$(DEPDIR)/unicode_text_renderer.Po
 	-rm -f ./$(DEPDIR)/win32hacks.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -4516,6 +4674,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_micro_delay-micro_delay.Po
 	-rm -f ./$(DEPDIR)/test_micro_delay-test_micro_delay.Po
 	-rm -f ./$(DEPDIR)/test_native_socket_handle.Po
+	-rm -f ./$(DEPDIR)/test_native_text-test_native_text.Po
 	-rm -f ./$(DEPDIR)/test_paint_transform.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-paintmap.Po
 	-rm -f ./$(DEPDIR)/test_paintmap_vdecor-test_paintmap_vdecor.Po
@@ -4591,11 +4750,15 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_geometry.Po
 	-rm -f ./$(DEPDIR)/test_text_ttf_atlas-text_ttf_atlas.Po
 	-rm -f ./$(DEPDIR)/test_transport_display.Po
+	-rm -f ./$(DEPDIR)/test_unicode_text_renderer.Po
 	-rm -f ./$(DEPDIR)/test_websocket_transport.Po
+	-rm -f ./$(DEPDIR)/test_x11_text-test_x11_text.Po
+	-rm -f ./$(DEPDIR)/test_x11_text-x11_text.Po
 	-rm -f ./$(DEPDIR)/text_atlas.Po
 	-rm -f ./$(DEPDIR)/text_geometry.Po
 	-rm -f ./$(DEPDIR)/text_renderer.Po
 	-rm -f ./$(DEPDIR)/transport_display.Po
+	-rm -f ./$(DEPDIR)/unicode_text_renderer.Po
 	-rm -f ./$(DEPDIR)/win32hacks.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic

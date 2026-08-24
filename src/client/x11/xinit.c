@@ -766,6 +766,7 @@ void Platform_specific_cleanup(void)
 	    XChangePointerControl(dpy, True, True, pre_acc_num,
 				  pre_acc_denom, pre_threshold);
 	XAutoRepeatOn(dpy);
+	Xp_x11_text_shutdown(dpy);
 	Colors_cleanup();
 	XCloseDisplay(dpy);
 	dpy = NULL;

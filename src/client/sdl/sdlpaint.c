@@ -47,6 +47,7 @@
 #include "sdlgameframe.h"
 #include "sdlrenderer.h"
 #include "score_font.h"
+#include "text_config.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -57,9 +58,6 @@
  * Globals.
  */
 static ScoreFont     scoreListFont;
-static const char   *scoreListFontName = CONF_FONTDIR "VeraMoBd.ttf";
-static const char   *scoreListFallbackFontName =
-    CONF_FONTDIR "Mplus1p-Regular.ttf";
 static sdl_window_t scoreListWin;
 static SDL_Rect     scoreEntryRect; /* Bounds for the last painted score entry */
 static GLWidget     *scoreListWidget;
@@ -372,10 +370,10 @@ GLWidget *Init_ScorelistWidget(void)
     tmp->bounds.w   	= 200;
     tmp->bounds.h   	= 100;
 
-    if (!Score_font_open(&scoreListFont, scoreListFontName,
-			 scoreListFallbackFontName, 11)) {
-	error("opening scorelist fonts %s and %s failed: %s",
-	      scoreListFontName, scoreListFallbackFontName, SDL_GetError());
+    if (!Score_font_open(&scoreListFont, Get_text_system(),
+			 Xp_text_config_families(XP_TEXT_SPACING_MONOSPACE),
+			 11)) {
+	error("opening scorelist system fonts failed: %s", SDL_GetError());
 	free(tmp);
 	return NULL;
     }
@@ -817,8 +815,7 @@ void Paint_score_start(void)
 	/* SDL 1.2_ttf ignored SDL_Color's fourth byte for blended text. */
 	fg.a = SDL_ALPHA_OPAQUE;
     SDL_FillSurfaceRect(scoreListWin.surface, NULL, 0);
-    header = TTF_RenderText_Blended(
-	scoreListFont.primary, headingStr, 0, fg);
+    header = Score_font_render(&scoreListFont, headingStr, fg);
     if (header == NULL) {
 	error("scorelist header rendering failed: %s", SDL_GetError());
 	return;
@@ -856,7 +853,7 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 	teamStr[1] = ' ';
 	raceStr[2] = ' ';
 
-	lineSpacing = TTF_GetFontLineSkip(scoreListFont.primary) + 1;
+	lineSpacing = Score_font_line_spacing(&scoreListFont) + 1;
 
 	firstLine = 2*SCORE_BORDER + lineSpacing;
     }
@@ -938,7 +935,7 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 	fg.b = (color >> 8) & 255;
 	/* Preserve the opaque glyphs produced by SDL 1.2_ttf. */
 	fg.a = SDL_ALPHA_OPAQUE;
-    line = TTF_RenderText_Blended(scoreListFont.primary, label, 0, fg);
+    line = Score_font_render(&scoreListFont, label, fg);
     if (line == NULL) {
 	error("scorelist rendering failed: %s", SDL_GetError());
 	return;

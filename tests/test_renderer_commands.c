@@ -671,6 +671,42 @@ static int check_active_frame_rejects_resource_changes(void)
     return 0;
 }
 
+static int check_streaming_texture_preserves_draw_order(void)
+{
+    const RendererColor black = {0, 0, 0, 255};
+    const RendererColor white = {255, 255, 255, 255};
+    const uint8_t pixel[] = {255, 255, 255, 255};
+    fake_backend_t backend;
+    Renderer *renderer = create_renderer(&backend);
+    RendererTexture *texture = NULL;
+
+    TEST_CHECK(renderer != NULL);
+    TEST_CHECK(Renderer_begin_frame(renderer, 32, 32, black)
+	       == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_fill_rect(
+		   renderer, 0.0f, 0.0f, 1.0f, 1.0f, white)
+	       == RENDERER_STATUS_OK);
+    TEST_CHECK(backend.draw_count == 0);
+    TEST_CHECK(Renderer_texture_create_streaming(
+		   renderer, &single_pixel_texture_desc,
+		   pixel, sizeof(pixel), &texture) == RENDERER_STATUS_OK);
+    TEST_CHECK(texture != NULL);
+    TEST_CHECK(backend.draw_count == 1);
+    TEST_CHECK(backend.texture_create_count == 1);
+    TEST_CHECK(Renderer_draw_sprite(
+		   renderer, texture, 1.0f, 0.0f, 2.0f, 1.0f,
+		   0.0f, 0.0f, 1.0f, 1.0f, white) == RENDERER_STATUS_OK);
+    TEST_CHECK(Renderer_texture_destroy_streaming(renderer, texture)
+	       == RENDERER_STATUS_OK);
+    texture = NULL;
+    TEST_CHECK(backend.draw_count == 2);
+    TEST_CHECK(backend.texture_destroy_count == 1);
+    TEST_CHECK(Renderer_end_frame(renderer) == RENDERER_STATUS_OK);
+
+    Renderer_destroy(renderer);
+    return 0;
+}
+
 static int check_destroy_discards_active_frame(void)
 {
     const RendererColor black = {0, 0, 0, 255};
@@ -1371,6 +1407,7 @@ int main(void)
     TEST_CHECK(check_texture_sampling_descriptor_contract() == 0);
     TEST_CHECK(check_resource_ownership() == 0);
     TEST_CHECK(check_active_frame_rejects_resource_changes() == 0);
+    TEST_CHECK(check_streaming_texture_preserves_draw_order() == 0);
     TEST_CHECK(check_destroy_discards_active_frame() == 0);
     TEST_CHECK(check_draw_failure_retries_from_undelivered_command() == 0);
     TEST_CHECK(check_textured_triangle_state_and_retry() == 0);
