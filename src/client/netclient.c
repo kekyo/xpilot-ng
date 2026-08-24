@@ -1041,9 +1041,8 @@ session_failure:
     return -1;
 }
 
-#define CLEANUP_FLUSH_ATTEMPTS 10
 #define CLEANUP_FLUSH_WAIT_USEC 100000
-#define CLEANUP_QUIT_REPLY_ATTEMPTS 20
+#define CLEANUP_STREAM_TIMEOUT_SECONDS 5
 
 static int Wait_for_cleanup_output(socket_handle_t handle)
 {
@@ -1093,14 +1092,18 @@ static void Await_session_quit_reply(socket_handle_t handle)
 {
     record_receive_result_t receive_result;
     size_t length;
-    int attempt;
+    time_t deadline = time(NULL) + CLEANUP_STREAM_TIMEOUT_SECONDS;
+    int status;
 
     /* Reading the server's quit reply also drains pending gameplay data, so
      * closing a WebSocket cannot reset the TCP stream before PKT_QUIT is
      * processed by the server. */
-    for (attempt = 0; attempt < CLEANUP_QUIT_REPLY_ATTEMPTS; attempt++) {
-	if (Wait_for_cleanup_input(handle) < 0)
+    while (time(NULL) <= deadline) {
+	status = Wait_for_cleanup_input(handle);
+	if (status < 0)
 	    return;
+	if (status == 0)
+	    continue;
 	length = 0;
 	receive_result = Record_session_receive(
 	    gameplay_session, rbuf.buf, (size_t)rbuf.size, &length);
@@ -1119,13 +1122,13 @@ static void Flush_session_quit(void)
 {
     record_flush_result_t flush_result;
     socket_handle_t handle;
-    int attempt;
+    time_t deadline = time(NULL) + CLEANUP_STREAM_TIMEOUT_SECONDS;
 
     Sockbuf_clear(&wbuf);
     if (Packet_printf(&wbuf, "%c", PKT_QUIT) <= 0)
 	return;
     handle = Record_session_native_handle(gameplay_session);
-    for (attempt = 0; attempt < CLEANUP_FLUSH_ATTEMPTS; attempt++) {
+    while (time(NULL) <= deadline) {
 	if (Net_send_output(RECORD_DELIVERY_REQUIRED) < 0)
 	    return;
 	flush_result = Record_session_flush(gameplay_session);
@@ -1141,9 +1144,35 @@ static void Flush_session_quit(void)
     }
 }
 
+static void Await_framed_quit_reply(socket_handle_t handle)
+{
+    time_t deadline = time(NULL) + CLEANUP_STREAM_TIMEOUT_SECONDS;
+    int status;
+
+    /* Drain gameplay frames until the server confirms PKT_QUIT, preventing
+     * unread TCP input from turning the client close into a stream reset. */
+    Sockbuf_clear(&rbuf);
+    while (time(NULL) <= deadline) {
+	status = Wait_for_cleanup_input(handle);
+	if (status < 0)
+	    return;
+	if (status == 0)
+	    continue;
+	status = Sockbuf_read(&rbuf);
+	if (status < 0)
+	    return;
+	if (status == 0)
+	    continue;
+	if ((unsigned char)rbuf.buf[0] == PKT_QUIT)
+	    return;
+	Sockbuf_clear(&rbuf);
+    }
+}
+
 static void Flush_framed_quit(void)
 {
-    int attempt;
+    socket_handle_t handle = wbuf.sock.fd;
+    time_t deadline = time(NULL) + CLEANUP_STREAM_TIMEOUT_SECONDS;
 
     /* Preserve the quit record while any partially written gameplay record
      * ahead of it is drained. */
@@ -1151,12 +1180,14 @@ static void Flush_framed_quit(void)
     Sockbuf_clear(&wbuf);
     if (Packet_printf(&wbuf, "%c", PKT_QUIT) <= 0)
 	return;
-    for (attempt = 0; attempt < CLEANUP_FLUSH_ATTEMPTS; attempt++) {
+    while (time(NULL) <= deadline) {
 	if (Sockbuf_flush(&wbuf) < 0)
 	    return;
 	if (wbuf.len == 0
-	    && wbuf.frame_output_offset >= wbuf.frame_output_len)
+	    && wbuf.frame_output_offset >= wbuf.frame_output_len) {
+	    Await_framed_quit_reply(handle);
 	    return;
+	}
 	if (Wait_for_cleanup_output(wbuf.sock.fd) < 0)
 	    return;
     }
