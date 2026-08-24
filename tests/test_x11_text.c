@@ -43,9 +43,49 @@ static int count_non_background_pixels(
     return count;
 }
 
+static int horizontal_regions_are_equal(
+    Display *display, Drawable drawable,
+    unsigned int first_y, unsigned int second_y,
+    unsigned int width, unsigned int height)
+{
+    XImage *first;
+    XImage *second;
+    unsigned int x;
+    unsigned int y;
+    int equal = 1;
+
+    first = XGetImage(display, drawable, 0, (int)first_y, width, height,
+                      AllPlanes, ZPixmap);
+    second = XGetImage(display, drawable, 0, (int)second_y, width, height,
+                       AllPlanes, ZPixmap);
+    if (first == NULL || second == NULL) {
+        if (first != NULL)
+            XDestroyImage(first);
+        if (second != NULL)
+            XDestroyImage(second);
+        return 0;
+    }
+    for (y = 0; y < height && equal; y++) {
+        for (x = 0; x < width; x++) {
+            if (XGetPixel(first, (int)x, (int)y)
+                != XGetPixel(second, (int)x, (int)y)) {
+                equal = 0;
+                break;
+            }
+        }
+    }
+    XDestroyImage(first);
+    XDestroyImage(second);
+    return equal;
+}
+
 int main(void)
 {
     static const char japanese[] = "\xe3\x81\x91\xe3\x81\x8d\xe3\x82\x87";
+    static const char score_prefix[] = "R      0.0";
+    static const char ascii_score_row[] = "R      0.0  Terminator (robot)";
+    static const char utf8_score_row[] =
+        "R      0.0  Kouji (\xe3\x81\x91\xe3\x81\x8d\xe3\x82\x87)";
     static const char repeated_japanese[] =
         "\xe3\x81\x91\xe3\x81\x8d\xe3\x82\x87"
         "\xe3\x81\x91\xe3\x81\x8d\xe3\x82\x87"
@@ -62,6 +102,7 @@ int main(void)
     int utf8_width;
     int first_character_width;
     int partial_width;
+    int score_prefix_width;
     int repeated_width;
     int ink_pixels;
     int overflow_pixels;
@@ -84,6 +125,23 @@ int main(void)
     if (pixmap == None || gc == NULL || font == NULL)
         return 1;
     XSetFont(dpy, gc, font->fid);
+
+    XSetForeground(dpy, gc, BlackPixel(dpy, DefaultScreen(dpy)));
+    XFillRectangle(dpy, pixmap, gc, 0, 0, width, height);
+    XSetForeground(dpy, gc, WhitePixel(dpy, DefaultScreen(dpy)));
+    TEST_CHECK(Xp_x11_draw_native_string(
+                   dpy, pixmap, gc, 10, 20, ascii_score_row,
+                   (int)(sizeof(ascii_score_row) - 1)) == 0);
+    TEST_CHECK(Xp_x11_draw_native_string(
+                   dpy, pixmap, gc, 10, 50, utf8_score_row,
+                   (int)(sizeof(utf8_score_row) - 1)) == 0);
+    score_prefix_width = Xp_x11_native_text_width(
+        font, score_prefix, (int)(sizeof(score_prefix) - 1));
+    TEST_CHECK(score_prefix_width > 0);
+    XSync(dpy, False);
+    TEST_CHECK(horizontal_regions_are_equal(
+        dpy, pixmap, 0, 30,
+        10 + (unsigned int)score_prefix_width, 30));
 
     TEST_CHECK(Xp_x11_text_width(font, "ASCII", 5)
                == XTextWidth(font, "ASCII", 5));

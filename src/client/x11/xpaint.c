@@ -313,6 +313,23 @@ static void Paint_score_background(void)
 }
 
 
+static void ShadowDrawScoreString(Display *display, Window w, GC gc,
+				  int x, int y, const char *str,
+				  unsigned long fg, unsigned long bg)
+{
+    int length = (int)strlen(str);
+
+    /* Score-list text must use one renderer so its space advances remain
+     * equal when only some player identities contain non-ASCII text. */
+    XSetForeground(display, gc, bg);
+    Xp_x11_draw_native_string(display, w, gc, x + 1, y + 1, str, length);
+    x--;
+    y--;
+    XSetForeground(display, gc, fg);
+    Xp_x11_draw_native_string(display, w, gc, x, y, str, length);
+}
+
+
 void Paint_score_start(void)
 {
     char	headingStr[MSG_LEN];
@@ -336,11 +353,11 @@ void Paint_score_start(void)
     }
     Paint_score_background();
 
-    ShadowDrawString(dpy, playersWindow, scoreListGC,
-		     SCORE_BORDER, thisLine,
-		     headingStr,
-		     colors[scoreColor].pixel,
-		     colors[BLACK].pixel);
+    ShadowDrawScoreString(dpy, playersWindow, scoreListGC,
+			  SCORE_BORDER, thisLine,
+			  headingStr,
+			  colors[scoreColor].pixel,
+			  colors[BLACK].pixel);
 
     gcv.line_style = LineSolid;
     XChangeGC(dpy, scoreListGC, GCLineStyle, &gcv);
@@ -444,9 +461,9 @@ void Paint_score_entry(int entry_num, other_t* other, bool is_team)
 	    color = scoreInactiveColor;
 
 	XSetForeground(dpy, scoreListGC, colors[color].pixel);
-	XDrawString(dpy, playersWindow, scoreListGC,
-		    SCORE_BORDER, thisLine,
-		    label, (int)strlen(label));
+	Xp_x11_draw_native_string(dpy, playersWindow, scoreListGC,
+				  SCORE_BORDER, thisLine,
+				  label, (int)strlen(label));
     } else {
 	if (!is_team) {
 	    if (self && other->id == self->id)
@@ -463,10 +480,10 @@ void Paint_score_entry(int entry_num, other_t* other, bool is_team)
 	    }
 	}
 
-	ShadowDrawString(dpy, playersWindow, scoreListGC, SCORE_BORDER,
-			 thisLine, label,
-			 colors[color].pixel,
-			 colors[BLACK].pixel);
+	ShadowDrawScoreString(dpy, playersWindow, scoreListGC, SCORE_BORDER,
+			      thisLine, label,
+			      colors[color].pixel,
+			      colors[BLACK].pixel);
     }
 
     /*
@@ -535,17 +552,18 @@ static void Paint_clock(bool redraw)
 	}
 	sprintf(buf, "%2d:%02d%cM", hour, minute, tmpchar);
     }
-    width = XTextWidth(scoreListFont, buf, (int)strlen(buf));
+    width = Xp_x11_native_text_width(
+		scoreListFont, buf, (int)strlen(buf));
     XSetForeground(dpy, scoreListGC, colors[windowColor].pixel);
     XFillRectangle(dpy, playersWindow, scoreListGC,
 		   256 - (int)(width + 2 * border), 0,
 		   width + 2 * border, height);
-    ShadowDrawString(dpy, playersWindow, scoreListGC,
-		     256 - (int)(width + border),
-		     scoreListFont->ascent + 4,
-		     buf,
-		     colors[clockColor].pixel,
-		     colors[BLACK].pixel);
+    ShadowDrawScoreString(dpy, playersWindow, scoreListGC,
+			  256 - (int)(width + border),
+			  scoreListFont->ascent + 4,
+			  buf,
+			  colors[clockColor].pixel,
+			  colors[BLACK].pixel);
 }
 
 

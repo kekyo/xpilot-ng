@@ -350,16 +350,14 @@ static X11TextLayout *Text_layout_for_core_font(
     return Text_layout_acquire(display, font, text, byte_length);
 }
 
-int Xp_x11_text_width(XFontStruct *font_struct,
-                      const char *string, int count)
+int Xp_x11_native_text_width(XFontStruct *font_struct,
+                             const char *string, int count)
 {
     X11TextLayout *layout;
     size_t complete_length;
 
-    if (font_struct == NULL || string == NULL || count <= 0
-        || !Text_has_non_ascii(string, (size_t)(count > 0 ? count : 0))) {
+    if (font_struct == NULL || string == NULL || count <= 0)
         return XTextWidth(font_struct, string, count);
-    }
     if (!Text_complete_length(string, count, &complete_length))
         return XTextWidth(font_struct, string, count);
     if (complete_length == 0)
@@ -368,6 +366,16 @@ int Xp_x11_text_width(XFontStruct *font_struct,
         dpy, font_struct, string, complete_length);
     return layout != NULL ? layout->metrics.width
                           : XTextWidth(font_struct, string, count);
+}
+
+int Xp_x11_text_width(XFontStruct *font_struct,
+                      const char *string, int count)
+{
+    if (font_struct == NULL || string == NULL || count <= 0
+        || !Text_has_non_ascii(string, (size_t)(count > 0 ? count : 0))) {
+        return XTextWidth(font_struct, string, count);
+    }
+    return Xp_x11_native_text_width(font_struct, string, count);
 }
 
 static int Text_draw_layout(Display *display, Drawable drawable,
@@ -424,8 +432,8 @@ static int Text_draw_layout(Display *display, Drawable drawable,
     return 1;
 }
 
-int Xp_x11_draw_string(Display *display, Drawable drawable, GC gc,
-                       int x, int y, const char *string, int length)
+int Xp_x11_draw_native_string(Display *display, Drawable drawable, GC gc,
+                              int x, int y, const char *string, int length)
 {
     /* XGetGCValues rejects GCClipMask because Xlib may represent clipping as
      * a client-side region rather than a pixmap. The X11 client does not clip
@@ -438,9 +446,7 @@ int Xp_x11_draw_string(Display *display, Drawable drawable, GC gc,
     size_t complete_length;
     int drawn;
 
-    if (display == NULL || gc == NULL || string == NULL || length <= 0
-        || !Text_has_non_ascii(
-            string, (size_t)(length > 0 ? length : 0))) {
+    if (display == NULL || gc == NULL || string == NULL || length <= 0) {
         return XDrawString(display, drawable, gc, x, y, string, length);
     }
     if (!Text_complete_length(string, length, &complete_length))
@@ -462,6 +468,18 @@ int Xp_x11_draw_string(Display *display, Drawable drawable, GC gc,
     return drawn ? 0
                  : XDrawString(display, drawable, gc, x, y,
                                string, length);
+}
+
+int Xp_x11_draw_string(Display *display, Drawable drawable, GC gc,
+                       int x, int y, const char *string, int length)
+{
+    if (display == NULL || gc == NULL || string == NULL || length <= 0
+        || !Text_has_non_ascii(
+            string, (size_t)(length > 0 ? length : 0))) {
+        return XDrawString(display, drawable, gc, x, y, string, length);
+    }
+    return Xp_x11_draw_native_string(
+        display, drawable, gc, x, y, string, length);
 }
 
 void Xp_x11_text_shutdown(Display *display)

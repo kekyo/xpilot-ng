@@ -34,6 +34,41 @@ int Xp_x11_text_width(XFontStruct *font_struct,
                       const char *string, int count);
 
 /**
+ * Measure a byte range with the installed-font renderer.
+ *
+ * @param font_struct X core font defining the compatible logical size.
+ * @param string UTF-8 bytes, including printable ASCII when present.
+ * @param count Available byte count; an incomplete final UTF-8 sequence is
+ * omitted.
+ * @return Logical width in pixels, or the XTextWidth fallback on failure.
+ *
+ * @remarks Use this for aligned text groups in which ASCII-only and mixed
+ * UTF-8 strings must use the same font metrics.
+ */
+int Xp_x11_native_text_width(XFontStruct *font_struct,
+                             const char *string, int count);
+
+/**
+ * Draw a byte range with the installed-font renderer.
+ *
+ * @param display X display owning the drawable and GC.
+ * @param drawable Destination drawable.
+ * @param gc Source GC providing font, foreground, and clipping state.
+ * @param x Baseline origin X coordinate.
+ * @param y Baseline origin Y coordinate.
+ * @param string UTF-8 bytes, including printable ASCII when present.
+ * @param length Available byte count; an incomplete final UTF-8 sequence is
+ * omitted.
+ * @return Zero after installed-font drawing, otherwise the XDrawString
+ * fallback result.
+ *
+ * @remarks Use this for aligned text groups in which ASCII-only and mixed
+ * UTF-8 strings must use the same font metrics.
+ */
+int Xp_x11_draw_native_string(Display *display, Drawable drawable, GC gc,
+                              int x, int y, const char *string, int length);
+
+/**
  * Release cached native layouts, fonts, and XRender masks.
  *
  * @param display Open display used by the adapter.
