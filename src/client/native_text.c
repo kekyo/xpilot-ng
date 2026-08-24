@@ -254,6 +254,30 @@ static int Source_list_contains(const XpTextSourceList *sources,
 
 #ifndef _WINDOWS
 
+static int Fontconfig_family_is_generic(const char *family)
+{
+    return strcmp(family, "monospace") == 0
+	|| strcmp(family, "sans-serif") == 0;
+}
+
+static int Fontconfig_pattern_has_family(const FcPattern *pattern,
+					 const char *family)
+{
+    FcChar8 *candidate = NULL;
+    int index;
+
+    for (index = 0;
+	 FcPatternGetString(pattern, FC_FAMILY, index, &candidate)
+	     == FcResultMatch;
+	 index++) {
+	if (candidate != NULL
+	    && FcStrCmpIgnoreCase(candidate, (const FcChar8 *)family) == 0) {
+	    return 1;
+	}
+    }
+    return 0;
+}
+
 static XpTextStatus Resolve_sources(XpTextSystem *system,
 				    const XpTextFontRequest *request,
 				    const XpTextFamilyList *families,
@@ -266,69 +290,91 @@ static XpTextStatus Resolve_sources(XpTextSystem *system,
     size_t family_index;
     int match_index;
 
-    pattern = FcPatternCreate();
-    if (pattern == NULL)
-	return XP_TEXT_STATUS_OUT_OF_MEMORY;
+    /* Resolve named families independently so style scoring cannot displace
+     * a later multilingual fallback beyond the bounded face chain. The final
+     * generic family still contributes the wider system fallback set. */
     for (family_index = 0; family_index < families->count; family_index++) {
-	if (!FcPatternAddString(
-		pattern, FC_FAMILY,
-		(const FcChar8 *)families->items[family_index])) {
-	    status = XP_TEXT_STATUS_OUT_OF_MEMORY;
-	    goto cleanup;
-	}
-    }
-    if (!FcPatternAddInteger(pattern, FC_WEIGHT,
-	request->weight == XP_TEXT_WEIGHT_BOLD ? FC_WEIGHT_BOLD
-					     : FC_WEIGHT_REGULAR)
-	|| !FcPatternAddInteger(pattern, FC_SLANT,
-	request->slant == XP_TEXT_SLANT_ITALIC ? FC_SLANT_ITALIC
-					     : FC_SLANT_ROMAN)
-	|| !FcPatternAddBool(pattern, FC_SCALABLE, FcTrue)) {
-	status = XP_TEXT_STATUS_OUT_OF_MEMORY;
-	goto cleanup;
-    }
-    if (!FcConfigSubstitute(system->font_config, pattern, FcMatchPattern)) {
-	status = XP_TEXT_STATUS_BACKEND_ERROR;
-	goto cleanup;
-    }
-    FcDefaultSubstitute(pattern);
-    matches = FcFontSort(system->font_config, pattern, FcTrue, NULL, &result);
-    if (matches == NULL) {
-	status = result == FcResultOutOfMemory
-	    ? XP_TEXT_STATUS_OUT_OF_MEMORY : XP_TEXT_STATUS_FONT_UNAVAILABLE;
-	goto cleanup;
-    }
-    for (match_index = 0;
-	 match_index < matches->nfont
-	     && sources->count < XP_TEXT_MAX_FACES;
-	 match_index++) {
-	FcPattern *match = matches->fonts[match_index];
-	FcChar8 *file = NULL;
-	FcChar8 *family = NULL;
-	int face_index = 0;
-	XpTextSource *source;
+	const char *requested_family = families->items[family_index];
+	int generic = Fontconfig_family_is_generic(requested_family);
 
-	if (FcPatternGetString(match, FC_FILE, 0, &file) != FcResultMatch
-	    || file == NULL) {
-	    continue;
-	}
-	(void)FcPatternGetInteger(match, FC_INDEX, 0, &face_index);
-	(void)FcPatternGetString(match, FC_FAMILY, 0, &family);
-	if (Source_list_contains(sources, (const char *)file,
-				 face_index, NULL)) {
-	    continue;
-	}
-	source = &sources->items[sources->count];
-	source->path = Text_duplicate((const char *)file);
-	source->family = Text_duplicate(
-	    family != NULL ? (const char *)family : "unknown");
-	if (source->path == NULL || source->family == NULL) {
-	    Source_destroy(source);
+	pattern = FcPatternCreate();
+	if (pattern == NULL) {
 	    status = XP_TEXT_STATUS_OUT_OF_MEMORY;
 	    goto cleanup;
 	}
-	source->face_index = face_index;
-	sources->count++;
+	if (!FcPatternAddString(pattern, FC_FAMILY,
+		(const FcChar8 *)requested_family)
+	    || !FcPatternAddInteger(pattern, FC_WEIGHT,
+		request->weight == XP_TEXT_WEIGHT_BOLD ? FC_WEIGHT_BOLD
+						 : FC_WEIGHT_REGULAR)
+	    || !FcPatternAddInteger(pattern, FC_SLANT,
+		request->slant == XP_TEXT_SLANT_ITALIC ? FC_SLANT_ITALIC
+						 : FC_SLANT_ROMAN)
+	    || !FcPatternAddBool(pattern, FC_SCALABLE, FcTrue)) {
+	    status = XP_TEXT_STATUS_OUT_OF_MEMORY;
+	    goto cleanup;
+	}
+	if (!FcConfigSubstitute(
+		system->font_config, pattern, FcMatchPattern)) {
+	    status = XP_TEXT_STATUS_BACKEND_ERROR;
+	    goto cleanup;
+	}
+	FcDefaultSubstitute(pattern);
+	matches = FcFontSort(
+	    system->font_config, pattern, FcTrue, NULL, &result);
+	if (matches == NULL) {
+	    status = result == FcResultOutOfMemory
+		? XP_TEXT_STATUS_OUT_OF_MEMORY
+		: XP_TEXT_STATUS_FONT_UNAVAILABLE;
+	    goto cleanup;
+	}
+	for (match_index = 0;
+	     match_index < matches->nfont
+		 && sources->count < XP_TEXT_MAX_FACES;
+	     match_index++) {
+	    FcPattern *match = matches->fonts[match_index];
+	    FcChar8 *file = NULL;
+	    FcChar8 *family = NULL;
+	    int face_index = 0;
+	    XpTextSource *source;
+
+	    if (!generic
+		&& !Fontconfig_pattern_has_family(match, requested_family)) {
+		continue;
+	    }
+	    if (FcPatternGetString(match, FC_FILE, 0, &file)
+		    != FcResultMatch
+		|| file == NULL) {
+		continue;
+	    }
+	    (void)FcPatternGetInteger(match, FC_INDEX, 0, &face_index);
+	    (void)FcPatternGetString(match, FC_FAMILY, 0, &family);
+	    if (Source_list_contains(sources, (const char *)file,
+				     face_index, NULL)) {
+		if (!generic)
+		    break;
+		continue;
+	    }
+	    source = &sources->items[sources->count];
+	    source->path = Text_duplicate((const char *)file);
+	    source->family = Text_duplicate(
+		family != NULL ? (const char *)family : "unknown");
+	    if (source->path == NULL || source->family == NULL) {
+		Source_destroy(source);
+		status = XP_TEXT_STATUS_OUT_OF_MEMORY;
+		goto cleanup;
+	    }
+	    source->face_index = face_index;
+	    sources->count++;
+	    if (!generic)
+		break;
+	}
+	FcFontSetDestroy(matches);
+	matches = NULL;
+	FcPatternDestroy(pattern);
+	pattern = NULL;
+	if (sources->count == XP_TEXT_MAX_FACES)
+	    break;
     }
     status = sources->count > 0 ? XP_TEXT_STATUS_OK
 				: XP_TEXT_STATUS_FONT_UNAVAILABLE;

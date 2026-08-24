@@ -36,8 +36,25 @@ static int Bitmap_has_ink(const XpTextBitmap *bitmap)
     return 0;
 }
 
-static int Font_has_resolved_family(const XpTextFont *font,
-				    const char *expected_family)
+static int Bitmaps_are_equal(const XpTextBitmap *left,
+			     const XpTextBitmap *right)
+{
+    int row;
+
+    if (left->width != right->width || left->height != right->height)
+	return 0;
+    for (row = 0; row < left->height; row++) {
+	if (memcmp(left->pixels + (size_t)row * left->pitch,
+		   right->pixels + (size_t)row * right->pitch,
+		   (size_t)left->width * 4) != 0) {
+	    return 0;
+	}
+    }
+    return 1;
+}
+
+static int Font_resolved_family_index(const XpTextFont *font,
+				      const char *expected_family)
 {
     size_t index;
 
@@ -45,9 +62,9 @@ static int Font_has_resolved_family(const XpTextFont *font,
 	const char *family = Xp_text_font_resolved_family(font, index);
 
 	if (family != NULL && strcmp(family, expected_family) == 0)
-	    return 1;
+	    return (int)index;
     }
-    return 0;
+    return -1;
 }
 
 static int Check_noto_sans_mono_fallback(void)
@@ -58,6 +75,8 @@ static int Check_noto_sans_mono_fallback(void)
     XpTextFont *fallback_font = NULL;
     XpTextFontRequest request;
     const char *family;
+    int noto_mono_index;
+    int noto_sans_mono_index;
     int noto_mono_available;
     int noto_sans_mono_available;
     int result = 1;
@@ -87,12 +106,15 @@ static int Check_noto_sans_mono_fallback(void)
     TEST_CHECK_CLEANUP(Xp_text_font_open(
 	system, &request, &fallback_font) == XP_TEXT_STATUS_OK);
     /* Missing system fonts are valid. When both names exist as distinct
-     * installed faces, verify that only the intended family is implicit. */
+     * installed faces, verify the intended family precedes generic results. */
     if (noto_mono_available && noto_sans_mono_available) {
-	TEST_CHECK_CLEANUP(Font_has_resolved_family(
-	    fallback_font, "Noto Sans Mono"));
-	TEST_CHECK_CLEANUP(!Font_has_resolved_family(
-	    fallback_font, "Noto Mono"));
+	noto_sans_mono_index = Font_resolved_family_index(
+	    fallback_font, "Noto Sans Mono");
+	noto_mono_index = Font_resolved_family_index(
+	    fallback_font, "Noto Mono");
+	TEST_CHECK_CLEANUP(noto_sans_mono_index >= 0);
+	TEST_CHECK_CLEANUP(noto_mono_index < 0
+	    || noto_sans_mono_index < noto_mono_index);
     }
     result = 0;
 
@@ -100,6 +122,75 @@ cleanup:
     Xp_text_font_close(&fallback_font);
     Xp_text_font_close(&noto_sans_mono_probe);
     Xp_text_font_close(&noto_mono_probe);
+    Xp_text_system_destroy(&system);
+    return result;
+}
+
+static int Check_sdl_style_cjk_fallback(void)
+{
+    static const char first_character[] = "\xe3\x81\x91";
+    static const char second_character[] = "\xe3\x81\x8d";
+    XpTextSystem *system = NULL;
+    XpTextFont *cjk_probe = NULL;
+    XpTextFont *font = NULL;
+    XpTextLayout *first_layout = NULL;
+    XpTextLayout *second_layout = NULL;
+    XpTextBitmap first_bitmap = { NULL, 0, 0, 0 };
+    XpTextBitmap second_bitmap = { NULL, 0, 0, 0 };
+    XpTextFontRequest font_request;
+    XpTextLayoutRequest layout_request;
+    const char *family;
+    int cjk_available;
+    int result = 1;
+
+    TEST_CHECK_CLEANUP(Xp_text_system_create(
+	XPILOT_TEST_FONT_DIR, &system) == XP_TEXT_STATUS_OK);
+    font_request.family_list = "Noto Sans Mono CJK JP";
+    font_request.pixel_height = 18.0f;
+    font_request.weight = XP_TEXT_WEIGHT_NORMAL;
+    font_request.slant = XP_TEXT_SLANT_NORMAL;
+    font_request.spacing = XP_TEXT_SPACING_MONOSPACE;
+    TEST_CHECK_CLEANUP(Xp_text_font_open(
+	system, &font_request, &cjk_probe) == XP_TEXT_STATUS_OK);
+    family = Xp_text_font_resolved_family(cjk_probe, 0);
+    cjk_available = family != NULL
+	&& strcmp(family, "Noto Sans Mono CJK JP") == 0;
+
+    font_request.family_list = "FreeSans";
+    font_request.weight = XP_TEXT_WEIGHT_BOLD;
+    font_request.slant = XP_TEXT_SLANT_ITALIC;
+    font_request.spacing = XP_TEXT_SPACING_PROPORTIONAL;
+    TEST_CHECK_CLEANUP(Xp_text_font_open(
+	system, &font_request, &font) == XP_TEXT_STATUS_OK);
+    if (cjk_available) {
+	TEST_CHECK_CLEANUP(Xp_text_font_has_glyph(font, 0x3051));
+	TEST_CHECK_CLEANUP(Xp_text_font_has_glyph(font, 0x304d));
+	layout_request.utf8 = first_character;
+	layout_request.byte_length = sizeof(first_character) - 1;
+	layout_request.direction = XP_TEXT_DIRECTION_LTR;
+	layout_request.language_bcp47 = "ja";
+	TEST_CHECK_CLEANUP(Xp_text_layout_create(
+	    font, &layout_request, &first_layout) == XP_TEXT_STATUS_OK);
+	TEST_CHECK_CLEANUP(Xp_text_layout_rasterize(
+	    first_layout, &first_bitmap) == XP_TEXT_STATUS_OK);
+	layout_request.utf8 = second_character;
+	layout_request.byte_length = sizeof(second_character) - 1;
+	TEST_CHECK_CLEANUP(Xp_text_layout_create(
+	    font, &layout_request, &second_layout) == XP_TEXT_STATUS_OK);
+	TEST_CHECK_CLEANUP(Xp_text_layout_rasterize(
+	    second_layout, &second_bitmap) == XP_TEXT_STATUS_OK);
+	TEST_CHECK_CLEANUP(!Bitmaps_are_equal(
+	    &first_bitmap, &second_bitmap));
+    }
+    result = 0;
+
+cleanup:
+    Xp_text_bitmap_destroy(&second_bitmap);
+    Xp_text_bitmap_destroy(&first_bitmap);
+    Xp_text_layout_destroy(&second_layout);
+    Xp_text_layout_destroy(&first_layout);
+    Xp_text_font_close(&font);
+    Xp_text_font_close(&cjk_probe);
     Xp_text_system_destroy(&system);
     return result;
 }
@@ -197,5 +288,7 @@ int main(void)
 {
     if (Check_family_resolution_and_layout() != 0)
 	return 1;
-    return Check_noto_sans_mono_fallback();
+    if (Check_noto_sans_mono_fallback() != 0)
+	return 1;
+    return Check_sdl_style_cjk_fallback();
 }
