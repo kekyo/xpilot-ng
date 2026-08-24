@@ -60,7 +60,6 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 	test-sdlgui-hud-primitives test-sdlgui-asteroids \
 	test-sdlgui-polygons test-sdlgui-sparks test-sdlgui-ships \
 	test-text-geometry test-text-atlas test-unicode-text-renderer \
-	test-x11-text \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
 TESTS = test-framed-stream test-websocket-transport \
 	test-game-transport test-checknames test-connect-target \
@@ -92,9 +91,12 @@ TESTS = test-framed-stream test-websocket-transport \
 	test-text-atlas test-unicode-text-renderer \
 	test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
-	run-x11-text.sh \
 	run-renderer-gl-core.sh run-sdl-renderer-core-context.sh \
 	run-build-wrapper.sh run-vendored-zlib.sh run-e2e.sh
+if COND_X11_CLIENT
+check_PROGRAMS += test-x11-text
+TESTS += run-x11-text.sh
+endif
 endif
 
 test_game_transport_SOURCES = test_game_transport.c

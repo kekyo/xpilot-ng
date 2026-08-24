@@ -148,10 +148,10 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-text-geometry$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-atlas$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-unicode-text-renderer$(EXEEXT) \
-@COND_WINDOWS_FALSE@	test-x11-text$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-ttf-atlas$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-renderer$(EXEEXT) \
-@COND_WINDOWS_FALSE@	test-text-cache-adapter$(EXEEXT)
+@COND_WINDOWS_FALSE@	test-text-cache-adapter$(EXEEXT) \
+@COND_WINDOWS_FALSE@	$(am__EXEEXT_1)
 @COND_WINDOWS_TRUE@check_PROGRAMS = test-framed-stream$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-websocket-transport$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-game-transport$(EXEEXT) \
@@ -170,7 +170,7 @@ target_triplet = @target@
 @COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-score-font$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-native-text$(EXEEXT) \
-@COND_WINDOWS_TRUE@	test-game-input$(EXEEXT)
+@COND_WINDOWS_TRUE@	test-game-input$(EXEEXT) $(am__EXEEXT_1)
 @COND_WINDOWS_FALSE@TESTS = test-framed-stream$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-websocket-transport$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-game-transport$(EXEEXT) \
@@ -232,10 +232,13 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-text-ttf-atlas$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-renderer$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-text-cache-adapter$(EXEEXT) \
-@COND_WINDOWS_FALSE@	run-x11-text.sh run-renderer-gl-core.sh \
+@COND_WINDOWS_FALSE@	run-renderer-gl-core.sh \
 @COND_WINDOWS_FALSE@	run-sdl-renderer-core-context.sh \
 @COND_WINDOWS_FALSE@	run-build-wrapper.sh run-vendored-zlib.sh \
-@COND_WINDOWS_FALSE@	run-e2e.sh
+@COND_WINDOWS_FALSE@	run-e2e.sh $(am__append_2)
+@COND_WINDOWS_TRUE@TESTS = $(am__append_2)
+@COND_WINDOWS_FALSE@@COND_X11_CLIENT_TRUE@am__append_1 = test-x11-text
+@COND_WINDOWS_FALSE@@COND_X11_CLIENT_TRUE@am__append_2 = run-x11-text.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -246,6 +249,7 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+@COND_WINDOWS_FALSE@@COND_X11_CLIENT_TRUE@am__EXEEXT_1 = test-x11-text$(EXEEXT)
 am_test_checknames_OBJECTS = test_checknames.$(OBJEXT)
 test_checknames_OBJECTS = $(am_test_checknames_OBJECTS)
 test_checknames_DEPENDENCIES =  \
