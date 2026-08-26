@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
@@ -56,7 +56,7 @@ void Race_compute_game_status(void)
     char msg[MSG_LEN];
 
     /*
-     * kps - ng wants to handle laps here, requires change in collision.c
+     * kps - Infinity wants to handle laps here, requires change in collision.c
      * too, maybe I'll fix it later.
      */
 #if 0

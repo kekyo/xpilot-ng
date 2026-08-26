@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
@@ -967,9 +967,9 @@ void Fire_general_shot(int id, int team,
 	    pl->vel.x += options.constantSpeed * pl->acc.x;
 	    pl->vel.y += options.constantSpeed * pl->acc.y;
 	}
-	if (options.ngControls && pl && ldir == pl->dir) {
+	if (options.infinityControls && pl && ldir == pl->dir) {
 	    /*
-	     * If using "NG controls", use float dir when shooting
+	     * If using "Infinity controls", use float dir when shooting
 	     * straight ahead.
 	     */
 	    shot->vel.x = mv.x + pl->vel.x + pl->float_dir_cos * speed;

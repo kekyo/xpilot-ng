@@ -23,7 +23,7 @@
 /*  SDL_console.c
  *  Written By: Garrett Banuk <mongoose@mongeese.org>
  *  Code Cleanup and heavily extended by: Clemens Wacha <reflex-2000@gmx.net>
- *  Modified for XPilotNG/SDL: Juha Lindström <juhal@users.sourceforge.net>
+ *  Modified for XPilot Infinity/SDL: Juha Lindström <juhal@users.sourceforge.net>
  */
 
 #include "xpclient_sdl.h"

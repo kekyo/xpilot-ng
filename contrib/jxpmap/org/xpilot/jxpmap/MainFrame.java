@@ -55,7 +55,7 @@ public class MainFrame extends JFrame implements ActionListener {
     private bsh.Interpreter interpreter;
     
     public MainFrame() throws Exception {
-        super("XPilotNG Map Editor");
+        super("XPilot Infinity Map Editor");
         canvas = new MapCanvas();
         getContentPane().add(canvas, BorderLayout.CENTER);
         buildMenuBar();

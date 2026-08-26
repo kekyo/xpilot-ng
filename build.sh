@@ -7,7 +7,7 @@ usage()
     cat <<'EOF'
 Usage: ./build.sh [OPTIONS] [-- CONFIGURE_OPTIONS...]
 
-Configure and build XPilot NG and its pinned dependencies in one command.
+Configure and build XPilot Infinity and its pinned dependencies in one command.
 Build products are kept out of the source tree under ./build by default.
 
 Options:
@@ -22,7 +22,7 @@ Options:
   --toolchain-file PATH    CMake toolchain file for one target architecture
   --help                   Show this help
 
-Arguments after -- are forwarded to XPilot NG's configure script.  Native
+Arguments after -- are forwarded to XPilot Infinity's configure script.  Native
 builds use the vendored SDL3 provider.  Windows builds run on Linux with
 MinGW and delegate dependency builds, packaging, and Wine tests to the
 configured Makefiles for x86 and/or x86_64.  The default builds native and
@@ -252,7 +252,7 @@ build_native()
 
     vendor_build_dir="$build_root/vendor-sdl3"
     vendor_prefix="$build_root/vendor-sdl3-prefix"
-    xpilot_build_dir="$build_root/xpilot-ng"
+    xpilot_build_dir="$build_root/xpilot-infinity"
 
     echo "===== build: vendored SDL3 dependencies ====="
     if test -n "$toolchain_file"; then
@@ -271,7 +271,7 @@ build_native()
     fi
 
     mkdir -p "$xpilot_build_dir"
-    echo "===== configure: XPilot NG with vendored SDL3 ====="
+    echo "===== configure: XPilot Infinity with vendored SDL3 ====="
     (
         cd "$xpilot_build_dir"
         "$source_dir/configure" "$@" \
@@ -283,7 +283,7 @@ build_native()
         fi
     )
 
-    echo "XPilot NG build completed in $xpilot_build_dir"
+    echo "XPilot Infinity build completed in $xpilot_build_dir"
 )
 
 build_windows_architecture()
@@ -306,7 +306,7 @@ build_windows_architecture()
     architecture_root="$build_root/windows/$windows_architecture"
     install_prefix="$architecture_root/install"
     mkdir -p "$architecture_root"
-    echo "===== configure: XPilot NG for $triplet ====="
+    echo "===== configure: XPilot Infinity for $triplet ====="
     (
         cd "$architecture_root"
         if test -n "$toolchain_file"; then
@@ -332,14 +332,14 @@ build_windows_architecture()
         fi
     )
 
-    archive_path="$artifact_root/xpilot-ng-$package_version-windows-$windows_architecture.zip"
+    archive_path="$artifact_root/xpilot-infinity-$package_version-windows-$windows_architecture.zip"
     "$node_program" "$windows_archiver" \
         --input "$architecture_root/package" \
         --output "$archive_path"
     test -f "$archive_path" \
         || fail "Windows archive was not created: $archive_path"
-    echo "XPilot NG Windows package completed in $architecture_root/package"
-    echo "XPilot NG Windows archive completed in $archive_path"
+    echo "XPilot Infinity Windows package completed in $architecture_root/package"
+    echo "XPilot Infinity Windows archive completed in $archive_path"
 )
 
 build_windows()

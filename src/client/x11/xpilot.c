@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
@@ -44,7 +44,7 @@ static void printfile(const char *filename)
 
 const char *Program_name(void)
 {
-    return "xpilot-ng-x11";
+    return "xpilot-infinity-x11";
 }
 
 /*

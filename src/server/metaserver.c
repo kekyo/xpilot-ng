@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
@@ -25,7 +25,7 @@
 
 #include "xpserver.h"
 
-#define META_VERSION	VERSION "ng"
+#define META_VERSION	VERSION "infinity"
 
 static sock_t metaSocket;
 static bool meta_socket_open;

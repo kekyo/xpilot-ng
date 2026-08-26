@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 2000-2004 by
  *
@@ -3743,10 +3743,10 @@ static option_desc opts[] = {
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
-	"ngControls",
-	"ngControls",
+	"infinityControls",
+	"infinityControls",
 	"false",
-	&options.ngControls,
+	&options.infinityControls,
 	valBool,
 	tuner_dummy,
 	"Enable improved precision steering and aiming of main gun.\n",

@@ -1,7 +1,7 @@
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common
-bin_PROGRAMS = xpilot-ng-server
-xpilot_ng_server_SOURCES = \
+bin_PROGRAMS = xpilot-infinity-server
+xpilot_infinity_server_SOURCES = \
 	alliance.c asteroid.c asteroid.h \
 	cannon.c cannon.h cell.c cmdline.c collision.c \
 	command.c connection.h contact.c contact_session.h \
@@ -26,4 +26,4 @@ xpilot_ng_server_SOURCES = \
 	walls.c walls.h wormhole.c wormhole.h \
 	xp2map.c xpmap.c xpserver.h
 
-xpilot_ng_server_LDADD =  $(top_builddir)/src/common/libxpcommon.a @X_EXTRA_LIBS@ @W32_LIBS@
+xpilot_infinity_server_LDADD =  $(top_builddir)/src/common/libxpcommon.a @X_EXTRA_LIBS@ @W32_LIBS@

@@ -1,5 +1,5 @@
 /*
- * XPilot NG, a multiplayer space war game. 
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *

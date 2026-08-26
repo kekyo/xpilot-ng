@@ -86,11 +86,11 @@ assert_equal 1 "$(count_deb_builds)" \
 VERSION=4.7.99
 DEB_ARTIFACT_ROOT=/tmp/xpilot-artifacts
 assert_equal \
-    /tmp/xpilot-artifacts/xpilot-ng-4.7.99-ubuntu-24.04-amd64.deb \
+    /tmp/xpilot-artifacts/xpilot-infinity-4.7.99-ubuntu-24.04-amd64.deb \
     "$(deb_artifact_path ubuntu 24.04 x86_64)" \
     "the Debian artifact name was incorrect"
 assert_equal \
-    localhost/xpilot-ng-pack-deb-debian-bookworm-x86_64:latest \
+    localhost/xpilot-infinity-pack-deb-debian-bookworm-x86_64:latest \
     "$(prereq_image_for_target debian bookworm x86_64)" \
     "the prerequisite image name was incorrect"
 
@@ -160,9 +160,9 @@ done
 test -n "$workspace"
 test -n "$work_dir"
 host_work_dir="$workspace/${work_dir#/workspace/}"
-mkdir -p "$host_work_dir/stage/xpilot-ng/DEBIAN"
-printf 'Package: xpilot-ng\n' \
-    > "$host_work_dir/stage/xpilot-ng/DEBIAN/control"
+mkdir -p "$host_work_dir/stage/xpilot-infinity/DEBIAN"
+printf 'Package: xpilot-infinity\n' \
+    > "$host_work_dir/stage/xpilot-infinity/DEBIAN/control"
 EOF
 
 cat > "$fixture_tools/dpkg-deb" <<'EOF'
@@ -197,13 +197,13 @@ export PATH
 build_deb_package debian bookworm x86_64 linux/amd64
 
 assert_contains "$fixture_log" \
-    "exists=localhost/xpilot-ng-pack-deb-debian-bookworm-x86_64:latest"
+    "exists=localhost/xpilot-infinity-pack-deb-debian-bookworm-x86_64:latest"
 assert_contains "$fixture_log" "platform=linux/amd64"
 assert_contains "$fixture_log" \
-    "run-image=localhost/xpilot-ng-pack-deb-debian-bookworm-x86_64:latest"
+    "run-image=localhost/xpilot-infinity-pack-deb-debian-bookworm-x86_64:latest"
 assert_contains "$fixture_dpkg_log" \
-    "$DEB_ARTIFACT_ROOT/xpilot-ng-4.7.99-debian-bookworm-amd64.deb"
-test -f "$DEB_ARTIFACT_ROOT/xpilot-ng-4.7.99-debian-bookworm-amd64.deb" \
+    "$DEB_ARTIFACT_ROOT/xpilot-infinity-4.7.99-debian-bookworm-amd64.deb"
+test -f "$DEB_ARTIFACT_ROOT/xpilot-infinity-4.7.99-debian-bookworm-amd64.deb" \
     || fail "the Debian artifact was not created"
 
 all_args="$test_root/build-all.args"
@@ -264,7 +264,7 @@ CONTAINER_ENGINE="$fixture_tools/prereq-container-engine" \
 
 assert_contains "$prereq_log" "--platform linux/amd64"
 assert_contains "$prereq_log" \
-    "localhost/xpilot-ng-pack-deb-debian-bookworm-x86_64:latest"
+    "localhost/xpilot-infinity-pack-deb-debian-bookworm-x86_64:latest"
 assert_contains "$prereq_log" "dpkg-dev"
 assert_contains "$prereq_log" "libalut-dev"
 assert_contains "$prereq_log" "libfontconfig1-dev"

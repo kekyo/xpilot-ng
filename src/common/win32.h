@@ -1,5 +1,5 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Windows declarations shared by the MinGW server and SDL client.
  */

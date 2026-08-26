@@ -32,7 +32,7 @@ static const char *prog_basename(const char *prog)
 
     return (p != NULL) ? (p + 1) : prog;
 #else
-    return "XPilot NG";
+    return "XPilot Infinity";
 #endif
 }
 

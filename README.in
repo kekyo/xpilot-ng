@@ -1,5 +1,7 @@
 This is the README file for @PACKAGE_STRING@.
 
+XPilot Infinity was renamed from XPilot NG.
+
 @XP_COPYRIGHT@.
 
 Please see the COPYING file for further details.  You may not
@@ -22,13 +24,13 @@ Contact/lobby and gameplay connections use UDP by default and can be selected
 independently.  To use TCP for both, start both endpoints with matching
 settings, for example:
 
-        xpilot-ng-server -transport tcp [options]
-        xpilot-ng-sdl -join tcp://server.example
+        xpilot-infinity-server -transport tcp [options]
+        xpilot-infinity-sdl -join tcp://server.example
 
 Or use WebSocket for both:
 
-        xpilot-ng-server -websocket [options]
-        xpilot-ng-sdl -join ws://server.example
+        xpilot-infinity-server -websocket [options]
+        xpilot-infinity-sdl -join ws://server.example
 
 The server shortcuts `-tcp`, `-udp`, `-websocket`, and
 `-transport udp|tcp|websocket` select one transport for both contact/lobby and
@@ -43,7 +45,7 @@ transport for both contact/lobby and gameplay, while a bare host uses the
 target port overrides `-port`.  Split UDP/TCP combinations remain available
 through the long options or metaserver advertisements.
 
-WebSocket uses RFC 6455 binary messages at `/xpilot` with the `xpilot-ng-v1`
+WebSocket uses RFC 6455 binary messages at `/xpilot` with the `xpilot-infinity-v1`
 subprotocol; each message carries one logical XPilot record.  Only unencrypted
 `ws://` is currently implemented.  The native clients exercise this transport;
 browser client integration is intentionally a separate step.
@@ -85,7 +87,7 @@ with the same `gameTransport` value that was used while recording.
 
 OTHER SOURCES OF INFORMATION ON THE INTERNET
 
-XPilot NG: http://xpilot.sourceforge.net/
+XPilot Infinity: http://xpilot.sourceforge.net/
 
 XPilot FAQ: telnet meta.xpilot.org 4402
 	(also in the doc/ subdirectory)

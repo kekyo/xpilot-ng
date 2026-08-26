@@ -20,7 +20,7 @@ XP_SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
 XP_SOUND_LIBS = @SOUND_LIBS@
 endif
 
-bin_PROGRAMS = xpilot-ng-sdl
+bin_PROGRAMS = xpilot-infinity-sdl
 noinst_LIBRARIES = libxp_libtess2.a
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-DSDL_DISABLE_OLD_NAMES \
@@ -45,7 +45,7 @@ libxp_libtess2_a_SOURCES = \
 	$(top_srcdir)/vendor/libtess2/Source/sweep.h \
 	$(top_srcdir)/vendor/libtess2/Source/tess.c \
 	$(top_srcdir)/vendor/libtess2/Source/tess.h
-xpilot_ng_sdl_SOURCES = \
+xpilot_infinity_sdl_SOURCES = \
 	asteroid_data.h DT_drawtext.c DT_drawtext.h \
 	SDL_console.c SDL_console.h console.c console.h glwidgets.c glwidgets.h \
 	gameinput.c gameinput.h gameloop.c gameloop.h \
@@ -71,14 +71,14 @@ xpilot_ng_sdl_SOURCES = \
 	unicode_text_renderer.c unicode_text_renderer.h \
 	text_ttf_atlas.c text_ttf_atlas.h todo.c \
 	sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h
-xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
+xpilot_infinity_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	libxp_libtess2.a \
 	$(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) \
 	@NATIVE_TEXT_LIBS@ @GL_LIBS@ $(XP_SOUND_LIBS) @W32_LIBS@
 
 if COND_WINDOWS
-  xpilot_ng_sdl_SOURCES += win32hacks.c
+  xpilot_infinity_sdl_SOURCES += win32hacks.c
 endif
 
 EXTRA_DIST = $(top_srcdir)/vendor/libtess2/LICENSE.txt \

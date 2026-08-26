@@ -1,5 +1,5 @@
 /*
- * XPilotNG/SDL, an SDL/OpenGL XPilot client.
+ * XPilot Infinity/SDL, an SDL/OpenGL XPilot client.
  *
  * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
  *
@@ -44,7 +44,7 @@ static void sigcatch(int signum)
 
 const char *Program_name(void)
 {
-    return "xpilot-ng-sdl";
+    return "xpilot-infinity-sdl";
 }
 
 static void Main_report_connection_failure(
@@ -107,7 +107,7 @@ static void Main_report_connection_failure(
     fflush(stderr);
     if (show_dialog
 	&& !SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-				     "XPilot NG - Connection failed",
+				     "XPilot Infinity - Connection failed",
 				     message, NULL)) {
 	fprintf(stderr, "%s: ERROR: Could not show the connection failure "
 		"dialog: %s\n", Program_name(), SDL_GetError());

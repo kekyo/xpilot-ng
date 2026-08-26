@@ -1,5 +1,5 @@
 /*
- * XPilotNG/SDL, an SDL/OpenGL XPilot client.
+ * XPilot Infinity/SDL, an SDL/OpenGL XPilot client.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

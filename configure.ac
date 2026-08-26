@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT([XPilot NG], 4.7.3, xpilot-hacks@lists.sourceforge.net, xpilot-ng)
+AC_INIT([XPilot Infinity], 4.7.3, xpilot-hacks@lists.sourceforge.net, xpilot-infinity)
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_SRCDIR(src/client/xpclient.h)
 
@@ -40,7 +40,7 @@ XP_COPYRIGHT="Copyright © $XP_COPYRIGHTDATE by $XP_AUTHORS"
 AC_SUBST([XP_COPYRIGHT])
 
 AC_SUBST([XP_RELEASEDATE],["Sep 16, 2005"])
-AC_SUBST([XP_DATADIR],"$prefix/share/xpilot-ng")
+AC_SUBST([XP_DATADIR],"$prefix/share/xpilot-infinity")
 
 dnl  Checks for options.
 dnl  We should have some general macro for these.
@@ -60,9 +60,9 @@ fi])
 
 AC_ARG_ENABLE(plockserver,
 	AC_HELP_STRING([--enable-plockserver],
-			[lock the xpilot-ng server into memory]),
+			[lock the xpilot-infinity server into memory]),
 [if test x$enable_plockserver = xyes; then
-	AC_DEFINE([PLOCKSERVER], 1, [lock the xpilot-ng server into memory])
+	AC_DEFINE([PLOCKSERVER], 1, [lock the xpilot-infinity server into memory])
 fi])
 
 AC_ARG_ENABLE(development,
@@ -658,7 +658,7 @@ AC_CONFIG_FILES([ \
 	Makefile \
 	README \
 	contrib/Makefile \
-	contrib/xpngcc/Makefile \
+	contrib/xpicc/Makefile \
 	doc/Makefile \
 	doc/man/Makefile \
 	lib/Makefile \

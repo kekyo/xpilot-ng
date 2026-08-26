@@ -27,7 +27,7 @@
 <Option name="maxPlayerShots" value="12"/>
 <Option name="maxShieldedWallBounceSpeed" value="130"/>
 <Option name="maxUnshieldedWallBounceSpeed" value="110"/>
-<Option name="ngControls" value="yes"/>
+<Option name="infinityControls" value="yes"/>
 <Option name="objectWallBounceBrakeFactor" value="0.85"/>
 <Option name="pausedfps" value="0"/>
 <Option name="playerWallBounceBrakeFactor" value="0.5"/>

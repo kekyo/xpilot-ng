@@ -96,7 +96,7 @@ affected:
 
 -------------------------------------------------------------------
 Problem : shotsize 8 with texturedObjects works ok in the lg [old] client
-          while it doesnt work in ng X11 client (in ng shotsize comes out
+          while it doesnt work in the Infinity X11 client (in Infinity shotsize comes out
           too small)
 Found by: Throat
 Solution: New textures extend the limit of "maximum size" of a shot
@@ -158,7 +158,7 @@ Files
 affected:
 -----------------------------------------------------------------
 
-Problem : ngControls break server recordings,
+Problem : infinityControls break server recordings,
 	  if ncControls if off, they work.
 Found by: kps
 Solution:

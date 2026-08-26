@@ -44,11 +44,11 @@ if test -f "$source_dir/config.status" \
         "$build_source_dir/config.cache" "$build_source_dir/config.log" \
         "$build_source_dir/config.h" "$build_source_dir/stamp-h1" \
         "$build_source_dir/src/common/version.h" \
-        "$build_source_dir/src/client/sdl/xpilot-ng-sdl" \
-        "$build_source_dir/src/client/x11/xpilot-ng-x11" \
-        "$build_source_dir/src/server/xpilot-ng-server" \
-        "$build_source_dir/src/replay/xpilot-ng-replay" \
-        "$build_source_dir/src/mapedit/xpilot-ng-xp-mapedit"
+        "$build_source_dir/src/client/sdl/xpilot-infinity-sdl" \
+        "$build_source_dir/src/client/x11/xpilot-infinity-x11" \
+        "$build_source_dir/src/server/xpilot-infinity-server" \
+        "$build_source_dir/src/replay/xpilot-infinity-replay" \
+        "$build_source_dir/src/mapedit/xpilot-infinity-xp-mapedit"
     find "$build_source_dir" -type f \
         \( -name Makefile -o -name '*.o' -o -name '*.a' \) -delete
     find "$build_source_dir" -depth -type d -name .deps -exec rm -rf -- {} \;
@@ -93,7 +93,7 @@ run_configuration()
         cd "$build_dir"
         "$build_source_dir/configure" --prefix="$install_prefix" "$@"
         make -j"$test_jobs"
-        client_help=$(src/client/sdl/xpilot-ng-sdl -help 2>&1 || true)
+        client_help=$(src/client/sdl/xpilot-infinity-sdl -help 2>&1 || true)
         printf '%s\n' "$client_help" | grep -Fq 'soundFile' \
             || { echo "default client sound options are unavailable" >&2; exit 1; }
         if ! make check; then

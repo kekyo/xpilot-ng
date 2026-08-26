@@ -146,10 +146,10 @@ for argument do
     printf 'make.arg=%s\n' "$argument" >> "$XPILOT_BUILD_TEST_LOG"
 done
 case "$(pwd)" in
-    */output/windows/*/xpilot-ng)
+    */output/windows/*/xpilot-infinity)
         mkdir -p src/server src/client/sdl tests
-        : > src/server/xpilot-ng-server.exe
-        : > src/client/sdl/xpilot-ng-sdl.exe
+        : > src/server/xpilot-infinity-server.exe
+        : > src/client/sdl/xpilot-infinity-sdl.exe
         : > tests/test-framed-stream.exe
         : > tests/test-game-transport.exe
         : > tests/test-socket-io.exe
@@ -159,8 +159,8 @@ case "$(pwd)" in
         case " $* " in
             *" windows-package "*)
                 mkdir -p package/lib/maps
-                : > package/xpilot-ng-server.exe
-                : > package/xpilot-ng-sdl.exe
+                : > package/xpilot-infinity-server.exe
+                : > package/xpilot-infinity-sdl.exe
                 : > package/lib/maps/ndh.xp2
                 ;;
         esac
@@ -207,9 +207,9 @@ grep -Fx "vendor.arg=Debug" "$fixture_log" >/dev/null \
 grep -Fx "vendor.arg=$fixture_toolchain" "$fixture_log" >/dev/null \
     || fail "CMake toolchain was not passed"
 
-grep -Fx "configure.cwd=$fixture_output/xpilot-ng" \
+grep -Fx "configure.cwd=$fixture_output/xpilot-infinity" \
     "$fixture_log" >/dev/null \
-    || fail "XPilot NG was not configured out of tree"
+    || fail "XPilot Infinity was not configured out of tree"
 grep -Fx "configure.arg=--disable-x11-client" \
     "$fixture_log" >/dev/null \
     || fail "configure option was not forwarded"
@@ -222,8 +222,8 @@ grep -Fx "configure.arg=--with-sdl3=vendored" \
 grep -Fx "configure.arg=--with-sdl3-prefix=$fixture_output/vendor-sdl3-prefix" \
     "$fixture_log" >/dev/null \
     || fail "vendored SDL3 prefix was not selected"
-grep -Fx "make.cwd=$fixture_output/xpilot-ng" "$fixture_log" >/dev/null \
-    || fail "XPilot NG was not built out of tree"
+grep -Fx "make.cwd=$fixture_output/xpilot-infinity" "$fixture_log" >/dev/null \
+    || fail "XPilot Infinity was not built out of tree"
 grep -Fx "make.arg=-j3" "$fixture_log" >/dev/null \
     || fail "parallel build count was not passed to make"
 
@@ -237,7 +237,7 @@ PATH="$fixture_tools:$PATH" \
     --jobs 1
 
 for target_build_dir in \
-    "$default_output/xpilot-ng" \
+    "$default_output/xpilot-infinity" \
     "$default_output/windows/x86" \
     "$default_output/windows/x86_64"
 do
@@ -245,7 +245,7 @@ do
         || fail "default build did not configure every target exactly once: $target_build_dir"
 done
 for architecture in x86 x86_64; do
-    test -f "$fixture_source/artifacts/windows/xpilot-ng-4.7.99-windows-$architecture.zip" \
+    test -f "$fixture_source/artifacts/windows/xpilot-infinity-4.7.99-windows-$architecture.zip" \
         || fail "default build did not create the $architecture archive"
 done
 
@@ -308,13 +308,13 @@ for architecture in x86 x86_64; do
     grep -Fx 'make.arg=check' "$fixture_log" >/dev/null \
         || fail "$architecture check target was not requested"
 
-    test -f "$architecture_root/package/xpilot-ng-server.exe" \
+    test -f "$architecture_root/package/xpilot-infinity-server.exe" \
         || fail "$architecture server was not packaged"
-    test -f "$architecture_root/package/xpilot-ng-sdl.exe" \
+    test -f "$architecture_root/package/xpilot-infinity-sdl.exe" \
         || fail "$architecture SDL client was not packaged"
     test -f "$architecture_root/package/lib/maps/ndh.xp2" \
         || fail "$architecture game data was not packaged"
-    test -f "$fixture_artifacts/xpilot-ng-4.7.99-windows-$architecture.zip" \
+    test -f "$fixture_artifacts/xpilot-infinity-4.7.99-windows-$architecture.zip" \
         || fail "$architecture distribution archive was not created"
 done
 

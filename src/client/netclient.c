@@ -1,5 +1,5 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
@@ -2859,7 +2859,7 @@ int Receive_target(void)
     return 1;
 }
 
-int Receive_polystyle(void)	/* since ng 4.7.0 */
+int Receive_polystyle(void)	/* since Infinity 4.7.0 */
 {
     int			n;
     unsigned short	num, newstyle;

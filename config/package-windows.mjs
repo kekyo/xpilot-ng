@@ -208,7 +208,7 @@ const createZipArchive = async (outputPath, inputs) => {
  * @param {{inputDirectory: string, outputPath: string}} options Packaging paths.
  * @returns {Promise<string>} The absolute path of the generated archive.
  * @remarks Symbolic links and non-file package entries are rejected. ZIP64 is
- * not emitted because XPilot NG distribution packages are expected to remain
+ * not emitted because XPilot Infinity distribution packages are expected to remain
  * within classic ZIP limits.
  */
 export const createWindowsArchive = async ({ inputDirectory, outputPath }) => {

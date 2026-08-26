@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 2000-2004 by
  *
@@ -541,7 +541,7 @@ void Server_info(char *str, size_t max_size)
 	     "      SIZE......: %dx%d pixels\n"
 	     "PLAYERS.........: %2d/%2d\n"
 	     "\n"
-	     "XPILOT NG SERVER, see\n"
+	     "XPILOT INFINITY SERVER, see\n"
 	     "http://xpilot.sourceforge.net/\n"
 	     "\n",
 	     VERSION,

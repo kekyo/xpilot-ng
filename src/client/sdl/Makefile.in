@@ -90,7 +90,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-bin_PROGRAMS = xpilot-ng-sdl$(EXEEXT)
+bin_PROGRAMS = xpilot-infinity-sdl$(EXEEXT)
 @COND_WINDOWS_TRUE@am__append_1 = win32hacks.c
 subdir = src/client/sdl
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -123,7 +123,7 @@ am_libxp_libtess2_a_OBJECTS =  \
 	$(top_builddir)/vendor/libtess2/Source/sweep.$(OBJEXT) \
 	$(top_builddir)/vendor/libtess2/Source/tess.$(OBJEXT)
 libxp_libtess2_a_OBJECTS = $(am_libxp_libtess2_a_OBJECTS)
-am__xpilot_ng_sdl_SOURCES_DIST = asteroid_data.h DT_drawtext.c \
+am__xpilot_infinity_sdl_SOURCES_DIST = asteroid_data.h DT_drawtext.c \
 	DT_drawtext.h SDL_console.c SDL_console.h console.c console.h \
 	glwidgets.c glwidgets.h gameinput.c gameinput.h gameloop.c \
 	gameloop.h gl_diagnostics.c gl_diagnostics.h image_geometry.c \
@@ -144,7 +144,7 @@ am__xpilot_ng_sdl_SOURCES_DIST = asteroid_data.h DT_drawtext.c \
 	text_ttf_atlas.c text_ttf_atlas.h todo.c sdlmeta.h sdlmeta.c \
 	sdlinit.h xpclient_sdl.h win32hacks.c
 @COND_WINDOWS_TRUE@am__objects_1 = win32hacks.$(OBJEXT)
-am_xpilot_ng_sdl_OBJECTS = DT_drawtext.$(OBJEXT) SDL_console.$(OBJEXT) \
+am_xpilot_infinity_sdl_OBJECTS = DT_drawtext.$(OBJEXT) SDL_console.$(OBJEXT) \
 	console.$(OBJEXT) glwidgets.$(OBJEXT) gameinput.$(OBJEXT) \
 	gameloop.$(OBJEXT) gl_diagnostics.$(OBJEXT) \
 	image_geometry.$(OBJEXT) images.$(OBJEXT) main.$(OBJEXT) \
@@ -160,9 +160,9 @@ am_xpilot_ng_sdl_OBJECTS = DT_drawtext.$(OBJEXT) SDL_console.$(OBJEXT) \
 	text_geometry.$(OBJEXT) text_renderer.$(OBJEXT) \
 	unicode_text_renderer.$(OBJEXT) text_ttf_atlas.$(OBJEXT) \
 	todo.$(OBJEXT) sdlmeta.$(OBJEXT) $(am__objects_1)
-xpilot_ng_sdl_OBJECTS = $(am_xpilot_ng_sdl_OBJECTS)
+xpilot_infinity_sdl_OBJECTS = $(am_xpilot_infinity_sdl_OBJECTS)
 am__DEPENDENCIES_1 =
-xpilot_ng_sdl_DEPENDENCIES = $(top_builddir)/src/client/libxpclient.a \
+xpilot_infinity_sdl_DEPENDENCIES = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a libxp_libtess2.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
@@ -221,9 +221,9 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
-SOURCES = $(libxp_libtess2_a_SOURCES) $(xpilot_ng_sdl_SOURCES)
+SOURCES = $(libxp_libtess2_a_SOURCES) $(xpilot_infinity_sdl_SOURCES)
 DIST_SOURCES = $(libxp_libtess2_a_SOURCES) \
-	$(am__xpilot_ng_sdl_SOURCES_DIST)
+	$(am__xpilot_infinity_sdl_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -434,7 +434,7 @@ libxp_libtess2_a_SOURCES = \
 	$(top_srcdir)/vendor/libtess2/Source/tess.c \
 	$(top_srcdir)/vendor/libtess2/Source/tess.h
 
-xpilot_ng_sdl_SOURCES = asteroid_data.h DT_drawtext.c DT_drawtext.h \
+xpilot_infinity_sdl_SOURCES = asteroid_data.h DT_drawtext.c DT_drawtext.h \
 	SDL_console.c SDL_console.h console.c console.h glwidgets.c \
 	glwidgets.h gameinput.c gameinput.h gameloop.c gameloop.h \
 	gl_diagnostics.c gl_diagnostics.h image_geometry.c \
@@ -454,7 +454,7 @@ xpilot_ng_sdl_SOURCES = asteroid_data.h DT_drawtext.c DT_drawtext.h \
 	unicode_text_renderer.c unicode_text_renderer.h \
 	text_ttf_atlas.c text_ttf_atlas.h todo.c sdlmeta.h sdlmeta.c \
 	sdlinit.h xpclient_sdl.h $(am__append_1)
-xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
+xpilot_infinity_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	libxp_libtess2.a \
 	$(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) \
@@ -574,9 +574,9 @@ libxp_libtess2.a: $(libxp_libtess2_a_OBJECTS) $(libxp_libtess2_a_DEPENDENCIES) $
 	$(AM_V_AR)$(libxp_libtess2_a_AR) libxp_libtess2.a $(libxp_libtess2_a_OBJECTS) $(libxp_libtess2_a_LIBADD)
 	$(AM_V_at)$(RANLIB) libxp_libtess2.a
 
-xpilot-ng-sdl$(EXEEXT): $(xpilot_ng_sdl_OBJECTS) $(xpilot_ng_sdl_DEPENDENCIES) $(EXTRA_xpilot_ng_sdl_DEPENDENCIES)
-	@rm -f xpilot-ng-sdl$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(xpilot_ng_sdl_OBJECTS) $(xpilot_ng_sdl_LDADD) $(LIBS)
+xpilot-infinity-sdl$(EXEEXT): $(xpilot_infinity_sdl_OBJECTS) $(xpilot_infinity_sdl_DEPENDENCIES) $(EXTRA_xpilot_infinity_sdl_DEPENDENCIES)
+	@rm -f xpilot-infinity-sdl$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(xpilot_infinity_sdl_OBJECTS) $(xpilot_infinity_sdl_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1999-2004 by
  *
@@ -675,7 +675,7 @@ void Rank_write_rankfile(void)
 
     if (fprintf(file,
 		"<?xml version=\"1.0\"?>\n"
-		"<XPilotNGRank version=\"1.0\">\n"
+		"<XPilotInfinityRank version=\"1.0\">\n"
 		"<Players>\n") < 0)
 	goto writefailed;
     
@@ -756,7 +756,7 @@ void Rank_write_rankfile(void)
     
     if (fprintf(file,
 		"</Players>\n"
-		"</XPilotNGRank>\n") < 0)
+		"</XPilotInfinityRank>\n") < 0)
 	goto writefailed;
     
 
@@ -800,7 +800,7 @@ static void tagstart(void *data, const char *el, const char **attr)
 
     UNUSED_PARAM(data);
 
-    if (!strcasecmp(el, "XPilotNGRank")) {
+    if (!strcasecmp(el, "XPilotInfinityRank")) {
 	double version = -1;
 
 	while (*attr) {
@@ -818,7 +818,7 @@ static void tagstart(void *data, const char *el, const char **attr)
 
     if (!xptag) {
 	fatal("This doesn't look like a rank file "
-	      " (XPilotNGRank must be first tag).");
+	      " (XPilotInfinityRank must be first tag).");
 	return; /* not reached */
     }
 

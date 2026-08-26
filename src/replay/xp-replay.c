@@ -3192,7 +3192,7 @@ static void usage(void)
 
 static void version(void)
 {
-    printf("xpilot-ng-replay %s\n", VERSION);
+    printf("xpilot-infinity-replay %s\n", VERSION);
     exit(0);
 }
 

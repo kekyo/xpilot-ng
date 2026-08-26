@@ -175,7 +175,7 @@
 <Option name="missilesonradar" value="yes"/>
 <Option name="missileswallbounce" value="no"/>
 <Option name="movingitemprob" value="0.5"/>
-<Option name="ngcontrols" value="true"/>
+<Option name="infinitycontrols" value="true"/>
 <Option name="nukeclusterdamage" value="1.0"/>
 <Option name="nukedebrislife" value="120.0"/>
 <Option name="nukesonradar" value="yes"/>

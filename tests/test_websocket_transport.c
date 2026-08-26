@@ -138,13 +138,13 @@ static int check_subprotocol_is_case_sensitive(void)
         "Connection: Upgrade\r\n"
         "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
         "Sec-WebSocket-Version: 13\r\n"
-        "Sec-WebSocket-Protocol: XPILOT-NG-V1\r\n\r\n";
+        "Sec-WebSocket-Protocol: XPILOT-INFINITY-V1\r\n\r\n";
     static const char response[] =
         "HTTP/1.1 101 Switching Protocols\r\n"
         "Upgrade: websocket\r\n"
         "Connection: Upgrade\r\n"
         "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n"
-        "Sec-WebSocket-Protocol: XPILOT-NG-V1\r\n\r\n";
+        "Sec-WebSocket-Protocol: XPILOT-INFINITY-V1\r\n\r\n";
     websocket_http_server_request_t parsed_request;
     websocket_http_client_response_t parsed_response;
 
@@ -282,7 +282,7 @@ static int check_native_client_receives_buffered_record_burst(void)
         "Upgrade: websocket\r\n"
         "Connection: Upgrade\r\n"
         "Sec-WebSocket-Accept: %s\r\n"
-        "Sec-WebSocket-Protocol: xpilot-ng-v1\r\n"
+        "Sec-WebSocket-Protocol: xpilot-infinity-v1\r\n"
         "\r\n", accept);
     TEST_CHECK(response_length > 0
                && (size_t)response_length < sizeof(response));
@@ -324,7 +324,7 @@ static int check_server_accepts_browser_style_frames(void)
         "Connection: keep-alive, Upgrade\r\n"
         "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
         "Sec-WebSocket-Version: 13\r\n"
-        "Sec-WebSocket-Protocol: xpilot-ng-v1\r\n"
+        "Sec-WebSocket-Protocol: xpilot-infinity-v1\r\n"
         "\r\n";
     sock_t raw_client;
     sock_t server_socket;
@@ -350,7 +350,8 @@ static int check_server_accepts_browser_style_frames(void)
                       "Sec-WebSocket-Accept: "
                       "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n") != NULL);
     TEST_CHECK(strstr(response,
-                      "Sec-WebSocket-Protocol: xpilot-ng-v1\r\n") != NULL);
+                      "Sec-WebSocket-Protocol: xpilot-infinity-v1\r\n")
+               != NULL);
 
     TEST_CHECK(write_masked_frame(
                    &raw_client, false, 0x2,
@@ -397,7 +398,7 @@ static int check_server_rejects_unmasked_client_frame(void)
         "Connection: Upgrade\r\n"
         "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
         "Sec-WebSocket-Version: 13\r\n"
-        "Sec-WebSocket-Protocol: xpilot-ng-v1\r\n\r\n";
+        "Sec-WebSocket-Protocol: xpilot-infinity-v1\r\n\r\n";
     static const unsigned char unmasked_frame[] = { 0x82, 0x01, 0x2a };
     sock_t raw_client;
     sock_t server_socket;
@@ -504,7 +505,7 @@ static int check_native_client_masks_frames(void)
         "Upgrade: websocket\r\n"
         "Connection: Upgrade\r\n"
         "Sec-WebSocket-Accept: %s\r\n"
-        "Sec-WebSocket-Protocol: xpilot-ng-v1\r\n"
+        "Sec-WebSocket-Protocol: xpilot-infinity-v1\r\n"
         "\r\n", accept);
     TEST_CHECK(response_length > 0
                && (size_t)response_length < sizeof(response));
@@ -551,7 +552,7 @@ static int check_text_and_close_are_handled(void)
         "Connection: Upgrade\r\n"
         "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
         "Sec-WebSocket-Version: 13\r\n"
-        "Sec-WebSocket-Protocol: xpilot-ng-v1\r\n\r\n";
+        "Sec-WebSocket-Protocol: xpilot-infinity-v1\r\n\r\n";
     sock_t raw_client;
     sock_t server_socket;
     record_transport_t *server;
@@ -607,7 +608,7 @@ static int check_wrong_resource_is_rejected(void)
         "Connection: Upgrade\r\n"
         "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
         "Sec-WebSocket-Version: 13\r\n"
-        "Sec-WebSocket-Protocol: xpilot-ng-v1\r\n\r\n";
+        "Sec-WebSocket-Protocol: xpilot-infinity-v1\r\n\r\n";
     sock_t raw_client;
     sock_t server_socket;
     record_transport_t *server;

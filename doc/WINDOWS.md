@@ -1,6 +1,6 @@
 # Linux-hosted Windows builds
 
-XPilot NG's supported Windows build is a Linux cross-build.  It targets
+XPilot Infinity's supported Windows build is a Linux cross-build.  It targets
 32-bit x86 and 64-bit x86_64 Windows with MinGW-w64; building with Visual
 Studio or on a Windows host is not supported.
 
@@ -53,7 +53,7 @@ make check
 ```
 
 The first `make` cross-builds the pinned dependencies before building XPilot
-NG.  `make windows-package` assembles the executable and game data, and
+Infinity.  `make windows-package` assembles the executable and game data, and
 `make check` builds the supported Windows tests and runs the complete suite
 through Wine.  Repeating `make` reuses the dependency build until one of its
 inputs or configuration changes.  Do not reconfigure one build directory for
@@ -89,13 +89,13 @@ prefix, and package directory:
 ```text
 build/windows/x86/package/
 build/windows/x86_64/package/
-artifacts/windows/xpilot-ng-<version>-windows-x86.zip
-artifacts/windows/xpilot-ng-<version>-windows-x86_64.zip
+artifacts/windows/xpilot-infinity-<version>-windows-x86.zip
+artifacts/windows/xpilot-infinity-<version>-windows-x86_64.zip
 ```
 
-The packages contain `xpilot-ng-server.exe`, `xpilot-ng-sdl.exe`,
+The packages contain `xpilot-infinity-server.exe`, `xpilot-infinity-sdl.exe`,
 `OpenAL32.dll`, `libalut.dll`, game data including sound samples,
-and the XPilot NG, OpenAL Soft, and freealut licenses.  ZIP entries are sorted
+and the XPilot Infinity, OpenAL Soft, and freealut licenses.  ZIP entries are sorted
 and use a fixed timestamp, so unchanged package trees produce byte-identical
 archives.  The Wine suite verifies the PE architecture, runs the portable
 networking and SDL dependency tests, validates a TCP-contact server's

@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
@@ -308,7 +308,7 @@ extern struct options {
     char	*dataURL;
     char	*recordFileName;
     double	gameSpeed;
-    bool	ngControls;
+    bool	infinityControls;
     double  	turnPushPersistence;
     double  	turnGrip;
     double	thrustWidth;

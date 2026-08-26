@@ -1,10 +1,10 @@
-bin_PROGRAMS = xpilot-ng-x11
+bin_PROGRAMS = xpilot-infinity-x11
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/client \
 	@SDL3_CFLAGS@ @SDL3_TTF_CFLAGS@ @NATIVE_TEXT_CFLAGS@ \
 	@XRENDER_CFLAGS@
-xpilot_ng_x11_SOURCES = \
+xpilot_infinity_x11_SOURCES = \
 	about.c \
 	bitmaps.c bitmaps.h \
 	colors.c configure.c \
@@ -21,5 +21,5 @@ xpilot_ng_x11_SOURCES = \
 	../xhacks.h xinit.c xinit.h xpaint.c xpaint.h xpclient_x11.h xpilot.c
 
 #xpilot_CFLAGS = @X_CFLAGS@
-xpilot_ng_x11_LDADD = $(top_builddir)/src/client/libxpclient.a $(top_builddir)/src/common/libxpcommon.a @X_LIBS@ @X_PRE_LIBS@ @X_EXTENSIONS_LIB@ @X_EXTRA_LIBS@ -lX11 @XRENDER_LIBS@ @SDL3_TTF_LIBS@ @SDL3_LIBS@ @NATIVE_TEXT_LIBS@ @SOUND_LIBS@
+xpilot_infinity_x11_LDADD = $(top_builddir)/src/client/libxpclient.a $(top_builddir)/src/common/libxpcommon.a @X_LIBS@ @X_PRE_LIBS@ @X_EXTENSIONS_LIB@ @X_EXTRA_LIBS@ -lX11 @XRENDER_LIBS@ @SDL3_TTF_LIBS@ @SDL3_LIBS@ @NATIVE_TEXT_LIBS@ @SOUND_LIBS@
 #EXTRA_xpilot_SOURCES = debugaudio.c

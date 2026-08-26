@@ -89,7 +89,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-bin_PROGRAMS = xpilot-ng-xp-mapedit$(EXEEXT)
+bin_PROGRAMS = xpilot-infinity-xp-mapedit$(EXEEXT)
 subdir = src/mapedit
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -102,13 +102,13 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_xpilot_ng_xp_mapedit_OBJECTS = events.$(OBJEXT) expose.$(OBJEXT) \
+am_xpilot_infinity_xp_mapedit_OBJECTS = events.$(OBJEXT) expose.$(OBJEXT) \
 	file.$(OBJEXT) forms.$(OBJEXT) grow.$(OBJEXT) help.$(OBJEXT) \
 	main.$(OBJEXT) round.$(OBJEXT) T_Form.$(OBJEXT) \
 	T_Handler.$(OBJEXT) tools.$(OBJEXT) T_Popup.$(OBJEXT) \
 	T_Toolkit.$(OBJEXT)
-xpilot_ng_xp_mapedit_OBJECTS = $(am_xpilot_ng_xp_mapedit_OBJECTS)
-xpilot_ng_xp_mapedit_DEPENDENCIES =  \
+xpilot_infinity_xp_mapedit_OBJECTS = $(am_xpilot_infinity_xp_mapedit_OBJECTS)
+xpilot_infinity_xp_mapedit_DEPENDENCIES =  \
 	$(top_builddir)/src/common/libxpcommon.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -144,8 +144,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
-SOURCES = $(xpilot_ng_xp_mapedit_SOURCES)
-DIST_SOURCES = $(xpilot_ng_xp_mapedit_SOURCES)
+SOURCES = $(xpilot_infinity_xp_mapedit_SOURCES)
+DIST_SOURCES = $(xpilot_infinity_xp_mapedit_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -317,8 +317,8 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\"
 INCLUDES = -I$(top_builddir)/src/common -I$(top_srcdir)/src/common
-xpilot_ng_xp_mapedit_SOURCES = default_colors.h defaults.h events.c expose.c file.c file.h forms.c grow.c help.c main.c main.h proto.h round.c T_Form.c T_Handler.c tools.c T_Popup.c T_Toolkit.c T_Toolkit.h xpmapedit.h
-xpilot_ng_xp_mapedit_LDADD = $(top_builddir)/src/common/libxpcommon.a @X_LIBS@ @X_PRE_LIBS@ @X_EXTRA_LIBS@ -lX11
+xpilot_infinity_xp_mapedit_SOURCES = default_colors.h defaults.h events.c expose.c file.c file.h forms.c grow.c help.c main.c main.h proto.h round.c T_Form.c T_Handler.c tools.c T_Popup.c T_Toolkit.c T_Toolkit.h xpmapedit.h
+xpilot_infinity_xp_mapedit_LDADD = $(top_builddir)/src/common/libxpcommon.a @X_LIBS@ @X_PRE_LIBS@ @X_EXTRA_LIBS@ -lX11
 EXTRA_DIST = COPYRIGHT README README.UPDATE TODO
 all: all-am
 
@@ -396,9 +396,9 @@ uninstall-binPROGRAMS:
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
 
-xpilot-ng-xp-mapedit$(EXEEXT): $(xpilot_ng_xp_mapedit_OBJECTS) $(xpilot_ng_xp_mapedit_DEPENDENCIES) $(EXTRA_xpilot_ng_xp_mapedit_DEPENDENCIES)
-	@rm -f xpilot-ng-xp-mapedit$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(xpilot_ng_xp_mapedit_OBJECTS) $(xpilot_ng_xp_mapedit_LDADD) $(LIBS)
+xpilot-infinity-xp-mapedit$(EXEEXT): $(xpilot_infinity_xp_mapedit_OBJECTS) $(xpilot_infinity_xp_mapedit_DEPENDENCIES) $(EXTRA_xpilot_infinity_xp_mapedit_DEPENDENCIES)
+	@rm -f xpilot-infinity-xp-mapedit$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(xpilot_infinity_xp_mapedit_OBJECTS) $(xpilot_infinity_xp_mapedit_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

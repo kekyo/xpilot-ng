@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
@@ -153,11 +153,11 @@ void Expose_about_window(void)
     case 1:
 	DrawShadowText(dpy, aboutWindow, textGC,
 	BORDER, BORDER,
-	"ABOUT XPILOT NG\n"
+	"ABOUT XPILOT INFINITY\n"
 	"\n"
-	"XPilot NG is an improved version of XPilot.\n\n"
+	"XPilot Infinity is an improved version of XPilot.\n\n"
 	"For more info visit http://xpilot.sourceforge.net/ or\n"
-	"read the man pages xpilot-ng-x11(6) and xpilot-ng-server(6).\n\n"
+	"read the man pages xpilot-infinity-x11(6) and xpilot-infinity-server(6).\n\n"
 	"You can report any bug you find to <" PACKAGE_BUGREPORT ">.",
 	colors[WHITE].pixel, colors[BLACK].pixel);
 	break;

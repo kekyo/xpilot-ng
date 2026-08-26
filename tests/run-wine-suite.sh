@@ -277,7 +277,7 @@ client_transport_banner_reported()
 
 find_game_window()
 {
-    window_id=$(xdotool search --onlyvisible --name '^XPilot NG ' \
+    window_id=$(xdotool search --onlyvisible --name '^XPilot Infinity ' \
         2>/dev/null | tail -n 1 || true)
     test -n "$window_id"
 }
@@ -285,7 +285,7 @@ find_game_window()
 find_connection_failure_window()
 {
     window_id=$(xdotool search --onlyvisible \
-	--name '^XPilot NG - Connection failed$' 2>/dev/null \
+	--name '^XPilot Infinity - Connection failed$' 2>/dev/null \
 	| tail -n 1 || true)
     test -n "$window_id"
 }
@@ -303,7 +303,7 @@ game_window_transport_visible()
     game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
 	|| true)
     test "$game_window_title" = \
-	"XPilot NG 4.7.3 - 127.0.0.1 "\
+	"XPilot Infinity 4.7.3 - 127.0.0.1 "\
 "[Gameplay: $expected_gameplay_transport]"
 }
 
@@ -347,7 +347,7 @@ meta_tcp_transport_reported()
     test -s "$runtime_dir/meta-report-fixture.received" \
         && grep -q "^source-port $meta_report_contact_port$" \
             "$runtime_dir/meta-report-fixture.received" \
-        && grep -q '^add version 4.7.3ng+ct=tcp+gt=udp$' \
+        && grep -q '^add version 4.7.3infinity+ct=tcp+gt=udp$' \
             "$runtime_dir/meta-report-fixture.received"
 }
 
@@ -403,7 +403,7 @@ run_contact_target_failover()
 
     (
         cd "$runtime_package"
-        exec "$wine_program" ./xpilot-ng-server.exe \
+        exec "$wine_program" ./xpilot-infinity-server.exe \
             -map lib/maps/ndh.xp2 \
             -port "$contact_port" \
             -noQuit +reportMeta \
@@ -424,7 +424,7 @@ run_contact_target_failover()
 
     (
 	cd "$runtime_package"
-	exec "$wine_program" ./xpilot-ng-sdl.exe -list \
+	exec "$wine_program" ./xpilot-infinity-sdl.exe -list \
 	    "tcp://127.0.0.1:$contact_port" \
 	    "udp://127.0.0.1:$contact_port"
     ) >"$list_log" 2>&1 \
@@ -448,7 +448,7 @@ run_connection_failure_notification()
 
     (
 	cd "$runtime_package"
-	exec "$wine_program" ./xpilot-ng-server.exe \
+	exec "$wine_program" ./xpilot-infinity-server.exe \
 	    -map lib/maps/ndh.xp2 -port "$contact_port" \
 	    -noQuit +reportMeta -transport udp
     ) >"$server_log" 2>&1 &
@@ -457,7 +457,7 @@ run_connection_failure_notification()
 
     (
 	cd "$runtime_package"
-	exec "$wine_program" ./xpilot-ng-sdl.exe \
+	exec "$wine_program" ./xpilot-infinity-sdl.exe \
 	    "tcp://127.0.0.1:$contact_port"
     ) >"$client_log" 2>&1 &
     client_pid=$!
@@ -477,7 +477,7 @@ run_connection_failure_notification()
 	|| fail "Windows connection attempt diagnostics were not written"
 
     failure_window_count=$(xdotool search --onlyvisible \
-	--name '^XPilot NG - Connection failed$' 2>/dev/null \
+	--name '^XPilot Infinity - Connection failed$' 2>/dev/null \
 	| wc -l)
     test "$failure_window_count" -eq 1 \
 	|| fail "expected one final connection failure dialog"
@@ -540,7 +540,7 @@ process.on("SIGINT", stop);
         XPILOT_META_REPORT_HOST=127.0.0.1 \
         XPILOT_META_REPORT_HOST_TWO=127.0.0.1 \
         XPILOT_META_REPORT_PORT="$meta_report_port" \
-            exec "$wine_program" ./xpilot-ng-server.exe \
+            exec "$wine_program" ./xpilot-infinity-server.exe \
                 -map lib/maps/ndh.xp2 \
                 -port "$meta_report_contact_port" \
                 -noQuit -reportMeta \
@@ -593,28 +593,28 @@ run_gameplay_case()
         cd "$runtime_package"
         case "$contact_transport:$gameplay_transport" in
         tcp:tcp)
-            exec "$wine_program" ./xpilot-ng-server.exe \
+            exec "$wine_program" ./xpilot-infinity-server.exe \
                 -map lib/maps/ndh.xp2 -port "$contact_port" \
                 -noQuit +reportMeta -transport tcp
             ;;
         websocket:websocket)
-            exec "$wine_program" ./xpilot-ng-server.exe \
+            exec "$wine_program" ./xpilot-infinity-server.exe \
                 -map lib/maps/ndh.xp2 -port "$contact_port" \
                 -noQuit +reportMeta -websocket
             ;;
         udp:udp)
-            exec "$wine_program" ./xpilot-ng-server.exe \
+            exec "$wine_program" ./xpilot-infinity-server.exe \
                 -map lib/maps/ndh.xp2 -port "$contact_port" \
                 -noQuit +reportMeta \
                 -contactTransport tcp -gameTransport tcp -udp
             ;;
         tcp:udp)
-            exec "$wine_program" ./xpilot-ng-server.exe \
+            exec "$wine_program" ./xpilot-infinity-server.exe \
                 -map lib/maps/ndh.xp2 -port "$contact_port" \
                 -noQuit +reportMeta -tcp -gameTransport udp
             ;;
         udp:tcp)
-            exec "$wine_program" ./xpilot-ng-server.exe \
+            exec "$wine_program" ./xpilot-infinity-server.exe \
                 -map lib/maps/ndh.xp2 -port "$contact_port" \
                 -noQuit +reportMeta -transport udp -gameTransport tcp
             ;;
@@ -627,26 +627,26 @@ run_gameplay_case()
         cd "$runtime_package"
         case "$contact_transport:$gameplay_transport" in
         tcp:tcp)
-            exec "$wine_program" ./xpilot-ng-sdl.exe \
+            exec "$wine_program" ./xpilot-infinity-sdl.exe \
                 -geometry 800x600 -join -name "$client_name" \
                 -user "$client_user" -messagesToStdout 2 \
                 "tcp://127.0.0.1:$contact_port"
             ;;
         websocket:websocket)
-            exec "$wine_program" ./xpilot-ng-sdl.exe \
+            exec "$wine_program" ./xpilot-infinity-sdl.exe \
                 -geometry 800x600 -join -name "$client_name" \
                 -user "$client_user" -messagesToStdout 2 \
                 "ws://127.0.0.1:$contact_port"
             ;;
         udp:udp)
-            exec "$wine_program" ./xpilot-ng-sdl.exe \
+            exec "$wine_program" ./xpilot-infinity-sdl.exe \
                 -geometry 800x600 -join -name "$client_name" \
                 -user "$client_user" -messagesToStdout 2 \
                 -contactTransport tcp -gameTransport tcp \
                 "udp://127.0.0.1:$contact_port"
             ;;
         *)
-            exec "$wine_program" ./xpilot-ng-sdl.exe \
+            exec "$wine_program" ./xpilot-infinity-sdl.exe \
                 -geometry 800x600 -join -port "$contact_port" \
                 -name "$client_name" -user "$client_user" \
                 -messagesToStdout 2 \
@@ -689,8 +689,8 @@ run_gameplay_case()
     window_id=
 }
 
-server_executable="$package_dir/xpilot-ng-server.exe"
-client_executable="$package_dir/xpilot-ng-sdl.exe"
+server_executable="$package_dir/xpilot-infinity-server.exe"
+client_executable="$package_dir/xpilot-infinity-sdl.exe"
 map_file="$package_dir/lib/maps/ndh.xp2"
 openal_library="$package_dir/OpenAL32.dll"
 freealut_library=

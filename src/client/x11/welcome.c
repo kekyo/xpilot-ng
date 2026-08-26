@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
@@ -1567,7 +1567,7 @@ static int Welcome_input_loop(Connect_param_t * conpar)
     Welcome_set_mode(ModeWaiting);
 
     /* Start main loop */
-    Welcome_create_label(1, "Welcome to XPilot NG!");
+    Welcome_create_label(1, "Welcome to XPilot Infinity!");
 
     while (!quitting && !joining) {
 	XNextEvent(dpy, &event);

@@ -594,7 +594,7 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_X11_TEXT_TEST_BINARY; \
 	XPILOT_SDL_OBJECT_DIR='$(abs_top_builddir)/src/client/sdl'; \
 	export XPILOT_SDL_OBJECT_DIR; \
-	XPILOT_SDL_BINARY='$(abs_top_builddir)/src/client/sdl/xpilot-ng-sdl'; \
+	XPILOT_SDL_BINARY='$(abs_top_builddir)/src/client/sdl/xpilot-infinity-sdl'; \
 	export XPILOT_SDL_BINARY; \
 	XPILOT_BUILD_WRAPPER='$(abs_top_srcdir)/build.sh'; \
 	export XPILOT_BUILD_WRAPPER; \
@@ -621,7 +621,7 @@ EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
 	test-windows-archive.mjs test_helpers.h
 
 run-sdl-core-boundary.log: \
-	$(top_builddir)/src/client/sdl/xpilot-ng-sdl
+	$(top_builddir)/src/client/sdl/xpilot-infinity-sdl
 
 .PHONY: e2e-install
 run-e2e.log: e2e-install

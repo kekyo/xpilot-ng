@@ -89,7 +89,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-bin_PROGRAMS = xpilot-ng-replay$(EXEEXT)
+bin_PROGRAMS = xpilot-infinity-replay$(EXEEXT)
 subdir = src/replay
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -102,10 +102,10 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_xpilot_ng_replay_OBJECTS = buttons.$(OBJEXT) ppm_image.$(OBJEXT) \
+am_xpilot_infinity_replay_OBJECTS = buttons.$(OBJEXT) ppm_image.$(OBJEXT) \
 	xp-replay.$(OBJEXT)
-xpilot_ng_replay_OBJECTS = $(am_xpilot_ng_replay_OBJECTS)
-xpilot_ng_replay_DEPENDENCIES =  \
+xpilot_infinity_replay_OBJECTS = $(am_xpilot_infinity_replay_OBJECTS)
+xpilot_infinity_replay_DEPENDENCIES =  \
 	$(top_builddir)/src/common/libxpcommon.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -137,8 +137,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
-SOURCES = $(xpilot_ng_replay_SOURCES)
-DIST_SOURCES = $(xpilot_ng_replay_SOURCES)
+SOURCES = $(xpilot_infinity_replay_SOURCES)
+DIST_SOURCES = $(xpilot_infinity_replay_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -354,10 +354,10 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\"
 INCLUDES = -I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/client
 
-xpilot_ng_replay_SOURCES = buttons.c buttons.h ppm_image.c ppm_image.h \
+xpilot_infinity_replay_SOURCES = buttons.c buttons.h ppm_image.c ppm_image.h \
 	xp-replay.c xp-replay.h
 
-xpilot_ng_replay_LDADD = $(top_builddir)/src/common/libxpcommon.a @X_LIBS@ @X_PRE_LIBS@ @X_EXTRA_LIBS@ -lX11
+xpilot_infinity_replay_LDADD = $(top_builddir)/src/common/libxpcommon.a @X_LIBS@ @X_PRE_LIBS@ @X_EXTRA_LIBS@ -lX11
 SUBDIRS = tools
 all: all-recursive
 
@@ -435,9 +435,9 @@ uninstall-binPROGRAMS:
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
 
-xpilot-ng-replay$(EXEEXT): $(xpilot_ng_replay_OBJECTS) $(xpilot_ng_replay_DEPENDENCIES) $(EXTRA_xpilot_ng_replay_DEPENDENCIES)
-	@rm -f xpilot-ng-replay$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(xpilot_ng_replay_OBJECTS) $(xpilot_ng_replay_LDADD) $(LIBS)
+xpilot-infinity-replay$(EXEEXT): $(xpilot_infinity_replay_OBJECTS) $(xpilot_infinity_replay_DEPENDENCIES) $(EXTRA_xpilot_infinity_replay_DEPENDENCIES)
+	@rm -f xpilot-infinity-replay$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(xpilot_infinity_replay_OBJECTS) $(xpilot_infinity_replay_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

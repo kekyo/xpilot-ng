@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 2000-2004 by
  *
@@ -989,7 +989,7 @@ static void Update_players(void)
 		f = AFTER_BURN_FUEL(f, a);
 	    }
 
-	    if (!options.ngControls) {
+	    if (!options.infinityControls) {
 		pl->acc.x = power * tcos(pl->dir) / inert;
 		pl->acc.y = power * tsin(pl->dir) / inert;
 	    } else {

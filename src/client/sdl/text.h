@@ -1,5 +1,5 @@
 /*
- * XPilotNG/SDL, an SDL/OpenGL XPilot client.
+ * XPilot Infinity/SDL, an SDL/OpenGL XPilot client.
  *
  * Copyright (C) 2003-2004  Erik Andersson <deity_at_home.se>
  *

@@ -5,9 +5,9 @@ set -eu
 PROJECT_ROOT=${BUILD_PACKAGE_PROJECT_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}
 ARTIFACT_ROOT="$PROJECT_ROOT/artifacts"
 DEB_ARTIFACT_ROOT="$ARTIFACT_ROOT/deb"
-PACKAGE_NAME=xpilot-ng
+PACKAGE_NAME=xpilot-infinity
 PACKAGE_DESCRIPTION="Multi-player tactical game with SDL and X11 clients."
-DEFAULT_MAINTAINER="XPilot NG packager <packager@localhost>"
+DEFAULT_MAINTAINER="XPilot Infinity packager <packager@localhost>"
 DEFAULT_PARALLEL_JOB_CAP=14
 
 LINUX_MATRIX=$(cat <<'EOF'
@@ -34,7 +34,7 @@ print_usage()
     cat <<'EOF'
 Usage: ./build_package.sh [OPTIONS]
 
-Build and validate distributable XPilot NG packages.
+Build and validate distributable XPilot Infinity packages.
 
 Options:
   --version VERSION  Package version (default: screw-up-derived version)
@@ -339,7 +339,7 @@ container_image_for_target()
 
 prereq_image_for_target()
 {
-    printf 'localhost/xpilot-ng-pack-deb-%s-%s-%s:latest\n' "$1" "$2" "$3"
+    printf 'localhost/xpilot-infinity-pack-deb-%s-%s-%s:latest\n' "$1" "$2" "$3"
 }
 
 assert_prereq_image()
@@ -406,8 +406,8 @@ validate_deb_package()
 
     dpkg-deb -x "$package_path" "$extract_dir"
     for executable_name in \
-        xpilot-ng-sdl xpilot-ng-x11 xpilot-ng-server \
-        xpilot-ng-replay xpilot-ng-xp-mapedit
+        xpilot-infinity-sdl xpilot-infinity-x11 xpilot-infinity-server \
+        xpilot-infinity-replay xpilot-infinity-xp-mapedit
     do
         executable_path="$extract_dir/usr/games/$executable_name"
         assert_file "$executable_path"
@@ -418,14 +418,14 @@ validate_deb_package()
             "$(expected_elf_machine "$expected_arch")"
     done
 
-    assert_file "$extract_dir/usr/share/games/xpilot-ng/defaults.txt"
-    assert_file "$extract_dir/usr/share/games/xpilot-ng/maps/ndh.xp2"
-    assert_file "$extract_dir/usr/share/games/xpilot-ng/textures/ship.ppm"
-    assert_file "$extract_dir/usr/share/games/xpilot-ng/sound/sounds.txt"
-    assert_file "$extract_dir/usr/share/games/xpilot-ng/sound/bfire.wav"
-    assert_file "$extract_dir/usr/share/man/man6/xpilot-ng-sdl.6"
-    assert_file "$extract_dir/usr/share/doc/xpilot-ng/README"
-    assert_file "$extract_dir/usr/share/doc/xpilot-ng/COPYING"
+    assert_file "$extract_dir/usr/share/games/xpilot-infinity/defaults.txt"
+    assert_file "$extract_dir/usr/share/games/xpilot-infinity/maps/ndh.xp2"
+    assert_file "$extract_dir/usr/share/games/xpilot-infinity/textures/ship.ppm"
+    assert_file "$extract_dir/usr/share/games/xpilot-infinity/sound/sounds.txt"
+    assert_file "$extract_dir/usr/share/games/xpilot-infinity/sound/bfire.wav"
+    assert_file "$extract_dir/usr/share/man/man6/xpilot-infinity-sdl.6"
+    assert_file "$extract_dir/usr/share/doc/xpilot-infinity/README"
+    assert_file "$extract_dir/usr/share/doc/xpilot-infinity/COPYING"
 
     rm -rf "$extract_dir"
 }

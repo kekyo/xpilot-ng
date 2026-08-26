@@ -1,7 +1,7 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
- * Copyright (C) 2026 XPilot NG contributors.
+ * Copyright (C) 2026 XPilot Infinity contributors.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 /** WebSocket resource used by XPilot session connections. */
 #define WEBSOCKET_HTTP_RESOURCE "/xpilot"
 /** Case-sensitive WebSocket subprotocol identifying XPilot logical records. */
-#define WEBSOCKET_HTTP_SUBPROTOCOL "xpilot-ng-v1"
+#define WEBSOCKET_HTTP_SUBPROTOCOL "xpilot-infinity-v1"
 /** Bytes in an RFC 6455 client nonce before Base64 encoding. */
 #define WEBSOCKET_HTTP_NONCE_SIZE 16
 /** Buffer capacity required for a Base64 `Sec-WebSocket-Key`. */

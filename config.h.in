@@ -299,7 +299,7 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* lock the xpilot-ng server into memory */
+/* lock the xpilot-infinity server into memory */
 #undef PLOCKSERVER
 
 /* enable replay program */

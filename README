@@ -1,4 +1,6 @@
-This is the README file for XPilot NG 4.7.3.
+This is the README file for XPilot Infinity 4.7.3.
+
+XPilot Infinity was renamed from XPilot NG.
 
 Copyright © 1991-2005 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha Lindström, Kristian Söderblom and Erik Andersson.
 
@@ -11,7 +13,7 @@ source code, and the COPYING file.
 Installation instructions are in the INSTALL file.
 Distribution package generation is documented in doc/PACKAGING.md.
 
-The documentation for XPilot NG is far from complete.
+The documentation for XPilot Infinity is far from complete.
 
 For further reading, see the manuals in the doc/man directory.
 
@@ -23,13 +25,13 @@ Contact/lobby and gameplay connections use UDP by default and can be selected
 independently.  To use TCP for both, start both endpoints with matching
 settings, for example:
 
-        xpilot-ng-server -transport tcp [options]
-        xpilot-ng-sdl -join tcp://server.example
+        xpilot-infinity-server -transport tcp [options]
+        xpilot-infinity-sdl -join tcp://server.example
 
 Or use WebSocket for both:
 
-        xpilot-ng-server -websocket [options]
-        xpilot-ng-sdl -join ws://server.example
+        xpilot-infinity-server -websocket [options]
+        xpilot-infinity-sdl -join ws://server.example
 
 The server shortcuts `-tcp`, `-udp`, `-websocket`, and
 `-transport udp|tcp|websocket` select one transport for both contact/lobby and
@@ -44,7 +46,7 @@ transport for both contact/lobby and gameplay, while a bare host uses the
 target port overrides `-port`.  Split UDP/TCP combinations remain available
 through the long options or metaserver advertisements.
 
-WebSocket uses RFC 6455 binary messages at `/xpilot` with the `xpilot-ng-v1`
+WebSocket uses RFC 6455 binary messages at `/xpilot` with the `xpilot-infinity-v1`
 subprotocol; each message carries one logical XPilot record.  Only unencrypted
 `ws://` is currently implemented.  The native clients exercise this transport;
 browser client integration is intentionally a separate step.
@@ -86,7 +88,7 @@ with the same `gameTransport` value that was used while recording.
 
 OTHER SOURCES OF INFORMATION ON THE INTERNET
 
-XPilot NG: http://xpilot.sourceforge.net/
+XPilot Infinity: http://xpilot.sourceforge.net/
 
 XPilot FAQ: telnet meta.xpilot.org 4402
 	(also in the doc/ subdirectory)
@@ -116,7 +118,7 @@ If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
 
         xpilot-hacks@lists.sourceforge.net
 
-Remember to include the version of XPilot NG, your platform and the
+Remember to include the version of XPilot Infinity, your platform and the
 symptoms in as much detail as possible.
 
 

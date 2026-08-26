@@ -189,9 +189,9 @@ static int check_transport_metadata_does_not_change_client_defaults(void)
     connectDefaults.contact_transport = GAME_TRANSPORT_UDP;
     connectDefaults.game_transport = GAME_TRANSPORT_TCP;
     Delete_server_list();
-    TEST_CHECK(add_transport_line("4.7.3ng+ct=tcp+gt=udp") == 0);
+    TEST_CHECK(add_transport_line("4.7.3infinity+ct=tcp+gt=udp") == 0);
     server = (server_info_t *)List_front(server_list);
-    TEST_CHECK(strcmp(server->version, "4.7.3ng") == 0);
+    TEST_CHECK(strcmp(server->version, "4.7.3infinity") == 0);
     TEST_CHECK(server->contact_transport == GAME_TRANSPORT_TCP);
     TEST_CHECK(server->game_transport == GAME_TRANSPORT_UDP);
     TEST_CHECK(strcmp(server->transport_pair, "TCP -> UDP") == 0);
@@ -206,7 +206,7 @@ static int check_transport_metadata_does_not_change_client_defaults(void)
     TEST_CHECK(connectDefaults.game_transport == GAME_TRANSPORT_TCP);
 
     Delete_server_list();
-    TEST_CHECK(add_transport_line("4.7.3ng") == 0);
+    TEST_CHECK(add_transport_line("4.7.3infinity") == 0);
     server = (server_info_t *)List_front(server_list);
     TEST_CHECK(server->contact_transport == GAME_TRANSPORT_UDP);
     TEST_CHECK(server->game_transport == GAME_TRANSPORT_UDP);

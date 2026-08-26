@@ -32,9 +32,9 @@ if test "${1:-}" != --inside-xvfb; then
         /bin/sh "$0" --inside-xvfb
 fi
 
-client="${XPILOT_TEST_BINDIR:?XPILOT_TEST_BINDIR is required}/xpilot-ng-sdl"
-x11_client="${XPILOT_TEST_BINDIR}/xpilot-ng-x11"
-server="${XPILOT_TEST_BINDIR}/xpilot-ng-server"
+client="${XPILOT_TEST_BINDIR:?XPILOT_TEST_BINDIR is required}/xpilot-infinity-sdl"
+x11_client="${XPILOT_TEST_BINDIR}/xpilot-infinity-x11"
+server="${XPILOT_TEST_BINDIR}/xpilot-infinity-server"
 map="${XPILOT_TEST_PKGDATADIR:?XPILOT_TEST_PKGDATADIR is required}/maps/ndh.xp2"
 contact_target_probe="${XPILOT_CONTACT_TARGET_PROBE:?XPILOT_CONTACT_TARGET_PROBE is required}"
 
@@ -215,7 +215,7 @@ meta_tcp_transport_reported()
     test -s "$runtime_dir/meta-report-fixture.received" \
         && grep -q "^source-port $meta_report_contact_port$" \
             "$runtime_dir/meta-report-fixture.received" \
-        && grep -q '^add version 4.7.3ng+ct=tcp+gt=udp$' \
+        && grep -q '^add version 4.7.3infinity+ct=tcp+gt=udp$' \
             "$runtime_dir/meta-report-fixture.received"
 }
 
@@ -273,7 +273,7 @@ runtime_logs_have_no_gl_errors()
 find_game_window()
 {
     window_id=
-    for candidate_id in $(xdotool search --onlyvisible --name '^XPilot NG ' \
+    for candidate_id in $(xdotool search --onlyvisible --name '^XPilot Infinity ' \
         2>/dev/null || true); do
         candidate_pid=$(xdotool getwindowpid "$candidate_id" 2>/dev/null \
             || true)
@@ -290,7 +290,7 @@ find_connection_failure_window()
     # SDL's X11 message box runs in a short-lived child process, so its
     # _NET_WM_PID intentionally differs from the waiting client process.
     window_id=$(xdotool search --onlyvisible \
-	--name '^XPilot NG - Connection failed$' 2>/dev/null \
+	--name '^XPilot Infinity - Connection failed$' 2>/dev/null \
 	| tail -n 1 || true)
     test -n "$window_id"
 }
@@ -308,7 +308,7 @@ find_x11_game_window()
     if ! kill -0 "$client_pid" 2>/dev/null; then
 	fail "X11 client stopped before its game window became visible"
     fi
-    window_id=$(xdotool search --onlyvisible --name '^XPilot NG ' \
+    window_id=$(xdotool search --onlyvisible --name '^XPilot Infinity ' \
 	2>/dev/null | tail -n 1 || true)
     test -n "$window_id"
 }
@@ -338,7 +338,7 @@ game_window_transport_visible()
     game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
 	|| true)
     test "$game_window_title" = \
-	"XPilot NG 4.7.3 - 127.0.0.1 "\
+	"XPilot Infinity 4.7.3 - 127.0.0.1 "\
 "[Gameplay: $expected_gameplay_transport]"
 }
 
@@ -347,7 +347,7 @@ x11_local_game_window_transport_visible()
     game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
 	|| true)
     case "$game_window_title" in
-	"XPilot NG 4.7.3 - "?*"[Gameplay: $expected_gameplay_transport]")
+	"XPilot Infinity 4.7.3 - "?*"[Gameplay: $expected_gameplay_transport]")
 	    return 0
 	    ;;
     esac
@@ -381,13 +381,13 @@ quit_game_client()
 
 x11_game_window_absent()
 {
-    ! xdotool search --name '^XPilot NG ' >/dev/null 2>&1
+    ! xdotool search --name '^XPilot Infinity ' >/dev/null 2>&1
 }
 
 process_window_absent()
 {
     absent_pid=$1
-    for candidate_id in $(xdotool search --name '^XPilot NG ' 2>/dev/null \
+    for candidate_id in $(xdotool search --name '^XPilot Infinity ' 2>/dev/null \
         || true); do
         candidate_pid=$(xdotool getwindowpid "$candidate_id" 2>/dev/null \
             || true)
@@ -574,7 +574,7 @@ run_contact_target_failover()
 	fail "server listing response was reported as a connection failure"
     fi
     if xdotool search --onlyvisible \
-	--name '^XPilot NG - Connection failed$' >/dev/null 2>&1; then
+	--name '^XPilot Infinity - Connection failed$' >/dev/null 2>&1; then
 	fail "server listing displayed a connection failure dialog"
     fi
     stop_local_server
@@ -642,7 +642,7 @@ run_connection_failure_notification()
     grep -Fq "Could not contact 127.0.0.1:$port." "$text_failure_log" \
 	|| fail "text-mode failure did not identify the endpoint"
     if xdotool search --onlyvisible \
-	--name '^XPilot NG - Connection failed$' >/dev/null 2>&1; then
+	--name '^XPilot Infinity - Connection failed$' >/dev/null 2>&1; then
 	fail "text-mode connection failure displayed a dialog"
     fi
 
@@ -662,7 +662,7 @@ run_connection_failure_notification()
 	|| fail "final connection failure omitted the gameplay transport"
 
     failure_window_count=$(xdotool search --onlyvisible \
-	--name '^XPilot NG - Connection failed$' 2>/dev/null \
+	--name '^XPilot Infinity - Connection failed$' 2>/dev/null \
 	| wc -l)
     test "$failure_window_count" -eq 1 \
 	|| fail "expected one final connection failure dialog"

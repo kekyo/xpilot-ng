@@ -1,6 +1,6 @@
 # Distribution packages
 
-XPilot NG builds release artifacts from a Linux host.  Debian packages are
+XPilot Infinity builds release artifacts from a Linux host.  Debian packages are
 built inside target-specific Podman containers so that their runtime
 dependencies are resolved against the selected Debian or Ubuntu release.
 
@@ -52,7 +52,7 @@ installed paths, and the ELF architecture of every executable.  Artifacts are
 written as:
 
 ```text
-artifacts/deb/xpilot-ng-<version>-<distro>-<release>-<deb-arch>.deb
+artifacts/deb/xpilot-infinity-<version>-<distro>-<release>-<deb-arch>.deb
 ```
 
 ## Windows archives
@@ -71,8 +71,8 @@ and assigned a fixed timestamp so the result is reproducible for identical
 input.  Artifacts are written as:
 
 ```text
-artifacts/windows/xpilot-ng-<version>-windows-x86.zip
-artifacts/windows/xpilot-ng-<version>-windows-x86_64.zip
+artifacts/windows/xpilot-infinity-<version>-windows-x86.zip
+artifacts/windows/xpilot-infinity-<version>-windows-x86_64.zip
 ```
 
 Use `--artifact-root` to select another output directory and

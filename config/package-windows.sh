@@ -8,7 +8,7 @@ usage()
 Usage: package-windows.sh --source-dir PATH --build-dir PATH \
        --dependency-prefix PATH --output PATH
 
-Assemble MinGW executables, vendored sound DLLs, and XPilot NG game data into
+Assemble MinGW executables, vendored sound DLLs, and XPilot Infinity game data into
 a relocatable Windows package directory.
 EOF
 }
@@ -89,8 +89,8 @@ case "$package_dir" in
     *) fail "package output must be inside the build directory" ;;
 esac
 
-server_executable="$build_dir/src/server/xpilot-ng-server.exe"
-client_executable="$build_dir/src/client/sdl/xpilot-ng-sdl.exe"
+server_executable="$build_dir/src/server/xpilot-infinity-server.exe"
+client_executable="$build_dir/src/client/sdl/xpilot-infinity-sdl.exe"
 test -f "$server_executable" \
     || fail "Windows server executable is missing: $server_executable"
 test -f "$client_executable" \

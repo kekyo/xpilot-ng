@@ -1,7 +1,7 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
- * Copyright (C) 2026 XPilot NG contributors.
+ * Copyright (C) 2026 XPilot Infinity contributors.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

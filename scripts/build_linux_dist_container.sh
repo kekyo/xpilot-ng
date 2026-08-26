@@ -73,11 +73,11 @@ EOF
     dependencies=$(
         cd "$temporary_dir"
         dpkg-shlibdeps -O \
-            "$stage_dir/usr/games/xpilot-ng-sdl" \
-            "$stage_dir/usr/games/xpilot-ng-x11" \
-            "$stage_dir/usr/games/xpilot-ng-server" \
-            "$stage_dir/usr/games/xpilot-ng-replay" \
-            "$stage_dir/usr/games/xpilot-ng-xp-mapedit" \
+            "$stage_dir/usr/games/xpilot-infinity-sdl" \
+            "$stage_dir/usr/games/xpilot-infinity-x11" \
+            "$stage_dir/usr/games/xpilot-infinity-server" \
+            "$stage_dir/usr/games/xpilot-infinity-replay" \
+            "$stage_dir/usr/games/xpilot-infinity-xp-mapedit" \
             | sed -n 's/^shlibs:Depends=//p'
     )
     rm -rf "$temporary_dir"
@@ -100,7 +100,7 @@ Architecture: $deb_arch
 Maintainer: $XPILOT_PACKAGE_MAINTAINER
 Depends: $dependencies
 Description: $XPILOT_PACKAGE_DESCRIPTION
- XPilot NG is a multiplayer tactical game. This package includes the SDL
+ XPilot Infinity is a multiplayer tactical game. This package includes the SDL
  and X11 clients, the dedicated server, utilities, game data, and manuals.
 EOF
 }
@@ -139,7 +139,7 @@ work_dir=$XPILOT_WORK_DIR
 meta_dir=$XPILOT_META_DIR
 dependency_build_dir="$work_dir/vendor-sdl3"
 dependency_prefix="$work_dir/vendor-sdl3-prefix"
-build_dir="$work_dir/xpilot-ng"
+build_dir="$work_dir/xpilot-infinity"
 stage_dir="$work_dir/stage/$XPILOT_PACKAGE_NAME"
 
 rm -rf "$work_dir" "$meta_dir"
@@ -166,15 +166,15 @@ mkdir -p "$build_dir" "$meta_dir" "$stage_dir"
 )
 
 for executable_name in \
-    xpilot-ng-sdl xpilot-ng-x11 xpilot-ng-server \
-    xpilot-ng-replay xpilot-ng-xp-mapedit
+    xpilot-infinity-sdl xpilot-infinity-x11 xpilot-infinity-server \
+    xpilot-infinity-replay xpilot-infinity-xp-mapedit
 do
     assert_file "$stage_dir/usr/games/$executable_name"
 done
-assert_file "$stage_dir/usr/share/games/xpilot-ng/defaults.txt"
-assert_file "$stage_dir/usr/share/games/xpilot-ng/maps/ndh.xp2"
-assert_file "$stage_dir/usr/share/games/xpilot-ng/sound/sounds.txt"
-assert_file "$stage_dir/usr/share/games/xpilot-ng/sound/bfire.wav"
+assert_file "$stage_dir/usr/share/games/xpilot-infinity/defaults.txt"
+assert_file "$stage_dir/usr/share/games/xpilot-infinity/maps/ndh.xp2"
+assert_file "$stage_dir/usr/share/games/xpilot-infinity/sound/sounds.txt"
+assert_file "$stage_dir/usr/share/games/xpilot-infinity/sound/bfire.wav"
 
 doc_dir="$stage_dir/usr/share/doc/$XPILOT_PACKAGE_NAME"
 mkdir -p "$doc_dir"

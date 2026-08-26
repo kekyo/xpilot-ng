@@ -2,11 +2,11 @@ Makefile
 .deps/
 /config.h
 /config.status
-/src/client/sdl/xpilot-ng-sdl
-/src/client/x11/xpilot-ng-x11
-/src/mapedit/xpilot-ng-xp-mapedit
-/src/replay/xpilot-ng-replay
-/src/server/xpilot-ng-server
+/src/client/sdl/xpilot-infinity-sdl
+/src/client/x11/xpilot-infinity-x11
+/src/mapedit/xpilot-infinity-xp-mapedit
+/src/replay/xpilot-infinity-replay
+/src/server/xpilot-infinity-server
 /stamp-h1
 /build-sdl
 /install-sdl

@@ -1,6 +1,7 @@
 #include "test_helpers.h"
 
 #include "transport_display.h"
+#include "version.h"
 
 #include <string.h>
 
@@ -59,34 +60,38 @@ static int check_gameplay_titles(void)
     char title[128];
 
     TEST_CHECK(Transport_display_gameplay_title(
-                   title, sizeof(title), "XPilot NG 4.7.3",
+                   title, sizeof(title), TITLE,
                    "game.example", GAME_TRANSPORT_TCP));
-    TEST_CHECK(strcmp(title,
-                      "XPilot NG 4.7.3 - game.example [Gameplay: TCP]") == 0);
+    TEST_CHECK(strcmp(
+                   title,
+                   "XPilot Infinity 4.7.3 - game.example [Gameplay: TCP]")
+               == 0);
     TEST_CHECK(Transport_display_gameplay_title(
-                   title, sizeof(title), "XPilot NG 4.7.3",
+                   title, sizeof(title), TITLE,
                    "127.0.0.1", GAME_TRANSPORT_UDP));
-    TEST_CHECK(strcmp(title,
-                      "XPilot NG 4.7.3 - 127.0.0.1 [Gameplay: UDP]") == 0);
+    TEST_CHECK(strcmp(
+                   title,
+                   "XPilot Infinity 4.7.3 - 127.0.0.1 [Gameplay: UDP]")
+               == 0);
     TEST_CHECK(Transport_display_gameplay_title(
-                   title, sizeof(title), "XPilot NG 4.7.3",
+                   title, sizeof(title), TITLE,
                    "ws.example", GAME_TRANSPORT_WEBSOCKET));
     TEST_CHECK(strcmp(
                    title,
-                   "XPilot NG 4.7.3 - ws.example [Gameplay: WebSocket]")
+                   "XPilot Infinity 4.7.3 - ws.example [Gameplay: WebSocket]")
                == 0);
 
     TEST_CHECK(!Transport_display_gameplay_title(
-                    title, 12, "XPilot NG 4.7.3", "game.example",
+                    title, 12, TITLE, "game.example",
                     GAME_TRANSPORT_TCP));
     TEST_CHECK(!Transport_display_gameplay_title(
                     title, sizeof(title), NULL, "game.example",
                     GAME_TRANSPORT_TCP));
     TEST_CHECK(!Transport_display_gameplay_title(
-                    title, sizeof(title), "XPilot NG 4.7.3", NULL,
+                    title, sizeof(title), TITLE, NULL,
                     GAME_TRANSPORT_TCP));
     TEST_CHECK(!Transport_display_gameplay_title(
-                    title, sizeof(title), "XPilot NG 4.7.3", "game.example",
+                    title, sizeof(title), TITLE, "game.example",
                     (game_transport_t)-1));
     return 0;
 }

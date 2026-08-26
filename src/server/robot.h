@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
@@ -161,7 +161,7 @@ typedef struct robot_default_data {
 } robot_default_data_t;
 
 /*
- * The private robot instance data for the simple ng robot.
+ * The private robot instance data for the simple Infinity robot.
  */
 typedef struct robot_suibot_data {
     int         robot_lock;             /* lock mode */

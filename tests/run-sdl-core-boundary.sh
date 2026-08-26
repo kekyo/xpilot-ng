@@ -83,7 +83,7 @@ if test -z "$object_extension"; then
     fail "could not determine the production object extension"
 fi
 production_objects=$(awk -v extension="$object_extension" '
-    /^am_xpilot_ng_sdl_OBJECTS[[:space:]]*=/ {
+    /^am_xpilot_infinity_sdl_OBJECTS[[:space:]]*=/ {
         collecting = 1
         sub(/^[^=]*=[[:space:]]*/, "")
     }

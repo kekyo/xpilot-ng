@@ -32,7 +32,7 @@ test -n "$c23_flag" || fail "the configured compiler does not support C23"
 
 $XPILOT_C23_CC "$c23_flag" -fsyntax-only \
     -DHAVE_CONFIG_H \
-    -DCONF_DATADIR='"/usr/share/games/xpilot-ng/"' \
+    -DCONF_DATADIR='"/usr/share/games/xpilot-infinity/"' \
     -I"$XPILOT_C23_BUILD_DIR" \
     -I"$XPILOT_C23_SOURCE_DIR/src/server" \
     -I"$XPILOT_C23_BUILD_DIR/src/common" \

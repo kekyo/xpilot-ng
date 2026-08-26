@@ -89,7 +89,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-bin_PROGRAMS = xpilot-ng-x11$(EXEEXT)
+bin_PROGRAMS = xpilot-infinity-x11$(EXEEXT)
 subdir = src/client/x11
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -102,7 +102,7 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_xpilot_ng_x11_OBJECTS = about.$(OBJEXT) bitmaps.$(OBJEXT) \
+am_xpilot_infinity_x11_OBJECTS = about.$(OBJEXT) bitmaps.$(OBJEXT) \
 	colors.$(OBJEXT) configure.$(OBJEXT) dbuff.$(OBJEXT) \
 	guimap.$(OBJEXT) guiobjects.$(OBJEXT) join.$(OBJEXT) \
 	paintdata.$(OBJEXT) painthud.$(OBJEXT) paintradar.$(OBJEXT) \
@@ -110,8 +110,8 @@ am_xpilot_ng_x11_OBJECTS = about.$(OBJEXT) bitmaps.$(OBJEXT) \
 	widget.$(OBJEXT) xdefault.$(OBJEXT) xevent.$(OBJEXT) \
 	xeventhandlers.$(OBJEXT) x11_text.$(OBJEXT) xinit.$(OBJEXT) \
 	xpaint.$(OBJEXT) xpilot.$(OBJEXT)
-xpilot_ng_x11_OBJECTS = $(am_xpilot_ng_x11_OBJECTS)
-xpilot_ng_x11_DEPENDENCIES = $(top_builddir)/src/client/libxpclient.a \
+xpilot_infinity_x11_OBJECTS = $(am_xpilot_infinity_x11_OBJECTS)
+xpilot_infinity_x11_DEPENDENCIES = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -152,8 +152,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 =
-SOURCES = $(xpilot_ng_x11_SOURCES)
-DIST_SOURCES = $(xpilot_ng_x11_SOURCES)
+SOURCES = $(xpilot_infinity_x11_SOURCES)
+DIST_SOURCES = $(xpilot_infinity_x11_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -329,7 +329,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	@SDL3_CFLAGS@ @SDL3_TTF_CFLAGS@ @NATIVE_TEXT_CFLAGS@ \
 	@XRENDER_CFLAGS@
 
-xpilot_ng_x11_SOURCES = \
+xpilot_infinity_x11_SOURCES = \
 	about.c \
 	bitmaps.c bitmaps.h \
 	colors.c configure.c \
@@ -347,7 +347,7 @@ xpilot_ng_x11_SOURCES = \
 
 
 #xpilot_CFLAGS = @X_CFLAGS@
-xpilot_ng_x11_LDADD = $(top_builddir)/src/client/libxpclient.a $(top_builddir)/src/common/libxpcommon.a @X_LIBS@ @X_PRE_LIBS@ @X_EXTENSIONS_LIB@ @X_EXTRA_LIBS@ -lX11 @XRENDER_LIBS@ @SDL3_TTF_LIBS@ @SDL3_LIBS@ @NATIVE_TEXT_LIBS@ @SOUND_LIBS@
+xpilot_infinity_x11_LDADD = $(top_builddir)/src/client/libxpclient.a $(top_builddir)/src/common/libxpcommon.a @X_LIBS@ @X_PRE_LIBS@ @X_EXTENSIONS_LIB@ @X_EXTRA_LIBS@ -lX11 @XRENDER_LIBS@ @SDL3_TTF_LIBS@ @SDL3_LIBS@ @NATIVE_TEXT_LIBS@ @SOUND_LIBS@
 all: all-am
 
 .SUFFIXES:
@@ -424,9 +424,9 @@ uninstall-binPROGRAMS:
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
 
-xpilot-ng-x11$(EXEEXT): $(xpilot_ng_x11_OBJECTS) $(xpilot_ng_x11_DEPENDENCIES) $(EXTRA_xpilot_ng_x11_DEPENDENCIES)
-	@rm -f xpilot-ng-x11$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(xpilot_ng_x11_OBJECTS) $(xpilot_ng_x11_LDADD) $(LIBS)
+xpilot-infinity-x11$(EXEEXT): $(xpilot_infinity_x11_OBJECTS) $(xpilot_infinity_x11_DEPENDENCIES) $(EXTRA_xpilot_infinity_x11_DEPENDENCIES)
+	@rm -f xpilot-infinity-x11$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(xpilot_infinity_x11_OBJECTS) $(xpilot_infinity_x11_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

@@ -1,5 +1,5 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
@@ -112,9 +112,9 @@ static inline double SHOT_MULT(object_t *obj)
 }
 
 #ifndef	_WINDOWS
-#define	APPNAME	"xpilot-ng-server"
+#define	APPNAME	"xpilot-infinity-server"
 #else
-#define	APPNAME	"XPilotNGServer"
+#define	APPNAME	"XPilotInfinityServer"
 #endif
 
 

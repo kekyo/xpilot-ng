@@ -189,56 +189,56 @@ static int check_meta_versions(void)
     game_transport_t gameplay = GAME_TRANSPORT_UDP;
 
     TEST_CHECK(Game_transport_format_meta_version(
-                   version, sizeof(version), "4.7.3ng",
+                   version, sizeof(version), "4.7.3infinity",
                    GAME_TRANSPORT_TCP, GAME_TRANSPORT_UDP));
-    TEST_CHECK(strcmp(version, "4.7.3ng+ct=tcp+gt=udp") == 0);
+    TEST_CHECK(strcmp(version, "4.7.3infinity+ct=tcp+gt=udp") == 0);
     TEST_CHECK(Game_transport_parse_meta_version(
                    version, &contact, &gameplay, &base_length));
     TEST_CHECK(contact == GAME_TRANSPORT_TCP);
     TEST_CHECK(gameplay == GAME_TRANSPORT_UDP);
-    TEST_CHECK(base_length == strlen("4.7.3ng"));
+    TEST_CHECK(base_length == strlen("4.7.3infinity"));
 
     TEST_CHECK(Game_transport_format_meta_version(
-                   version, sizeof(version), "4.7.3ng",
+                   version, sizeof(version), "4.7.3infinity",
                    GAME_TRANSPORT_UDP, GAME_TRANSPORT_TCP));
-    TEST_CHECK(strcmp(version, "4.7.3ng+ct=udp+gt=tcp") == 0);
+    TEST_CHECK(strcmp(version, "4.7.3infinity+ct=udp+gt=tcp") == 0);
     TEST_CHECK(Game_transport_parse_meta_version(
                    version, &contact, &gameplay, &base_length));
     TEST_CHECK(contact == GAME_TRANSPORT_UDP);
     TEST_CHECK(gameplay == GAME_TRANSPORT_TCP);
 
     TEST_CHECK(Game_transport_format_meta_version(
-                   version, sizeof(version), "4.7.3ng",
+                   version, sizeof(version), "4.7.3infinity",
                    GAME_TRANSPORT_WEBSOCKET,
                    GAME_TRANSPORT_WEBSOCKET));
     TEST_CHECK(strcmp(version,
-                      "4.7.3ng+ct=websocket+gt=websocket") == 0);
+                      "4.7.3infinity+ct=websocket+gt=websocket") == 0);
     TEST_CHECK(Game_transport_parse_meta_version(
                    version, &contact, &gameplay, &base_length));
     TEST_CHECK(contact == GAME_TRANSPORT_WEBSOCKET);
     TEST_CHECK(gameplay == GAME_TRANSPORT_WEBSOCKET);
 
     TEST_CHECK(!Game_transport_format_meta_version(
-                    version, 8, "4.7.3ng",
+                    version, 8, "4.7.3infinity",
                     GAME_TRANSPORT_TCP, GAME_TRANSPORT_TCP));
     TEST_CHECK(!Game_transport_format_meta_version(
-                    version, sizeof(version), "4.7.3ng",
+                    version, sizeof(version), "4.7.3infinity",
                     (game_transport_t)-1, GAME_TRANSPORT_TCP));
     TEST_CHECK(!Game_transport_format_meta_version(
-                    version, sizeof(version), "4.7.3ng",
+                    version, sizeof(version), "4.7.3infinity",
                     GAME_TRANSPORT_WEBSOCKET, GAME_TRANSPORT_TCP));
     TEST_CHECK(!Game_transport_parse_meta_version(
-                    "4.7.3ng", &contact, &gameplay, &base_length));
+                    "4.7.3infinity", &contact, &gameplay, &base_length));
     TEST_CHECK(!Game_transport_parse_meta_version(
-                    "4.7.3ng+ct=tcp+gt=quic",
+                    "4.7.3infinity+ct=tcp+gt=quic",
                     &contact, &gameplay, &base_length));
     TEST_CHECK(!Game_transport_parse_meta_version(
-                    "4.7.3ng+ct=websocket+gt=tcp",
+                    "4.7.3infinity+ct=websocket+gt=tcp",
                     &contact, &gameplay, &base_length));
     TEST_CHECK(!Game_transport_parse_meta_version(
                     NULL, &contact, &gameplay, &base_length));
     TEST_CHECK(!Game_transport_parse_meta_version(
-                    "4.7.3ng+ct=tcp+gt=tcp", NULL,
+                    "4.7.3infinity+ct=tcp+gt=tcp", NULL,
                     &gameplay, &base_length));
     return 0;
 }

@@ -47,8 +47,8 @@ printf 'fixture sound map\n' > "$source_dir/lib/sound/sounds.txt"
 printf 'fixture license\n' > "$source_dir/COPYING"
 printf 'fixture OpenAL license\n' > "$source_dir/vendor/openal-soft/COPYING"
 printf 'fixture freealut license\n' > "$source_dir/vendor/freealut/COPYING"
-printf 'fixture server\n' > "$build_dir/src/server/xpilot-ng-server.exe"
-printf 'fixture client\n' > "$build_dir/src/client/sdl/xpilot-ng-sdl.exe"
+printf 'fixture server\n' > "$build_dir/src/server/xpilot-infinity-server.exe"
+printf 'fixture client\n' > "$build_dir/src/client/sdl/xpilot-infinity-sdl.exe"
 printf 'fixture OpenAL\n' > "$dependency_prefix/bin/OpenAL32.dll"
 printf 'fixture freealut\n' > "$dependency_prefix/bin/alut.dll"
 
@@ -59,8 +59,8 @@ printf 'fixture freealut\n' > "$dependency_prefix/bin/alut.dll"
     --output "$package_dir"
 
 for expected_file in \
-    "$package_dir/xpilot-ng-server.exe" \
-    "$package_dir/xpilot-ng-sdl.exe" \
+    "$package_dir/xpilot-infinity-server.exe" \
+    "$package_dir/xpilot-infinity-sdl.exe" \
     "$package_dir/OpenAL32.dll" \
     "$package_dir/alut.dll" \
     "$package_dir/licenses/OpenAL-Soft-COPYING" \

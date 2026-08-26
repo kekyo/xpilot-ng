@@ -83,8 +83,8 @@ try {
 
   await mkdir(join(packageDirectory, 'lib', 'maps'), { recursive: true });
   await writeFile(join(packageDirectory, 'COPYING'), 'license text');
-  await writeFile(join(packageDirectory, 'xpilot-ng-server.exe'), 'server');
-  await writeFile(join(packageDirectory, 'xpilot-ng-sdl.exe'), 'client');
+  await writeFile(join(packageDirectory, 'xpilot-infinity-server.exe'), 'server');
+  await writeFile(join(packageDirectory, 'xpilot-infinity-sdl.exe'), 'client');
   await writeFile(join(packageDirectory, 'lib.txt'), 'top-level data');
   await writeFile(join(packageDirectory, 'lib', 'defaults.txt'), 'defaults');
   await writeFile(join(packageDirectory, 'lib', 'maps', 'ndh.xp2'), 'map');
@@ -110,12 +110,12 @@ try {
     'lib.txt',
     'lib/defaults.txt',
     'lib/maps/ndh.xp2',
-    'xpilot-ng-sdl.exe',
-    'xpilot-ng-server.exe',
+    'xpilot-infinity-sdl.exe',
+    'xpilot-infinity-server.exe',
   ]);
   assert.equal(entries.get('COPYING').toString('utf8'), 'license text');
   assert.equal(entries.get('lib/maps/ndh.xp2').toString('utf8'), 'map');
-  assert.equal(entries.get('xpilot-ng-sdl.exe').toString('utf8'), 'client');
+  assert.equal(entries.get('xpilot-infinity-sdl.exe').toString('utf8'), 'client');
 
   process.stdout.write('Deterministic Windows archive generation passed\n');
 } finally {

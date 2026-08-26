@@ -1,5 +1,5 @@
 /* 
- * XPilotNG, an XPilot-like multiplayer space war game.
+ * XPilot Infinity, an XPilot-like multiplayer space war game.
  *
  * Copyright (C) 1991-2005 by
  *
@@ -30,7 +30,7 @@
 #ifndef	VERSION_H
 #define	VERSION_H
 
-#define TITLE			"XPilot NG 4.7.3"
+#define TITLE			"XPilot Infinity 4.7.3"
 #ifndef VERSION
 #  define VERSION		"4.7.3"
 #endif

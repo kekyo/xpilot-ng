@@ -1,14 +1,14 @@
-Source: xpilot-ng
+Source: xpilot-infinity
 Section: games
 Priority: extra
 Maintainer: Unofficial Debian XPilot <xpilot-hacks@lists.sourceforge.net>
 Build-Depends: debhelper (>= 4.0.0), pkg-config, libx11-dev, libxext-dev, libsm-dev, libice-dev, zlib1g-dev, libexpat1-dev, libsdl3-dev (>= 3.2.0), libsdl3-image-dev (>= 3.2.0), libsdl3-ttf-dev (>= 3.2.0), libgl-dev, libopenal-dev, libalut-dev
 Standards-Version: 3.6.2
 
-Package: xpilot-ng
+Package: xpilot-infinity
 Architecture: all
-Depends: xpilot-ng-client-x11 (= ${Source-Version}), xpilot-ng-client-sdl (= ${Source-Version}), xpilot-ng-server (= ${Source-Version}), xpilot-ng-utils (= ${Source-Version})
-Description: Multi-player tactical game for X (NG version)
+Depends: xpilot-infinity-client-x11 (= ${Source-Version}), xpilot-infinity-client-sdl (= ${Source-Version}), xpilot-infinity-server (= ${Source-Version}), xpilot-infinity-utils (= ${Source-Version})
+Description: Multi-player tactical game for X (Infinity version)
  XPilot is a multi-player tactical manoeuvring game for X.  Each
  player controls their own fighter equipped with a variety of weapons
  and power-ups.  Players compete as teams or as individuals;  the
@@ -19,13 +19,13 @@ Description: Multi-player tactical game for X (NG version)
  This package is a complete XPilot installation, including the
  XPilot client, server and utilities.
  .
- This package is for the "Next Generation" (NG) fork at http://xpilot.sf.net
+ This package is for the XPilot Infinity fork at http://xpilot.sf.net
 
-Package: xpilot-ng-common
+Package: xpilot-infinity-common
 Architecture: all
 Depends: ${misc:Depends}, adduser (>=3.34)
-Suggests: xpilot-ng-server, xpilot-ng-utils, xpilot-ng-client-x11, xpilot-ng-client-sdl
-Description: Common files for XPilot NG
+Suggests: xpilot-infinity-server, xpilot-infinity-utils, xpilot-infinity-client-x11, xpilot-infinity-client-sdl
+Description: Common files for XPilot Infinity
  XPilot is a multi-player tactical manoeuvring game for X.  Each
  player controls their own fighter equipped with a variety of weapons
  and power-ups.  Players compete as teams or as individuals;  the
@@ -36,12 +36,12 @@ Description: Common files for XPilot NG
  This package contains the common files for the server, clients and
  utilities including both data and documentation.
  .
- This package is for the "Next Generation" (NG) fork at http://xpilot.sf.net
+ This package is for the XPilot Infinity fork at http://xpilot.sf.net
 
-Package: xpilot-ng-client-x11
+Package: xpilot-infinity-client-x11
 Architecture: any
-Depends: ${shlibs:Depends}, xpilot-ng-common (= ${Source-Version})
-Description: Client for XPilot NG
+Depends: ${shlibs:Depends}, xpilot-infinity-common (= ${Source-Version})
+Description: Client for XPilot Infinity
  XPilot is a multi-player tactical manoeuvring game for X.  Each
  player controls their own fighter equipped with a variety of weapons
  and power-ups.  Players compete as teams or as individuals;  the
@@ -53,12 +53,12 @@ Description: Client for XPilot NG
  Because it is X11-based, it is has a very basic, clean look-and-feel,
  and is suitable for use on older, less powerful systems.
  .
- This package is for the "Next Generation" (NG) fork at http://xpilot.sf.net
+ This package is for the XPilot Infinity fork at http://xpilot.sf.net
 
-Package: xpilot-ng-client-sdl
+Package: xpilot-infinity-client-sdl
 Architecture: any
-Depends: ${shlibs:Depends}, xpilot-ng-common (= ${Source-Version})
-Description: Client for XPilot NG
+Depends: ${shlibs:Depends}, xpilot-infinity-common (= ${Source-Version})
+Description: Client for XPilot Infinity
  XPilot is a multi-player tactical manoeuvring game for X.  Each
  player controls their own fighter equipped with a variety of weapons
  and power-ups.  Players compete as teams or as individuals;  the
@@ -70,12 +70,12 @@ Description: Client for XPilot NG
  suitable for use on modern systems with sufficient resources to run SDL 
  and GL.
  .
- This package is for the "Next Generation" (NG) fork at http://xpilot.sf.net
+ This package is for the XPilot Infinity fork at http://xpilot.sf.net
 
-Package: xpilot-ng-utils
+Package: xpilot-infinity-utils
 Architecture: any
-Depends: ${shlibs:Depends}, xpilot-ng-common (= ${Source-Version})
-Description: Utilities for XPilot NG
+Depends: ${shlibs:Depends}, xpilot-infinity-common (= ${Source-Version})
+Description: Utilities for XPilot Infinity
  XPilot is a multi-player tactical manoeuvring game for X.  Each
  player controls their own fighter equipped with a variety of weapons
  and power-ups.  Players compete as teams or as individuals;  the
@@ -86,12 +86,12 @@ Description: Utilities for XPilot NG
  This package contains utilities for making XPilot maps and playing
  back recordings of XPilot games.
  .
- This package is for the "Next Generation" (NG) fork at http://xpilot.sf.net
+ This package is for the XPilot Infinity fork at http://xpilot.sf.net
 
-Package: xpilot-ng-server
+Package: xpilot-infinity-server
 Architecture: any
-Depends: ${shlibs:Depends}, xpilot-ng-common (= ${Source-Version})
-Description: Server for hosting XPilot NG games
+Depends: ${shlibs:Depends}, xpilot-infinity-common (= ${Source-Version})
+Description: Server for hosting XPilot Infinity games
  XPilot is a multi-player tactical manoeuvring game for X.  Each
  player controls their own fighter equipped with a variety of weapons
  and power-ups.  Players compete as teams or as individuals;  the
@@ -102,4 +102,4 @@ Description: Server for hosting XPilot NG games
  This package contains the server daemon you need in order to host
  your own game of XPilot.
  .
- This package is for the "Next Generation" (NG) fork at http://xpilot.sf.net
+ This package is for the XPilot Infinity fork at http://xpilot.sf.net
