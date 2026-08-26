@@ -52,3 +52,26 @@ Artifacts are written as:
 ```text
 artifacts/deb/xpilot-ng-<version>-<distro>-<release>-<deb-arch>.deb
 ```
+
+## Windows archives
+
+The Linux-hosted MinGW build creates separate 32-bit and 64-bit Windows ZIP
+archives because both packages use the same executable names:
+
+```sh
+./build.sh --target windows --arch all --test
+```
+
+The ZIP files contain the SDL client, dedicated server, game data, and license
+from the corresponding `windows-package` directory.  Entries are sorted and
+assigned a fixed timestamp so the result is reproducible for identical input.
+Artifacts are written as:
+
+```text
+artifacts/windows/xpilot-ng-<version>-windows-x86.zip
+artifacts/windows/xpilot-ng-<version>-windows-x86_64.zip
+```
+
+Use `--artifact-root` to select another output directory and
+`--package-version` to override the version derived by `screw-up`.  The full
+cross-build and Wine prerequisites are documented in `doc/WINDOWS.md`.

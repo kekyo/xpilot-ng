@@ -12,6 +12,10 @@ test -n "${XPILOT_BUILD_WRAPPER:-}" \
     || fail "XPILOT_BUILD_WRAPPER is not set"
 test -x "$XPILOT_BUILD_WRAPPER" \
     || fail "build wrapper is unavailable: $XPILOT_BUILD_WRAPPER"
+test -n "${XPILOT_WINDOWS_ARCHIVER:-}" \
+    || fail "XPILOT_WINDOWS_ARCHIVER is not set"
+test -f "$XPILOT_WINDOWS_ARCHIVER" \
+    || fail "Windows archiver is unavailable: $XPILOT_WINDOWS_ARCHIVER"
 
 wrapper_test_dir=$(mktemp -d \
     "${TMPDIR:-/tmp}/xpilot-build-wrapper-test.XXXXXX")
@@ -36,11 +40,14 @@ fixture_output="$wrapper_test_dir/output"
 fixture_log="$wrapper_test_dir/invocations.log"
 fixture_toolchain="$wrapper_test_dir/toolchain.cmake"
 fixture_install="$wrapper_test_dir/install"
+fixture_artifacts="$wrapper_test_dir/artifacts"
 
 mkdir -p "$fixture_source/vendor/sdl3/SDL/build-scripts" \
-    "$fixture_source/vendor/mingw" "$fixture_source/tests" \
+    "$fixture_source/vendor/mingw" "$fixture_source/config" \
+    "$fixture_source/tests" \
     "$fixture_source/lib/maps" "$fixture_tools"
 cp "$XPILOT_BUILD_WRAPPER" "$fixture_source/build.sh"
+cp "$XPILOT_WINDOWS_ARCHIVER" "$fixture_source/config/package-windows.mjs"
 chmod +x "$fixture_source/build.sh"
 : > "$fixture_toolchain"
 : > "$fixture_source/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-i686.cmake"
@@ -148,7 +155,7 @@ case "$(pwd)" in
         : > tests/test-socket-io.exe
         : > tests/test-sdl-versions.exe
         ;;
-    */output/windows/x86|*/output/windows/x86_64)
+    */windows/x86|*/windows/x86_64)
         case " $* " in
             *" windows-package "*)
                 mkdir -p package/lib/maps
@@ -226,6 +233,7 @@ XPILOT_BUILD_TEST_LOG=$fixture_log \
 PATH="$fixture_tools:$PATH" \
     "$fixture_source/build.sh" \
     --build-root "$default_output" \
+    --package-version 4.7.99 \
     --jobs 1
 
 for target_build_dir in \
@@ -236,6 +244,10 @@ do
     test "$(grep -Fxc "configure.cwd=$target_build_dir" "$fixture_log")" -eq 1 \
         || fail "default build did not configure every target exactly once: $target_build_dir"
 done
+for architecture in x86 x86_64; do
+    test -f "$fixture_source/artifacts/windows/xpilot-ng-4.7.99-windows-$architecture.zip" \
+        || fail "default build did not create the $architecture archive"
+done
 
 : > "$fixture_log"
 XPILOT_BUILD_TEST_LOG=$fixture_log \
@@ -245,6 +257,8 @@ PATH="$fixture_tools:$PATH" \
     --arch all \
     --test \
     --build-root "$fixture_output" \
+    --artifact-root "$fixture_artifacts" \
+    --package-version 4.7.99 \
     --jobs 2
 
 for architecture in x86 x86_64; do
@@ -300,6 +314,8 @@ for architecture in x86 x86_64; do
         || fail "$architecture SDL client was not packaged"
     test -f "$architecture_root/package/lib/maps/ndh.xp2" \
         || fail "$architecture game data was not packaged"
+    test -f "$fixture_artifacts/xpilot-ng-4.7.99-windows-$architecture.zip" \
+        || fail "$architecture distribution archive was not created"
 done
 
 if grep -q '^wine\.arg=' "$fixture_log"; then

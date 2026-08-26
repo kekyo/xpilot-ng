@@ -9,7 +9,8 @@ SUBDIRS += tests
 endif
 dist_pkgdata_DATA = mapconvert.py
 EXTRA_DIST = build.sh build_package.sh build_package_all.sh prereq.sh \
-	scripts/build_linux_dist_container.sh config/package-windows.sh
+	scripts/build_linux_dist_container.sh config/package-windows.sh \
+	config/package-windows.mjs
 
 if COND_WINDOWS
 MINGW_TEST_JOBS =
