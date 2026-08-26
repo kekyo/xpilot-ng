@@ -45,6 +45,24 @@ for required_file in "$client" "$server" "$map" "$contact_target_probe"; do
     fi
 done
 
+product_name='XPilot Infinity'
+server_title=$("$server" -version \
+    | tr -d '\r' \
+    | sed -n '/^XPilot Infinity /p' \
+    | tail -n 1 \
+    || true)
+case "$server_title" in
+    "$product_name "*) build_version=${server_title#"$product_name "} ;;
+    *)
+        echo "Unexpected server title: $server_title" >&2
+        exit 1
+        ;;
+esac
+test -n "$build_version" || {
+    echo "The server version is empty" >&2
+    exit 1
+}
+
 runtime_dir=$(mktemp -d "${TMPDIR:-/tmp}/xpilot-sdl3-e2e.XXXXXX")
 meta_pid=
 meta_fixture_pid=
@@ -215,7 +233,7 @@ meta_tcp_transport_reported()
     test -s "$runtime_dir/meta-report-fixture.received" \
         && grep -q "^source-port $meta_report_contact_port$" \
             "$runtime_dir/meta-report-fixture.received" \
-        && grep -q '^add version 4.7.3infinity+ct=tcp+gt=udp$' \
+        && grep -Fqx "add version ${build_version}infinity+ct=tcp+gt=udp" \
             "$runtime_dir/meta-report-fixture.received"
 }
 
@@ -338,7 +356,7 @@ game_window_transport_visible()
     game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
 	|| true)
     test "$game_window_title" = \
-	"XPilot Infinity 4.7.3 - 127.0.0.1 "\
+	"$product_name $build_version - 127.0.0.1 "\
 "[Gameplay: $expected_gameplay_transport]"
 }
 
@@ -347,7 +365,7 @@ x11_local_game_window_transport_visible()
     game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
 	|| true)
     case "$game_window_title" in
-	"XPilot Infinity 4.7.3 - "?*"[Gameplay: $expected_gameplay_transport]")
+	"$product_name $build_version - "?*"[Gameplay: $expected_gameplay_transport]")
 	    return 0
 	    ;;
     esac

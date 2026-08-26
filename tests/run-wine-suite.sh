@@ -105,6 +105,14 @@ case "$wine_prefix" in
     *) fail "--wine-prefix must be an absolute path" ;;
 esac
 
+version_file="$build_dir/src/common/version.txt"
+test -r "$version_file" \
+    || fail "build version is unavailable: $version_file"
+build_version=$(sed -n '1p' "$version_file")
+case "$build_version" in
+    ''|*[!0-9A-Za-z.+:~-]*) fail "invalid build version: $build_version" ;;
+esac
+
 make_program=${MAKE:-make}
 wine_program=${WINE:-wine}
 wineboot_program=${WINEBOOT:-wineboot}
@@ -303,7 +311,7 @@ game_window_transport_visible()
     game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
 	|| true)
     test "$game_window_title" = \
-	"XPilot Infinity 4.7.3 - 127.0.0.1 "\
+	"XPilot Infinity $build_version - 127.0.0.1 "\
 "[Gameplay: $expected_gameplay_transport]"
 }
 
@@ -347,7 +355,7 @@ meta_tcp_transport_reported()
     test -s "$runtime_dir/meta-report-fixture.received" \
         && grep -q "^source-port $meta_report_contact_port$" \
             "$runtime_dir/meta-report-fixture.received" \
-        && grep -q '^add version 4.7.3infinity+ct=tcp+gt=udp$' \
+        && grep -Fqx "add version ${build_version}infinity+ct=tcp+gt=udp" \
             "$runtime_dir/meta-report-fixture.received"
 }
 
@@ -589,6 +597,11 @@ run_gameplay_case()
 	x86_64:websocket:websocket) client_name=W64WS ;;
     esac
 
+    # Keep Wine's process-wide audio and socket state from leaking between
+    # gameplay cases.  Sound is not part of these transport/UI assertions.
+    stop_wine_server \
+	|| fail "Wine server did not stop before $transport_case"
+
     (
         cd "$runtime_package"
         case "$contact_transport:$gameplay_transport" in
@@ -628,26 +641,30 @@ run_gameplay_case()
         case "$contact_transport:$gameplay_transport" in
         tcp:tcp)
             exec "$wine_program" ./xpilot-infinity-sdl.exe \
-                -geometry 800x600 -join -name "$client_name" \
+                -geometry 800x600 -join -sound false \
+		-name "$client_name" \
                 -user "$client_user" -messagesToStdout 2 \
                 "tcp://127.0.0.1:$contact_port"
             ;;
         websocket:websocket)
             exec "$wine_program" ./xpilot-infinity-sdl.exe \
-                -geometry 800x600 -join -name "$client_name" \
+                -geometry 800x600 -join -sound false \
+		-name "$client_name" \
                 -user "$client_user" -messagesToStdout 2 \
                 "ws://127.0.0.1:$contact_port"
             ;;
         udp:udp)
             exec "$wine_program" ./xpilot-infinity-sdl.exe \
-                -geometry 800x600 -join -name "$client_name" \
+                -geometry 800x600 -join -sound false \
+		-name "$client_name" \
                 -user "$client_user" -messagesToStdout 2 \
                 -contactTransport tcp -gameTransport tcp \
                 "udp://127.0.0.1:$contact_port"
             ;;
         *)
             exec "$wine_program" ./xpilot-infinity-sdl.exe \
-                -geometry 800x600 -join -port "$contact_port" \
+                -geometry 800x600 -join -sound false \
+		-port "$contact_port" \
                 -name "$client_name" -user "$client_user" \
                 -messagesToStdout 2 \
                 -contactTransport "$contact_transport" \

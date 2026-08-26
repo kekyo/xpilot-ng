@@ -668,7 +668,7 @@ AC_CONFIG_FILES([ \
 	lib/sound/Makefile \
 	src/Makefile \
 	src/common/Makefile \
-	src/common/version.h \
+	src/common/version.h.template:src/common/version.h.in \
 	src/client/Makefile \
 	src/client/items/Makefile \
 	src/client/sdl/Makefile \

@@ -30,10 +30,12 @@
 #ifndef	VERSION_H
 #define	VERSION_H
 
-#define TITLE			"@PACKAGE_STRING@"
-#ifndef VERSION
-#  define VERSION		"@VERSION@"
+#define XPILOT_PRODUCT_NAME	"@PACKAGE_NAME@"
+#ifdef VERSION
+#  undef VERSION
 #endif
+#define VERSION			"__XPILOT_BUILD_VERSION__"
+#define TITLE			XPILOT_PRODUCT_NAME " " VERSION
 #define AUTHORS			"@XP_AUTHORS@"
 #define COPYRIGHT		"@XP_COPYRIGHT@"
 

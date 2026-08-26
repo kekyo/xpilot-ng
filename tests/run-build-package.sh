@@ -136,6 +136,8 @@ for argument do
         continue
     fi
     if test "$previous" = environment; then
+        printf 'environment=%s\n' "$argument" \
+            >> "$XPILOT_PACKAGE_CONTAINER_LOG"
         case "$argument" in
             XPILOT_WORK_DIR=*) work_dir=${argument#*=} ;;
         esac
@@ -199,6 +201,7 @@ build_deb_package debian bookworm x86_64 linux/amd64
 assert_contains "$fixture_log" \
     "exists=localhost/xpilot-infinity-pack-deb-debian-bookworm-x86_64:latest"
 assert_contains "$fixture_log" "platform=linux/amd64"
+assert_contains "$fixture_log" "environment=XPILOT_PACKAGE_VERSION=4.7.99"
 assert_contains "$fixture_log" \
     "run-image=localhost/xpilot-infinity-pack-deb-debian-bookworm-x86_64:latest"
 assert_contains "$fixture_dpkg_log" \

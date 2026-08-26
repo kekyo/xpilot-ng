@@ -1843,6 +1843,8 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_SDL_BINARY; \
 	XPILOT_BUILD_WRAPPER='$(abs_top_srcdir)/build.sh'; \
 	export XPILOT_BUILD_WRAPPER; \
+	XPILOT_VERSION_RESOLVER='$(abs_top_srcdir)/config/resolve-version.sh'; \
+	export XPILOT_VERSION_RESOLVER; \
 	XPILOT_BUILD_PACKAGE='$(abs_top_srcdir)/build_package.sh'; \
 	export XPILOT_BUILD_PACKAGE; \
 	XPILOT_WINDOWS_ARCHIVER='$(abs_top_srcdir)/config/package-windows.mjs'; \

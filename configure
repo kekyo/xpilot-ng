@@ -8531,7 +8531,7 @@ if test x$mingw_vendored_deps = xyes; then
 	LIBS="-lexpat -lz -lm $LIBS"
 fi
 
-ac_config_files="$ac_config_files Makefile README contrib/Makefile contrib/xpicc/Makefile doc/Makefile doc/man/Makefile lib/Makefile lib/fonts/Makefile lib/maps/Makefile lib/textures/Makefile lib/sound/Makefile src/Makefile src/common/Makefile src/common/version.h src/client/Makefile src/client/items/Makefile src/client/sdl/Makefile src/client/x11/Makefile src/server/Makefile src/replay/Makefile src/replay/tools/Makefile src/mapedit/Makefile tests/Makefile vendor/mingw/Makefile"
+ac_config_files="$ac_config_files Makefile README contrib/Makefile contrib/xpicc/Makefile doc/Makefile doc/man/Makefile lib/Makefile lib/fonts/Makefile lib/maps/Makefile lib/textures/Makefile lib/sound/Makefile src/Makefile src/common/Makefile src/common/version.h.template:src/common/version.h.in src/client/Makefile src/client/items/Makefile src/client/sdl/Makefile src/client/x11/Makefile src/server/Makefile src/replay/Makefile src/replay/tools/Makefile src/mapedit/Makefile tests/Makefile vendor/mingw/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -9303,7 +9303,7 @@ do
     "lib/sound/Makefile") CONFIG_FILES="$CONFIG_FILES lib/sound/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "src/common/Makefile") CONFIG_FILES="$CONFIG_FILES src/common/Makefile" ;;
-    "src/common/version.h") CONFIG_FILES="$CONFIG_FILES src/common/version.h" ;;
+    "src/common/version.h.template") CONFIG_FILES="$CONFIG_FILES src/common/version.h.template:src/common/version.h.in" ;;
     "src/client/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/Makefile" ;;
     "src/client/items/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/items/Makefile" ;;
     "src/client/sdl/Makefile") CONFIG_FILES="$CONFIG_FILES src/client/sdl/Makefile" ;;

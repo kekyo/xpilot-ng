@@ -12,6 +12,10 @@ test -n "${XPILOT_BUILD_WRAPPER:-}" \
     || fail "XPILOT_BUILD_WRAPPER is not set"
 test -x "$XPILOT_BUILD_WRAPPER" \
     || fail "build wrapper is unavailable: $XPILOT_BUILD_WRAPPER"
+test -n "${XPILOT_VERSION_RESOLVER:-}" \
+    || fail "XPILOT_VERSION_RESOLVER is not set"
+test -x "$XPILOT_VERSION_RESOLVER" \
+    || fail "version resolver is unavailable: $XPILOT_VERSION_RESOLVER"
 test -n "${XPILOT_WINDOWS_ARCHIVER:-}" \
     || fail "XPILOT_WINDOWS_ARCHIVER is not set"
 test -f "$XPILOT_WINDOWS_ARCHIVER" \
@@ -47,8 +51,10 @@ mkdir -p "$fixture_source/vendor/sdl3/SDL/build-scripts" \
     "$fixture_source/tests" \
     "$fixture_source/lib/maps" "$fixture_tools"
 cp "$XPILOT_BUILD_WRAPPER" "$fixture_source/build.sh"
+cp "$XPILOT_VERSION_RESOLVER" "$fixture_source/config/resolve-version.sh"
 cp "$XPILOT_WINDOWS_ARCHIVER" "$fixture_source/config/package-windows.mjs"
-chmod +x "$fixture_source/build.sh"
+chmod +x "$fixture_source/build.sh" \
+    "$fixture_source/config/resolve-version.sh"
 : > "$fixture_toolchain"
 : > "$fixture_source/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-i686.cmake"
 : > "$fixture_source/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-x86_64.cmake"
@@ -183,6 +189,7 @@ chmod +x "$fixture_source/vendor/sdl3/build.sh" \
     "$fixture_source/configure" "$fixture_tools/make"
 
 XPILOT_BUILD_TEST_LOG=$fixture_log \
+XPILOT_PACKAGE_VERSION=4.7.98 \
 PATH="$fixture_tools:$PATH" \
     "$fixture_source/build.sh" \
     --target native \
@@ -226,6 +233,8 @@ grep -Fx "make.cwd=$fixture_output/xpilot-infinity" "$fixture_log" >/dev/null \
     || fail "XPilot Infinity was not built out of tree"
 grep -Fx "make.arg=-j3" "$fixture_log" >/dev/null \
     || fail "parallel build count was not passed to make"
+grep -Fx "make.arg=XPILOT_VERSION=4.7.98" "$fixture_log" >/dev/null \
+    || fail "the resolved native version was not passed to make"
 
 : > "$fixture_log"
 default_output="$wrapper_test_dir/default-output"
@@ -305,6 +314,8 @@ for architecture in x86 x86_64; do
         || fail "$architecture parallel build was not requested"
     grep -Fx 'make.arg=windows-package' "$fixture_log" >/dev/null \
         || fail "$architecture package target was not requested"
+    grep -Fx 'make.arg=XPILOT_VERSION=4.7.99' "$fixture_log" >/dev/null \
+        || fail "$architecture version was not passed to make"
     grep -Fx 'make.arg=check' "$fixture_log" >/dev/null \
         || fail "$architecture check target was not requested"
 

@@ -1,5 +1,7 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
+SCREW_UP = screw-up
+
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_srcdir)/vendor/wslay/lib/includes \
 	-I$(top_srcdir)/vendor/wslay/lib \
@@ -11,6 +13,33 @@ AM_CPPFLAGS += -DHAVE_WINSOCK2_H
 endif
 
 noinst_LIBRARIES = libxpcommon.a
+BUILT_SOURCES = version.h
+CLEANFILES = version.h version.txt
+
+.PHONY: version-force
+
+version-force:
+
+version.txt: version-force $(top_srcdir)/config/resolve-version.sh
+	@resolved_version=`XPILOT_VERSION='$(XPILOT_VERSION)' \
+		SCREW_UP='$(SCREW_UP)' \
+		$(top_srcdir)/config/resolve-version.sh` || exit $$?; \
+	if test ! -f $@ \
+		|| test "x$$resolved_version" != "x`cat $@`"; then \
+		printf '%s\n' "$$resolved_version" > $@.tmp; \
+		mv -f $@.tmp $@; \
+	fi
+
+version.h: version.h.template version.txt
+	@resolved_version=`cat version.txt`; \
+	sed "s/__XPILOT_BUILD_VERSION__/$$resolved_version/g" \
+		version.h.template > $@.tmp; \
+	if test -f $@ && cmp -s $@.tmp $@; then \
+		rm -f $@.tmp; \
+	else \
+		mv -f $@.tmp $@; \
+	fi
+
 libxpcommon_a_SOURCES = \
 	arraylist.c arraylist.h astershape.h audio.h \
 	bit.h \

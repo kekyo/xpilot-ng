@@ -98,7 +98,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
 mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES = version.h
+CONFIG_CLEAN_FILES = version.h.template
 CONFIG_CLEAN_VPATH_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
 AR = ar
@@ -348,12 +348,15 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
+SCREW_UP = screw-up
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_srcdir)/vendor/wslay/lib/includes \
 	-I$(top_srcdir)/vendor/wslay/lib \
 	-I$(top_srcdir)/vendor/mtwister -DWSLAY_VERSION=\"1.1.1\" \
 	$(am__append_1)
 noinst_LIBRARIES = libxpcommon.a
+BUILT_SOURCES = version.h
+CLEANFILES = version.h version.txt
 libxpcommon_a_SOURCES = \
 	arraylist.c arraylist.h astershape.h audio.h \
 	bit.h \
@@ -397,7 +400,8 @@ libxpcommon_a_SOURCES = \
 EXTRA_DIST = $(top_srcdir)/vendor/wslay/COPYING \
 	$(top_srcdir)/vendor/mtwister/README.md
 
-all: all-am
+all: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
 .SUFFIXES: .c .o .obj
@@ -430,7 +434,7 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-version.h: $(top_builddir)/config.status $(srcdir)/version.h.in
+version.h.template: $(top_builddir)/config.status $(srcdir)/version.h.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
 clean-noinstLIBRARIES:
@@ -615,11 +619,14 @@ distdir-am: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: check-am
+check: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) check-am
 all-am: Makefile $(LIBRARIES)
 installdirs:
-install: install-am
-install-exec: install-exec-am
+install: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) install-am
+install-exec: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
 
@@ -640,6 +647,7 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -652,6 +660,7 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-generic clean-noinstLIBRARIES mostlyclean-am
@@ -781,7 +790,7 @@ ps-am:
 
 uninstall-am:
 
-.MAKE: install-am install-strip
+.MAKE: all check install install-am install-exec install-strip
 
 .PHONY: CTAGS GTAGS TAGS all all-am am--depfiles check check-am clean \
 	clean-generic clean-noinstLIBRARIES cscopelist-am ctags \
@@ -798,6 +807,30 @@ uninstall-am:
 
 .PRECIOUS: Makefile
 
+
+.PHONY: version-force
+
+version-force:
+
+version.txt: version-force $(top_srcdir)/config/resolve-version.sh
+	@resolved_version=`XPILOT_VERSION='$(XPILOT_VERSION)' \
+		SCREW_UP='$(SCREW_UP)' \
+		$(top_srcdir)/config/resolve-version.sh` || exit $$?; \
+	if test ! -f $@ \
+		|| test "x$$resolved_version" != "x`cat $@`"; then \
+		printf '%s\n' "$$resolved_version" > $@.tmp; \
+		mv -f $@.tmp $@; \
+	fi
+
+version.h: version.h.template version.txt
+	@resolved_version=`cat version.txt`; \
+	sed "s/__XPILOT_BUILD_VERSION__/$$resolved_version/g" \
+		version.h.template > $@.tmp; \
+	if test -f $@ && cmp -s $@.tmp $@; then \
+		rm -f $@.tmp; \
+	else \
+		mv -f $@.tmp $@; \
+	fi
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

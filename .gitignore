@@ -7,6 +7,9 @@ Makefile
 /src/mapedit/xpilot-infinity-xp-mapedit
 /src/replay/xpilot-infinity-replay
 /src/server/xpilot-infinity-server
+/src/common/version.h
+/src/common/version.h.template
+/src/common/version.txt
 /stamp-h1
 /build-sdl
 /install-sdl

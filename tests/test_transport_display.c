@@ -64,21 +64,21 @@ static int check_gameplay_titles(void)
                    "game.example", GAME_TRANSPORT_TCP));
     TEST_CHECK(strcmp(
                    title,
-                   "XPilot Infinity 4.7.3 - game.example [Gameplay: TCP]")
+                   TITLE " - game.example [Gameplay: TCP]")
                == 0);
     TEST_CHECK(Transport_display_gameplay_title(
                    title, sizeof(title), TITLE,
                    "127.0.0.1", GAME_TRANSPORT_UDP));
     TEST_CHECK(strcmp(
                    title,
-                   "XPilot Infinity 4.7.3 - 127.0.0.1 [Gameplay: UDP]")
+                   TITLE " - 127.0.0.1 [Gameplay: UDP]")
                == 0);
     TEST_CHECK(Transport_display_gameplay_title(
                    title, sizeof(title), TITLE,
                    "ws.example", GAME_TRANSPORT_WEBSOCKET));
     TEST_CHECK(strcmp(
                    title,
-                   "XPilot Infinity 4.7.3 - ws.example [Gameplay: WebSocket]")
+                   TITLE " - ws.example [Gameplay: WebSocket]")
                == 0);
 
     TEST_CHECK(!Transport_display_gameplay_title(

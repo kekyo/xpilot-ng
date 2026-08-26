@@ -16,7 +16,7 @@ Options:
   --test                   Run the target's complete supported test suite
   --build-root PATH        Root for all build output (default: ./build)
   --artifact-root PATH     Windows ZIP output (default: ./artifacts/windows)
-  --package-version VALUE  Archive version (default: screw-up-derived version)
+  --package-version VALUE  Build/archive version override (default: resolved at make time)
   --jobs NUMBER            Parallel build jobs (default: detected CPU count)
   --build-type TYPE        Dependency CMake build type (default: Release)
   --toolchain-file PATH    CMake toolchain file for one target architecture
@@ -40,7 +40,13 @@ source_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 invocation_dir=$(pwd)
 build_root="$source_dir/build"
 artifact_root="$source_dir/artifacts/windows"
-package_version=${XPILOT_PACKAGE_VERSION:-}
+if test "${XPILOT_PACKAGE_VERSION+x}" = x; then
+    package_version=$XPILOT_PACKAGE_VERSION
+    package_version_set=true
+else
+    package_version=
+    package_version_set=false
+fi
 jobs=
 build_type=Release
 toolchain_file=
@@ -93,10 +99,12 @@ while test "$#" -gt 0; do
         --package-version)
             test "$#" -ge 2 || fail "--package-version requires a value"
             package_version=$2
+            package_version_set=true
             shift 2
             ;;
         --package-version=*)
             package_version=${1#*=}
+            package_version_set=true
             shift
             ;;
         --jobs)
@@ -170,6 +178,14 @@ esac
 test -n "$build_root" || fail "--build-root requires a nonempty path"
 test -n "$build_type" || fail "--build-type requires a nonempty value"
 
+if test "$package_version_set" = true; then
+    case "$package_version" in
+        ''|*[!0-9A-Za-z.+:~-]*) \
+            fail "invalid package version: $package_version" \
+            ;;
+    esac
+fi
+
 if test -z "$jobs"; then
     jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)
 fi
@@ -205,22 +221,6 @@ case "$target" in
         command -v "$node_program" >/dev/null 2>&1 \
             || fail "Node.js was not found: $node_program"
 
-        if test -z "$package_version"; then
-            command -v screw-up >/dev/null 2>&1 \
-                || fail "screw-up is required to determine the package version"
-            package_version=$(
-                cd "$source_dir"
-                printf '%s\n' '{version}' \
-                    | screw-up format \
-                    | tr -d '\r' \
-                    | head -n 1
-            )
-        fi
-        case "$package_version" in
-            ''|*[!0-9A-Za-z.+:~\-]*) \
-                fail "invalid package version: $package_version" \
-                ;;
-        esac
         ;;
 esac
 
@@ -239,6 +239,19 @@ test -x "$source_dir/configure" \
     || fail "configure is unavailable; run ./bootstrap first"
 test ! -f "$source_dir/config.status" \
     || fail "source tree is configured in place; run make distclean first"
+
+version_resolver="$source_dir/config/resolve-version.sh"
+test -x "$version_resolver" \
+    || fail "version resolver is unavailable: $version_resolver"
+
+resolve_build_version()
+{
+    if test -n "$package_version"; then
+        XPILOT_VERSION=$package_version "$version_resolver"
+    else
+        "$version_resolver"
+    fi
+}
 
 make_program=${MAKE:-make}
 command -v "$make_program" >/dev/null 2>&1 \
@@ -272,16 +285,15 @@ build_native()
 
     mkdir -p "$xpilot_build_dir"
     echo "===== configure: XPilot Infinity with vendored SDL3 ====="
-    (
-        cd "$xpilot_build_dir"
-        "$source_dir/configure" "$@" \
-            --with-sdl3=vendored \
-            "--with-sdl3-prefix=$vendor_prefix"
-        "$make_program" "-j$jobs"
-        if test "$run_tests" = true; then
-            "$make_program" check
-        fi
-    )
+    cd "$xpilot_build_dir"
+    "$source_dir/configure" "$@" \
+        --with-sdl3=vendored \
+        "--with-sdl3-prefix=$vendor_prefix"
+    build_version=$(resolve_build_version)
+    "$make_program" "-j$jobs" "XPILOT_VERSION=$build_version"
+    if test "$run_tests" = true; then
+        "$make_program" "XPILOT_VERSION=$build_version" check
+    fi
 
     echo "XPilot Infinity build completed in $xpilot_build_dir"
 )
@@ -307,32 +319,33 @@ build_windows_architecture()
     install_prefix="$architecture_root/install"
     mkdir -p "$architecture_root"
     echo "===== configure: XPilot Infinity for $triplet ====="
-    (
-        cd "$architecture_root"
-        if test -n "$toolchain_file"; then
-            "$source_dir/configure" "$@" \
-                "--host=$triplet" \
-                "--prefix=$install_prefix" \
-                --enable-mingw-vendored-deps \
-                "--with-mingw-deps-build-type=$build_type" \
-                "--with-mingw-toolchain-file=$toolchain_file"
-        else
-            "$source_dir/configure" "$@" \
-                "--host=$triplet" \
-                "--prefix=$install_prefix" \
-                --enable-mingw-vendored-deps \
-                "--with-mingw-deps-build-type=$build_type"
-        fi
+    cd "$architecture_root"
+    if test -n "$toolchain_file"; then
+        "$source_dir/configure" "$@" \
+            "--host=$triplet" \
+            "--prefix=$install_prefix" \
+            --enable-mingw-vendored-deps \
+            "--with-mingw-deps-build-type=$build_type" \
+            "--with-mingw-toolchain-file=$toolchain_file"
+    else
+        "$source_dir/configure" "$@" \
+            "--host=$triplet" \
+            "--prefix=$install_prefix" \
+            --enable-mingw-vendored-deps \
+            "--with-mingw-deps-build-type=$build_type"
+    fi
 
-        "$make_program" "-j$jobs" "MINGW_DEPS_JOBS=$jobs"
-        "$make_program" "MINGW_DEPS_JOBS=$jobs" windows-package
-        if test "$run_tests" = true; then
-            "$make_program" "MINGW_DEPS_JOBS=$jobs" \
-                "MINGW_TEST_JOBS=$jobs" check
-        fi
-    )
+    build_version=$(resolve_build_version)
+    "$make_program" "-j$jobs" "MINGW_DEPS_JOBS=$jobs" \
+        "XPILOT_VERSION=$build_version"
+    "$make_program" "MINGW_DEPS_JOBS=$jobs" \
+        "XPILOT_VERSION=$build_version" windows-package
+    if test "$run_tests" = true; then
+        "$make_program" "MINGW_DEPS_JOBS=$jobs" \
+            "MINGW_TEST_JOBS=$jobs" "XPILOT_VERSION=$build_version" check
+    fi
 
-    archive_path="$artifact_root/xpilot-infinity-$package_version-windows-$windows_architecture.zip"
+    archive_path="$artifact_root/xpilot-infinity-$build_version-windows-$windows_architecture.zip"
     "$node_program" "$windows_archiver" \
         --input "$architecture_root/package" \
         --output "$archive_path"

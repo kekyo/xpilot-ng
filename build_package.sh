@@ -9,6 +9,7 @@ PACKAGE_NAME=xpilot-infinity
 PACKAGE_DESCRIPTION="Multi-player tactical game with SDL and X11 clients."
 DEFAULT_MAINTAINER="XPilot Infinity packager <packager@localhost>"
 DEFAULT_PARALLEL_JOB_CAP=14
+VERSION_RESOLVER=${XPILOT_VERSION_RESOLVER:-"$PROJECT_ROOT/config/resolve-version.sh"}
 
 LINUX_MATRIX=$(cat <<'EOF'
 debian bookworm x86_64 linux/amd64
@@ -139,19 +140,15 @@ min_int()
 
 detect_version()
 {
-    require_command screw-up
-    detected_version=$(
-        cd "$PROJECT_ROOT"
-        printf '%s\n' '{version}' | screw-up format | tr -d '\r' | head -n 1
-    )
-    test -n "$detected_version" || fail "screw-up did not return a version"
-    printf '%s\n' "$detected_version"
+    test -x "$VERSION_RESOLVER" \
+        || fail "version resolver is unavailable: $VERSION_RESOLVER"
+    XPILOT_VERSION= "$VERSION_RESOLVER"
 }
 
 validate_version()
 {
     case $1 in
-        ''|*[!0-9A-Za-z.+:~\-]*) fail "invalid package version: $1" ;;
+        ''|*[!0-9A-Za-z.+:~-]*) fail "invalid package version: $1" ;;
     esac
 }
 

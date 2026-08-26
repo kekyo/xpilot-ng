@@ -161,8 +161,10 @@ mkdir -p "$build_dir" "$meta_dir" "$stage_dir"
         --mandir=/usr/share/man \
         --with-sdl3=vendored \
         "--with-sdl3-prefix=$dependency_prefix"
-    make -j"$XPILOT_MAKE_JOBS"
-    make install DESTDIR="$stage_dir"
+    make -j"$XPILOT_MAKE_JOBS" \
+        "XPILOT_VERSION=$XPILOT_PACKAGE_VERSION"
+    make "XPILOT_VERSION=$XPILOT_PACKAGE_VERSION" \
+        install DESTDIR="$stage_dir"
 )
 
 for executable_name in \
