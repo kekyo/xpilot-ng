@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -573,7 +573,7 @@ double direction_evade1;
 */
     direction_evade1 = Wrap_findDir(evade_x, evade_y );
 
-    /* Change evade by 180° if wall will be in the way in the chosen direction */
+    /* Change evade by 180Â° if wall will be in the way in the chosen direction */
     if(Wall_in_between_points(
                   pl->pos.cx + time_shot_closest * (pl->vel.x +  pl->power * cos(direction_evade1) / pl->mass),
                   pl->pos.cy + time_shot_closest * (pl->vel.y +  pl->power * sin(direction_evade1) / pl->mass),
@@ -650,7 +650,7 @@ double Robot_ram_object(player_t *pl,object_t *object){
     sqr_a   = sqr(pl->power / pl->mass * CLICK);       /* acceleration */
     sqr_b   = sqr(velx)+sqr(vely);  /* velocity     */
     sqr_c   = sqr(x)+sqr(y);        /* distance     */
-    b_dot_c = velx*x + vely*y;      /* dot product b·c */
+    b_dot_c = velx*x + vely*y;      /* dot product bÂ·c */
 
 /*     for (i = 0; i < 500; i++){ */
 /*       time=i/10.0; */

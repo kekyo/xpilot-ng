@@ -2446,13 +2446,13 @@ fi
 ac_config_headers="$ac_config_headers config.h"
 
 
-XP_AUTHORS="Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha Lindström, Kristian Söderblom and Erik Andersson"
+XP_AUTHORS="BjÃ¸rn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha LindstrÃ¶m, Kristian SÃ¶derblom and Erik Andersson"
 
 
 XP_COPYRIGHTDATE="1991-2005"
 
 
-XP_COPYRIGHT="Copyright © $XP_COPYRIGHTDATE by $XP_AUTHORS"
+XP_COPYRIGHT="Copyright Â© $XP_COPYRIGHTDATE by $XP_AUTHORS"
 
 
 XP_RELEASEDATE="Sep 16, 2005"

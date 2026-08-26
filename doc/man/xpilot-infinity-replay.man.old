@@ -1,6 +1,6 @@
 .\" -*-Text-*-
 .\"
-.\" Copyright © 1991-2004 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha Lindström, Kristian Söderblom and Erik Andersson & Steven Singer.
+.\" Copyright Â© 1991-2004 by BjÃ¸rn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha LindstrÃ¶m, Kristian SÃ¶derblom and Erik Andersson & Steven Singer.
 .\"
 .TH XPILOT-INFINITY-REPLAY 6 "Requires X11"
 .ds )H GNU General Public License 2.0 applies

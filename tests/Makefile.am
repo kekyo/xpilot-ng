@@ -94,6 +94,7 @@ TESTS = test-framed-stream test-websocket-transport \
 	run-renderer-gl-core.sh run-sdl-renderer-core-context.sh \
 	run-build-wrapper.sh run-build-package.sh run-package-windows.sh \
 	run-windows-archive.sh run-macos-info-plist.sh \
+	run-source-encoding.sh \
 	run-c23-server-build.sh run-vendored-zlib.sh run-e2e.sh
 if COND_SOUND
 check_PROGRAMS += test-audio-device
@@ -606,6 +607,8 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_WINDOWS_PACKAGER; \
 	XPILOT_MACOS_INFO_PLIST='$(abs_top_srcdir)/contrib/macosx/English.lproj/InfoPlist.strings'; \
 	export XPILOT_MACOS_INFO_PLIST; \
+	XPILOT_SOURCE_ENCODING_ROOT='$(abs_top_srcdir)'; \
+	export XPILOT_SOURCE_ENCODING_ROOT; \
 	XPILOT_C23_CC='$(CC)'; export XPILOT_C23_CC; \
 	XPILOT_C23_SOURCE_DIR='$(abs_top_srcdir)'; export XPILOT_C23_SOURCE_DIR; \
 	XPILOT_C23_BUILD_DIR='$(abs_top_builddir)'; export XPILOT_C23_BUILD_DIR; \
@@ -620,6 +623,7 @@ EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
 	run-vendored-zlib.sh \
 	run-wine-suite.sh run-build-package.sh run-package-windows.sh \
 	run-windows-archive.sh run-macos-info-plist.sh \
+	run-source-encoding.sh test-source-encoding.mjs \
 	test-windows-archive.mjs test-macos-info-plist.mjs test_helpers.h
 
 run-sdl-core-boundary.log: \

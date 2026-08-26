@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2005 by
  *
- *      Lars Dieﬂelberg       <marvn@users.sourceforge.net>
+ *      Lars Die√üelberg       <marvn@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -27,7 +27,7 @@ Release 4.5 credits:
                             asteroid concentrators, lag meter.
     Thorsten Kroeger        Messages to standard output,
                             server security fix.
-    Kristian Söderblom      Several bugfixes.
+    Kristian SÃ¶derblom      Several bugfixes.
 
 Release 4.4 credits:
 
@@ -42,7 +42,7 @@ Release 4.4 credits:
     Jarno van der Kolk      More server tuning, Windows XPreplay.
                             Windows NSIS Install script.
     Bob Glickstein          Flak.
-    Juha Lindström          radar on HUD.Release 4.3 credits:
+    Juha LindstrÃ¶m          radar on HUD.Release 4.3 credits:
 
     Claus Leth Gregersen    Several patches, graphics look.
     Marcus Sundberg         Radar color fix + localnet fix.
@@ -50,16 +50,16 @@ Release 4.4 credits:
     Peder Herborg           Fixes for sliding radar under Windows.
     Ben Jackson             Several fixes + ping button.
     Jarno van der Kolk      Windows sliding radar performance fix.
-    Juha Lindström          Windows fixes for new socklib.
+    Juha LindstrÃ¶m          Windows fixes for new socklib.
     Ben Armstrong           UDP port range + ideas + documentation.
 
 Release 4.2 credits:
 
     Ben Jackson             Numerous patches.
     Uoti Urpala             Numerous patches.
-    Jonny Svärling,         Talk macros.
+    Jonny SvÃ¤rling,         Talk macros.
     Adam Lorentzon
-    Teemu Elias Hirsimäki   xp-replay fix.
+    Teemu Elias HirsimÃ¤ki   xp-replay fix.
     Guido Koopman           Armor item.
     Sven Mascheck           Joined the maintenance team.
 
@@ -144,7 +144,7 @@ Release 3.1 credits:
     Harvey Thompson         Lots of first class wonderful new
                             features, ideas and cleanups.  Thanks!
     Mark Boyns              Sound.
-    Stig Sæther Bakken      Imakefile, testing & feedback.
+    Stig SÃ¦ther Bakken      Imakefile, testing & feedback.
     Scott W. Adkins         Ship shapes.
     Tony Plate              Missile length and names.
     Steven Singer           Sun tester & knowledge provider. :-)
@@ -168,7 +168,7 @@ Release 3.0 credits:
     Michael Staats  
     Maurice Abraham
     Makoto Matsushita
-    Stig Sæther Bakken      patches & feedback.
+    Stig SÃ¦ther Bakken      patches & feedback.
     & all the beta testers
 
 Version 2.0 credits:    (Never released)
@@ -183,7 +183,7 @@ Version 2.0 credits:    (Never released)
     Evan Miller
     Eric Flink
     Karthik P. Sheka
-    Stig Sæther Bakken
+    Stig SÃ¦ther Bakken
     Jim Hickey
     Harvey Thompson
     Ted Lemon

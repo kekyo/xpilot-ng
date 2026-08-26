@@ -5,8 +5,8 @@
  *
  *      Uoti Urpala          <uau@users.sourceforge.net>
  *      Erik Andersson
- *      Kristian Söderblom
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Kristian SÃ¶derblom
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>

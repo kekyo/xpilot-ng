@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -129,8 +129,8 @@ void Expose_about_window(void)
 	"ABOUT XPILOT\n"
 	"\n"
 	"The game was conceived in its original form at the "
-	"University of Tromsø (Norway) by Ken Ronny Schouten and "
-	"Bjørn Stabell during the fall of 1991, but much of the game today "
+	"University of TromsÃ¸ (Norway) by Ken Ronny Schouten and "
+	"BjÃ¸rn Stabell during the fall of 1991, but much of the game today "
 	"is the result of hard efforts by Bert Gijsbers of the "
 	"molecular cytology lab at the University of Amsterdam "
 	"(The Netherlands).  "
@@ -146,7 +146,7 @@ void Expose_about_window(void)
 	"read the XPilot FAQ (Frequently Asked Questions).\n"
 	"\n\n"
 	"Good luck as a future xpilot,\n"
-	"Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska",
+	"BjÃ¸rn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska",
 	colors[WHITE].pixel, colors[BLACK].pixel);
 	break;
 
