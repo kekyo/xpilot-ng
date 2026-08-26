@@ -234,8 +234,8 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-text-cache-adapter$(EXEEXT) \
 @COND_WINDOWS_FALSE@	run-renderer-gl-core.sh \
 @COND_WINDOWS_FALSE@	run-sdl-renderer-core-context.sh \
-@COND_WINDOWS_FALSE@	run-build-wrapper.sh run-vendored-zlib.sh \
-@COND_WINDOWS_FALSE@	run-e2e.sh $(am__append_2)
+@COND_WINDOWS_FALSE@	run-build-wrapper.sh run-build-package.sh \
+@COND_WINDOWS_FALSE@	run-vendored-zlib.sh run-e2e.sh $(am__append_2)
 @COND_WINDOWS_TRUE@TESTS = $(am__append_2)
 @COND_WINDOWS_FALSE@@COND_X11_CLIENT_TRUE@am__append_1 = test-x11-text
 @COND_WINDOWS_FALSE@@COND_X11_CLIENT_TRUE@am__append_2 = run-x11-text.sh
@@ -1810,6 +1810,8 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_SDL_BINARY; \
 	XPILOT_BUILD_WRAPPER='$(abs_top_srcdir)/build.sh'; \
 	export XPILOT_BUILD_WRAPPER; \
+	XPILOT_BUILD_PACKAGE='$(abs_top_srcdir)/build_package.sh'; \
+	export XPILOT_BUILD_PACKAGE; \
 	XPILOT_VENDOR_ZLIB_SOURCE='$(abs_top_srcdir)/vendor/zlib'; \
 	export XPILOT_VENDOR_ZLIB_SOURCE;
 
@@ -1818,7 +1820,7 @@ EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
 	run-gl-core-resources.sh \
 	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
 	run-sdl-renderer-core-context.sh run-vendored-zlib.sh \
-	run-wine-suite.sh test_helpers.h
+	run-wine-suite.sh run-build-package.sh test_helpers.h
 
 all: all-am
 

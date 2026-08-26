@@ -11,6 +11,8 @@ Makefile
 /build-sdl
 /install-sdl
 /build/
+/.build/
+/artifacts/
 
 *.o
 *.a

@@ -92,7 +92,7 @@ TESTS = test-framed-stream test-websocket-transport \
 	test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
 	run-renderer-gl-core.sh run-sdl-renderer-core-context.sh \
-	run-build-wrapper.sh run-vendored-zlib.sh run-e2e.sh
+	run-build-wrapper.sh run-build-package.sh run-vendored-zlib.sh run-e2e.sh
 if COND_X11_CLIENT
 check_PROGRAMS += test-x11-text
 TESTS += run-x11-text.sh
@@ -581,6 +581,8 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_SDL_BINARY; \
 	XPILOT_BUILD_WRAPPER='$(abs_top_srcdir)/build.sh'; \
 	export XPILOT_BUILD_WRAPPER; \
+	XPILOT_BUILD_PACKAGE='$(abs_top_srcdir)/build_package.sh'; \
+	export XPILOT_BUILD_PACKAGE; \
 	XPILOT_VENDOR_ZLIB_SOURCE='$(abs_top_srcdir)/vendor/zlib'; \
 	export XPILOT_VENDOR_ZLIB_SOURCE;
 
@@ -589,7 +591,7 @@ EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
 	run-gl-core-resources.sh \
 	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
 	run-sdl-renderer-core-context.sh run-vendored-zlib.sh \
-	run-wine-suite.sh test_helpers.h
+	run-wine-suite.sh run-build-package.sh test_helpers.h
 
 run-sdl-core-boundary.log: \
 	$(top_builddir)/src/client/sdl/xpilot-ng-sdl

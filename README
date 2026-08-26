@@ -9,6 +9,7 @@ source code, and the COPYING file.
 
 
 Installation instructions are in the INSTALL file.
+Distribution package generation is documented in doc/PACKAGING.md.
 
 The documentation for XPilot NG is far from complete.
 
