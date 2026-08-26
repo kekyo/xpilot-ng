@@ -45,9 +45,11 @@ accepted as release aliases.  Add `--debug` for an unoptimized build, or use
 `--version` to override the version derived by `screw-up`.
 
 Each package contains both graphical clients, the dedicated server, utilities,
-game data, documentation, and manual pages.  The build validates package
-metadata, installed paths, and the ELF architecture of every executable.
-Artifacts are written as:
+game data including the sound map and samples, documentation, and manual
+pages.  Its generated `Depends` field includes the OpenAL and freealut runtime
+packages (`libopenal1` and `libalut0`).  The build validates those dependencies,
+installed paths, and the ELF architecture of every executable.  Artifacts are
+written as:
 
 ```text
 artifacts/deb/xpilot-ng-<version>-<distro>-<release>-<deb-arch>.deb
@@ -62,10 +64,11 @@ archives because both packages use the same executable names:
 ./build.sh --target windows --arch all --test
 ```
 
-The ZIP files contain the SDL client, dedicated server, game data, and license
-from the corresponding `windows-package` directory.  Entries are sorted and
-assigned a fixed timestamp so the result is reproducible for identical input.
-Artifacts are written as:
+The ZIP files contain the SDL client, dedicated server, game data including
+sound samples, `OpenAL32.dll`, `libalut.dll`, and the corresponding
+project licenses from the `windows-package` directory.  Entries are sorted
+and assigned a fixed timestamp so the result is reproducible for identical
+input.  Artifacts are written as:
 
 ```text
 artifacts/windows/xpilot-ng-<version>-windows-x86.zip

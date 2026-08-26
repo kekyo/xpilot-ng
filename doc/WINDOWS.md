@@ -23,7 +23,9 @@ git submodule update --init --recursive
 
 The build does not download dependencies.  zlib, Expat, SDL3, SDL3_image,
 SDL3_ttf, FreeType, and HarfBuzz are cross-compiled from the pinned submodules
-and linked statically.
+and linked statically.  OpenAL Soft and freealut are also cross-compiled from
+pinned submodules; they remain shared libraries so the required runtime DLLs
+can be distributed with the client.
 
 ## Build and test
 
@@ -91,15 +93,19 @@ artifacts/windows/xpilot-ng-<version>-windows-x86.zip
 artifacts/windows/xpilot-ng-<version>-windows-x86_64.zip
 ```
 
-The packages contain `xpilot-ng-server.exe`, `xpilot-ng-sdl.exe`, the game
-data, and the license.  ZIP entries are sorted and use a fixed timestamp, so
-unchanged package trees produce byte-identical archives.  The Wine suite
-verifies the PE architecture, runs the portable networking and SDL dependency
-tests, validates a TCP-contact server's metaserver advertisement, and starts
-the packaged server and SDL client for all four UDP/TCP contact and gameplay
-combinations.  Every session must join, create an OpenGL context, initialize
-its text renderers, and quit cleanly.  A software OpenGL renderer is selected
-so the graphical checks do not depend on host GPU drivers.
+The packages contain `xpilot-ng-server.exe`, `xpilot-ng-sdl.exe`,
+`OpenAL32.dll`, `libalut.dll`, game data including sound samples,
+and the XPilot NG, OpenAL Soft, and freealut licenses.  ZIP entries are sorted
+and use a fixed timestamp, so unchanged package trees produce byte-identical
+archives.  The Wine suite verifies the PE architecture, runs the portable
+networking and SDL dependency tests, validates a TCP-contact server's
+metaserver advertisement, and starts the packaged server and SDL client for
+all four UDP/TCP contact and gameplay combinations.  Every session must join,
+create an OpenGL context, initialize its text renderers, and quit cleanly.  A
+software OpenGL renderer is selected so the graphical checks do not depend on
+host GPU drivers.  If Wine or a real Windows system has no usable sound
+device, OpenAL initialization is disabled for that process and gameplay
+continues silently.
 
 The Wine prefixes are persistent in their configured build directories.
 Build and test output never needs to be written into the source tree.
