@@ -27,6 +27,25 @@ assert_file()
     test -f "$1" || fail "missing expected file: $1"
 }
 
+assert_debian_dependency()
+{
+    dependency_list=$1
+    expected_package=$2
+    saved_ifs=$IFS
+    IFS=,
+    for dependency in $dependency_list; do
+        dependency=${dependency# }
+        case $dependency in
+            "$expected_package"|"$expected_package "*)
+                IFS=$saved_ifs
+                return 0
+                ;;
+        esac
+    done
+    IFS=$saved_ifs
+    fail "missing runtime dependency: $expected_package"
+}
+
 validate_positive_integer()
 {
     case $2 in
@@ -140,7 +159,6 @@ mkdir -p "$build_dir" "$meta_dir" "$stage_dir"
         --bindir=/usr/games \
         --datadir=/usr/share/games \
         --mandir=/usr/share/man \
-        --disable-sound \
         --with-sdl3=vendored \
         "--with-sdl3-prefix=$dependency_prefix"
     make -j"$XPILOT_MAKE_JOBS"
@@ -155,6 +173,8 @@ do
 done
 assert_file "$stage_dir/usr/share/games/xpilot-ng/defaults.txt"
 assert_file "$stage_dir/usr/share/games/xpilot-ng/maps/ndh.xp2"
+assert_file "$stage_dir/usr/share/games/xpilot-ng/sound/sounds.txt"
+assert_file "$stage_dir/usr/share/games/xpilot-ng/sound/bfire.wav"
 
 doc_dir="$stage_dir/usr/share/doc/$XPILOT_PACKAGE_NAME"
 mkdir -p "$doc_dir"
@@ -162,6 +182,8 @@ cp COPYING README INSTALL ChangeLog "$doc_dir/"
 
 deb_arch=$(dpkg-architecture -qDEB_HOST_ARCH)
 runtime_dependencies=$(calculate_runtime_dependencies)
+assert_debian_dependency "$runtime_dependencies" libalut0
+assert_debian_dependency "$runtime_dependencies" libopenal1
 write_control_file "$runtime_dependencies"
 
 printf '%s\n' "$deb_arch" > "$meta_dir/deb_arch"

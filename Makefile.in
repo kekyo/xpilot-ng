@@ -310,6 +310,7 @@ SDL3_TTF_CFLAGS = @SDL3_TTF_CFLAGS@
 SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOUND_CFLAGS = @SOUND_CFLAGS@
 SOUND_LIBS = @SOUND_LIBS@
 STRIP = @STRIP@
 VERSION = @VERSION@
@@ -390,6 +391,7 @@ dist_pkgdata_DATA = mapconvert.py
 EXTRA_DIST = build.sh build_package.sh build_package_all.sh prereq.sh \
 	scripts/build_linux_dist_container.sh config/package-windows.sh \
 	config/package-windows.mjs
+
 @COND_WINDOWS_TRUE@MINGW_TEST_JOBS =
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
@@ -905,6 +907,7 @@ uninstall-am: uninstall-dist_pkgdataDATA
 @COND_WINDOWS_TRUE@	$(SHELL) $(top_srcdir)/config/package-windows.sh \
 @COND_WINDOWS_TRUE@		--source-dir '$(abs_top_srcdir)' \
 @COND_WINDOWS_TRUE@		--build-dir '$(abs_top_builddir)' \
+@COND_WINDOWS_TRUE@		--dependency-prefix '@MINGW_DEPS_PREFIX@' \
 @COND_WINDOWS_TRUE@		--output '@MINGW_PACKAGE_DIR@'
 
 @COND_WINDOWS_TRUE@windows-check: windows-package

@@ -692,7 +692,18 @@ run_gameplay_case()
 server_executable="$package_dir/xpilot-ng-server.exe"
 client_executable="$package_dir/xpilot-ng-sdl.exe"
 map_file="$package_dir/lib/maps/ndh.xp2"
-for required_file in "$server_executable" "$client_executable" "$map_file"; do
+openal_library="$package_dir/OpenAL32.dll"
+freealut_library=
+for freealut_name in alut.dll libalut.dll freealut.dll; do
+    if test -f "$package_dir/$freealut_name"; then
+        freealut_library="$package_dir/$freealut_name"
+        break
+    fi
+done
+test -n "$freealut_library" \
+    || fail "packaged Windows freealut runtime is missing"
+for required_file in "$server_executable" "$client_executable" "$map_file" \
+    "$openal_library" "$freealut_library"; do
     test -f "$required_file" \
         || fail "packaged Windows test input is missing: $required_file"
 done

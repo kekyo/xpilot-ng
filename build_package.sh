@@ -71,6 +71,25 @@ assert_contains()
         || fail "missing expected text in $target_path: $expected_text"
 }
 
+assert_debian_dependency()
+{
+    dependency_list=$1
+    expected_package=$2
+    saved_ifs=$IFS
+    IFS=,
+    for dependency in $dependency_list; do
+        dependency=${dependency# }
+        case $dependency in
+            "$expected_package"|"$expected_package "*)
+                IFS=$saved_ifs
+                return 0
+                ;;
+        esac
+    done
+    IFS=$saved_ifs
+    fail "missing Debian dependency $expected_package"
+}
+
 require_command()
 {
     command -v "$1" >/dev/null 2>&1 \
@@ -379,8 +398,11 @@ validate_deb_package()
         || fail "unexpected Architecture field in $package_path"
     test "$(dpkg-deb -f "$package_path" Version)" = "$VERSION" \
         || fail "unexpected Version field in $package_path"
-    test -n "$(dpkg-deb -f "$package_path" Depends)" \
+    package_dependencies=$(dpkg-deb -f "$package_path" Depends)
+    test -n "$package_dependencies" \
         || fail "missing Depends field in $package_path"
+    assert_debian_dependency "$package_dependencies" libalut0
+    assert_debian_dependency "$package_dependencies" libopenal1
 
     dpkg-deb -x "$package_path" "$extract_dir"
     for executable_name in \
@@ -399,6 +421,8 @@ validate_deb_package()
     assert_file "$extract_dir/usr/share/games/xpilot-ng/defaults.txt"
     assert_file "$extract_dir/usr/share/games/xpilot-ng/maps/ndh.xp2"
     assert_file "$extract_dir/usr/share/games/xpilot-ng/textures/ship.ppm"
+    assert_file "$extract_dir/usr/share/games/xpilot-ng/sound/sounds.txt"
+    assert_file "$extract_dir/usr/share/games/xpilot-ng/sound/bfire.wav"
     assert_file "$extract_dir/usr/share/man/man6/xpilot-ng-sdl.6"
     assert_file "$extract_dir/usr/share/doc/xpilot-ng/README"
     assert_file "$extract_dir/usr/share/doc/xpilot-ng/COPYING"

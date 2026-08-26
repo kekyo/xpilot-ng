@@ -22,3 +22,9 @@
 [submodule "vendor/mtwister"]
 	path = vendor/mtwister
 	url = https://github.com/ESultanik/mtwister
+[submodule "vendor/openal-soft"]
+	path = vendor/openal-soft
+	url = https://github.com/kcat/openal-soft.git
+[submodule "vendor/freealut"]
+	path = vendor/freealut
+	url = https://github.com/vancegroup/freealut.git

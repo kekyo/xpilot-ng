@@ -59,6 +59,17 @@ assert_equal armv7l "$(canonical_arch armhf)" \
     "armhf architecture alias was not normalized"
 assert_equal 24.04 "$(canonical_release noble)" \
     "Ubuntu noble release alias was not normalized"
+assert_debian_dependency \
+    "libc6 (>= 2.34), libalut0 (>= 1.1.0), libopenal1 (>= 1.14)" \
+    libalut0
+assert_debian_dependency \
+    "libc6 (>= 2.34), libalut0 (>= 1.1.0), libopenal1 (>= 1.14)" \
+    libopenal1
+if (assert_debian_dependency "libc6 (>= 2.34)" libopenal1) \
+    >/dev/null 2>&1
+then
+    fail "a missing Debian dependency was accepted"
+fi
 
 DISTRO_FILTER=
 RELEASE_FILTER=
@@ -255,8 +266,10 @@ assert_contains "$prereq_log" "--platform linux/amd64"
 assert_contains "$prereq_log" \
     "localhost/xpilot-ng-pack-deb-debian-bookworm-x86_64:latest"
 assert_contains "$prereq_log" "dpkg-dev"
+assert_contains "$prereq_log" "libalut-dev"
 assert_contains "$prereq_log" "libfontconfig1-dev"
 assert_contains "$prereq_log" "libgl-dev"
+assert_contains "$prereq_log" "libopenal-dev"
 assert_contains "$prereq_log" "libxrender-dev"
 assert_contains "$prereq_log" "libxtst-dev"
 

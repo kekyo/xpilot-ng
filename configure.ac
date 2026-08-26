@@ -236,8 +236,16 @@ AC_SUBST([MINGW_PACKAGE_DIR])
 AC_SUBST([MINGW_WINE_PREFIX])
 
 AC_ARG_ENABLE(sound,
-	AC_HELP_STRING([--enable-sound],
-			[enable OpenAL sound]), [])
+	AC_HELP_STRING([--disable-sound],
+			[disable OpenAL sound]),
+[], [enable_sound=yes])
+case "$enable_sound" in
+	yes|no)
+		;;
+	*)
+		AC_MSG_ERROR([--enable-sound accepts yes or no])
+		;;
+esac
 
 dnl  Checks for programs.
 AC_PROG_CC
@@ -484,32 +492,24 @@ AM_CONDITIONAL([COND_XP_MAPEDIT], [test x$enable_xp_mapedit = xyes])
 AM_CONDITIONAL([COND_X11_CLIENT], [test x$enable_x11_client = xyes])
 AM_CONDITIONAL([COND_SDL_CLIENT], [test x$enable_sdl_client = xyes])
 
-dnl OpenAL client sound support.
-if test x$enable_sound = xyes; then
-	have_openal=no
-	have_alut=no
-	have_sound=no
-	AC_CHECK_LIB(
-		openal, 
-		main, 
-		[have_openal=yes],
-		[])
-	AC_CHECK_LIB(
-		alut, 
-		main, 
-		[have_alut=yes],
-		[])
-	if test x$have_openal = xyes; then
-		if test x$have_alut = xyes; then
-			have_sound=yes
-			SOUND_LIBS="-lopenal -lalut"
-			AC_DEFINE([SOUND], 1, [Define to 1 if you want OpenAL sound.])
-		else
-			echo "*** Client sound disabled. Check that you have OpenAL installed."
-		fi
+dnl OpenAL client sound support. MinGW dependencies are built by make after
+dnl configure, so their compiler and linker flags come from mingw-deps.mk.
+have_sound=no
+SOUND_CFLAGS=
+SOUND_LIBS=
+if test x$enable_sound = xyes && test x$need_libxpclient = xyes; then
+	if test x$mingw_vendored_deps = xyes; then
+		have_sound=yes
+	else
+		PKG_CHECK_MODULES([SOUND], [freealut openal], [], [
+			AC_MSG_ERROR([OpenAL and freealut are required for client sound; install their development packages or use --disable-sound])
+		])
+		have_sound=yes
 	fi
-	AC_SUBST(SOUND_LIBS)
+	AC_DEFINE([SOUND], 1, [Define to 1 if you want OpenAL sound.])
 fi
+AC_SUBST([SOUND_CFLAGS])
+AC_SUBST([SOUND_LIBS])
 
 AM_CONDITIONAL([COND_SOUND], [test x$have_sound = xyes])
 

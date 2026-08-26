@@ -657,6 +657,7 @@ LIBOBJS
 COND_SOUND_FALSE
 COND_SOUND_TRUE
 SOUND_LIBS
+SOUND_CFLAGS
 COND_SDL_CLIENT_FALSE
 COND_SDL_CLIENT_TRUE
 COND_X11_CLIENT_FALSE
@@ -859,7 +860,9 @@ GL_LIBS
 FONTCONFIG_CFLAGS
 FONTCONFIG_LIBS
 XRENDER_CFLAGS
-XRENDER_LIBS'
+XRENDER_LIBS
+SOUND_CFLAGS
+SOUND_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1509,7 +1512,7 @@ Optional Features:
   --disable-sdl-client    disable SDL/OpenGL client
   --disable-mingw-vendored-deps
                           use externally prepared dependencies for MinGW
-  --enable-sound          enable OpenAL sound
+  --disable-sound         disable OpenAL sound
   --enable-dependency-tracking
                           do not reject slow dependency extractors
   --disable-dependency-tracking
@@ -1561,6 +1564,9 @@ Some influential environment variables:
               C compiler flags for XRENDER, overriding pkg-config
   XRENDER_LIBS
               linker flags for XRENDER, overriding pkg-config
+  SOUND_CFLAGS
+              C compiler flags for SOUND, overriding pkg-config
+  SOUND_LIBS  linker flags for SOUND, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -3793,8 +3799,17 @@ fi
 if test ${enable_sound+y}
 then :
   enableval=$enable_sound;
+else $as_nop
+  enable_sound=yes
 fi
 
+case "$enable_sound" in
+	yes|no)
+		;;
+	*)
+		as_fn_error $? "--enable-sound accepts yes or no" "$LINENO" 5
+		;;
+esac
 
 
 
@@ -7181,97 +7196,96 @@ else
 fi
 
 
-if test x$enable_sound = xyes; then
-	have_openal=no
-	have_alut=no
-	have_sound=no
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for main in -lopenal" >&5
-printf %s "checking for main in -lopenal... " >&6; }
-if test ${ac_cv_lib_openal_main+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lopenal  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+have_sound=no
+SOUND_CFLAGS=
+SOUND_LIBS=
+if test x$enable_sound = xyes && test x$need_libxpclient = xyes; then
+	if test x$mingw_vendored_deps = xyes; then
+		have_sound=yes
+	else
 
+pkg_failed=no
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for freealut openal" >&5
+printf %s "checking for freealut openal... " >&6; }
 
-int
-main (void)
-{
-return main ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_lib_openal_main=yes
-else $as_nop
-  ac_cv_lib_openal_main=no
+if test -n "$SOUND_CFLAGS"; then
+    pkg_cv_SOUND_CFLAGS="$SOUND_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"freealut openal\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "freealut openal") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SOUND_CFLAGS=`$PKG_CONFIG --cflags "freealut openal" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+ else
+    pkg_failed=untried
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_openal_main" >&5
-printf "%s\n" "$ac_cv_lib_openal_main" >&6; }
-if test "x$ac_cv_lib_openal_main" = xyes
-then :
-  have_openal=yes
+if test -n "$SOUND_LIBS"; then
+    pkg_cv_SOUND_LIBS="$SOUND_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"freealut openal\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "freealut openal") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SOUND_LIBS=`$PKG_CONFIG --libs "freealut openal" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
 fi
-
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for main in -lalut" >&5
-printf %s "checking for main in -lalut... " >&6; }
-if test ${ac_cv_lib_alut_main+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lalut  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-int
-main (void)
-{
-return main ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_lib_alut_main=yes
-else $as_nop
-  ac_cv_lib_alut_main=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_alut_main" >&5
-printf "%s\n" "$ac_cv_lib_alut_main" >&6; }
-if test "x$ac_cv_lib_alut_main" = xyes
-then :
-  have_alut=yes
+ else
+    pkg_failed=untried
 fi
 
-	if test x$have_openal = xyes; then
-		if test x$have_alut = xyes; then
-			have_sound=yes
-			SOUND_LIBS="-lopenal -lalut"
+
+
+if test $pkg_failed = yes; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+                SOUND_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "freealut openal" 2>&1`
+        else
+                SOUND_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "freealut openal" 2>&1`
+        fi
+        # Put the nasty error message in config.log where it belongs
+        echo "$SOUND_PKG_ERRORS" >&5
+
+
+			as_fn_error $? "OpenAL and freealut are required for client sound; install their development packages or use --disable-sound" "$LINENO" 5
+
+elif test $pkg_failed = untried; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+			as_fn_error $? "OpenAL and freealut are required for client sound; install their development packages or use --disable-sound" "$LINENO" 5
+
+else
+        SOUND_CFLAGS=$pkg_cv_SOUND_CFLAGS
+        SOUND_LIBS=$pkg_cv_SOUND_LIBS
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+fi
+		have_sound=yes
+	fi
 
 printf "%s\n" "#define SOUND 1" >>confdefs.h
 
-		else
-			echo "*** Client sound disabled. Check that you have OpenAL installed."
-		fi
-	fi
-
 fi
+
+
 
  if test x$have_sound = xyes; then
   COND_SOUND_TRUE=

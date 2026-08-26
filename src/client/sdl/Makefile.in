@@ -165,7 +165,7 @@ am__DEPENDENCIES_1 =
 xpilot_ng_sdl_DEPENDENCIES = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a libxp_libtess2.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -320,6 +320,7 @@ SDL3_TTF_CFLAGS = @SDL3_TTF_CFLAGS@
 SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOUND_CFLAGS = @SOUND_CFLAGS@
 SOUND_LIBS = @SOUND_LIBS@
 STRIP = @STRIP@
 VERSION = @VERSION@
@@ -405,6 +406,8 @@ AUTOMAKE_OPTIONS = subdir-objects
 @COND_MINGW_VENDORED_TRUE@XP_SDL3_TTF_CFLAGS = $(MINGW_SDL3_TTF_CFLAGS)
 @COND_MINGW_VENDORED_FALSE@XP_SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
 @COND_MINGW_VENDORED_TRUE@XP_SDL3_TTF_LIBS = $(MINGW_SDL3_TTF_LIBS)
+@COND_MINGW_VENDORED_FALSE@XP_SOUND_LIBS = @SOUND_LIBS@
+@COND_MINGW_VENDORED_TRUE@XP_SOUND_LIBS = $(MINGW_SOUND_LIBS)
 noinst_LIBRARIES = libxp_libtess2.a
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-DSDL_DISABLE_OLD_NAMES \
@@ -455,7 +458,7 @@ xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	libxp_libtess2.a \
 	$(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) \
-	@NATIVE_TEXT_LIBS@ @GL_LIBS@ @SOUND_LIBS@ @W32_LIBS@
+	@NATIVE_TEXT_LIBS@ @GL_LIBS@ $(XP_SOUND_LIBS) @W32_LIBS@
 
 EXTRA_DIST = $(top_srcdir)/vendor/libtess2/LICENSE.txt \
 	$(top_srcdir)/vendor/libtess2/README.md

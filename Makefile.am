@@ -20,6 +20,7 @@ windows-package: all
 	$(SHELL) $(top_srcdir)/config/package-windows.sh \
 		--source-dir '$(abs_top_srcdir)' \
 		--build-dir '$(abs_top_builddir)' \
+		--dependency-prefix '@MINGW_DEPS_PREFIX@' \
 		--output '@MINGW_PACKAGE_DIR@'
 
 windows-check: windows-package

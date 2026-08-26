@@ -5,10 +5,11 @@ set -eu
 usage()
 {
     cat <<'EOF'
-Usage: package-windows.sh --source-dir PATH --build-dir PATH --output PATH
+Usage: package-windows.sh --source-dir PATH --build-dir PATH \
+       --dependency-prefix PATH --output PATH
 
-Assemble statically linked MinGW executables and XPilot NG game data into a
-relocatable Windows package directory.
+Assemble MinGW executables, vendored sound DLLs, and XPilot NG game data into
+a relocatable Windows package directory.
 EOF
 }
 
@@ -20,6 +21,7 @@ fail()
 
 source_dir=
 build_dir=
+dependency_prefix=
 package_dir=
 
 while test "$#" -gt 0; do
@@ -42,6 +44,15 @@ while test "$#" -gt 0; do
             build_dir=${1#*=}
             shift
             ;;
+        --dependency-prefix)
+            test "$#" -ge 2 || fail "--dependency-prefix requires a path"
+            dependency_prefix=$2
+            shift 2
+            ;;
+        --dependency-prefix=*)
+            dependency_prefix=${1#*=}
+            shift
+            ;;
         --output)
             test "$#" -ge 2 || fail "--output requires a path"
             package_dir=$2
@@ -61,7 +72,8 @@ while test "$#" -gt 0; do
     esac
 done
 
-for required_path in "$source_dir" "$build_dir" "$package_dir"; do
+for required_path in \
+    "$source_dir" "$build_dir" "$dependency_prefix" "$package_dir"; do
     test -n "$required_path" || fail "all path options are required"
     case "$required_path" in
         /*) ;;
@@ -70,6 +82,8 @@ for required_path in "$source_dir" "$build_dir" "$package_dir"; do
 done
 test -d "$source_dir" || fail "source directory was not found: $source_dir"
 test -d "$build_dir" || fail "build directory was not found: $build_dir"
+test -d "$dependency_prefix" \
+    || fail "dependency prefix was not found: $dependency_prefix"
 case "$package_dir" in
     "$build_dir"/*) ;;
     *) fail "package output must be inside the build directory" ;;
@@ -81,6 +95,18 @@ test -f "$server_executable" \
     || fail "Windows server executable is missing: $server_executable"
 test -f "$client_executable" \
     || fail "Windows SDL client executable is missing: $client_executable"
+openal_runtime="$dependency_prefix/bin/OpenAL32.dll"
+test -f "$openal_runtime" \
+    || fail "OpenAL Soft runtime is missing: $openal_runtime"
+alut_runtime=
+for alut_runtime_name in alut.dll libalut.dll freealut.dll; do
+    if test -f "$dependency_prefix/bin/$alut_runtime_name"; then
+        alut_runtime="$dependency_prefix/bin/$alut_runtime_name"
+        break
+    fi
+done
+test -n "$alut_runtime" \
+    || fail "freealut runtime is missing from $dependency_prefix/bin"
 
 package_work_dir="$package_dir.tmp"
 for output_dir in "$package_dir" "$package_work_dir"; do
@@ -91,6 +117,7 @@ for output_dir in "$package_dir" "$package_work_dir"; do
 done
 mkdir -p "$package_work_dir/lib"
 cp "$server_executable" "$client_executable" "$package_work_dir/"
+cp "$openal_runtime" "$alut_runtime" "$package_work_dir/"
 
 for data_directory in fonts maps textures sound; do
     if test -d "$source_dir/lib/$data_directory"; then
@@ -104,6 +131,11 @@ for data_file in defaults.txt password.txt robots.txt shipshapes.txt; do
     cp "$source_dir/lib/$data_file" "$package_work_dir/lib/"
 done
 cp "$source_dir/COPYING" "$package_work_dir/"
+mkdir -p "$package_work_dir/licenses"
+cp "$source_dir/vendor/openal-soft/COPYING" \
+    "$package_work_dir/licenses/OpenAL-Soft-COPYING"
+cp "$source_dir/vendor/freealut/COPYING" \
+    "$package_work_dir/licenses/freealut-COPYING"
 
 mv "$package_work_dir" "$package_dir"
 echo "Windows package assembled in $package_dir"

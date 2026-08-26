@@ -7,8 +7,8 @@ usage()
     cat <<'EOF'
 Usage: vendor/mingw/build.sh --build-dir PATH --prefix PATH [OPTIONS]
 
-Cross-build the pinned zlib, Expat, SDL3, SDL3_image, and SDL3_ttf
-dependencies for a MinGW target and install static libraries into one prefix.
+Cross-build the pinned zlib, Expat, OpenAL Soft, freealut, SDL3, SDL3_image,
+and SDL3_ttf dependencies for a MinGW target and install them into one prefix.
 
 Options:
   --build-dir PATH          Out-of-tree dependency build directory (required)
@@ -144,16 +144,23 @@ test -n "$build_type" || fail "--build-type requires a nonempty value"
 
 zlib_source="$vendor_dir/zlib"
 expat_source="$vendor_dir/expat/expat"
+openal_source="$vendor_dir/openal-soft"
+freealut_source="$vendor_dir/freealut"
 sdl_builder="$vendor_dir/sdl3/build.sh"
 test -x "$zlib_source/configure" \
     || fail "missing zlib submodule; run git submodule update --init"
 test -f "$expat_source/CMakeLists.txt" \
     || fail "missing Expat submodule; run git submodule update --init"
+test -f "$openal_source/CMakeLists.txt" \
+    || fail "missing OpenAL Soft submodule; run git submodule update --init"
+test -f "$freealut_source/CMakeLists.txt" \
+    || fail "missing freealut submodule; run git submodule update --init"
 test -x "$sdl_builder" \
     || fail "vendored SDL3 builder is unavailable: $sdl_builder"
 
 make_program=${MAKE:-make}
-for required_command in cmake cp "$make_program" "$triplet-gcc"; do
+for required_command in cmake cp "$make_program" \
+    "$triplet-gcc" "$triplet-g++"; do
     command -v "$required_command" >/dev/null 2>&1 \
         || fail "required command was not found: $required_command"
 done
@@ -197,6 +204,73 @@ cmake --build "$expat_build_dir" --config "$build_type" \
     --parallel "$jobs"
 cmake --install "$expat_build_dir" --config "$build_type"
 
+openal_build_dir="$build_dir/openal-soft"
+echo "===== build: OpenAL Soft for $triplet ====="
+PKG_CONFIG_PATH= \
+PKG_CONFIG_LIBDIR="$install_prefix/lib/pkgconfig" \
+cmake -S "$openal_source" -B "$openal_build_dir" \
+    "-DCMAKE_TOOLCHAIN_FILE=$toolchain_file" \
+    "-DCMAKE_BUILD_TYPE=$build_type" \
+    "-DCMAKE_INSTALL_PREFIX=$install_prefix" \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DLIBTYPE=SHARED \
+    -DALSOFT_UTILS=OFF \
+    -DALSOFT_EXAMPLES=OFF \
+    -DALSOFT_TESTS=OFF \
+    -DALSOFT_INSTALL_CONFIG=OFF \
+    -DALSOFT_INSTALL_HRTF_DATA=OFF \
+    -DALSOFT_INSTALL_AMBDEC_PRESETS=OFF \
+    -DALSOFT_INSTALL_EXAMPLES=OFF \
+    -DALSOFT_INSTALL_UTILS=OFF \
+    -DALSOFT_UPDATE_BUILD_VERSION=OFF \
+    -DALSOFT_STATIC_LIBGCC=ON \
+    -DALSOFT_STATIC_STDCXX=ON \
+    -DALSOFT_STATIC_WINPTHREAD=ON \
+    -DALSOFT_BACKEND_PIPEWIRE=OFF \
+    -DALSOFT_BACKEND_PULSEAUDIO=OFF \
+    -DALSOFT_BACKEND_ALSA=OFF \
+    -DALSOFT_BACKEND_OSS=OFF \
+    -DALSOFT_BACKEND_SOLARIS=OFF \
+    -DALSOFT_BACKEND_SNDIO=OFF \
+    -DALSOFT_BACKEND_JACK=OFF \
+    -DALSOFT_BACKEND_COREAUDIO=OFF \
+    -DALSOFT_BACKEND_OBOE=OFF \
+    -DALSOFT_BACKEND_OPENSL=OFF \
+    -DALSOFT_BACKEND_PORTAUDIO=OFF \
+    -DALSOFT_BACKEND_SDL3=OFF \
+    -DALSOFT_BACKEND_SDL2=OFF
+cmake --build "$openal_build_dir" --config "$build_type" \
+    --parallel "$jobs"
+cmake --install "$openal_build_dir" --config "$build_type"
+
+openal_import_library=
+for candidate_path in \
+    "$install_prefix/lib/libOpenAL32.dll.a" \
+    "$install_prefix/lib/OpenAL32.lib"; do
+    if test -f "$candidate_path"; then
+        openal_import_library=$candidate_path
+        break
+    fi
+done
+test -n "$openal_import_library" \
+    || fail "OpenAL Soft import library was not installed"
+
+freealut_build_dir="$build_dir/freealut"
+echo "===== build: freealut for $triplet ====="
+cmake -S "$freealut_source" -B "$freealut_build_dir" \
+    "-DCMAKE_TOOLCHAIN_FILE=$toolchain_file" \
+    "-DCMAKE_BUILD_TYPE=$build_type" \
+    "-DCMAKE_INSTALL_PREFIX=$install_prefix" \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    "-DOPENAL_INCLUDE_DIR=$install_prefix/include" \
+    "-DOPENAL_LIBRARY=$openal_import_library" \
+    -DBUILD_SHARED_LIBS=ON \
+    -DBUILD_EXAMPLES=OFF \
+    -DBUILD_TESTS=OFF
+cmake --build "$freealut_build_dir" --config "$build_type" \
+    --parallel "$jobs"
+cmake --install "$freealut_build_dir" --config "$build_type"
+
 echo "===== build: SDL3 dependencies for $triplet ====="
 "$sdl_builder" \
     --build-dir "$build_dir/sdl3" \
@@ -210,11 +284,24 @@ echo "===== build: SDL3 dependencies for $triplet ====="
 for required_file in \
     "$install_prefix/lib/libz.a" \
     "$install_prefix/lib/libexpat.a" \
+    "$install_prefix/bin/OpenAL32.dll" \
+    "$install_prefix/lib/pkgconfig/openal.pc" \
+    "$install_prefix/lib/pkgconfig/freealut.pc" \
     "$install_prefix/lib/pkgconfig/sdl3.pc" \
     "$install_prefix/lib/pkgconfig/sdl3-image.pc" \
     "$install_prefix/lib/pkgconfig/sdl3-ttf.pc"; do
     test -f "$required_file" \
         || fail "expected target dependency was not installed: $required_file"
 done
+
+alut_runtime_found=false
+for alut_runtime_name in alut.dll libalut.dll freealut.dll; do
+    if test -f "$install_prefix/bin/$alut_runtime_name"; then
+        alut_runtime_found=true
+        break
+    fi
+done
+test "$alut_runtime_found" = true \
+    || fail "freealut runtime DLL was not installed"
 
 echo "MinGW dependencies for $triplet installed in $install_prefix"

@@ -40,6 +40,7 @@ ca-certificates
 cmake
 dpkg-dev
 file
+libalut-dev
 libbrotli-dev
 libbz2-dev
 libexpat1-dev
@@ -50,6 +51,7 @@ libglib2.0-dev
 libgraphite2-dev
 libharfbuzz-dev
 libice-dev
+libopenal-dev
 libpng-dev
 libsm-dev
 libx11-dev

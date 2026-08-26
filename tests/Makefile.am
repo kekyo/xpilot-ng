@@ -92,8 +92,13 @@ TESTS = test-framed-stream test-websocket-transport \
 	test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
 	run-renderer-gl-core.sh run-sdl-renderer-core-context.sh \
-	run-build-wrapper.sh run-build-package.sh run-windows-archive.sh \
+	run-build-wrapper.sh run-build-package.sh run-package-windows.sh \
+	run-windows-archive.sh \
 	run-c23-server-build.sh run-vendored-zlib.sh run-e2e.sh
+if COND_SOUND
+check_PROGRAMS += test-audio-device
+TESTS += test-audio-device
+endif
 if COND_X11_CLIENT
 check_PROGRAMS += test-x11-text
 TESTS += run-x11-text.sh
@@ -560,6 +565,17 @@ test_text_cache_adapter_CFLAGS = $(AM_CFLAGS) \
 test_text_cache_adapter_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_text_cache_adapter_LDADD = $(top_builddir)/src/common/libxpcommon.a
 
+test_audio_device_SOURCES = test_audio_device.c
+test_audio_device_CFLAGS = $(AM_CFLAGS) -ffunction-sections -fdata-sections
+test_audio_device_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=alutInit -Wl,--wrap=alutGetError \
+	-Wl,--wrap=alutGetErrorString -Wl,--wrap=alutExit \
+	-Wl,--wrap=alListenerf -Wl,--wrap=alDopplerFactor \
+	-Wl,--wrap=alSpeedOfSound -Wl,--wrap=alGetError \
+	-Wl,--wrap=alGenSources -Wl,--wrap=alDeleteSources
+test_audio_device_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a @SOUND_LIBS@
+
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
 AM_TESTS_ENVIRONMENT = \
@@ -586,6 +602,8 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_BUILD_PACKAGE; \
 	XPILOT_WINDOWS_ARCHIVER='$(abs_top_srcdir)/config/package-windows.mjs'; \
 	export XPILOT_WINDOWS_ARCHIVER; \
+	XPILOT_WINDOWS_PACKAGER='$(abs_top_srcdir)/config/package-windows.sh'; \
+	export XPILOT_WINDOWS_PACKAGER; \
 	XPILOT_C23_CC='$(CC)'; export XPILOT_C23_CC; \
 	XPILOT_C23_SOURCE_DIR='$(abs_top_srcdir)'; export XPILOT_C23_SOURCE_DIR; \
 	XPILOT_C23_BUILD_DIR='$(abs_top_builddir)'; export XPILOT_C23_BUILD_DIR; \
@@ -598,7 +616,8 @@ EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
 	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
 	run-sdl-renderer-core-context.sh run-c23-server-build.sh \
 	run-vendored-zlib.sh \
-	run-wine-suite.sh run-build-package.sh run-windows-archive.sh \
+	run-wine-suite.sh run-build-package.sh run-package-windows.sh \
+	run-windows-archive.sh \
 	test-windows-archive.mjs test_helpers.h
 
 run-sdl-core-boundary.log: \
