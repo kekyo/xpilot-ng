@@ -372,7 +372,6 @@ typedef struct {
 } object_proximity_t;
 
 
-static bool Get_object_proximity();
 static bool Get_object_proximity(player_t *pl, object_t *shot, double sqmaxdist,int maxtime, object_proximity_t *object_proximity){
    /* get square of closest distance between player and object
     * compare with sqmaxdist and maxtime and return sqdistance and time

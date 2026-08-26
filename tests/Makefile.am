@@ -93,7 +93,7 @@ TESTS = test-framed-stream test-websocket-transport \
 	test-text-cache-adapter \
 	run-renderer-gl-core.sh run-sdl-renderer-core-context.sh \
 	run-build-wrapper.sh run-build-package.sh run-windows-archive.sh \
-	run-vendored-zlib.sh run-e2e.sh
+	run-c23-server-build.sh run-vendored-zlib.sh run-e2e.sh
 if COND_X11_CLIENT
 check_PROGRAMS += test-x11-text
 TESTS += run-x11-text.sh
@@ -586,6 +586,9 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_BUILD_PACKAGE; \
 	XPILOT_WINDOWS_ARCHIVER='$(abs_top_srcdir)/config/package-windows.mjs'; \
 	export XPILOT_WINDOWS_ARCHIVER; \
+	XPILOT_C23_CC='$(CC)'; export XPILOT_C23_CC; \
+	XPILOT_C23_SOURCE_DIR='$(abs_top_srcdir)'; export XPILOT_C23_SOURCE_DIR; \
+	XPILOT_C23_BUILD_DIR='$(abs_top_builddir)'; export XPILOT_C23_BUILD_DIR; \
 	XPILOT_VENDOR_ZLIB_SOURCE='$(abs_top_srcdir)/vendor/zlib'; \
 	export XPILOT_VENDOR_ZLIB_SOURCE;
 
@@ -593,7 +596,8 @@ EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
 	tcp-reconnect-proxy.mjs session-reconnect-proxy.mjs \
 	run-gl-core-resources.sh \
 	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
-	run-sdl-renderer-core-context.sh run-vendored-zlib.sh \
+	run-sdl-renderer-core-context.sh run-c23-server-build.sh \
+	run-vendored-zlib.sh \
 	run-wine-suite.sh run-build-package.sh run-windows-archive.sh \
 	test-windows-archive.mjs test_helpers.h
 
