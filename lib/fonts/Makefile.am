@@ -6,5 +6,3 @@ xpilotfont_DATA = \
 	FreeSansBoldOblique.ttf
 
 EXTRA_DIST = $(xpilotfont_DATA)
-
-

@@ -7,8 +7,8 @@ usage()
     cat <<'EOF'
 Usage: generate-deps-makefile.sh --prefix PATH --output PATH [OPTIONS]
 
-Generate a GNU Make fragment containing MinGW SDL3 compiler and static linker
-flags from an isolated vendored dependency prefix.
+Generate a GNU Make fragment containing MinGW SDL3 and sound dependency flags
+from an isolated vendored dependency prefix.
 
 Options:
   --prefix PATH       Installed MinGW dependency prefix (required)
@@ -94,6 +94,10 @@ export PKG_CONFIG_PATH PKG_CONFIG_LIBDIR
     || fail "vendored SDL3_image metadata is unavailable"
 "$pkg_config_program" --atleast-version=3.2.0 sdl3-ttf \
     || fail "vendored SDL3_ttf metadata is unavailable"
+"$pkg_config_program" --atleast-version=1.1.0 freealut \
+    || fail "vendored freealut metadata is unavailable"
+"$pkg_config_program" --atleast-version=1.25.2 openal \
+    || fail "vendored OpenAL Soft metadata is unavailable"
 
 sdl3_cflags=$("$pkg_config_program" --cflags sdl3)
 sdl3_libs=$("$pkg_config_program" --static --libs sdl3)
@@ -101,6 +105,11 @@ sdl3_image_cflags=$("$pkg_config_program" --cflags sdl3-image)
 sdl3_image_libs=$("$pkg_config_program" --static --libs sdl3-image)
 sdl3_ttf_cflags=$("$pkg_config_program" --cflags sdl3-ttf)
 sdl3_ttf_libs=$("$pkg_config_program" --static --libs sdl3-ttf)
+# The upstream freealut CMake metadata marks shared consumers as ALUT_STATIC.
+# OpenAL's include flags cover both installed AL and ALUT headers, while the
+# freealut library metadata still supplies the correct shared-library order.
+sound_cflags=$("$pkg_config_program" --cflags openal)
+sound_libs=$("$pkg_config_program" --libs freealut)
 
 output_tmp="$output_file.tmp.$$"
 cleanup()
@@ -117,6 +126,8 @@ trap cleanup EXIT HUP INT TERM
     printf 'MINGW_SDL3_IMAGE_LIBS := %s\n' "$sdl3_image_libs"
     printf 'MINGW_SDL3_TTF_CFLAGS := %s\n' "$sdl3_ttf_cflags"
     printf 'MINGW_SDL3_TTF_LIBS := %s\n' "$sdl3_ttf_libs"
+    printf 'MINGW_SOUND_CFLAGS := %s\n' "$sound_cflags"
+    printf 'MINGW_SOUND_LIBS := %s\n' "$sound_libs"
 } >"$output_tmp"
 mv -f -- "$output_tmp" "$output_file"
 trap - EXIT HUP INT TERM

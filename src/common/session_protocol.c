@@ -17,7 +17,8 @@
 typedef enum {
     SESSION_MESSAGE_OPEN = 1,
     SESSION_MESSAGE_GAME_REPLY = 2,
-    SESSION_MESSAGE_CONTROL_REPLY = 3
+    SESSION_MESSAGE_CONTROL_REPLY = 3,
+    SESSION_MESSAGE_RESUME_REPLY = 4
 } session_message_t;
 
 typedef struct {
@@ -59,6 +60,17 @@ static int Session_writer_u16(session_writer_t *writer, unsigned value)
         return Session_protocol_invalid(EINVAL);
     if (Session_writer_reserve(writer, 2) == -1)
         return -1;
+    writer->payload[writer->offset++] = (unsigned char)(value >> 8);
+    writer->payload[writer->offset++] = (unsigned char)value;
+    return 0;
+}
+
+static int Session_writer_u32(session_writer_t *writer, uint32_t value)
+{
+    if (Session_writer_reserve(writer, 4) == -1)
+        return -1;
+    writer->payload[writer->offset++] = (unsigned char)(value >> 24);
+    writer->payload[writer->offset++] = (unsigned char)(value >> 16);
     writer->payload[writer->offset++] = (unsigned char)(value >> 8);
     writer->payload[writer->offset++] = (unsigned char)value;
     return 0;
@@ -138,6 +150,20 @@ static int Session_reader_u16(session_reader_t *reader,
     high = reader->payload[reader->offset++];
     low = reader->payload[reader->offset++];
     *value = (unsigned short)((high << 8) | low);
+    return 0;
+}
+
+static int Session_reader_u32(session_reader_t *reader, uint32_t *value)
+{
+    uint32_t result;
+
+    if (Session_reader_reserve(reader, 4) == -1)
+        return -1;
+    result = (uint32_t)reader->payload[reader->offset++] << 24;
+    result |= (uint32_t)reader->payload[reader->offset++] << 16;
+    result |= (uint32_t)reader->payload[reader->offset++] << 8;
+    result |= reader->payload[reader->offset++];
+    *value = result;
     return 0;
 }
 
@@ -247,6 +273,26 @@ int Session_protocol_encode_control_open(
     return Session_writer_finish(&writer, length);
 }
 
+int Session_protocol_encode_resume_open(
+    char *destination, size_t capacity, size_t *length,
+    const session_resume_request_t *request)
+{
+    session_writer_t writer;
+    int i;
+
+    if (Session_writer_begin(
+            &writer, destination, capacity, length, request) == -1)
+        return -1;
+    if (Session_writer_header(&writer, SESSION_MESSAGE_OPEN) == -1
+        || Session_writer_byte(&writer, SESSION_PURPOSE_RESUME) == -1)
+        return -1;
+    for (i = 0; i < SESSION_TOKEN_WORDS; i++) {
+        if (Session_writer_u32(&writer, request->token.words[i]) == -1)
+            return -1;
+    }
+    return Session_writer_finish(&writer, length);
+}
+
 int Session_protocol_decode_open(const char *payload, size_t length,
                                  session_open_t *open)
 {
@@ -302,6 +348,15 @@ int Session_protocol_decode_open(const char *payload, size_t length,
         if (open->request.control.polygon_version == 0
             || open->request.control.legacy_version == 0)
             return Session_protocol_invalid(EPROTO);
+    } else if (purpose == SESSION_PURPOSE_RESUME) {
+        int i;
+
+        open->purpose = SESSION_PURPOSE_RESUME;
+        for (i = 0; i < SESSION_TOKEN_WORDS; i++) {
+            if (Session_reader_u32(
+                    &reader, &open->request.resume.token.words[i]) == -1)
+                return -1;
+        }
     } else {
         return Session_protocol_invalid(EPROTO);
     }
@@ -383,5 +438,39 @@ int Session_protocol_decode_control_reply(
         return -1;
     if (reply->more > 1)
         return Session_protocol_invalid(EPROTO);
+    return Session_reader_finish(&reader);
+}
+
+int Session_protocol_encode_resume_reply(
+    char *destination, size_t capacity, size_t *length,
+    const session_resume_reply_t *reply)
+{
+    session_writer_t writer;
+
+    if (Session_writer_begin(
+            &writer, destination, capacity, length, reply) == -1)
+        return -1;
+    if (Session_writer_header(&writer, SESSION_MESSAGE_RESUME_REPLY) == -1
+        || Session_writer_byte(&writer, reply->status) == -1
+        || Session_writer_string(
+               &writer, reply->reason, sizeof(reply->reason)) == -1)
+        return -1;
+    return Session_writer_finish(&writer, length);
+}
+
+int Session_protocol_decode_resume_reply(
+    const char *payload, size_t length, session_resume_reply_t *reply)
+{
+    session_reader_t reader;
+
+    if (Session_reader_begin(
+            &reader, payload, length, reply,
+            SESSION_MESSAGE_RESUME_REPLY) == -1)
+        return -1;
+    memset(reply, 0, sizeof(*reply));
+    if (Session_reader_byte(&reader, &reply->status) == -1
+        || Session_reader_string(
+               &reader, reply->reason, sizeof(reply->reason)) == -1)
+        return -1;
     return Session_reader_finish(&reader);
 }

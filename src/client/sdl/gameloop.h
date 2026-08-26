@@ -39,7 +39,7 @@ GameLoopResult Game_loop_prepare(GameLoopState *state);
  * @remarks A scheduler that cannot query socket readiness may pass nonzero;
  * Net_input is non-blocking and reports when no complete input is ready. The
  * native socket handle is refreshed after every successful step so a resumed
- * TCP session can replace its connection safely.
+ * gameplay session can replace its transport safely.
  */
 GameLoopResult Game_loop_step(GameLoopState *state, int network_ready);
 

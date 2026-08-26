@@ -28,6 +28,19 @@ typedef enum {
 /** Opaque nonblocking gameplay admission exchange. */
 typedef struct client_session client_session_t;
 
+/** Result of advancing a gameplay resumption exchange once. */
+typedef enum {
+    /** The request was rejected or a protocol or transport error occurred. */
+    CLIENT_RESUME_ERROR = -1,
+    /** More transport progress is required. */
+    CLIENT_RESUME_PENDING = 0,
+    /** The existing gameplay session accepted the replacement transport. */
+    CLIENT_RESUME_ACCEPTED = 1
+} client_resume_result_t;
+
+/** Opaque nonblocking gameplay resumption exchange. */
+typedef struct client_resume client_resume_t;
+
 /**
  * Create a gameplay admission exchange on an existing logical session.
  *
@@ -87,5 +100,39 @@ const char *Client_session_error(const client_session_t *session);
  * @param session Admission exchange to destroy. NULL is accepted.
  */
 void Client_session_destroy(client_session_t *session);
+
+/**
+ * Create a gameplay resumption exchange on an existing logical session.
+ *
+ * @param session Stable session retained and owned by the caller.
+ * @param token Bearer token copied into the resumption request.
+ * @return Allocated exchange, or NULL on invalid input or allocation failure.
+ */
+client_resume_t *Client_resume_create(record_session_t *session,
+                                      const session_token_t *token);
+
+/**
+ * Advance gameplay resumption once without waiting.
+ *
+ * @param resume Resumption exchange.
+ * @return Current resumption result.
+ */
+client_resume_result_t Client_resume_step(client_resume_t *resume);
+
+/**
+ * Return the human-readable resumption failure reason.
+ *
+ * @param resume Resumption exchange to inspect.
+ * @return Stable failure text, an empty string before failure, or an invalid
+ *         exchange message for NULL.
+ */
+const char *Client_resume_error(const client_resume_t *resume);
+
+/**
+ * Destroy resumption state without destroying the caller-owned session.
+ *
+ * @param resume Resumption exchange to destroy. NULL is accepted.
+ */
+void Client_resume_destroy(client_resume_t *resume);
 
 #endif /* CLIENT_SESSION_H */

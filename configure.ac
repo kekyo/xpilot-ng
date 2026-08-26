@@ -236,8 +236,16 @@ AC_SUBST([MINGW_PACKAGE_DIR])
 AC_SUBST([MINGW_WINE_PREFIX])
 
 AC_ARG_ENABLE(sound,
-	AC_HELP_STRING([--enable-sound],
-			[enable OpenAL sound]), [])
+	AC_HELP_STRING([--disable-sound],
+			[disable OpenAL sound]),
+[], [enable_sound=yes])
+case "$enable_sound" in
+	yes|no)
+		;;
+	*)
+		AC_MSG_ERROR([--enable-sound accepts yes or no])
+		;;
+esac
 
 dnl  Checks for programs.
 AC_PROG_CC
@@ -352,8 +360,9 @@ if test x$enable_xp_mapedit = xyes; then
 	AC_DEFINE([XP_MAPEDIT], 1, [enable xp-mapedit program])
 fi
 
-dnl Libraries needed by the SDL client.
-if test x$enable_sdl_client = xyes; then
+dnl SDL3 and SDL_ttf provide the shared native text implementation used by
+dnl both graphical clients. SDL_image and OpenGL remain SDL-client-only.
+if test x$enable_sdl_client = xyes || test x$enable_x11_client = xyes; then
 	if test x$mingw_vendored_deps = xyes; then
 		SDL3_CFLAGS=
 		SDL3_LIBS=
@@ -378,11 +387,15 @@ if test x$enable_sdl_client = xyes; then
 			if test ! -d "$with_sdl3_prefix/lib/pkgconfig"; then
 				AC_MSG_ERROR([vendored SDL3 pkg-config directory not found: $with_sdl3_prefix/lib/pkgconfig])
 			fi
-			for sdl3_pc_file in sdl3.pc sdl3-image.pc sdl3-ttf.pc; do
+			for sdl3_pc_file in sdl3.pc sdl3-ttf.pc; do
 				if test ! -f "$with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file"; then
 					AC_MSG_ERROR([vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file])
 				fi
 			done
+			if test x$enable_sdl_client = xyes \
+				&& test ! -f "$with_sdl3_prefix/lib/pkgconfig/sdl3-image.pc"; then
+				AC_MSG_ERROR([vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/sdl3-image.pc])
+			fi
 
 			if test "${PKG_CONFIG_PATH+set}" = set; then
 				saved_sdl3_pkg_config_path=$PKG_CONFIG_PATH
@@ -396,8 +409,16 @@ if test x$enable_sdl_client = xyes; then
 		fi
 
 		PKG_CHECK_MODULES([SDL3], [sdl3 >= 3.2.0])
-		PKG_CHECK_MODULES([SDL3_IMAGE], [sdl3-image >= 3.2.0])
 		PKG_CHECK_MODULES([SDL3_TTF], [sdl3-ttf >= 3.2.0])
+		if test x$enable_sdl_client = xyes; then
+			PKG_CHECK_MODULES([SDL3_IMAGE], [sdl3-image >= 3.2.0])
+			PKG_CHECK_MODULES([GL], [gl])
+		else
+			SDL3_IMAGE_CFLAGS=
+			SDL3_IMAGE_LIBS=
+			GL_CFLAGS=
+			GL_LIBS=
+		fi
 
 		if test x$with_sdl3 = xvendored; then
 			AC_MSG_CHECKING([for static vendored SDL3 linker flags])
@@ -405,13 +426,15 @@ if test x$enable_sdl_client = xyes; then
 			if test $? -ne 0; then
 				AC_MSG_ERROR([could not resolve static SDL3 linker flags])
 			fi
-			SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
-			if test $? -ne 0; then
-				AC_MSG_ERROR([could not resolve static SDL3_image linker flags])
-			fi
 			SDL3_TTF_LIBS=`$PKG_CONFIG --static --libs sdl3-ttf`
 			if test $? -ne 0; then
 				AC_MSG_ERROR([could not resolve static SDL3_ttf linker flags])
+			fi
+			if test x$enable_sdl_client = xyes; then
+				SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
+				if test $? -ne 0; then
+					AC_MSG_ERROR([could not resolve static SDL3_image linker flags])
+				fi
 			fi
 			AC_MSG_RESULT([yes])
 
@@ -422,11 +445,30 @@ if test x$enable_sdl_client = xyes; then
 				unset PKG_CONFIG_PATH
 			fi
 		fi
-		PKG_CHECK_MODULES([GL], [gl])
 	fi
 	AC_MSG_NOTICE([SDL3 dependency provider: $with_sdl3])
+	if test x$enable_sdl_client = xyes; then
 	AC_DEFINE([HAVE_SDL_IMAGE], 1,
 		  [Define to 1 if you have the SDL_image library.])
+	fi
+fi
+
+NATIVE_TEXT_CFLAGS=
+NATIVE_TEXT_LIBS=
+if test x$enable_sdl_client = xyes || test x$enable_x11_client = xyes; then
+	if test x$windows_target = xyes; then
+		NATIVE_TEXT_LIBS="-lgdi32"
+	else
+		PKG_CHECK_MODULES([FONTCONFIG], [fontconfig >= 2.8.0])
+		NATIVE_TEXT_CFLAGS=$FONTCONFIG_CFLAGS
+		NATIVE_TEXT_LIBS=$FONTCONFIG_LIBS
+	fi
+fi
+
+XRENDER_CFLAGS=
+XRENDER_LIBS=
+if test x$enable_x11_client = xyes; then
+	PKG_CHECK_MODULES([XRENDER], [xrender >= 0.9.0])
 fi
 
 AC_SUBST([SDL3_CFLAGS])
@@ -435,6 +477,10 @@ AC_SUBST([SDL3_IMAGE_CFLAGS])
 AC_SUBST([SDL3_IMAGE_LIBS])
 AC_SUBST([SDL3_TTF_CFLAGS])
 AC_SUBST([SDL3_TTF_LIBS])
+AC_SUBST([NATIVE_TEXT_CFLAGS])
+AC_SUBST([NATIVE_TEXT_LIBS])
+AC_SUBST([XRENDER_CFLAGS])
+AC_SUBST([XRENDER_LIBS])
 AC_SUBST([GL_CFLAGS])
 AC_SUBST([GL_LIBS])
 
@@ -446,32 +492,24 @@ AM_CONDITIONAL([COND_XP_MAPEDIT], [test x$enable_xp_mapedit = xyes])
 AM_CONDITIONAL([COND_X11_CLIENT], [test x$enable_x11_client = xyes])
 AM_CONDITIONAL([COND_SDL_CLIENT], [test x$enable_sdl_client = xyes])
 
-dnl OpenAL client sound support.
-if test x$enable_sound = xyes; then
-	have_openal=no
-	have_alut=no
-	have_sound=no
-	AC_CHECK_LIB(
-		openal, 
-		main, 
-		[have_openal=yes],
-		[])
-	AC_CHECK_LIB(
-		alut, 
-		main, 
-		[have_alut=yes],
-		[])
-	if test x$have_openal = xyes; then
-		if test x$have_alut = xyes; then
-			have_sound=yes
-			SOUND_LIBS="-lopenal -lalut"
-			AC_DEFINE([SOUND], 1, [Define to 1 if you want OpenAL sound.])
-		else
-			echo "*** Client sound disabled. Check that you have OpenAL installed."
-		fi
+dnl OpenAL client sound support. MinGW dependencies are built by make after
+dnl configure, so their compiler and linker flags come from mingw-deps.mk.
+have_sound=no
+SOUND_CFLAGS=
+SOUND_LIBS=
+if test x$enable_sound = xyes && test x$need_libxpclient = xyes; then
+	if test x$mingw_vendored_deps = xyes; then
+		have_sound=yes
+	else
+		PKG_CHECK_MODULES([SOUND], [freealut openal], [], [
+			AC_MSG_ERROR([OpenAL and freealut are required for client sound; install their development packages or use --disable-sound])
+		])
+		have_sound=yes
 	fi
-	AC_SUBST(SOUND_LIBS)
+	AC_DEFINE([SOUND], 1, [Define to 1 if you want OpenAL sound.])
 fi
+AC_SUBST([SOUND_CFLAGS])
+AC_SUBST([SOUND_LIBS])
 
 AM_CONDITIONAL([COND_SOUND], [test x$have_sound = xyes])
 

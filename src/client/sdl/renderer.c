@@ -1259,7 +1259,7 @@ RendererStatus Renderer_draw_mesh(Renderer *renderer,
                          renderer->transform);
 }
 
-RendererStatus Renderer_texture_create_with_desc(
+static RendererStatus Texture_create(
     Renderer *renderer, const RendererTextureDesc *desc,
     const uint8_t *rgba_pixels, size_t pitch, RendererTexture **texture)
 {
@@ -1268,13 +1268,6 @@ RendererStatus Renderer_texture_create_with_desc(
     size_t retained_pitch;
     void *handle = NULL;
 
-    if (texture == NULL)
-        return RENDERER_STATUS_INVALID_ARGUMENT;
-    *texture = NULL;
-    if (renderer == NULL)
-        return RENDERER_STATUS_INVALID_ARGUMENT;
-    if (!renderer->context_available || renderer->frame_active)
-        return RENDERER_STATUS_INVALID_STATE;
     if (desc == NULL || desc->width <= 0 || desc->height <= 0
         || (desc->filter != RENDERER_TEXTURE_FILTER_NEAREST
             && desc->filter != RENDERER_TEXTURE_FILTER_LINEAR)
@@ -1314,6 +1307,48 @@ RendererStatus Renderer_texture_create_with_desc(
     return RENDERER_STATUS_OK;
 }
 
+RendererStatus Renderer_texture_create_with_desc(
+    Renderer *renderer, const RendererTextureDesc *desc,
+    const uint8_t *rgba_pixels, size_t pitch, RendererTexture **texture)
+{
+    if (texture == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    *texture = NULL;
+    if (renderer == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!renderer->context_available || renderer->frame_active)
+	return RENDERER_STATUS_INVALID_STATE;
+    return Texture_create(renderer, desc, rgba_pixels, pitch, texture);
+}
+
+RendererStatus Renderer_texture_create_streaming(
+    Renderer *renderer, const RendererTextureDesc *desc,
+    const uint8_t *rgba_pixels, size_t pitch, RendererTexture **texture)
+{
+    RendererStatus status;
+
+    if (texture == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    *texture = NULL;
+    if (renderer == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!renderer->context_available || !renderer->frame_active)
+	return RENDERER_STATUS_INVALID_STATE;
+    if (desc == NULL || desc->width <= 0 || desc->height <= 0
+	|| (desc->filter != RENDERER_TEXTURE_FILTER_NEAREST
+	    && desc->filter != RENDERER_TEXTURE_FILTER_LINEAR)
+	|| (desc->wrap != RENDERER_TEXTURE_WRAP_CLAMP
+	    && desc->wrap != RENDERER_TEXTURE_WRAP_REPEAT)
+	|| rgba_pixels == NULL
+	|| !Pixel_data_valid(desc->width, desc->height, pitch)) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    status = Renderer_flush(renderer);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    return Texture_create(renderer, desc, rgba_pixels, pitch, texture);
+}
+
 RendererStatus Renderer_texture_update(Renderer *renderer,
                                        RendererTexture *texture,
                                        RendererRect region,
@@ -1347,15 +1382,11 @@ RendererStatus Renderer_texture_update(Renderer *renderer,
     return status;
 }
 
-RendererStatus Renderer_texture_destroy(Renderer *renderer,
-                                        RendererTexture *texture)
+static RendererStatus Texture_destroy(Renderer *renderer,
+			      RendererTexture *texture)
 {
     RendererTexture **link;
 
-    if (renderer == NULL || texture == NULL)
-        return RENDERER_STATUS_INVALID_ARGUMENT;
-    if (renderer->frame_active)
-        return RENDERER_STATUS_INVALID_STATE;
     if (!Texture_is_owned(renderer, texture))
         return RENDERER_STATUS_RESOURCE_MISMATCH;
     for (link = &renderer->textures; *link != texture; link = &(*link)->next)
@@ -1367,6 +1398,33 @@ RendererStatus Renderer_texture_destroy(Renderer *renderer,
     free(texture->pixels);
     free(texture);
     return RENDERER_STATUS_OK;
+}
+
+RendererStatus Renderer_texture_destroy(Renderer *renderer,
+					RendererTexture *texture)
+{
+    if (renderer == NULL || texture == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (renderer->frame_active)
+	return RENDERER_STATUS_INVALID_STATE;
+    return Texture_destroy(renderer, texture);
+}
+
+RendererStatus Renderer_texture_destroy_streaming(Renderer *renderer,
+					   RendererTexture *texture)
+{
+    RendererStatus status;
+
+    if (renderer == NULL || texture == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    if (!renderer->context_available || !renderer->frame_active)
+	return RENDERER_STATUS_INVALID_STATE;
+    if (!Texture_is_owned(renderer, texture))
+	return RENDERER_STATUS_RESOURCE_MISMATCH;
+    status = Renderer_flush(renderer);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    return Texture_destroy(renderer, texture);
 }
 
 RendererStatus Renderer_mesh_create(Renderer *renderer,

@@ -123,12 +123,15 @@ if test "$inside_xvfb" = false; then
     echo "===== build: supported Windows tests for $architecture ====="
     "$make_program" -C "$build_dir/tests" "-j$jobs" \
         test-framed-stream.exe \
+        test-websocket-transport.exe \
         test-game-transport.exe \
         test-connect-target.exe \
         test-contact-target-probe.exe \
         test-transport-display.exe \
         test-socket-io.exe \
         test-sdl-versions.exe \
+        test-score-font.exe \
+        test-native-text.exe \
         test-native-socket-handle.exe
 
     mkdir -p "$(dirname -- "$wine_prefix")"
@@ -351,11 +354,23 @@ meta_tcp_transport_reported()
 reserve_contact_port()
 {
     node -e '
-const socket = require("dgram").createSocket("udp4");
-socket.bind(0, "127.0.0.1", () => {
-  process.stdout.write(String(socket.address().port));
-  socket.close();
-});'
+const dgram = require("dgram");
+const net = require("net");
+const reserve = () => {
+  const tcp = net.createServer();
+  tcp.once("error", reserve);
+  tcp.listen(0, "127.0.0.1", () => {
+    const port = tcp.address().port;
+    const udp = dgram.createSocket("udp4");
+    udp.once("error", () => tcp.close(reserve));
+    udp.bind(port, "127.0.0.1", () => {
+      process.stdout.write(String(port));
+      udp.close();
+      tcp.close();
+    });
+  });
+};
+reserve();'
 }
 
 run_wine_unit_test()
@@ -546,10 +561,17 @@ run_gameplay_case()
 {
     contact_transport=$1
     gameplay_transport=$2
+    client_user=EntryUser
     expected_contact_transport=$(printf '%s' "$contact_transport" \
 	| tr '[:lower:]' '[:upper:]')
     expected_gameplay_transport=$(printf '%s' "$gameplay_transport" \
 	| tr '[:lower:]' '[:upper:]')
+    if test "$contact_transport" = websocket; then
+	expected_contact_transport=WebSocket
+    fi
+    if test "$gameplay_transport" = websocket; then
+	expected_gameplay_transport=WebSocket
+    fi
     transport_case="$contact_transport-contact-$gameplay_transport-game"
     contact_port=$(reserve_contact_port)
     server_log="$runtime_dir/server-$transport_case.log"
@@ -559,10 +581,12 @@ run_gameplay_case()
 	x86:udp:tcp) client_name=W32UT ;;
 	x86:tcp:udp) client_name=W32TU ;;
 	x86:tcp:tcp) client_name=W32TT ;;
+	x86:websocket:websocket) client_name=W32WS ;;
 	x86_64:udp:udp) client_name=W64UU ;;
 	x86_64:udp:tcp) client_name=W64UT ;;
 	x86_64:tcp:udp) client_name=W64TU ;;
 	x86_64:tcp:tcp) client_name=W64TT ;;
+	x86_64:websocket:websocket) client_name=W64WS ;;
     esac
 
     (
@@ -572,6 +596,11 @@ run_gameplay_case()
             exec "$wine_program" ./xpilot-ng-server.exe \
                 -map lib/maps/ndh.xp2 -port "$contact_port" \
                 -noQuit +reportMeta -transport tcp
+            ;;
+        websocket:websocket)
+            exec "$wine_program" ./xpilot-ng-server.exe \
+                -map lib/maps/ndh.xp2 -port "$contact_port" \
+                -noQuit +reportMeta -websocket
             ;;
         udp:udp)
             exec "$wine_program" ./xpilot-ng-server.exe \
@@ -600,18 +629,27 @@ run_gameplay_case()
         tcp:tcp)
             exec "$wine_program" ./xpilot-ng-sdl.exe \
                 -geometry 800x600 -join -name "$client_name" \
+                -user "$client_user" -messagesToStdout 2 \
                 "tcp://127.0.0.1:$contact_port"
+            ;;
+        websocket:websocket)
+            exec "$wine_program" ./xpilot-ng-sdl.exe \
+                -geometry 800x600 -join -name "$client_name" \
+                -user "$client_user" -messagesToStdout 2 \
+                "ws://127.0.0.1:$contact_port"
             ;;
         udp:udp)
             exec "$wine_program" ./xpilot-ng-sdl.exe \
                 -geometry 800x600 -join -name "$client_name" \
+                -user "$client_user" -messagesToStdout 2 \
                 -contactTransport tcp -gameTransport tcp \
                 "udp://127.0.0.1:$contact_port"
             ;;
         *)
             exec "$wine_program" ./xpilot-ng-sdl.exe \
                 -geometry 800x600 -join -port "$contact_port" \
-                -name "$client_name" \
+                -name "$client_name" -user "$client_user" \
+                -messagesToStdout 2 \
                 -contactTransport "$contact_transport" \
                 -gameTransport "$gameplay_transport" \
                 127.0.0.1
@@ -621,6 +659,8 @@ run_gameplay_case()
     client_pid=$!
 
     wait_until "$transport_case client login" 30 client_joined
+    wait_until "$transport_case first-player entry announcement" 15 \
+	grep -Fq "$client_name ($client_user) has entered" "$client_log"
     wait_until "$transport_case connection transport banner" 15 \
 	client_transport_banner_reported
     wait_until "$transport_case SDL window" 30 find_game_window
@@ -652,7 +692,18 @@ run_gameplay_case()
 server_executable="$package_dir/xpilot-ng-server.exe"
 client_executable="$package_dir/xpilot-ng-sdl.exe"
 map_file="$package_dir/lib/maps/ndh.xp2"
-for required_file in "$server_executable" "$client_executable" "$map_file"; do
+openal_library="$package_dir/OpenAL32.dll"
+freealut_library=
+for freealut_name in alut.dll libalut.dll freealut.dll; do
+    if test -f "$package_dir/$freealut_name"; then
+        freealut_library="$package_dir/$freealut_name"
+        break
+    fi
+done
+test -n "$freealut_library" \
+    || fail "packaged Windows freealut runtime is missing"
+for required_file in "$server_executable" "$client_executable" "$map_file" \
+    "$openal_library" "$freealut_library"; do
     test -f "$required_file" \
         || fail "packaged Windows test input is missing: $required_file"
 done
@@ -679,9 +730,10 @@ timeout 60s "$wineboot_program" -u >"$runtime_dir/wineboot.log" 2>&1 \
 timeout 30s "$wineserver_program" -w >>"$runtime_dir/wineboot.log" 2>&1 \
     || fail "Wine prefix initialization did not settle"
 
-for unit_test in test-framed-stream test-game-transport test-connect-target \
+for unit_test in test-framed-stream test-websocket-transport \
+    test-game-transport test-connect-target \
     test-transport-display test-socket-io test-sdl-versions \
-    test-native-socket-handle; do
+    test-score-font test-native-text test-native-socket-handle; do
     run_wine_unit_test "$unit_test"
 done
 
@@ -693,6 +745,7 @@ for contact_transport in udp tcp; do
         run_gameplay_case "$contact_transport" "$gameplay_transport"
     done
 done
+run_gameplay_case websocket websocket
 
 stop_wine_server || fail "Wine server did not stop after tests"
-echo "Wine $architecture unit, metaserver, and UDP/TCP integration tests passed"
+echo "Wine $architecture unit, metaserver, and UDP/TCP/WebSocket integration tests passed"

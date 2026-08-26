@@ -55,7 +55,7 @@ typedef enum Connect_target_status {
     CONNECT_TARGET_STATUS_OK = 0,
     /** A required argument or default setting is invalid. */
     CONNECT_TARGET_STATUS_INVALID_ARGUMENT,
-    /** A qualified target uses a scheme other than `tcp` or `udp`. */
+    /** A qualified target uses a scheme other than `ws`, `tcp`, or `udp`. */
     CONNECT_TARGET_STATUS_UNSUPPORTED_SCHEME,
     /** The target does not contain a host address. */
     CONNECT_TARGET_STATUS_MISSING_ADDRESS,
@@ -87,11 +87,11 @@ bool Connect_target_init(Connect_target_t *target, const char *address,
 /**
  * Parse one command-line connection target.
  *
- * A bare `HOST` copies all defaults. `tcp://HOST[:PORT]` and
- * `udp://HOST[:PORT]` select that transport for both contact/lobby and
- * gameplay. An explicit port overrides the default contact port. Paths,
- * credentials, queries, fragments, percent encoding, and IPv6 literals are
- * not supported.
+ * A bare `HOST` copies all defaults. `ws://HOST[:PORT]`,
+ * `tcp://HOST[:PORT]`, and `udp://HOST[:PORT]` select that transport for
+ * both contact/lobby and gameplay. An explicit port overrides the default
+ * contact port. Paths, credentials, queries, fragments, percent encoding,
+ * and IPv6 literals are not supported.
  *
  * @param target Receives the parsed endpoint.
  * @param specification Target specification from a positional argument.

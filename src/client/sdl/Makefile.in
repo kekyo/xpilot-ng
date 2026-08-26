@@ -115,54 +115,57 @@ libxp_libtess2_a_AR = $(AR) $(ARFLAGS)
 libxp_libtess2_a_LIBADD =
 am__dirstamp = $(am__leading_dot)dirstamp
 am_libxp_libtess2_a_OBJECTS =  \
-	third_party/libtess2/Source/bucketalloc.$(OBJEXT) \
-	third_party/libtess2/Source/dict.$(OBJEXT) \
-	third_party/libtess2/Source/geom.$(OBJEXT) \
-	third_party/libtess2/Source/mesh.$(OBJEXT) \
-	third_party/libtess2/Source/priorityq.$(OBJEXT) \
-	third_party/libtess2/Source/sweep.$(OBJEXT) \
-	third_party/libtess2/Source/tess.$(OBJEXT)
+	$(top_builddir)/vendor/libtess2/Source/bucketalloc.$(OBJEXT) \
+	$(top_builddir)/vendor/libtess2/Source/dict.$(OBJEXT) \
+	$(top_builddir)/vendor/libtess2/Source/geom.$(OBJEXT) \
+	$(top_builddir)/vendor/libtess2/Source/mesh.$(OBJEXT) \
+	$(top_builddir)/vendor/libtess2/Source/priorityq.$(OBJEXT) \
+	$(top_builddir)/vendor/libtess2/Source/sweep.$(OBJEXT) \
+	$(top_builddir)/vendor/libtess2/Source/tess.$(OBJEXT)
 libxp_libtess2_a_OBJECTS = $(am_libxp_libtess2_a_OBJECTS)
 am__xpilot_ng_sdl_SOURCES_DIST = asteroid_data.h DT_drawtext.c \
-	DT_drawtext.h SDL_console.c SDL_console.h SDL_gfxPrimitives.c \
-	SDL_gfxPrimitives.h SDL_gfxPrimitives_font.h console.c \
-	console.h glwidgets.c glwidgets.h gameinput.c gameinput.h \
-	gameloop.c gameloop.h gl_diagnostics.c gl_diagnostics.h image_geometry.c \
+	DT_drawtext.h SDL_console.c SDL_console.h console.c console.h \
+	glwidgets.c glwidgets.h gameinput.c gameinput.h gameloop.c \
+	gameloop.h gl_diagnostics.c gl_diagnostics.h image_geometry.c \
 	image_geometry.h images.c images.h images_test_support.h \
 	main.c radar.c radar.h paint_transform.c paint_transform.h \
 	polygon_geometry.c polygon_geometry.h renderer.c renderer.h \
 	renderer_backend.h renderer_gl.h renderer_gl_core.c \
-	renderer_gl_core.h sdlclipboard.c sdlclipboard.h sdlcompat.c \
-	sdlcompat.h sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c \
-	sdlkeys.h sdlgameframe.c sdlgameframe.h sdlmetaframe.c \
-	sdlmetaframe.h sdlrenderer.c sdlrenderer.h sdluiimage.c \
-	sdluiimage.h sdlpaint.c surface_rgba8.c surface_rgba8.h \
-	sdlpaint.h sdlwindow.c sdlwindow.h text.c text.h text_atlas.c \
-	text_atlas.h text_geometry.c text_geometry.h text_renderer.c \
-	text_renderer.h text_ttf_atlas.c text_ttf_atlas.h todo.c \
-	sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h win32hacks.c
+	renderer_gl_core.h score_font.c score_font.h sdlclipboard.c \
+	sdlclipboard.h sdlcompat.c sdlcompat.h sdlevent.c sdlevent.h \
+	sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h sdlgameframe.c \
+	sdlgameframe.h sdlmetaframe.c sdlmetaframe.h sdlrenderer.c \
+	sdlrenderer.h sdluiimage.c sdluiimage.h sdlpaint.c \
+	surface_primitives.c surface_primitives.h surface_rgba8.c \
+	surface_rgba8.h sdlpaint.h sdlwindow.c sdlwindow.h text.c \
+	text.h text_atlas.c text_atlas.h text_geometry.c \
+	text_geometry.h text_renderer.c text_renderer.h \
+	unicode_text_renderer.c unicode_text_renderer.h \
+	text_ttf_atlas.c text_ttf_atlas.h todo.c sdlmeta.h sdlmeta.c \
+	sdlinit.h xpclient_sdl.h win32hacks.c
 @COND_WINDOWS_TRUE@am__objects_1 = win32hacks.$(OBJEXT)
 am_xpilot_ng_sdl_OBJECTS = DT_drawtext.$(OBJEXT) SDL_console.$(OBJEXT) \
-	SDL_gfxPrimitives.$(OBJEXT) console.$(OBJEXT) \
-	glwidgets.$(OBJEXT) gameinput.$(OBJEXT) gameloop.$(OBJEXT) \
-	gl_diagnostics.$(OBJEXT) image_geometry.$(OBJEXT) \
-	images.$(OBJEXT) main.$(OBJEXT) radar.$(OBJEXT) \
-	paint_transform.$(OBJEXT) polygon_geometry.$(OBJEXT) \
-	renderer.$(OBJEXT) renderer_gl_core.$(OBJEXT) \
+	console.$(OBJEXT) glwidgets.$(OBJEXT) gameinput.$(OBJEXT) \
+	gameloop.$(OBJEXT) gl_diagnostics.$(OBJEXT) \
+	image_geometry.$(OBJEXT) images.$(OBJEXT) main.$(OBJEXT) \
+	radar.$(OBJEXT) paint_transform.$(OBJEXT) \
+	polygon_geometry.$(OBJEXT) renderer.$(OBJEXT) \
+	renderer_gl_core.$(OBJEXT) score_font.$(OBJEXT) \
 	sdlclipboard.$(OBJEXT) sdlcompat.$(OBJEXT) sdlevent.$(OBJEXT) \
 	sdlgui.$(OBJEXT) sdlinit.$(OBJEXT) sdlkeys.$(OBJEXT) \
 	sdlgameframe.$(OBJEXT) sdlmetaframe.$(OBJEXT) \
 	sdlrenderer.$(OBJEXT) sdluiimage.$(OBJEXT) sdlpaint.$(OBJEXT) \
-	surface_rgba8.$(OBJEXT) sdlwindow.$(OBJEXT) text.$(OBJEXT) \
-	text_atlas.$(OBJEXT) text_geometry.$(OBJEXT) \
-	text_renderer.$(OBJEXT) text_ttf_atlas.$(OBJEXT) \
+	surface_primitives.$(OBJEXT) surface_rgba8.$(OBJEXT) \
+	sdlwindow.$(OBJEXT) text.$(OBJEXT) text_atlas.$(OBJEXT) \
+	text_geometry.$(OBJEXT) text_renderer.$(OBJEXT) \
+	unicode_text_renderer.$(OBJEXT) text_ttf_atlas.$(OBJEXT) \
 	todo.$(OBJEXT) sdlmeta.$(OBJEXT) $(am__objects_1)
 xpilot_ng_sdl_OBJECTS = $(am_xpilot_ng_sdl_OBJECTS)
 am__DEPENDENCIES_1 =
 xpilot_ng_sdl_DEPENDENCIES = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a libxp_libtess2.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -178,32 +181,33 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/DT_drawtext.Po \
-	./$(DEPDIR)/SDL_console.Po ./$(DEPDIR)/SDL_gfxPrimitives.Po \
+am__depfiles_remade = $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/bucketalloc.Po \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/dict.Po \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/geom.Po \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/mesh.Po \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/priorityq.Po \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/sweep.Po \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/tess.Po \
+	./$(DEPDIR)/DT_drawtext.Po ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/console.Po ./$(DEPDIR)/gameinput.Po \
 	./$(DEPDIR)/gameloop.Po ./$(DEPDIR)/gl_diagnostics.Po \
 	./$(DEPDIR)/glwidgets.Po ./$(DEPDIR)/image_geometry.Po \
 	./$(DEPDIR)/images.Po ./$(DEPDIR)/main.Po \
 	./$(DEPDIR)/paint_transform.Po ./$(DEPDIR)/polygon_geometry.Po \
 	./$(DEPDIR)/radar.Po ./$(DEPDIR)/renderer.Po \
-	./$(DEPDIR)/renderer_gl_core.Po ./$(DEPDIR)/sdlclipboard.Po \
-	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
-	./$(DEPDIR)/sdlgameframe.Po ./$(DEPDIR)/sdlgui.Po \
-	./$(DEPDIR)/sdlinit.Po ./$(DEPDIR)/sdlkeys.Po \
-	./$(DEPDIR)/sdlmeta.Po ./$(DEPDIR)/sdlmetaframe.Po \
-	./$(DEPDIR)/sdlpaint.Po ./$(DEPDIR)/sdlrenderer.Po \
-	./$(DEPDIR)/sdluiimage.Po ./$(DEPDIR)/sdlwindow.Po \
+	./$(DEPDIR)/renderer_gl_core.Po ./$(DEPDIR)/score_font.Po \
+	./$(DEPDIR)/sdlclipboard.Po ./$(DEPDIR)/sdlcompat.Po \
+	./$(DEPDIR)/sdlevent.Po ./$(DEPDIR)/sdlgameframe.Po \
+	./$(DEPDIR)/sdlgui.Po ./$(DEPDIR)/sdlinit.Po \
+	./$(DEPDIR)/sdlkeys.Po ./$(DEPDIR)/sdlmeta.Po \
+	./$(DEPDIR)/sdlmetaframe.Po ./$(DEPDIR)/sdlpaint.Po \
+	./$(DEPDIR)/sdlrenderer.Po ./$(DEPDIR)/sdluiimage.Po \
+	./$(DEPDIR)/sdlwindow.Po ./$(DEPDIR)/surface_primitives.Po \
 	./$(DEPDIR)/surface_rgba8.Po ./$(DEPDIR)/text.Po \
 	./$(DEPDIR)/text_atlas.Po ./$(DEPDIR)/text_geometry.Po \
 	./$(DEPDIR)/text_renderer.Po ./$(DEPDIR)/text_ttf_atlas.Po \
-	./$(DEPDIR)/todo.Po ./$(DEPDIR)/win32hacks.Po \
-	third_party/libtess2/Source/$(DEPDIR)/bucketalloc.Po \
-	third_party/libtess2/Source/$(DEPDIR)/dict.Po \
-	third_party/libtess2/Source/$(DEPDIR)/geom.Po \
-	third_party/libtess2/Source/$(DEPDIR)/mesh.Po \
-	third_party/libtess2/Source/$(DEPDIR)/priorityq.Po \
-	third_party/libtess2/Source/$(DEPDIR)/sweep.Po \
-	third_party/libtess2/Source/$(DEPDIR)/tess.Po
+	./$(DEPDIR)/todo.Po ./$(DEPDIR)/unicode_text_renderer.Po \
+	./$(DEPDIR)/win32hacks.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -268,6 +272,8 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
+FONTCONFIG_CFLAGS = @FONTCONFIG_CFLAGS@
+FONTCONFIG_LIBS = @FONTCONFIG_LIBS@
 GL_CFLAGS = @GL_CFLAGS@
 GL_LIBS = @GL_LIBS@
 INSTALL = @INSTALL@
@@ -290,6 +296,8 @@ MINGW_PACKAGE_DIR = @MINGW_PACKAGE_DIR@
 MINGW_TOOLCHAIN_FILE = @MINGW_TOOLCHAIN_FILE@
 MINGW_WINE_PREFIX = @MINGW_WINE_PREFIX@
 MKDIR_P = @MKDIR_P@
+NATIVE_TEXT_CFLAGS = @NATIVE_TEXT_CFLAGS@
+NATIVE_TEXT_LIBS = @NATIVE_TEXT_LIBS@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -312,6 +320,7 @@ SDL3_TTF_CFLAGS = @SDL3_TTF_CFLAGS@
 SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOUND_CFLAGS = @SOUND_CFLAGS@
 SOUND_LIBS = @SOUND_LIBS@
 STRIP = @STRIP@
 VERSION = @VERSION@
@@ -322,6 +331,8 @@ XP_COPYRIGHT = @XP_COPYRIGHT@
 XP_COPYRIGHTDATE = @XP_COPYRIGHTDATE@
 XP_DATADIR = @XP_DATADIR@
 XP_RELEASEDATE = @XP_RELEASEDATE@
+XRENDER_CFLAGS = @XRENDER_CFLAGS@
+XRENDER_LIBS = @XRENDER_LIBS@
 X_CFLAGS = @X_CFLAGS@
 X_EXTENSIONS_LIB = @X_EXTENSIONS_LIB@
 X_EXTRA_LIBS = @X_EXTRA_LIBS@
@@ -395,59 +406,62 @@ AUTOMAKE_OPTIONS = subdir-objects
 @COND_MINGW_VENDORED_TRUE@XP_SDL3_TTF_CFLAGS = $(MINGW_SDL3_TTF_CFLAGS)
 @COND_MINGW_VENDORED_FALSE@XP_SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
 @COND_MINGW_VENDORED_TRUE@XP_SDL3_TTF_LIBS = $(MINGW_SDL3_TTF_LIBS)
+@COND_MINGW_VENDORED_FALSE@XP_SOUND_LIBS = @SOUND_LIBS@
+@COND_MINGW_VENDORED_TRUE@XP_SOUND_LIBS = $(MINGW_SOUND_LIBS)
 noinst_LIBRARIES = libxp_libtess2.a
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-DSDL_DISABLE_OLD_NAMES \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/client \
-	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
+	-I$(top_srcdir)/vendor/libtess2/Include \
 	$(XP_SDL3_CFLAGS) $(XP_SDL3_IMAGE_CFLAGS) $(XP_SDL3_TTF_CFLAGS) \
-	@GL_CFLAGS@
+	@NATIVE_TEXT_CFLAGS@ @GL_CFLAGS@
 
 libxp_libtess2_a_SOURCES = \
-	third_party/libtess2/Include/tesselator.h \
-	third_party/libtess2/Source/bucketalloc.c \
-	third_party/libtess2/Source/bucketalloc.h \
-	third_party/libtess2/Source/dict.c \
-	third_party/libtess2/Source/dict.h \
-	third_party/libtess2/Source/geom.c \
-	third_party/libtess2/Source/geom.h \
-	third_party/libtess2/Source/mesh.c \
-	third_party/libtess2/Source/mesh.h \
-	third_party/libtess2/Source/priorityq.c \
-	third_party/libtess2/Source/priorityq.h \
-	third_party/libtess2/Source/sweep.c \
-	third_party/libtess2/Source/sweep.h \
-	third_party/libtess2/Source/tess.c \
-	third_party/libtess2/Source/tess.h
+	$(top_srcdir)/vendor/libtess2/Include/tesselator.h \
+	$(top_srcdir)/vendor/libtess2/Source/bucketalloc.c \
+	$(top_srcdir)/vendor/libtess2/Source/bucketalloc.h \
+	$(top_srcdir)/vendor/libtess2/Source/dict.c \
+	$(top_srcdir)/vendor/libtess2/Source/dict.h \
+	$(top_srcdir)/vendor/libtess2/Source/geom.c \
+	$(top_srcdir)/vendor/libtess2/Source/geom.h \
+	$(top_srcdir)/vendor/libtess2/Source/mesh.c \
+	$(top_srcdir)/vendor/libtess2/Source/mesh.h \
+	$(top_srcdir)/vendor/libtess2/Source/priorityq.c \
+	$(top_srcdir)/vendor/libtess2/Source/priorityq.h \
+	$(top_srcdir)/vendor/libtess2/Source/sweep.c \
+	$(top_srcdir)/vendor/libtess2/Source/sweep.h \
+	$(top_srcdir)/vendor/libtess2/Source/tess.c \
+	$(top_srcdir)/vendor/libtess2/Source/tess.h
 
 xpilot_ng_sdl_SOURCES = asteroid_data.h DT_drawtext.c DT_drawtext.h \
-	SDL_console.c SDL_console.h SDL_gfxPrimitives.c \
-	SDL_gfxPrimitives.h SDL_gfxPrimitives_font.h console.c \
-	console.h glwidgets.c glwidgets.h gameinput.c gameinput.h \
-	gameloop.c gameloop.h gl_diagnostics.c gl_diagnostics.h image_geometry.c \
+	SDL_console.c SDL_console.h console.c console.h glwidgets.c \
+	glwidgets.h gameinput.c gameinput.h gameloop.c gameloop.h \
+	gl_diagnostics.c gl_diagnostics.h image_geometry.c \
 	image_geometry.h images.c images.h images_test_support.h \
 	main.c radar.c radar.h paint_transform.c paint_transform.h \
 	polygon_geometry.c polygon_geometry.h renderer.c renderer.h \
 	renderer_backend.h renderer_gl.h renderer_gl_core.c \
-	renderer_gl_core.h sdlclipboard.c sdlclipboard.h sdlcompat.c \
-	sdlcompat.h sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c \
-	sdlkeys.h sdlgameframe.c sdlgameframe.h sdlmetaframe.c \
-	sdlmetaframe.h sdlrenderer.c sdlrenderer.h sdluiimage.c \
-	sdluiimage.h sdlpaint.c surface_rgba8.c surface_rgba8.h \
-	sdlpaint.h sdlwindow.c sdlwindow.h text.c text.h text_atlas.c \
-	text_atlas.h text_geometry.c text_geometry.h text_renderer.c \
-	text_renderer.h text_ttf_atlas.c text_ttf_atlas.h todo.c \
-	sdlmeta.h sdlmeta.c sdlinit.h xpclient_sdl.h $(am__append_1)
+	renderer_gl_core.h score_font.c score_font.h sdlclipboard.c \
+	sdlclipboard.h sdlcompat.c sdlcompat.h sdlevent.c sdlevent.h \
+	sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h sdlgameframe.c \
+	sdlgameframe.h sdlmetaframe.c sdlmetaframe.h sdlrenderer.c \
+	sdlrenderer.h sdluiimage.c sdluiimage.h sdlpaint.c \
+	surface_primitives.c surface_primitives.h surface_rgba8.c \
+	surface_rgba8.h sdlpaint.h sdlwindow.c sdlwindow.h text.c \
+	text.h text_atlas.c text_atlas.h text_geometry.c \
+	text_geometry.h text_renderer.c text_renderer.h \
+	unicode_text_renderer.c unicode_text_renderer.h \
+	text_ttf_atlas.c text_ttf_atlas.h todo.c sdlmeta.h sdlmeta.c \
+	sdlinit.h xpclient_sdl.h $(am__append_1)
 xpilot_ng_sdl_LDADD = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a \
 	libxp_libtess2.a \
 	$(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) \
-	@GL_LIBS@ @SOUND_LIBS@ @W32_LIBS@
+	@NATIVE_TEXT_LIBS@ @GL_LIBS@ $(XP_SOUND_LIBS) @W32_LIBS@
 
-EXTRA_DIST = third_party/libtess2/LICENSE.txt \
-	third_party/libtess2/README.md \
-	third_party/libtess2/UPSTREAM.md
+EXTRA_DIST = $(top_srcdir)/vendor/libtess2/LICENSE.txt \
+	$(top_srcdir)/vendor/libtess2/README.md
 
 all: all-am
 
@@ -527,33 +541,33 @@ clean-binPROGRAMS:
 
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
-third_party/libtess2/Source/$(am__dirstamp):
-	@$(MKDIR_P) third_party/libtess2/Source
-	@: > third_party/libtess2/Source/$(am__dirstamp)
-third_party/libtess2/Source/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) third_party/libtess2/Source/$(DEPDIR)
-	@: > third_party/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
-third_party/libtess2/Source/bucketalloc.$(OBJEXT):  \
-	third_party/libtess2/Source/$(am__dirstamp) \
-	third_party/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
-third_party/libtess2/Source/dict.$(OBJEXT):  \
-	third_party/libtess2/Source/$(am__dirstamp) \
-	third_party/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
-third_party/libtess2/Source/geom.$(OBJEXT):  \
-	third_party/libtess2/Source/$(am__dirstamp) \
-	third_party/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
-third_party/libtess2/Source/mesh.$(OBJEXT):  \
-	third_party/libtess2/Source/$(am__dirstamp) \
-	third_party/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
-third_party/libtess2/Source/priorityq.$(OBJEXT):  \
-	third_party/libtess2/Source/$(am__dirstamp) \
-	third_party/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
-third_party/libtess2/Source/sweep.$(OBJEXT):  \
-	third_party/libtess2/Source/$(am__dirstamp) \
-	third_party/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
-third_party/libtess2/Source/tess.$(OBJEXT):  \
-	third_party/libtess2/Source/$(am__dirstamp) \
-	third_party/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/libtess2/Source/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/vendor/libtess2/Source
+	@: > $(top_builddir)/vendor/libtess2/Source/$(am__dirstamp)
+$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)
+	@: > $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/libtess2/Source/bucketalloc.$(OBJEXT):  \
+	$(top_builddir)/vendor/libtess2/Source/$(am__dirstamp) \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/libtess2/Source/dict.$(OBJEXT):  \
+	$(top_builddir)/vendor/libtess2/Source/$(am__dirstamp) \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/libtess2/Source/geom.$(OBJEXT):  \
+	$(top_builddir)/vendor/libtess2/Source/$(am__dirstamp) \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/libtess2/Source/mesh.$(OBJEXT):  \
+	$(top_builddir)/vendor/libtess2/Source/$(am__dirstamp) \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/libtess2/Source/priorityq.$(OBJEXT):  \
+	$(top_builddir)/vendor/libtess2/Source/$(am__dirstamp) \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/libtess2/Source/sweep.$(OBJEXT):  \
+	$(top_builddir)/vendor/libtess2/Source/$(am__dirstamp) \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/vendor/libtess2/Source/tess.$(OBJEXT):  \
+	$(top_builddir)/vendor/libtess2/Source/$(am__dirstamp) \
+	$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
 
 libxp_libtess2.a: $(libxp_libtess2_a_OBJECTS) $(libxp_libtess2_a_DEPENDENCIES) $(EXTRA_libxp_libtess2_a_DEPENDENCIES)
 	$(AM_V_at)-rm -f libxp_libtess2.a
@@ -566,14 +580,20 @@ xpilot-ng-sdl$(EXEEXT): $(xpilot_ng_sdl_OBJECTS) $(xpilot_ng_sdl_DEPENDENCIES) $
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
-	-rm -f third_party/libtess2/Source/*.$(OBJEXT)
+	-rm -f $(top_builddir)/vendor/libtess2/Source/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/bucketalloc.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/dict.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/geom.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/mesh.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/priorityq.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/sweep.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/tess.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DT_drawtext.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SDL_console.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SDL_gfxPrimitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/console.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gameinput.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gameloop.Po@am__quote@ # am--include-marker
@@ -587,6 +607,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/radar.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer_gl_core.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/score_font.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlclipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlcompat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlevent.Po@am__quote@ # am--include-marker
@@ -600,6 +621,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlrenderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdluiimage.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlwindow.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/surface_primitives.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/surface_rgba8.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_atlas.Po@am__quote@ # am--include-marker
@@ -607,14 +629,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text_ttf_atlas.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/todo.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unicode_text_renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/win32hacks.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@third_party/libtess2/Source/$(DEPDIR)/bucketalloc.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@third_party/libtess2/Source/$(DEPDIR)/dict.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@third_party/libtess2/Source/$(DEPDIR)/geom.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@third_party/libtess2/Source/$(DEPDIR)/mesh.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@third_party/libtess2/Source/$(DEPDIR)/priorityq.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@third_party/libtess2/Source/$(DEPDIR)/sweep.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@third_party/libtess2/Source/$(DEPDIR)/tess.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -755,8 +771,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
-	-rm -f third_party/libtess2/Source/$(am__dirstamp)
+	-test -z "$(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/$(am__dirstamp)" || rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/$(am__dirstamp)
+	-test -z "$(top_builddir)/vendor/libtess2/Source/$(am__dirstamp)" || rm -f $(top_builddir)/vendor/libtess2/Source/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -767,9 +783,15 @@ clean-am: clean-binPROGRAMS clean-generic clean-noinstLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/DT_drawtext.Po
+		-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/bucketalloc.Po
+	-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/dict.Po
+	-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/geom.Po
+	-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/mesh.Po
+	-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/priorityq.Po
+	-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/sweep.Po
+	-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/tess.Po
+	-rm -f ./$(DEPDIR)/DT_drawtext.Po
 	-rm -f ./$(DEPDIR)/SDL_console.Po
-	-rm -f ./$(DEPDIR)/SDL_gfxPrimitives.Po
 	-rm -f ./$(DEPDIR)/console.Po
 	-rm -f ./$(DEPDIR)/gameinput.Po
 	-rm -f ./$(DEPDIR)/gameloop.Po
@@ -783,6 +805,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/radar.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
 	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
+	-rm -f ./$(DEPDIR)/score_font.Po
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
@@ -796,6 +819,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/sdluiimage.Po
 	-rm -f ./$(DEPDIR)/sdlwindow.Po
+	-rm -f ./$(DEPDIR)/surface_primitives.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/text.Po
 	-rm -f ./$(DEPDIR)/text_atlas.Po
@@ -803,14 +827,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/text_renderer.Po
 	-rm -f ./$(DEPDIR)/text_ttf_atlas.Po
 	-rm -f ./$(DEPDIR)/todo.Po
+	-rm -f ./$(DEPDIR)/unicode_text_renderer.Po
 	-rm -f ./$(DEPDIR)/win32hacks.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/bucketalloc.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/dict.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/geom.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/mesh.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/priorityq.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/sweep.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/tess.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -856,9 +874,15 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/DT_drawtext.Po
+		-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/bucketalloc.Po
+	-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/dict.Po
+	-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/geom.Po
+	-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/mesh.Po
+	-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/priorityq.Po
+	-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/sweep.Po
+	-rm -f $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/tess.Po
+	-rm -f ./$(DEPDIR)/DT_drawtext.Po
 	-rm -f ./$(DEPDIR)/SDL_console.Po
-	-rm -f ./$(DEPDIR)/SDL_gfxPrimitives.Po
 	-rm -f ./$(DEPDIR)/console.Po
 	-rm -f ./$(DEPDIR)/gameinput.Po
 	-rm -f ./$(DEPDIR)/gameloop.Po
@@ -872,6 +896,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/radar.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
 	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
+	-rm -f ./$(DEPDIR)/score_font.Po
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
@@ -885,6 +910,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/sdluiimage.Po
 	-rm -f ./$(DEPDIR)/sdlwindow.Po
+	-rm -f ./$(DEPDIR)/surface_primitives.Po
 	-rm -f ./$(DEPDIR)/surface_rgba8.Po
 	-rm -f ./$(DEPDIR)/text.Po
 	-rm -f ./$(DEPDIR)/text_atlas.Po
@@ -892,14 +918,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/text_renderer.Po
 	-rm -f ./$(DEPDIR)/text_ttf_atlas.Po
 	-rm -f ./$(DEPDIR)/todo.Po
+	-rm -f ./$(DEPDIR)/unicode_text_renderer.Po
 	-rm -f ./$(DEPDIR)/win32hacks.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/bucketalloc.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/dict.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/geom.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/mesh.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/priorityq.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/sweep.Po
-	-rm -f third_party/libtess2/Source/$(DEPDIR)/tess.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

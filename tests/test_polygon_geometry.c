@@ -418,6 +418,34 @@ static int check_validation_status_and_empty_output(void)
     return 0;
 }
 
+static int check_replaces_previous_geometry(void)
+{
+    const RendererPoint2D square[] = {
+        {0.0f, 0.0f}, {4.0f, 0.0f}, {4.0f, 4.0f}, {0.0f, 4.0f}
+    };
+    const RendererPoint2D triangle[] = {
+        {0.0f, 0.0f}, {3.0f, 0.0f}, {0.0f, 2.0f}
+    };
+    PolygonGeometry geometry = {NULL, 0};
+
+    TEST_CHECK(Polygon_geometry_tessellate_odd(
+                   square, 4, &geometry) == RENDERER_STATUS_OK);
+    TEST_CHECK(double_near(geometry_area(&geometry), 16.0));
+
+    TEST_CHECK(Polygon_geometry_tessellate_odd(
+                   triangle, 3, &geometry) == RENDERER_STATUS_OK);
+    TEST_CHECK(geometry_is_well_formed(&geometry));
+    TEST_CHECK(geometry.triangle_point_count == 3);
+    TEST_CHECK(double_near(geometry_area(&geometry), 3.0));
+
+    TEST_CHECK(Polygon_geometry_tessellate_odd(
+                   NULL, 3, &geometry)
+               == RENDERER_STATUS_INVALID_ARGUMENT);
+    TEST_CHECK(geometry_is_empty(&geometry));
+    Polygon_geometry_cleanup(&geometry);
+    return 0;
+}
+
 int main(void)
 {
     if (check_convex_winding_and_owned_output() != 0)
@@ -429,6 +457,8 @@ int main(void)
     if (check_duplicate_collinear_and_zero_area_contours() != 0)
         return 1;
     if (check_validation_status_and_empty_output() != 0)
+        return 1;
+    if (check_replaces_previous_geometry() != 0)
         return 1;
     return 0;
 }

@@ -133,7 +133,7 @@ int	packet_lag;		/* approximate lag in frames */
 char	*packet_measure;	/* packet measurement in a second */
 long	packet_loop;		/* start of measurement */
 
-bool	showUserName = false;	/* Show user name instead of nick name */
+bool	showUserName = false;	/* Show nick=user@host details */
 char	servername[MAX_CHARS];	/* Name of server connecting to */
 unsigned	version;	/* Version of the server */
 bool	toggle_shield;		/* Are shields toggled by a press? */
@@ -1374,6 +1374,9 @@ int Handle_player(int id, int player_team, int mychar,
 	self = other;
     }
     memset(other, 0, sizeof(other_t));
+    /* PKT_SCORE follows PKT_PLAYER and supplies the alliance marker. Keep
+     * its fixed-width score-list column occupied until that packet arrives. */
+    other->alliance = ' ';
     other->id = id;
     other->team = player_team;
     other->mychar = mychar;

@@ -22,7 +22,7 @@
 #include "xpclient_sdl.h"
 
 #include "sdlpaint.h"
-#include "SDL_gfxPrimitives.h"
+#include "surface_primitives.h"
 #include "radar.h"
 #include "glwidgets.h"
 #include "sdlinit.h"
@@ -288,11 +288,12 @@ static void Radar_paint_world_polygons(GLWidget *radar, SDL_Surface *s)
 		}
 
 		color = polygon_styles[polygons[i].style].rgb;
-		filledPolygonRGBA(s, vx, vy, j,
-				  (color >> 16) & 0xff,
-				  (color >> 8) & 0xff,
-				  color & 0xff,
-				  0xff);
+		Sdl_surface_fill_polygon_rgba(
+		    s, vx, vy, j,
+		    (color >> 16) & 0xff,
+		    (color >> 8) & 0xff,
+		    color & 0xff,
+		    0xff);
 	    }
 	}
     }

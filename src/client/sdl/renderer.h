@@ -447,6 +447,25 @@ RendererStatus Renderer_texture_create_with_desc(
     const uint8_t *rgba_pixels, size_t pitch, RendererTexture **texture);
 
 /**
+ * Create an RGBA8 texture while a frame is active.
+ *
+ * @param renderer Renderer with an active frame.
+ * @param desc Texture dimensions and immutable sampling behavior.
+ * @param rgba_pixels Source pixels.
+ * @param pitch Source row length in bytes, at least desc width times four.
+ * @param texture Receives the created texture on success.
+ * @return Operation status.
+ *
+ * @remarks Pending draws are flushed before the backend resource is created,
+ * preserving submission order. This explicit streaming path is intended for
+ * immutable text rasters discovered during a frame; ordinary resources
+ * should continue to use Renderer_texture_create_with_desc() outside frames.
+ */
+RendererStatus Renderer_texture_create_streaming(
+    Renderer *renderer, const RendererTextureDesc *desc,
+    const uint8_t *rgba_pixels, size_t pitch, RendererTexture **texture);
+
+/**
  * Update a rectangular portion of an RGBA8 texture.
  *
  * @param renderer Texture owner, outside an active frame.
@@ -471,6 +490,19 @@ RendererStatus Renderer_texture_update(Renderer *renderer,
  */
 RendererStatus Renderer_texture_destroy(Renderer *renderer,
                                         RendererTexture *texture);
+
+/**
+ * Destroy a texture while a frame is active.
+ *
+ * @param renderer Texture owner with an active frame.
+ * @param texture Texture to destroy.
+ * @return Operation status.
+ *
+ * @remarks Pending draws are flushed before destruction, so commands that
+ * borrow the texture complete first.
+ */
+RendererStatus Renderer_texture_destroy_streaming(Renderer *renderer,
+					   RendererTexture *texture);
 
 /**
  * Create an owned triangle mesh.

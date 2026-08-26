@@ -25,8 +25,8 @@ xpilot \- XPilot multiplayer gravity war game client
 .B [-shutdown [\fImessage\fC]]
 .B [-display \fIstring\fC]
 .B [-port \fIport-number\fC]
-.B [-contactTransport \fIudp|tcp\fC]
-.B [-gameTransport \fIudp|tcp\fC]
+.B [-contactTransport \fIudp|tcp|websocket\fC]
+.B [-gameTransport \fIudp|tcp|websocket\fC]
 .B [-text]
 .B [\fIconfiguration-options]\fC
 .B [\fIserver-target ...\fC]
@@ -81,13 +81,13 @@ Prints version information.
 .B -join
 Automatically joins the first server you get response from.
 If no \fIserver-target\fP is specified, UDP contact performs a
-\fIbroadcast query\fP on the local network.  TCP contact requires an
-explicit server target.
+\fIbroadcast query\fP on the local network.  TCP and WebSocket contact require
+an explicit server target.
 .TP 15
 .B -list
 With UDP contact, a \fIbroadcast query\fP is performed on the local network
-and status information is displayed from all servers found.  TCP contact
-requires one or more explicit server targets.
+and status information is displayed from all servers found.  TCP and
+WebSocket contact require one or more explicit server targets.
 .TP 15
 .B -shutdown [\fImessage\fP]
 Sends a shutdown to the server, the message part is optional.
@@ -105,24 +105,25 @@ Specifies which X server to contact.
 Specifies the default numeric contact port for bare targets and qualified
 targets without an explicit port.
 .TP 15
-.B -contactTransport \fIudp|tcp\fP
+.B -contactTransport \fIudp|tcp|websocket\fP
 Selects the default transport for direct contact and pre-game lobby requests
-to bare targets.  The default is UDP.  A \fBtcp://\fP or \fBudp://\fP
+to bare targets.  The default is UDP.  A \fBws://\fP, \fBtcp://\fP, or \fBudp://\fP
 target overrides both transport defaults for that target.  LAN broadcast
 discovery is available only with UDP.  A server selected from the metaserver
-list applies its advertised value.
+list applies its advertised value.  WebSocket must be selected for both
+transport settings.
 .TP 15
-.B -gameTransport \fIudp|tcp\fP
+.B -gameTransport \fIudp|tcp|websocket\fP
 Selects the default gameplay transport for bare targets.  The default is UDP.
-A \fBtcp://\fP or \fBudp://\fP target overrides both transport defaults for
+A \fBws://\fP, \fBtcp://\fP, or \fBudp://\fP target overrides both transport defaults for
 that target.  A server selected from the metaserver list applies its
-advertised value.
+advertised value.  WebSocket must be selected for both transport settings.
 .TP 15
 .B -text
 Invokes the old text-based \fBcommand prompt\fP interface instead
 of the new \fBWelcome Window\fP.  If no \fIserver-target\fP is specified,
-UDP contact performs a \fIbroadcast query\fP on the local network; TCP
-contact requires an explicit server target.  If a \fIserver-target\fP is
+UDP contact performs a \fIbroadcast query\fP on the local network; TCP and
+WebSocket contact require an explicit server target.  If a \fIserver-target\fP is
 specified, \fB-text\fP is implied.
 .TP 15
 .B \fIconfiguration-options\fP
@@ -131,8 +132,8 @@ line.  For example to change the ecm key to just `z' use;
 .B -keyEcm z
 .TP 15
 .B \fIserver-target\fP
-A direct target is \fIHOST\fP, \fItcp://HOST[:PORT]\fP, or
-\fIudp://HOST[:PORT]\fP.  A qualified target selects that transport for
+A direct target is \fIHOST\fP, \fIws://HOST[:PORT]\fP,
+\fItcp://HOST[:PORT]\fP, or \fIudp://HOST[:PORT]\fP.  A qualified target selects that transport for
 both contact/lobby and gameplay, and its optional port overrides
 \fB-port\fP.  A bare host uses the transport and port option defaults.
 Multiple targets are tried in command-line order without automatically
@@ -171,8 +172,8 @@ corner.  These buttons are:
 .TP 12
 .B Local
 Search for \fBxpilot\fP servers on the local network using UDP contact
-and display a list of matches.  TCP contact does not support LAN broadcast
-discovery.  Press the \fBJoin game\fP button beside the desired server name
+and display a list of matches.  TCP and WebSocket contact do not support LAN
+broadcast discovery.  Press the \fBJoin game\fP button beside the desired server name
 to start playing.  If no servers are listed, you will need to start one.
 See \fIxpilots(6)\fP.
 
@@ -391,7 +392,7 @@ your HUD.
 .RS -5
 .RS -5
 Between the \fBradar\fP and the \fBRating list\fP there are three
-push buttons: 
+push buttons:
 .RS 5
 .TP 12
 .B Quit
@@ -578,7 +579,7 @@ Extra rear cannon.
 2 extra front cannons.
 .TP 12
 .B Afterburner
-Your main engine becomes more powerful and uses your fuel more 
+Your main engine becomes more powerful and uses your fuel more
 efficiently.
 .TP 12
 .B Rockets
@@ -635,7 +636,7 @@ re-target smart missiles within a certain range of your ship.
 When missiles are zapped by ECM, they will become confused for a
 while and then have a high probability of going after the player
 who you were locked onto when you used the ECM.  The ECM will also
-cause within a certain range to either explode or be more likely 
+cause within a certain range to either explode or be more likely
 be temporarily be blinded such that they do not explode if you go
 near them.  The closest mine within ECM range may be reprogrammed
 to be safe for you and your team members. If another ship
@@ -656,7 +657,7 @@ increases the range and the repeat rate of the laser subsystem.
 Gives you a limited amount of super thrusters, equivalent to a full
 complement of afterburners.  With a light ship this is equivalent
 to hitting hyperspace or warp factor 9.99.  Useful for stopping quickly
-or running away fast from a deadly encounter.  The extra thrust 
+or running away fast from a deadly encounter.  The extra thrust
 capability is toggled on and off by a seperate key and can thus be
 saved, the amount of time remaining is shown by a status bar below the
 HUD.
@@ -677,7 +678,7 @@ annoying players into walls.
 .TP 12
 .B Emergency Shield
 Gives you a limited amount of extra shield power, which prevents any
-fuel loss from shots, debris, player and wall collisions, missiles, 
+fuel loss from shots, debris, player and wall collisions, missiles,
 mines, etc.  While in use, the ship can smash into walls at any speed
 and angle without fear of being killed.  The extra shield capability
 is toggled on and off by a separate key and can thus be saved, with
@@ -827,7 +828,7 @@ Pressing the key again clears the nuclear weapons mode.
 You must have eight or more missiles, or four or more mines to launch
 a nuclear missile or mine, and perhaps enough fuel as well.  If you do
 not a message will be displayed at the bottom of the game area explaining
-why and the weapon will not be fired.  
+why and the weapon will not be fired.
 
 Firing a full (or fusion) nuclear weapon completely depletes your stock
 of that weapon, limited nuclear weapons will deplete your stock by eight
@@ -940,7 +941,7 @@ give the equivalent of emergency brakes.
 .B keyToggleEmergencyShield {g}
 This toggles the emergency shield item.  You need at least one emergency
 shield item.  When first turning on, this item is used up and ten seconds
-or so of emergency shield power is placed at your disposal.  The time is 
+or so of emergency shield power is placed at your disposal.  The time is
 only used up as you use your regular shields, and hitting this key again
 will return you back to normal shield power while conserving the remaining
 emergency shield power.
@@ -1162,14 +1163,15 @@ recommended policy.  You can find out about which port
 is used by a server by querying the xpilot Meta server.
 .TP 12
 .B contactTransport
-Select direct contact and lobby transport, either udp or tcp.  The default
-is udp.  Direct connections must match the server; metaserver selections
-apply the advertised value.  LAN broadcast discovery requires udp.
+Select direct contact and lobby transport: udp, tcp, or websocket.  The
+default is udp.  Direct connections must match the server; metaserver
+selections apply the advertised value.  LAN broadcast discovery requires
+udp.  WebSocket must be selected for both transport settings.
 .TP 12
 .B gameTransport
-Select the gameplay transport, either udp or tcp.  The default is udp.
+Select the gameplay transport: udp, tcp, or websocket.  The default is udp.
 Direct connections must match the server; metaserver selections apply the
-advertised value.
+advertised value.  WebSocket must be selected for both transport settings.
 .TP 12
 .B power
 Primary power setting of your engine.  Primary in this context means that it
@@ -1559,7 +1561,7 @@ If
 is set then its value is used instead of $HOME/.xpilotrc
 to find the file containing the xpilot resources.
 .B XPILOTUSER
-and 
+and
 .B XPILOTHOST
 set the loginname and hostname as reported to the xpilots server.
 
@@ -1567,8 +1569,8 @@ set the loginname and hostname as reported to the xpilots server.
 .SH AUTHORS
 
 \fBXPilot\fP was developed by
-Bjørn Stabell <bjoern@xpilot.org> and
-Ken Ronny Schouten <ken@xpilot.org> from the University of Tromsø, 
+BjÃ¸rn Stabell <bjoern@xpilot.org> and
+Ken Ronny Schouten <ken@xpilot.org> from the University of TromsÃ¸,
 Bert Gijsbers <bert@xpilot.org> from the University of Amsterdam,
 and Dick Balaska <dick@xpilot.org> from BuckoSoft.COM.
 

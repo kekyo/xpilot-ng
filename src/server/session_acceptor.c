@@ -76,8 +76,11 @@ session_acceptor_result_t Session_acceptor_step(
     if (Session_protocol_decode_open(acceptor->input, length, open) == -1)
         return Session_acceptor_fail(acceptor, "invalid session request");
     acceptor->state = SESSION_ACCEPTOR_READY;
-    return open->purpose == SESSION_PURPOSE_GAME
-        ? SESSION_ACCEPTOR_GAME_READY : SESSION_ACCEPTOR_CONTROL_READY;
+    if (open->purpose == SESSION_PURPOSE_GAME)
+        return SESSION_ACCEPTOR_GAME_READY;
+    if (open->purpose == SESSION_PURPOSE_CONTROL)
+        return SESSION_ACCEPTOR_CONTROL_READY;
+    return SESSION_ACCEPTOR_RESUME_READY;
 }
 
 record_session_id_t Session_acceptor_id(const session_acceptor_t *acceptor)

@@ -108,8 +108,8 @@ am_xpilot_ng_x11_OBJECTS = about.$(OBJEXT) bitmaps.$(OBJEXT) \
 	paintdata.$(OBJEXT) painthud.$(OBJEXT) paintradar.$(OBJEXT) \
 	record.$(OBJEXT) talk.$(OBJEXT) welcome.$(OBJEXT) \
 	widget.$(OBJEXT) xdefault.$(OBJEXT) xevent.$(OBJEXT) \
-	xeventhandlers.$(OBJEXT) xinit.$(OBJEXT) xpaint.$(OBJEXT) \
-	xpilot.$(OBJEXT)
+	xeventhandlers.$(OBJEXT) x11_text.$(OBJEXT) xinit.$(OBJEXT) \
+	xpaint.$(OBJEXT) xpilot.$(OBJEXT)
 xpilot_ng_x11_OBJECTS = $(am_xpilot_ng_x11_OBJECTS)
 xpilot_ng_x11_DEPENDENCIES = $(top_builddir)/src/client/libxpclient.a \
 	$(top_builddir)/src/common/libxpcommon.a
@@ -135,10 +135,10 @@ am__depfiles_remade = ./$(DEPDIR)/about.Po ./$(DEPDIR)/bitmaps.Po \
 	./$(DEPDIR)/paintdata.Po ./$(DEPDIR)/painthud.Po \
 	./$(DEPDIR)/paintradar.Po ./$(DEPDIR)/record.Po \
 	./$(DEPDIR)/talk.Po ./$(DEPDIR)/welcome.Po \
-	./$(DEPDIR)/widget.Po ./$(DEPDIR)/xdefault.Po \
-	./$(DEPDIR)/xevent.Po ./$(DEPDIR)/xeventhandlers.Po \
-	./$(DEPDIR)/xinit.Po ./$(DEPDIR)/xpaint.Po \
-	./$(DEPDIR)/xpilot.Po
+	./$(DEPDIR)/widget.Po ./$(DEPDIR)/x11_text.Po \
+	./$(DEPDIR)/xdefault.Po ./$(DEPDIR)/xevent.Po \
+	./$(DEPDIR)/xeventhandlers.Po ./$(DEPDIR)/xinit.Po \
+	./$(DEPDIR)/xpaint.Po ./$(DEPDIR)/xpilot.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -202,6 +202,8 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
+FONTCONFIG_CFLAGS = @FONTCONFIG_CFLAGS@
+FONTCONFIG_LIBS = @FONTCONFIG_LIBS@
 GL_CFLAGS = @GL_CFLAGS@
 GL_LIBS = @GL_LIBS@
 INSTALL = @INSTALL@
@@ -224,6 +226,8 @@ MINGW_PACKAGE_DIR = @MINGW_PACKAGE_DIR@
 MINGW_TOOLCHAIN_FILE = @MINGW_TOOLCHAIN_FILE@
 MINGW_WINE_PREFIX = @MINGW_WINE_PREFIX@
 MKDIR_P = @MKDIR_P@
+NATIVE_TEXT_CFLAGS = @NATIVE_TEXT_CFLAGS@
+NATIVE_TEXT_LIBS = @NATIVE_TEXT_LIBS@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -246,6 +250,7 @@ SDL3_TTF_CFLAGS = @SDL3_TTF_CFLAGS@
 SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOUND_CFLAGS = @SOUND_CFLAGS@
 SOUND_LIBS = @SOUND_LIBS@
 STRIP = @STRIP@
 VERSION = @VERSION@
@@ -256,6 +261,8 @@ XP_COPYRIGHT = @XP_COPYRIGHT@
 XP_COPYRIGHTDATE = @XP_COPYRIGHTDATE@
 XP_DATADIR = @XP_DATADIR@
 XP_RELEASEDATE = @XP_RELEASEDATE@
+XRENDER_CFLAGS = @XRENDER_CFLAGS@
+XRENDER_LIBS = @XRENDER_LIBS@
 X_CFLAGS = @X_CFLAGS@
 X_EXTENSIONS_LIB = @X_EXTENSIONS_LIB@
 X_EXTRA_LIBS = @X_EXTRA_LIBS@
@@ -318,7 +325,9 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
-	-I$(top_srcdir)/src/client
+	-I$(top_srcdir)/src/client \
+	@SDL3_CFLAGS@ @SDL3_TTF_CFLAGS@ @NATIVE_TEXT_CFLAGS@ \
+	@XRENDER_CFLAGS@
 
 xpilot_ng_x11_SOURCES = \
 	about.c \
@@ -333,11 +342,12 @@ xpilot_ng_x11_SOURCES = \
 	talk.c \
 	welcome.c widget.c widget.h \
 	xdefault.c xevent.c xevent.h xeventhandlers.c xeventhandlers.h \
+	x11_text.c x11_text.h \
 	../xhacks.h xinit.c xinit.h xpaint.c xpaint.h xpclient_x11.h xpilot.c
 
 
 #xpilot_CFLAGS = @X_CFLAGS@
-xpilot_ng_x11_LDADD = $(top_builddir)/src/client/libxpclient.a $(top_builddir)/src/common/libxpcommon.a @X_LIBS@ @X_PRE_LIBS@ @X_EXTENSIONS_LIB@ @X_EXTRA_LIBS@ -lX11 @SOUND_LIBS@
+xpilot_ng_x11_LDADD = $(top_builddir)/src/client/libxpclient.a $(top_builddir)/src/common/libxpcommon.a @X_LIBS@ @X_PRE_LIBS@ @X_EXTENSIONS_LIB@ @X_EXTRA_LIBS@ -lX11 @XRENDER_LIBS@ @SDL3_TTF_LIBS@ @SDL3_LIBS@ @NATIVE_TEXT_LIBS@ @SOUND_LIBS@
 all: all-am
 
 .SUFFIXES:
@@ -439,6 +449,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/talk.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/welcome.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/widget.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/x11_text.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xdefault.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xevent.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xeventhandlers.Po@am__quote@ # am--include-marker
@@ -607,6 +618,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/talk.Po
 	-rm -f ./$(DEPDIR)/welcome.Po
 	-rm -f ./$(DEPDIR)/widget.Po
+	-rm -f ./$(DEPDIR)/x11_text.Po
 	-rm -f ./$(DEPDIR)/xdefault.Po
 	-rm -f ./$(DEPDIR)/xevent.Po
 	-rm -f ./$(DEPDIR)/xeventhandlers.Po
@@ -673,6 +685,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/talk.Po
 	-rm -f ./$(DEPDIR)/welcome.Po
 	-rm -f ./$(DEPDIR)/widget.Po
+	-rm -f ./$(DEPDIR)/x11_text.Po
 	-rm -f ./$(DEPDIR)/xdefault.Po
 	-rm -f ./$(DEPDIR)/xevent.Po
 	-rm -f ./$(DEPDIR)/xeventhandlers.Po

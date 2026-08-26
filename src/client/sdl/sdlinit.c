@@ -32,6 +32,8 @@
 #include "sdlrenderer.h"
 #include "images.h"
 #include "transport_display.h"
+#include "native_text.h"
+#include "text_config.h"
 
 /* These are only needed for the polygon tessellation */
 /* I'd like to move them to Paint_init/cleanup but because it */
@@ -43,6 +45,7 @@ extern void Gui_cleanup(void);
 static SDL_Window *main_window;
 static SDL_GLContext main_gl_context;
 static SdlRenderer *main_renderer;
+static XpTextSystem *text_system;
 static bool sdl_initialized;
 static bool ttf_initialized;
 static bool cleanup_registered;
@@ -147,6 +150,7 @@ static void cleanup_window_system(void)
 	main_window = NULL;
     }
     if (ttf_initialized) {
+	Xp_text_system_destroy(&text_system);
 	TTF_Quit();
 	ttf_initialized = false;
     }
@@ -281,6 +285,12 @@ int Init_window(void)
 	      (int)renderer_status);
 	goto fail;
     }
+    if (Xp_text_system_create(CONF_FONTDIR, &text_system)
+	!= XP_TEXT_STATUS_OK) {
+	error("Could not initialize system font resolution: %s",
+	      SDL_GetError());
+	goto fail;
+    }
     SDL_StopTextInput(main_window);
     windowed_width = draw_width;
     windowed_height = draw_height;
@@ -363,8 +373,20 @@ int Init_window(void)
     if (renderer_status == RENDERER_STATUS_OK) {
 	renderer_status = font_text_renderer_attach(&mapfont, main_renderer);
     }
+    if (renderer_status == RENDERER_STATUS_OK) {
+	renderer_status = font_unicode_renderer_attach(
+	    &gamefont, text_system, main_renderer,
+	    Xp_text_config_families(XP_TEXT_SPACING_PROPORTIONAL));
+    }
+    if (renderer_status == RENDERER_STATUS_OK) {
+	renderer_status = font_unicode_renderer_attach(
+	    &mapfont, text_system, main_renderer,
+	    Xp_text_config_families(XP_TEXT_SPACING_PROPORTIONAL));
+    }
     if (renderer_status != RENDERER_STATUS_OK
-	|| gamefont.text_renderer == NULL || mapfont.text_renderer == NULL) {
+	|| gamefont.text_renderer == NULL || mapfont.text_renderer == NULL
+	|| gamefont.unicode_renderer == NULL
+	|| mapfont.unicode_renderer == NULL) {
 	error("Font text renderer initialization failed (%d)",
 	      (int)renderer_status);
 	goto fail;
@@ -385,6 +407,11 @@ fail:
 SdlRenderer *Get_sdl_renderer(void)
 {
     return main_renderer;
+}
+
+XpTextSystem *Get_text_system(void)
+{
+    return text_system;
 }
 
 /* function to reset our viewport after a window resize */

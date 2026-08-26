@@ -26,6 +26,10 @@
  */
 
 #include "xpclient.h"
+
+#include "utf8_names.h"
+#include "session_connection.h"
+#include "session_transport.h"
 #include "transport_display.h"
 
 
@@ -913,6 +917,388 @@ int Connect_to_server(int auto_connect, int list_servers,
     return result;
 }
 
+typedef struct {
+    bool failed;
+    bool list_servers;
+    bool quiet;
+    const Connect_param_t *connection;
+} direct_control_output_t;
+
+static bool Print_direct_control_reply(
+    const session_control_reply_t *reply, void *context)
+{
+    direct_control_output_t *output = context;
+    char payload[MSG_LEN];
+
+    if (reply->status != SUCCESS) {
+	warn("Fixed-endpoint control request failed: %s", reply->payload);
+	output->failed = true;
+	return true;
+    }
+    if (output->quiet)
+	return true;
+    strlcpy(payload, reply->payload, sizeof(payload));
+    Clean_string(payload);
+    if (reply->command == REPORT_STATUS_pack) {
+	if (output->list_servers && payload[0] != '\0') {
+	    printf("SERVER HOST......: %s\n",
+		   output->connection->server_name);
+	    printf("TRANSPORTS.......: %s -> %s "
+		   "(Contact/Lobby -> Gameplay)\n",
+		   Transport_display_name(
+		       output->connection->contact_transport),
+		   Transport_display_name(
+		       output->connection->game_transport));
+	    output->list_servers = false;
+	}
+	if (payload[0] != '\0')
+	    printf("%s", payload);
+    } else if (reply->command == OPTION_LIST_pack
+	       && payload[0] != '\0')
+	printf("%s\n", payload);
+    else if (!reply->more && payload[0] != '\0')
+	printf("%s\n", payload);
+    return true;
+}
+
+static record_transport_t *Open_direct_session(
+    const Connect_target_t *target)
+{
+    int source_start = clientPortStart;
+    int source_end = clientPortEnd;
+
+    if (!clientPortStart || !clientPortEnd
+	|| clientPortStart > clientPortEnd) {
+	source_start = 0;
+	source_end = 0;
+    }
+    return Client_session_transport_connect(
+	target->contact_transport, target->address, target->contact_port,
+	source_start, source_end, CONTACT_CONNECT_TIMEOUT, true);
+}
+
+static void Init_direct_control_request(
+    const Connect_target_t *target, const Connect_param_t *connection,
+    unsigned char command, const char *argument,
+    session_control_request_t *request)
+{
+    memset(request, 0, sizeof(*request));
+    request->polygon_version = (unsigned short)
+	Game_transport_session_protocol_version(
+	    target->game_transport, true);
+    request->legacy_version = (unsigned short)
+	Game_transport_session_protocol_version(
+	    target->game_transport, false);
+    strlcpy(request->user, connection->user_name, sizeof(request->user));
+    request->command = command;
+    if (argument != NULL)
+	strlcpy(request->argument, argument, sizeof(request->argument));
+}
+
+static bool Run_direct_control(
+    const Connect_target_t *target, const Connect_param_t *connection,
+    unsigned char command, const char *argument, bool list_servers,
+    bool quiet, Contact_servers_result_t *contact_result)
+{
+    direct_control_output_t output;
+    session_control_request_t request;
+    record_transport_t *transport;
+    char error_text[MSG_LEN];
+    int control_status;
+
+    transport = Open_direct_session(target);
+    if (transport == NULL)
+	return false;
+    contact_result->contacted = true;
+    Init_direct_control_request(
+	target, connection, command, argument, &request);
+    output.failed = false;
+    output.list_servers = list_servers;
+    output.quiet = quiet;
+    output.connection = connection;
+    control_status = Session_connection_run_control(
+	transport, &request, CONTACT_CONNECT_TIMEOUT,
+	Print_direct_control_reply, &output,
+	error_text, sizeof(error_text));
+    if (control_status == -1) {
+	warn("Fixed-endpoint control failed: %s", error_text);
+	return false;
+    }
+    return !output.failed;
+}
+
+static bool Join_direct_session(
+    const Connect_target_t *target, Connect_param_t *connection,
+    Contact_servers_result_t *contact_result)
+{
+    session_game_request_t request;
+    record_session_t *session = NULL;
+    record_transport_t *transport;
+    char confirmation[CLIENT_RECV_SIZE];
+    char error_text[MSG_LEN];
+    size_t confirmation_length = 0;
+    unsigned selected_version = 0;
+
+    transport = Open_direct_session(target);
+    if (transport == NULL)
+	return false;
+    contact_result->contacted = true;
+    memset(&request, 0, sizeof(request));
+    request.polygon_version = (unsigned short)
+	Game_transport_session_protocol_version(
+	    target->game_transport, true);
+    request.legacy_version = (unsigned short)
+	Game_transport_session_protocol_version(
+	    target->game_transport, false);
+    strlcpy(request.user, connection->user_name, sizeof(request.user));
+    strlcpy(request.nick, connection->nick_name, sizeof(request.nick));
+    strlcpy(request.display, connection->disp_name, sizeof(request.display));
+    strlcpy(request.host, connection->host_name, sizeof(request.host));
+    request.team = connection->team;
+    if (Session_connection_admit_game(
+	    transport, &request, CONTACT_CONNECT_TIMEOUT,
+	    &session, confirmation, sizeof(confirmation),
+	    &confirmation_length, &selected_version,
+	    error_text, sizeof(error_text)) == -1) {
+	warn("Fixed-endpoint gameplay admission failed: %s", error_text);
+	return false;
+    }
+    if (Session_connection_stage_game(
+	    session, confirmation, confirmation_length) == -1) {
+	warn("Cannot stage admitted gameplay session");
+	return false;
+    }
+    connection->server_version = selected_version;
+    printf("*** Connected to %s "
+	   "[Contact/Lobby: %s, Gameplay: %s]\n",
+	   connection->server_name,
+	   Transport_display_name(connection->contact_transport),
+	   Transport_display_name(connection->game_transport));
+    printf("*** Login allowed.\n");
+    contact_result->connected = true;
+    return true;
+}
+
+static void Session_command_help(void)
+{
+    printf("Supported commands are:\n"
+	   "H/?  -   Help - this text.\n"
+	   "N    -   Next server, skip this one.\n"
+	   "S    -   list Status.\n"
+	   "T    -   set Team.\n"
+	   "Q    -   Quit.\n");
+    printf("K    -   Kick a player.                (only owner)\n"
+	   "M    -   send a Message.               (only owner)\n"
+	   "L    -   set server access lock.        (only owner)\n"
+	   "D    -   shut down the server.          (only owner)\n"
+	   "O    -   Modify a server option.        (only owner)\n"
+	   "V    -   View the server options.\n"
+	   "J(&) or just Return enters the game.\n");
+    printf("(&) You may specify a team number after the J.\n");
+}
+
+static void Set_direct_session_team(const char *line,
+				    Connect_param_t *connection)
+{
+    if (line[1] == '0') {
+	printf("Team '0' is reserved for robots.");
+	connection->team = TEAM_NOT_SET;
+    } else if (line[1] > '0' && line[1] <= '9') {
+	connection->team = line[1] - '0';
+	printf("Joining team %d\n", connection->team);
+    } else if (line[1] == '-') {
+	connection->team = TEAM_NOT_SET;
+	printf("Team set to unspecified\n");
+    } else if (line[1] != '\0')
+	connection->team = TEAM_NOT_SET;
+}
+
+static bool Process_direct_session_commands(
+    const Connect_target_t *target, Connect_param_t *connection,
+    Contact_servers_result_t *contact_result)
+{
+    char argument[MSG_LEN];
+    char linebuf[MAX_LINE];
+    char value[MAX_LINE];
+    unsigned char command;
+    char c;
+
+    if (!Run_direct_control(
+	    target, connection, CONTACT_pack, NULL, false, true,
+	    contact_result))
+	return false;
+
+    for (;;) {
+	printf("*** Server on %s. Enter command> ", connection->server_name);
+	fflush(stdout);
+	get_line(linebuf, MAX_LINE, stdin);
+	if (feof(stdin)) {
+	    puts("");
+	    c = 'Q';
+	} else {
+	    c = linebuf[0];
+	    if (c == '\0')
+		c = 'J';
+	}
+	CAP_LETTER(c);
+	command = 0;
+	argument[0] = '\0';
+
+	switch (c) {
+	case 'J':
+	    Set_direct_session_team(linebuf, connection);
+	    if (Join_direct_session(target, connection, contact_result))
+		return true;
+	    continue;
+	case 'S':
+	    command = REPORT_STATUS_pack;
+	    break;
+	case 'V':
+	    command = OPTION_LIST_pack;
+	    break;
+	case 'K':
+	    printf("Enter name of victim: ");
+	    fflush(stdout);
+	    if (!get_line(linebuf, MAX_LINE, stdin) || !linebuf[0]) {
+		printf("Nothing changed.\n");
+		continue;
+	    }
+	    linebuf[MAX_NAME_LEN - 1] = '\0';
+	    strlcpy(argument, linebuf, sizeof(argument));
+	    command = KICK_PLAYER_pack;
+	    break;
+	case 'M':
+	    printf("Enter message: ");
+	    fflush(stdout);
+	    if (!get_line(linebuf, MAX_LINE, stdin) || !linebuf[0]) {
+		printf("No message sent.\n");
+		continue;
+	    }
+	    strlcpy(argument, linebuf, sizeof(argument));
+	    command = MESSAGE_pack;
+	    break;
+	case 'L':
+	    printf("Enter lock state (on/off): ");
+	    fflush(stdout);
+	    if (!get_line(linebuf, MAX_LINE, stdin) || !linebuf[0]) {
+		printf("Nothing changed.\n");
+		continue;
+	    }
+	    strlcpy(argument, linebuf, sizeof(argument));
+	    command = LOCK_GAME_pack;
+	    break;
+	case 'D':
+	    printf("Enter shutdown reason or return to cancel: ");
+	    fflush(stdout);
+	    if (!get_line(linebuf, MAX_LINE, stdin) || !linebuf[0]) {
+		printf("Shutdown request cancelled.\n");
+		continue;
+	    }
+	    strlcpy(argument, linebuf, sizeof(argument));
+	    command = SHUTDOWN_pack;
+	    break;
+	case 'O':
+	    printf("Enter option: ");
+	    fflush(stdout);
+	    if (!get_line(linebuf, MAX_LINE, stdin) || !linebuf[0]) {
+		printf("Nothing changed.\n");
+		continue;
+	    }
+	    printf("Enter new value for %s: ", linebuf);
+	    fflush(stdout);
+	    if (!get_line(value, MAX_LINE, stdin) || !value[0]) {
+		printf("Nothing changed.\n");
+		continue;
+	    }
+	    if (snprintf(argument, sizeof(argument), "%s:%s",
+			 linebuf, value) >= (int)sizeof(argument)) {
+		warn("Option update is too long");
+		continue;
+	    }
+	    command = OPTION_TUNE_pack;
+	    break;
+	case 'N':
+	    return false;
+	case 'T':
+	{
+	    int newteam;
+
+	    printf("Enter team: ");
+	    fflush(stdout);
+	    if (!get_line(linebuf, MAX_LINE, stdin) || !linebuf[0])
+		printf("Nothing changed.\n");
+	    else if (sscanf(linebuf, " %d", &newteam) != 1)
+		printf("Invalid team specification: %s.\n", linebuf);
+	    else if (newteam >= 0 && newteam <= 9) {
+		connection->team = newteam;
+		printf("Team set to %d\n", connection->team);
+	    } else {
+		connection->team = TEAM_NOT_SET;
+		printf("Team set to unspecified\n");
+	    }
+	    continue;
+	}
+	case 'Q':
+	    exit(0);
+	case '?':
+	case 'H':
+	default:
+	    Session_command_help();
+	    continue;
+	}
+
+	Run_direct_control(
+	    target, connection, command, argument, false, false,
+	    contact_result);
+    }
+}
+
+static Contact_servers_result_t Contact_session_target(
+    const Connect_target_t *target, int auto_connect, int list_servers,
+    int auto_shutdown, const char *shutdown_reason,
+    Connect_param_t *connection)
+{
+    Contact_servers_result_t result = { false, false };
+    Connect_param_t attempt = *connection;
+
+    if (Check_utf8_user_name(attempt.user_name) == NAME_ERROR
+	|| Check_utf8_disp_name(attempt.disp_name) == NAME_ERROR) {
+	warn("Cannot use invalid UTF-8 player metadata for a session");
+	return result;
+    }
+    printf("Contacting server %s.\n", target->address);
+    attempt.contact_port = target->contact_port;
+    attempt.server_port = target->contact_port;
+    attempt.login_port = target->contact_port;
+    attempt.contact_transport = target->contact_transport;
+    attempt.game_transport = target->game_transport;
+    strlcpy(attempt.server_addr, target->address,
+	    sizeof(attempt.server_addr));
+    strlcpy(attempt.server_name, target->address,
+	    sizeof(attempt.server_name));
+
+    if (list_servers || auto_shutdown) {
+	Run_direct_control(
+	    target, &attempt,
+	    list_servers ? REPORT_STATUS_pack : SHUTDOWN_pack,
+	    auto_shutdown ? shutdown_reason : NULL,
+	    list_servers != 0, false, &result);
+	return result;
+    }
+
+#ifdef _WINDOWS
+    auto_connect = true;
+#endif
+
+    if (auto_connect)
+	Join_direct_session(target, &attempt, &result);
+    else
+	Process_direct_session_commands(target, &attempt, &result);
+    if (result.connected)
+	*connection = attempt;
+    return result;
+}
+
 
 /* Keep all attempt-specific state local so a failed endpoint cannot alter the
  * defaults or the established connection selected by the caller. */
@@ -934,6 +1320,17 @@ static Contact_servers_result_t Contact_target(
     int ret;
     sockbuf_t sbuf;
 
+    if (target->contact_transport == target->game_transport
+	&& Game_transport_session_protocol_version(
+	       target->contact_transport, true) != 0)
+	return Contact_session_target(
+	    target, auto_connect, list_servers, auto_shutdown,
+	    shutdown_reason, conpar);
+
+    /* Legacy contact and gameplay packets expose byte-oriented names to old
+     * peers, so preserve their exact printable-ASCII normalization. */
+    Fix_user_name(attempt.user_name);
+    Fix_disp_name(attempt.disp_name);
     attempt.contact_port = target->contact_port;
     attempt.contact_transport = target->contact_transport;
     attempt.game_transport = target->game_transport;
@@ -1071,6 +1468,7 @@ static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
 				      Connect_param_t *conpar)
 {
     const int max_retries = 2;
+    Connect_param_t legacy_connection;
     Connect_target_t target;
     int connected = false;
     int contacted = 0;
@@ -1082,11 +1480,15 @@ static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
 	*num_found = 0;
     if (defaults == NULL || conpar == NULL)
 	return false;
-    if (defaults->contact_transport == GAME_TRANSPORT_TCP) {
-	warn("TCP contact transport cannot broadcast on the local network");
+    if (defaults->contact_transport != GAME_TRANSPORT_UDP) {
+	warn("Only UDP contact transport can broadcast on the local network");
 	warn("Specify a server address or select one from the metaserver");
 	return false;
     }
+
+    legacy_connection = *conpar;
+    Fix_user_name(legacy_connection.user_name);
+    Fix_disp_name(legacy_connection.disp_name);
 
     memset(&target, 0, sizeof(target));
     target.contact_port = defaults->contact_port;
@@ -1102,7 +1504,8 @@ static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
 	Sockbuf_clear(&sbuf);
 	Packet_printf(&sbuf, "%u%s%hu%c",
 		      Client_contact_magic(target.game_transport, false),
-		      conpar->user_name, sock_get_port(&sbuf.sock), CONTACT_pack);
+		      legacy_connection.user_name,
+		      sock_get_port(&sbuf.sock), CONTACT_pack);
 	assert(sbuf.len >= 0);
 	if (Query_all(&sbuf.sock, target.contact_port,
 		      sbuf.buf, (size_t)sbuf.len) == -1) {
@@ -1118,7 +1521,7 @@ static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
 	    IFWINDOWS( Progress("Searching once more...") );
 	}
 	for (;;) {
-	    Connect_param_t attempt = *conpar;
+	    Connect_param_t attempt = legacy_connection;
 	    Contact_message_result_t message_result = Get_contact_message(
 		&sbuf, "", &target, &attempt);
 	    int ret = message_result.status;

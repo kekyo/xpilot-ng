@@ -262,6 +262,8 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
+FONTCONFIG_CFLAGS = @FONTCONFIG_CFLAGS@
+FONTCONFIG_LIBS = @FONTCONFIG_LIBS@
 GL_CFLAGS = @GL_CFLAGS@
 GL_LIBS = @GL_LIBS@
 INSTALL = @INSTALL@
@@ -284,6 +286,8 @@ MINGW_PACKAGE_DIR = @MINGW_PACKAGE_DIR@
 MINGW_TOOLCHAIN_FILE = @MINGW_TOOLCHAIN_FILE@
 MINGW_WINE_PREFIX = @MINGW_WINE_PREFIX@
 MKDIR_P = @MKDIR_P@
+NATIVE_TEXT_CFLAGS = @NATIVE_TEXT_CFLAGS@
+NATIVE_TEXT_LIBS = @NATIVE_TEXT_LIBS@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -306,6 +310,7 @@ SDL3_TTF_CFLAGS = @SDL3_TTF_CFLAGS@
 SDL3_TTF_LIBS = @SDL3_TTF_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOUND_CFLAGS = @SOUND_CFLAGS@
 SOUND_LIBS = @SOUND_LIBS@
 STRIP = @STRIP@
 VERSION = @VERSION@
@@ -316,6 +321,8 @@ XP_COPYRIGHT = @XP_COPYRIGHT@
 XP_COPYRIGHTDATE = @XP_COPYRIGHTDATE@
 XP_DATADIR = @XP_DATADIR@
 XP_RELEASEDATE = @XP_RELEASEDATE@
+XRENDER_CFLAGS = @XRENDER_CFLAGS@
+XRENDER_LIBS = @XRENDER_LIBS@
 X_CFLAGS = @X_CFLAGS@
 X_EXTENSIONS_LIB = @X_EXTENSIONS_LIB@
 X_EXTRA_LIBS = @X_EXTRA_LIBS@
@@ -381,7 +388,10 @@ top_srcdir = @top_srcdir@
 @COND_MINGW_VENDORED_TRUE@SUBDIRS = vendor/mingw src lib doc contrib \
 @COND_MINGW_VENDORED_TRUE@	$(am__append_1)
 dist_pkgdata_DATA = mapconvert.py
-EXTRA_DIST = build.sh config/package-windows.sh
+EXTRA_DIST = build.sh build_package.sh build_package_all.sh prereq.sh \
+	scripts/build_linux_dist_container.sh config/package-windows.sh \
+	config/package-windows.mjs
+
 @COND_WINDOWS_TRUE@MINGW_TEST_JOBS =
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
@@ -897,6 +907,7 @@ uninstall-am: uninstall-dist_pkgdataDATA
 @COND_WINDOWS_TRUE@	$(SHELL) $(top_srcdir)/config/package-windows.sh \
 @COND_WINDOWS_TRUE@		--source-dir '$(abs_top_srcdir)' \
 @COND_WINDOWS_TRUE@		--build-dir '$(abs_top_builddir)' \
+@COND_WINDOWS_TRUE@		--dependency-prefix '@MINGW_DEPS_PREFIX@' \
 @COND_WINDOWS_TRUE@		--output '@MINGW_PACKAGE_DIR@'
 
 @COND_WINDOWS_TRUE@windows-check: windows-package

@@ -286,6 +286,12 @@ int Images_prepare(Renderer *renderer)
     if (candidates == NULL)
         return -1;
     for (index = 0; index < num_images; index++) {
+        /* Map textures are registered after the built-in images. Keep them
+         * unprepared while textured walls are disabled, matching the client
+         * policy that avoids fetching the map's texture package. A later
+         * option change prepares them through the normal per-frame retry. */
+        if (index >= first_texture && !instruments.texturedWalls)
+            continue;
         if (images[index].state == IMG_STATE_READY)
             continue;
         if (Image_stage(renderer, &images[index], index,

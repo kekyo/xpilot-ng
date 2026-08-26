@@ -11,10 +11,12 @@ Configure and build XPilot NG and its pinned dependencies in one command.
 Build products are kept out of the source tree under ./build by default.
 
 Options:
-  --target TARGET          native or windows (default: native)
+  --target TARGET          all, native, or windows (default: all)
   --arch ARCH              Windows x86, x86_64, or all (default: all)
   --test                   Run the target's complete supported test suite
   --build-root PATH        Root for all build output (default: ./build)
+  --artifact-root PATH     Windows ZIP output (default: ./artifacts/windows)
+  --package-version VALUE  Archive version (default: screw-up-derived version)
   --jobs NUMBER            Parallel build jobs (default: detected CPU count)
   --build-type TYPE        Dependency CMake build type (default: Release)
   --toolchain-file PATH    CMake toolchain file for one target architecture
@@ -23,7 +25,8 @@ Options:
 Arguments after -- are forwarded to XPilot NG's configure script.  Native
 builds use the vendored SDL3 provider.  Windows builds run on Linux with
 MinGW and delegate dependency builds, packaging, and Wine tests to the
-configured Makefiles for x86 and/or x86_64.
+configured Makefiles for x86 and/or x86_64.  The default builds native and
+both Windows architectures.
 EOF
 }
 
@@ -36,10 +39,12 @@ fail()
 source_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 invocation_dir=$(pwd)
 build_root="$source_dir/build"
+artifact_root="$source_dir/artifacts/windows"
+package_version=${XPILOT_PACKAGE_VERSION:-}
 jobs=
 build_type=Release
 toolchain_file=
-target=native
+target=all
 architecture=
 run_tests=false
 
@@ -74,6 +79,24 @@ while test "$#" -gt 0; do
             ;;
         --build-root=*)
             build_root=${1#*=}
+            shift
+            ;;
+        --artifact-root)
+            test "$#" -ge 2 || fail "--artifact-root requires a path"
+            artifact_root=$2
+            shift 2
+            ;;
+        --artifact-root=*)
+            artifact_root=${1#*=}
+            shift
+            ;;
+        --package-version)
+            test "$#" -ge 2 || fail "--package-version requires a value"
+            package_version=$2
+            shift 2
+            ;;
+        --package-version=*)
+            package_version=${1#*=}
             shift
             ;;
         --jobs)
@@ -118,25 +141,31 @@ while test "$#" -gt 0; do
 done
 
 case "$target" in
-    native|windows) ;;
-    *) fail "--target must be native or windows" ;;
-esac
-
-if test "$target" = native; then
-    test -z "$architecture" \
-        || fail "--arch is only valid with --target windows"
-else
-    if test -z "$architecture"; then
+    all)
+        test -z "$architecture" \
+            || fail "--arch is only valid with --target windows"
+        test -z "$toolchain_file" \
+            || fail "--toolchain-file requires a single target"
         architecture=all
-    fi
-    case "$architecture" in
-        x86|x86_64|all) ;;
-        *) fail "--arch must be x86, x86_64, or all" ;;
-    esac
-    if test "$architecture" = all && test -n "$toolchain_file"; then
-        fail "--toolchain-file requires a single Windows architecture"
-    fi
-fi
+        ;;
+    native)
+        test -z "$architecture" \
+            || fail "--arch is only valid with --target windows"
+        ;;
+    windows)
+        if test -z "$architecture"; then
+            architecture=all
+        fi
+        case "$architecture" in
+            x86|x86_64|all) ;;
+            *) fail "--arch must be x86, x86_64, or all" ;;
+        esac
+        if test "$architecture" = all && test -n "$toolchain_file"; then
+            fail "--toolchain-file requires a single Windows architecture"
+        fi
+        ;;
+    *) fail "--target must be all, native, or windows" ;;
+esac
 
 test -n "$build_root" || fail "--build-root requires a nonempty path"
 test -n "$build_type" || fail "--build-type requires a nonempty value"
@@ -155,6 +184,45 @@ esac
 test "$build_root" != / || fail "refusing to use / as the build root"
 mkdir -p "$build_root"
 build_root=$(CDPATH= cd -- "$build_root" && pwd)
+
+case "$target" in
+    all|windows)
+        test -n "$artifact_root" \
+            || fail "--artifact-root requires a nonempty path"
+        case "$artifact_root" in
+            /*) ;;
+            *) artifact_root="$invocation_dir/$artifact_root" ;;
+        esac
+        test "$artifact_root" != / \
+            || fail "refusing to use / as the artifact root"
+        mkdir -p "$artifact_root"
+        artifact_root=$(CDPATH= cd -- "$artifact_root" && pwd)
+
+        windows_archiver="$source_dir/config/package-windows.mjs"
+        test -f "$windows_archiver" \
+            || fail "Windows archiver is unavailable: $windows_archiver"
+        node_program=${NODE:-node}
+        command -v "$node_program" >/dev/null 2>&1 \
+            || fail "Node.js was not found: $node_program"
+
+        if test -z "$package_version"; then
+            command -v screw-up >/dev/null 2>&1 \
+                || fail "screw-up is required to determine the package version"
+            package_version=$(
+                cd "$source_dir"
+                printf '%s\n' '{version}' \
+                    | screw-up format \
+                    | tr -d '\r' \
+                    | head -n 1
+            )
+        fi
+        case "$package_version" in
+            ''|*[!0-9A-Za-z.+:~\-]*) \
+                fail "invalid package version: $package_version" \
+                ;;
+        esac
+        ;;
+esac
 
 if test -n "$toolchain_file"; then
     case "$toolchain_file" in
@@ -264,12 +332,18 @@ build_windows_architecture()
         fi
     )
 
+    archive_path="$artifact_root/xpilot-ng-$package_version-windows-$windows_architecture.zip"
+    "$node_program" "$windows_archiver" \
+        --input "$architecture_root/package" \
+        --output "$archive_path"
+    test -f "$archive_path" \
+        || fail "Windows archive was not created: $archive_path"
     echo "XPilot NG Windows package completed in $architecture_root/package"
+    echo "XPilot NG Windows archive completed in $archive_path"
 )
 
-if test "$target" = native; then
-    build_native "$@"
-else
+build_windows()
+{
     case "$architecture" in
         all)
             build_windows_architecture x86 "$@"
@@ -279,4 +353,17 @@ else
             build_windows_architecture "$architecture" "$@"
             ;;
     esac
-fi
+}
+
+case "$target" in
+    all)
+        build_native "$@"
+        build_windows "$@"
+        ;;
+    native)
+        build_native "$@"
+        ;;
+    windows)
+        build_windows "$@"
+        ;;
+esac

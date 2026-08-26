@@ -10,6 +10,8 @@ $(mingw_deps_stamp): Makefile \
 	$(top_srcdir)/vendor/sdl3/build.sh \
 	$(top_srcdir)/vendor/zlib/zlib.h \
 	$(top_srcdir)/vendor/expat/expat/CMakeLists.txt \
+	$(top_srcdir)/vendor/openal-soft/CMakeLists.txt \
+	$(top_srcdir)/vendor/freealut/CMakeLists.txt \
 	$(top_srcdir)/vendor/sdl3/SDL/CMakeLists.txt \
 	$(top_srcdir)/vendor/sdl3/SDL_image/CMakeLists.txt \
 	$(top_srcdir)/vendor/sdl3/SDL_ttf/CMakeLists.txt \

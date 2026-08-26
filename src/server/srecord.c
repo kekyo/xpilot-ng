@@ -89,16 +89,19 @@ static void Convert_from_host(void *start, int len, int type)
 	iptr = (int *)start;
 	iend = iptr + len / 4;
 	while (iptr < iend) {
-	    err = htonl(*iptr);
+	    err = *iptr;
 	    switch (err) {
 	    case EAGAIN:
 		err = 1;
+		break;
 	    case EINTR:
 		err = 2;
+		break;
 	    default:
 		err = 0;
+		break;
 	    }
-	    *iptr++ = err;
+	    *iptr++ = htonl(err);
 	}
 	return;
     default:
@@ -140,10 +143,13 @@ static void Convert_to_host(void *start, int len, int type)
 		/* Just some number that isn't tested against anywhere
 		 * in the server code. */
 		err = ERANGE;
+		break;
 	    case 1:
 		err = EAGAIN;
+		break;
 	    case 2:
 		err = EINTR;
+		break;
 	    default:
 		warn("Unrecognized errno code in recording");
 		exit(1);

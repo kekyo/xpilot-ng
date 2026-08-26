@@ -611,9 +611,9 @@ int Check_pos_by_index(int index, int *x, int *y)
     return 0;
 }
 
-int filledPolygonRGBA(SDL_Surface *surface, Sint16 *vx, Sint16 *vy,
-                      int count, Uint8 red, Uint8 green,
-                      Uint8 blue, Uint8 alpha)
+bool Sdl_surface_fill_polygon_rgba(
+    SDL_Surface *surface, const Sint16 *vx, const Sint16 *vy,
+    int count, Uint8 red, Uint8 green, Uint8 blue, Uint8 alpha)
 {
     (void)surface;
     (void)vx;
@@ -623,7 +623,7 @@ int filledPolygonRGBA(SDL_Surface *surface, Sint16 *vx, Sint16 *vy,
     (void)green;
     (void)blue;
     (void)alpha;
-    return 0;
+    return true;
 }
 
 void warn(const char *format, ...)

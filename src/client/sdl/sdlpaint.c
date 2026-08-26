@@ -31,7 +31,7 @@
 
 #include "xpclient_sdl.h"
 
-#include "SDL_gfxPrimitives.h"
+#include "surface_primitives.h"
 #include "sdlcompat.h"
 #include "sdlinit.h"
 #include "sdlpaint.h"
@@ -46,6 +46,9 @@
 #include "paint_transform.h"
 #include "sdlgameframe.h"
 #include "sdlrenderer.h"
+#include "score_font.h"
+#include "text_config.h"
+#include "utf8_names.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -55,8 +58,7 @@
 /*
  * Globals.
  */
-static TTF_Font     *scoreListFont;
-static const char   *scoreListFontName = CONF_FONTDIR "VeraMoBd.ttf";
+static ScoreFont     scoreListFont;
 static sdl_window_t scoreListWin;
 static SDL_Rect     scoreEntryRect; /* Bounds for the last painted score entry */
 static GLWidget     *scoreListWidget;
@@ -288,10 +290,7 @@ static void Scorelist_move(Sint16 xrel, Sint16 yrel, Uint16 x, Uint16 y, void *d
 
 static void Scorelist_cleanup( GLWidget *widget )
 {
-    if (scoreListFont != NULL) {
-	TTF_CloseFont(scoreListFont);
-	scoreListFont = NULL;
-    }
+    Score_font_close(&scoreListFont);
     sdl_window_destroy(&scoreListWin);
     if (scoreListWidget == widget)
 	scoreListWidget = NULL;
@@ -372,16 +371,16 @@ GLWidget *Init_ScorelistWidget(void)
     tmp->bounds.w   	= 200;
     tmp->bounds.h   	= 100;
 
-    scoreListFont = TTF_OpenFont(scoreListFontName, 11);
-    if (scoreListFont == NULL) {
-	error("opening font %s failed", scoreListFontName);
+    if (!Score_font_open(&scoreListFont, Get_text_system(),
+			 Xp_text_config_families(XP_TEXT_SPACING_MONOSPACE),
+			 11)) {
+	error("opening scorelist system fonts failed: %s", SDL_GetError());
 	free(tmp);
 	return NULL;
     }
     if (sdl_window_init(&scoreListWin, tmp->bounds.x, tmp->bounds.y, tmp->bounds.w, tmp->bounds.h)) {
 	error("failed to init scorelist window");
-	TTF_CloseFont(scoreListFont);
-	scoreListFont = NULL;
+	Score_font_close(&scoreListFont);
 	free(tmp);
 	return NULL;
     }
@@ -817,7 +816,7 @@ void Paint_score_start(void)
 	/* SDL 1.2_ttf ignored SDL_Color's fourth byte for blended text. */
 	fg.a = SDL_ALPHA_OPAQUE;
     SDL_FillSurfaceRect(scoreListWin.surface, NULL, 0);
-    header = TTF_RenderText_Blended(scoreListFont, headingStr, 0, fg);
+    header = Score_font_render(&scoreListFont, headingStr, fg);
     if (header == NULL) {
 	error("scorelist header rendering failed: %s", SDL_GetError());
 	return;
@@ -826,11 +825,12 @@ void Paint_score_start(void)
     if (Sdl_blit_surface_unblended(header, NULL, scoreListWin.surface,
 				   &scoreEntryRect) < 0)
 	warn("Could not draw scorelist header: %s", SDL_GetError());
-    lineRGBA(scoreListWin.surface, SCORE_BORDER,
-	     scoreEntryRect.y + header->h + 2,
-	     scoreListWin.w - SCORE_BORDER,
-	     scoreEntryRect.y + header->h + 2,
-	     0, 128, 0, 255);
+    Sdl_surface_draw_line_rgba(
+        scoreListWin.surface, SCORE_BORDER,
+        scoreEntryRect.y + header->h + 2,
+        scoreListWin.w - SCORE_BORDER,
+        scoreEntryRect.y + header->h + 2,
+        0, 128, 0, 255);
     SDL_DestroySurface(header);
 }
 
@@ -839,6 +839,7 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
     static char		raceStr[16], teamStr[4], lifeStr[8], label[MSG_LEN];
     static int		lineSpacing = -1, firstLine;
     char		scoreStr[16];
+    char		playerName[2 * MAX_CHARS + 4];
     SDL_Surface         *line;
 	SDL_Color fg;
     int     	    	color;
@@ -854,7 +855,7 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 	teamStr[1] = ' ';
 	raceStr[2] = ' ';
 
-	lineSpacing = TTF_GetFontLineSkip(scoreListFont) + 1;
+	lineSpacing = Score_font_line_spacing(&scoreListFont) + 1;
 
 	firstLine = 2*SCORE_BORDER + lineSpacing;
     }
@@ -865,8 +866,13 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
      */
     if (showUserName)
 	sprintf(label, "%s=%s@%s",
-		other->nick_name, other->user_name, other->host_name);
+	    other->nick_name, other->user_name, other->host_name);
     else {
+	if (!Format_player_identity(
+		playerName, sizeof(playerName),
+		other->nick_name, other->user_name)) {
+	    strlcpy(playerName, other->nick_name, sizeof(playerName));
+	}
 	if (BIT(Setup->mode, TIMING)) {
 	    strlcpy(raceStr, "  ", sizeof(raceStr));
 	    if ((other->mychar == ' ' || other->mychar == 'R')
@@ -880,8 +886,10 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 	}
 	if (BIT(Setup->mode, TEAM_PLAY))
 	    teamStr[0] = other->team + '0';
-	else
-	    sprintf(teamStr, "%c", other->alliance);
+	else {
+	    teamStr[0] = (char)Player_alliance_display_char(other->alliance);
+	    teamStr[1] = '\0';
+	}
 
 	if (BIT(Setup->mode, LIMITED_LIVES))
 	    sprintf(lifeStr, " %3d", other->life);
@@ -898,12 +906,12 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 
 	if (BIT(Setup->mode, TEAM_PLAY))
 	    sprintf(label, "%c%s %-15s%s",
-		    other->mychar, scoreStr, other->nick_name, lifeStr);
+		    other->mychar, scoreStr, playerName, lifeStr);
 	else
 	    sprintf(label, "%c %s%s%s%s  %s",
 		    other->mychar, raceStr, teamStr,
 		    scoreStr, lifeStr,
-		    other->nick_name);
+		    playerName);
     }
 
     /*
@@ -936,7 +944,7 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
 	fg.b = (color >> 8) & 255;
 	/* Preserve the opaque glyphs produced by SDL 1.2_ttf. */
 	fg.a = SDL_ALPHA_OPAQUE;
-    line = TTF_RenderText_Blended(scoreListFont, label, 0, fg);
+    line = Score_font_render(&scoreListFont, label, fg);
     if (line == NULL) {
 	error("scorelist rendering failed: %s", SDL_GetError());
 	return;
@@ -950,11 +958,12 @@ void Paint_score_entry(int entry_num, other_t *other, bool is_team)
      * Underline the teams
      */
     if (is_team) {
-	lineRGBA(scoreListWin.surface, scoreEntryRect.x, 
-		 scoreEntryRect.y + line->h - 1,
-		 scoreEntryRect.x + scoreEntryRect.w,
-		 scoreEntryRect.y + line->h - 1,
-		 fg.r, fg.g, fg.b, 255);
+	Sdl_surface_draw_line_rgba(
+	    scoreListWin.surface, scoreEntryRect.x,
+	    scoreEntryRect.y + line->h - 1,
+	    scoreEntryRect.x + scoreEntryRect.w,
+	    scoreEntryRect.y + line->h - 1,
+	    fg.r, fg.g, fg.b, 255);
     }
 
     SDL_DestroySurface(line);

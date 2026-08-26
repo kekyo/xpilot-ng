@@ -93,6 +93,9 @@ run_configuration()
         cd "$build_dir"
         "$build_source_dir/configure" --prefix="$install_prefix" "$@"
         make -j"$test_jobs"
+        client_help=$(src/client/sdl/xpilot-ng-sdl -help 2>&1 || true)
+        printf '%s\n' "$client_help" | grep -Fq 'soundFile' \
+            || { echo "default client sound options are unavailable" >&2; exit 1; }
         if ! make check; then
             for test_log in tests/*.log; do
                 if test -f "$test_log"; then

@@ -4,11 +4,11 @@
  * Copyright (C) 2000-2004 by
  *
  *      Uoti Urpala          <uau@users.sourceforge.net>
- *      Kristian Söderblom   <kps@users.sourceforge.net>
+ *      Kristian SÃ¶derblom   <kps@users.sourceforge.net>
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -116,13 +116,19 @@ int main(int argc, char **argv)
 	exit(1);
 
     if (!Game_transport_parse(options.contactTransport, &contactTransport)) {
-	warn("Invalid contactTransport '%s'; expected 'udp' or 'tcp'",
+	warn("Invalid contactTransport '%s'; expected 'udp', 'tcp', or "
+	     "'websocket'",
 	     options.contactTransport);
 	return 1;
     }
     if (!Game_transport_parse(options.gameTransport, &gameTransport)) {
-	warn("Invalid gameTransport '%s'; expected 'udp' or 'tcp'",
+	warn("Invalid gameTransport '%s'; expected 'udp', 'tcp', or "
+	     "'websocket'",
 	     options.gameTransport);
+	return 1;
+    }
+    if (!Game_transport_pair_is_supported(contactTransport, gameTransport)) {
+	warn("WebSocket must be selected for both contact/lobby and gameplay");
 	return 1;
     }
 
@@ -867,4 +873,3 @@ void Hitmasks_init(void)
     Target_init();
     Team_immunity_init();
 }
-

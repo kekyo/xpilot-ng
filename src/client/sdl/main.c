@@ -64,6 +64,11 @@ static void Main_report_connection_failure(
 	transport_advice =
 	    "\nFor TCP on both transports, start the server with -tcp "
 	    "or -transport tcp.";
+    } else if (last_target->contact_transport == GAME_TRANSPORT_WEBSOCKET
+	       && last_target->game_transport == GAME_TRANSPORT_WEBSOCKET) {
+	transport_advice =
+	    "\nFor WebSocket on both transports, start the server with "
+	    "-websocket or -transport websocket.";
     } else {
 	transport_advice =
 	    "\nConfigure the server contact and gameplay transports to match.";

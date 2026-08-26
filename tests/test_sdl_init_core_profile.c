@@ -48,6 +48,21 @@ int xpprintf(const char *format, ...)
     return 0;
 }
 
+XpTextStatus Xp_text_system_create(const char *font_directory,
+				   XpTextSystem **system)
+{
+    (void)font_directory;
+    if (system != NULL)
+	*system = NULL;
+    return XP_TEXT_STATUS_BACKEND_ERROR;
+}
+
+void Xp_text_system_destroy(XpTextSystem **system)
+{
+    if (system != NULL)
+	*system = NULL;
+}
+
 RendererStatus fontinit(font_data *font, Renderer *renderer,
                         const char *filename, unsigned int size)
 {
@@ -64,6 +79,23 @@ RendererStatus font_text_renderer_attach(font_data *font,
     (void)font;
     (void)renderer;
     return RENDERER_STATUS_BACKEND_ERROR;
+}
+
+RendererStatus font_unicode_renderer_attach(
+    font_data *font, XpTextSystem *system,
+    SdlRenderer *renderer, const char *family_list)
+{
+    (void)font;
+    (void)system;
+    (void)renderer;
+    (void)family_list;
+    return RENDERER_STATUS_BACKEND_ERROR;
+}
+
+const char *Xp_text_config_families(XpTextSpacing spacing)
+{
+    (void)spacing;
+    return "FreeSans";
 }
 
 RendererStatus fontclean(font_data *font)

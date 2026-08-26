@@ -2,6 +2,7 @@
 
 #include "text.h"
 #include "text_renderer.h"
+#include "unicode_text_renderer.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -21,6 +22,10 @@ struct TextRendererCache {
     unsigned char *text;
     size_t text_length;
     TextGeometryMetrics metrics;
+};
+
+struct UnicodeTextRenderer {
+    int identity;
 };
 
 typedef struct FakeDraw {
@@ -50,6 +55,7 @@ unsigned draw_height = 480;
 static TextRenderer first_text_renderer = {
     1, 0, RENDERER_STATUS_OK
 };
+static UnicodeTextRenderer first_unicode_renderer = {1};
 static FakeDraw last_draw;
 static FakeImmediateDraw last_immediate_draw;
 static unsigned char last_measured_text[CAPTURED_TEXT_CAPACITY];
@@ -71,6 +77,14 @@ static int renderer_texture_destroy_calls;
 static int renderer_mesh_create_calls;
 static int renderer_mesh_update_calls;
 static int renderer_mesh_destroy_calls;
+static int unicode_measure_calls;
+static int unicode_draw_calls;
+static XpTextLayoutRequest last_unicode_request;
+static unsigned char last_unicode_text[CAPTURED_TEXT_CAPACITY];
+static RendererPoint2D last_unicode_anchor;
+static TextGeometryHorizontalAlign last_unicode_horizontal;
+static TextGeometryVerticalAlign last_unicode_vertical;
+static TextRendererSpace last_unicode_space;
 
 static int float_equal(float actual, float expected)
 {
@@ -121,6 +135,93 @@ static void reset_fixture(void)
     renderer_mesh_create_calls = 0;
     renderer_mesh_update_calls = 0;
     renderer_mesh_destroy_calls = 0;
+    unicode_measure_calls = 0;
+    unicode_draw_calls = 0;
+    memset(&last_unicode_request, 0, sizeof(last_unicode_request));
+    memset(last_unicode_text, 0, sizeof(last_unicode_text));
+    memset(&last_unicode_anchor, 0, sizeof(last_unicode_anchor));
+    last_unicode_horizontal = TEXT_GEOMETRY_ALIGN_LEFT;
+    last_unicode_vertical = TEXT_GEOMETRY_ALIGN_TOP;
+    last_unicode_space = TEXT_RENDERER_SPACE_HUD;
+}
+
+RendererStatus Unicode_text_renderer_measure(
+    UnicodeTextRenderer *text_renderer,
+    const XpTextLayoutRequest *request, XpTextMetrics *metrics)
+{
+    if (text_renderer != &first_unicode_renderer || request == NULL
+        || metrics == NULL || request->utf8 == NULL
+        || request->byte_length >= sizeof(last_unicode_text)) {
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    memcpy(last_unicode_text, request->utf8, request->byte_length);
+    last_unicode_request = *request;
+    last_unicode_request.utf8 = (const char *)last_unicode_text;
+    *metrics = (XpTextMetrics){20, 10, 8, 12};
+    unicode_measure_calls++;
+    return RENDERER_STATUS_OK;
+}
+
+RendererStatus Unicode_text_renderer_draw(
+    UnicodeTextRenderer *text_renderer,
+    const XpTextLayoutRequest *request, RendererPoint2D anchor,
+    TextGeometryHorizontalAlign horizontal,
+    TextGeometryVerticalAlign vertical, RendererColor color,
+    TextRendererSpace space)
+{
+    XpTextMetrics metrics;
+
+    (void)color;
+    if (Unicode_text_renderer_measure(text_renderer, request, &metrics)
+        != RENDERER_STATUS_OK) {
+        return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    unicode_measure_calls--;
+    unicode_draw_calls++;
+    last_unicode_anchor = anchor;
+    last_unicode_horizontal = horizontal;
+    last_unicode_vertical = vertical;
+    last_unicode_space = space;
+    return RENDERER_STATUS_OK;
+}
+
+XpTextStatus Xp_text_complete_utf8_prefix(const char *utf8,
+                                          size_t byte_length,
+                                          size_t *prefix_length)
+{
+    size_t offset = 0;
+
+    if ((utf8 == NULL && byte_length != 0) || prefix_length == NULL)
+        return XP_TEXT_STATUS_INVALID_ARGUMENT;
+    while (offset < byte_length) {
+        const unsigned char byte = (unsigned char)utf8[offset];
+        size_t sequence_length;
+        size_t index;
+
+        if (byte < 0x80) {
+            offset++;
+            continue;
+        }
+        if (byte >= 0xc2 && byte <= 0xdf)
+            sequence_length = 2;
+        else if (byte >= 0xe0 && byte <= 0xef)
+            sequence_length = 3;
+        else if (byte >= 0xf0 && byte <= 0xf4)
+            sequence_length = 4;
+        else
+            return XP_TEXT_STATUS_INVALID_UTF8;
+        if (sequence_length > byte_length - offset) {
+            *prefix_length = offset;
+            return XP_TEXT_STATUS_OK;
+        }
+        for (index = 1; index < sequence_length; index++) {
+            if (((unsigned char)utf8[offset + index] & 0xc0) != 0x80)
+                return XP_TEXT_STATUS_INVALID_UTF8;
+        }
+        offset += sequence_length;
+    }
+    *prefix_length = offset;
+    return XP_TEXT_STATUS_OK;
 }
 
 static void begin_fake_frame(TextRenderer *text_renderer)
@@ -463,7 +564,54 @@ static font_data make_font(TextRenderer *text_renderer, unsigned int height)
     memset(&font, 0, sizeof(font));
     font.requested_height = height;
     font.text_renderer = text_renderer;
+    font.unicode_renderer = &first_unicode_renderer;
     return font;
+}
+
+static int check_utf8_uses_unicode_renderer(void)
+{
+    static const char text[] = "A\xe3\x81\x91";
+    string_tex_t string = {0};
+    font_data font;
+
+    reset_fixture();
+    begin_fake_frame(&first_text_renderer);
+    font = make_font(&first_text_renderer, 9);
+
+    TEST_CHECK(render_text(&font, text, &string));
+    TEST_CHECK(string.unicode_renderer == &first_unicode_renderer);
+    TEST_CHECK(string.text_renderer == NULL);
+    TEST_CHECK(string.cache == NULL);
+    TEST_CHECK(string.width == 20 && string.height == 10);
+    TEST_CHECK(unicode_measure_calls == 1);
+    TEST_CHECK(cache_replace_calls == 0);
+    TEST_CHECK(last_unicode_request.direction == XP_TEXT_DIRECTION_LTR);
+    TEST_CHECK(strcmp(last_unicode_request.language_bcp47, "") == 0);
+    TEST_CHECK(last_unicode_request.byte_length == sizeof(text) - 1);
+    TEST_CHECK(memcmp(last_unicode_text, text, sizeof(text) - 1) == 0);
+
+    TEST_CHECK(disp_text(&string, 0x11223344, CENTER, UP,
+                         30, 70, true) == RENDERER_STATUS_OK);
+    TEST_CHECK(unicode_draw_calls == 1);
+    TEST_CHECK(float_equal(last_unicode_anchor.x, 30.0f));
+    TEST_CHECK(float_equal(last_unicode_anchor.y, 410.0f));
+    TEST_CHECK(last_unicode_horizontal == TEXT_GEOMETRY_ALIGN_CENTER);
+    TEST_CHECK(last_unicode_vertical == TEXT_GEOMETRY_ALIGN_BOTTOM);
+    TEST_CHECK(last_unicode_space == TEXT_RENDERER_SPACE_HUD);
+
+    TEST_CHECK(HUDnprint(&font, 0x11223344, LEFT, DOWN,
+                         0, 0, 2, "%s", "\xe3\x81\x91")
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(unicode_draw_calls == 1);
+    TEST_CHECK(HUDnprint(&font, 0x11223344, LEFT, DOWN,
+                         0, 0, 3, "%s", "\xe3\x81\x91")
+               == RENDERER_STATUS_OK);
+    TEST_CHECK(unicode_draw_calls == 2);
+    TEST_CHECK(last_unicode_request.byte_length == 3);
+
+    free_string_texture(&string);
+    TEST_CHECK(string.unicode_renderer == NULL);
+    return 0;
 }
 
 static int check_render_is_cpu_only_and_empty_compatible(void)
@@ -921,6 +1069,8 @@ static int check_immediate_failures_are_sticky(void)
 
 int main(void)
 {
+    if (check_utf8_uses_unicode_renderer() != 0)
+        return 1;
     if (check_render_is_cpu_only_and_empty_compatible() != 0)
         return 1;
     if (check_replace_is_atomic_and_cleanup_is_idempotent() != 0)

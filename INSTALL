@@ -8,12 +8,38 @@ To compile XPilot NG, you'll need at least:
     An ANSI C compiler
     pkg-config
 
+Additional requirements for either graphical client are:
+
+    OpenAL
+    freealut
+
 Additional requirements for the SDL client are:
 
     SDL3 version 3.2.0 or newer
     SDL3_ttf version 3.2.0 or newer
     SDL3_image version 3.2.0 or newer
     OpenGL 3.3 core profile
+
+WSLAY DEPENDENCY
+
+The WebSocket transport builds wslay 1.1.1 directly from its pinned git
+submodule. Initialize it before configuring XPilot NG:
+
+    git submodule update --init vendor/wslay
+
+LIBTESS2 DEPENDENCY
+
+The SDL polygon geometry code builds libtess2 directly from its pinned git
+submodule. Initialize it before configuring XPilot NG:
+
+    git submodule update --init vendor/libtess2
+
+MT19937 DEPENDENCY
+
+The process-global random number wrapper builds MTwister directly from its
+pinned git submodule. Initialize it before configuring XPilot NG:
+
+    git submodule update --init vendor/mtwister
 
 SDL3 DEPENDENCY PROVIDERS
 
@@ -28,16 +54,18 @@ Initialize them before entering a network-isolated build environment:
     git submodule update --init vendor/sdl3/SDL \
         vendor/sdl3/SDL_image vendor/sdl3/SDL_ttf
 
-For a normal native build, the root wrapper performs both the dependency and
-XPilot NG builds in one command:
+For a normal build, the root wrapper builds native XPilot NG and both Windows
+architectures, including their pinned dependencies, in one command:
 
     ./build.sh
 
-By default, all output is placed under `build/`; XPilot NG itself is built in
-`build/xpilot-ng`.  Run `./build.sh --help` to select another build root,
-change the parallel job count or CMake build type, pass a cross-compilation
-toolchain, or forward additional options to configure.  The wrapper builds
-but does not install XPilot NG.
+By default, all output is placed under `build/`; native XPilot NG is built in
+`build/xpilot-ng`, and the Windows packages are built below `build/windows`.
+Use `./build.sh --target native` when only the native target is required.  Run
+`./build.sh --help` to select another build root, change the parallel job count
+or CMake build type, select individual targets, pass a cross-compilation
+toolchain, or forward additional options to configure.  The wrapper builds but
+does not install XPilot NG.
 
 The dependency build and the XPilot NG build use separate out-of-tree
 directories and installation prefixes.  From the source directory, run:
@@ -75,13 +103,20 @@ and 64-bit x86_64 packages and test them with Wine by running:
     ./build.sh --target windows --arch all --test
 
 The output packages are placed below build/windows/x86/package and
-build/windows/x86_64/package.  See doc/WINDOWS.md for prerequisites, output
-layout, single-architecture commands, and the Wine test contract.
+build/windows/x86_64/package.  The pinned OpenAL Soft and freealut submodules
+are built as target DLLs and included in each package.  See doc/WINDOWS.md for
+prerequisites, output layout, single-architecture commands, and the Wine test
+contract.
 
 X11 is required when building the X11 client, replay program, or map editor,
 but the SDL client itself does not depend on X11.
-	
-Also if you enable sound support you'll need OpenAL and freealut.
+
+Sound support is enabled by default.  Configure stops with a dependency error
+when a graphical client is selected but the OpenAL or freealut development
+package is unavailable.  Use --disable-sound only for an explicitly silent
+build.  A sound-enabled client still starts and remains playable without an
+available sound device; it reports that sound was disabled and continues
+silently.
     
 To really enjoy the game you also need a fast graphics card and 
 a decent network connection.

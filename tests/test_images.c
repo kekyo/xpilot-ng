@@ -47,6 +47,7 @@ typedef struct FixtureState {
     int picture_init_calls;
     int picture_init_successes;
     int picture_cleanup_calls;
+    int disabled_map_init_calls;
     int ordinary_signed_count;
     int rotatable_signed_count;
     int map_signed_count;
@@ -74,6 +75,8 @@ static int pending_draws;
 static RendererStatus draw_result = RENDERER_STATUS_OK;
 static RendererStatus blend_result = RENDERER_STATUS_OK;
 static RendererStatus flush_result = RENDERER_STATUS_OK;
+
+instruments_t instruments;
 
 static int float_equal(float actual, float expected)
 {
@@ -146,6 +149,10 @@ static int fixture_picture_init(xp_picture_t *picture,
     uint8_t base = fixture_base(filename);
 
     state->picture_init_calls++;
+    if (strcmp(filename, "fixture-disabled-map") == 0) {
+        state->disabled_map_init_calls++;
+        return -1;
+    }
     if (strcmp(filename, "fixture-ordinary") == 0)
         state->ordinary_signed_count = count;
     else if (strcmp(filename, "fixture-rotatable") == 0)
@@ -592,6 +599,25 @@ static int check_late_registration(void)
     return 0;
 }
 
+static int check_disabled_map_texture_does_not_block_preparation(void)
+{
+    int disabled_map_id;
+    int init_calls_before;
+
+    disabled_map_id = Bitmap_add("fixture-disabled-map", 1, false);
+    TEST_CHECK(disabled_map_id >= 0);
+    init_calls_before = fixture_state.picture_init_calls;
+    instruments.texturedWalls = false;
+
+    TEST_CHECK(Images_prepare(&fake_renderer) == 0);
+    TEST_CHECK(Image_get(disabled_map_id) == NULL);
+    TEST_CHECK(fixture_state.picture_init_calls == init_calls_before);
+    TEST_CHECK(fixture_state.disabled_map_init_calls == 0);
+
+    instruments.texturedWalls = true;
+    return 0;
+}
+
 static int check_semantic_world_and_hud_draws(int ordinary_id)
 {
     const RendererColor tint = {17, 34, 51, 68};
@@ -806,10 +832,13 @@ int main(void)
     int rotatable_id;
     int map_id;
 
+    instruments.texturedWalls = true;
     if (check_registration_prepare_and_pixels(
             &ordinary_id, &rotatable_id, &map_id) != 0)
         return 1;
     if (check_late_registration() != 0)
+        return 1;
+    if (check_disabled_map_texture_does_not_block_preparation() != 0)
         return 1;
     reset_active_frame_capture();
     if (check_semantic_world_and_hud_draws(ordinary_id) != 0)

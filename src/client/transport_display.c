@@ -21,6 +21,8 @@ const char *Transport_display_name(game_transport_t transport)
         return "UDP";
     case GAME_TRANSPORT_TCP:
         return "TCP";
+    case GAME_TRANSPORT_WEBSOCKET:
+        return "WebSocket";
     default:
         return "UNKNOWN";
     }

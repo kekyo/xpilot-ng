@@ -20,28 +20,32 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	-I$(top_builddir)/src/common -I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/client \
 	-I$(top_srcdir)/src/client/sdl \
-	-I$(top_srcdir)/src/client/sdl/third_party/libtess2/Include \
+	-I$(top_srcdir)/vendor/libtess2/Include \
 	$(XP_SDL3_CFLAGS) $(XP_SDL3_IMAGE_CFLAGS) $(XP_SDL3_TTF_CFLAGS) \
-	@GL_CFLAGS@
+	@NATIVE_TEXT_CFLAGS@ @GL_CFLAGS@
 
 if COND_WINDOWS
-check_PROGRAMS = test-framed-stream test-game-transport \
+check_PROGRAMS = test-framed-stream test-websocket-transport \
+	test-game-transport test-checknames \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle test-recording-input test-session-flow \
-	test-sdl-versions test-game-input
+	test-randommt test-ppm-image test-micro-delay \
+	test-sdl-versions test-score-font test-native-text test-game-input
 TESTS =
 else
-check_PROGRAMS = test-framed-stream test-game-transport \
+check_PROGRAMS = test-framed-stream test-websocket-transport \
+	test-game-transport test-checknames \
 	test-connect-target test-contact-target-probe \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle \
 	test-recording-input \
 	test-session-flow \
-	test-meta-environment test-sdl-versions \
+	test-meta-environment test-randommt test-ppm-image test-micro-delay \
+	test-sdl-versions test-score-font test-native-text \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
-	test-surface-rgba8 test-sdl-window \
+	test-surface-rgba8 test-surface-primitives test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-gl-core-resources \
 	test-renderer-commands test-renderer-context-recovery \
 	test-renderer-geometry \
@@ -55,18 +59,20 @@ check_PROGRAMS = test-framed-stream test-game-transport \
 	test-sdlmeta-primitives test-sdlgui-appearing \
 	test-sdlgui-hud-primitives test-sdlgui-asteroids \
 	test-sdlgui-polygons test-sdlgui-sparks test-sdlgui-ships \
-	test-text-geometry test-text-atlas \
+	test-text-geometry test-text-atlas test-unicode-text-renderer \
 	test-text-ttf-atlas test-text-renderer test-text-cache-adapter
-TESTS = test-framed-stream test-game-transport test-connect-target \
+TESTS = test-framed-stream test-websocket-transport \
+	test-game-transport test-checknames test-connect-target \
 	test-transport-display test-session-token \
 	test-socket-io \
 	test-native-socket-handle \
 	test-recording-input \
 	test-session-flow \
-	test-meta-environment test-sdl-versions \
+	test-meta-environment test-randommt test-ppm-image test-micro-delay \
+	test-sdl-versions test-score-font test-native-text \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
-	test-surface-rgba8 test-sdl-window \
+	test-surface-rgba8 test-surface-primitives test-sdl-window \
 	test-sdl-clipboard test-sdl-event test-renderer-commands \
 	test-renderer-context-recovery test-renderer-geometry \
 	test-paint-transform run-gl-core-resources.sh \
@@ -82,14 +88,41 @@ TESTS = test-framed-stream test-game-transport test-connect-target \
 	test-sdlgui-asteroids test-sdlgui-polygons test-sdlgui-sparks \
 	test-sdlgui-ships \
 	test-text-geometry \
-	test-text-atlas test-text-ttf-atlas test-text-renderer \
+	test-text-atlas test-unicode-text-renderer \
+	test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
 	run-renderer-gl-core.sh run-sdl-renderer-core-context.sh \
-	run-build-wrapper.sh run-vendored-zlib.sh run-e2e.sh
+	run-build-wrapper.sh run-build-package.sh run-package-windows.sh \
+	run-windows-archive.sh \
+	run-c23-server-build.sh run-vendored-zlib.sh run-e2e.sh
+if COND_SOUND
+check_PROGRAMS += test-audio-device
+TESTS += test-audio-device
+endif
+if COND_X11_CLIENT
+check_PROGRAMS += test-x11-text
+TESTS += run-x11-text.sh
+endif
 endif
 
 test_game_transport_SOURCES = test_game_transport.c
 test_game_transport_LDADD = $(top_builddir)/src/common/libxpcommon.a
+
+test_checknames_SOURCES = test_checknames.c
+test_checknames_LDADD = $(top_builddir)/src/common/libxpcommon.a
+
+test_randommt_SOURCES = test_randommt.c
+test_randommt_LDADD = $(top_builddir)/src/common/libxpcommon.a
+
+test_ppm_image_SOURCES = test_ppm_image.c \
+	$(top_srcdir)/src/replay/ppm_image.c
+test_ppm_image_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src/replay
+
+test_micro_delay_SOURCES = test_micro_delay.c \
+	$(top_srcdir)/src/client/micro_delay.c
+test_micro_delay_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_MICRO_DELAY_TEST_HOOKS
+test_micro_delay_LDADD = @W32_LIBS@
 
 test_session_token_SOURCES = test_session_token.c
 test_session_token_LDADD = $(top_builddir)/src/common/libxpcommon.a
@@ -110,6 +143,10 @@ test_transport_display_SOURCES = test_transport_display.c \
 test_framed_stream_SOURCES = test_framed_stream.c
 test_framed_stream_LDADD = $(top_builddir)/src/common/libxpcommon.a \
 	@W32_LIBS@
+
+test_websocket_transport_SOURCES = test_websocket_transport.c
+test_websocket_transport_LDADD = \
+	$(top_builddir)/src/common/libxpcommon.a @W32_LIBS@
 
 test_socket_io_SOURCES = test_socket_io.c
 test_socket_io_LDADD = $(top_builddir)/src/common/libxpcommon.a \
@@ -143,6 +180,20 @@ test_meta_environment_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_sdl_versions_SOURCES = test_sdl_versions.c
 test_sdl_versions_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
 
+test_score_font_SOURCES = test_score_font.c \
+	$(top_srcdir)/src/client/sdl/score_font.c
+test_score_font_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_TEST_FONT_DIR=\"$(top_srcdir)/lib/fonts\"
+test_score_font_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) @NATIVE_TEXT_LIBS@
+
+test_native_text_SOURCES = test_native_text.c
+test_native_text_CPPFLAGS = $(AM_CPPFLAGS) \
+	-DXPILOT_TEST_FONT_DIR=\"$(top_srcdir)/lib/fonts\"
+test_native_text_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a \
+	$(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) @NATIVE_TEXT_LIBS@
+
 test_game_input_SOURCES = test_game_input.c \
 	$(top_srcdir)/src/client/sdl/gameinput.c
 test_game_input_LDADD = $(XP_SDL3_LIBS)
@@ -167,6 +218,10 @@ test_surface_rgba8_SOURCES = test_surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/surface_rgba8.c \
 	$(top_srcdir)/src/client/sdl/sdlcompat.c
 test_surface_rgba8_LDADD = $(XP_SDL3_LIBS)
+
+test_surface_primitives_SOURCES = test_surface_primitives.c \
+	$(top_srcdir)/src/client/sdl/surface_primitives.c
+test_surface_primitives_LDADD = $(XP_SDL3_LIBS)
 
 test_sdl_window_SOURCES = test_sdl_window.c \
 	$(top_srcdir)/src/client/sdl/sdlwindow.c
@@ -488,12 +543,38 @@ test_text_renderer_SOURCES = test_text_renderer.c \
 	$(top_srcdir)/src/client/sdl/text_geometry.h
 test_text_renderer_LDFLAGS = $(AM_LDFLAGS) -Wl,--wrap=malloc
 
+test_unicode_text_renderer_SOURCES = test_unicode_text_renderer.c \
+	$(top_srcdir)/src/client/sdl/unicode_text_renderer.c \
+	$(top_srcdir)/src/client/sdl/unicode_text_renderer.h
+
+test_x11_text_SOURCES = test_x11_text.c \
+	$(top_srcdir)/src/client/x11/x11_text.c \
+	$(top_srcdir)/src/client/x11/x11_text.h
+test_x11_text_CPPFLAGS = $(AM_CPPFLAGS) \
+	-I$(top_srcdir)/src/client/x11 \
+	-DXPILOT_TEST_FONT_DIR=\"$(top_srcdir)/lib/fonts\"
+test_x11_text_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a \
+	$(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS) @NATIVE_TEXT_LIBS@ \
+	@XRENDER_LIBS@ -lX11
+
 test_text_cache_adapter_SOURCES = test_text_cache_adapter.c \
 	$(top_srcdir)/src/client/sdl/text.c
 test_text_cache_adapter_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_text_cache_adapter_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
 test_text_cache_adapter_LDADD = $(top_builddir)/src/common/libxpcommon.a
+
+test_audio_device_SOURCES = test_audio_device.c
+test_audio_device_CFLAGS = $(AM_CFLAGS) -ffunction-sections -fdata-sections
+test_audio_device_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections \
+	-Wl,--wrap=alutInit -Wl,--wrap=alutGetError \
+	-Wl,--wrap=alutGetErrorString -Wl,--wrap=alutExit \
+	-Wl,--wrap=alListenerf -Wl,--wrap=alDopplerFactor \
+	-Wl,--wrap=alSpeedOfSound -Wl,--wrap=alGetError \
+	-Wl,--wrap=alGenSources -Wl,--wrap=alDeleteSources
+test_audio_device_LDADD = $(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a @SOUND_LIBS@
 
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
@@ -509,21 +590,35 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_RENDERER_GL_CORE_TEST_BINARY; \
 	XPILOT_SDL_CORE_CONTEXT_TEST_BINARY='$(abs_builddir)/test-sdl-renderer-core-context'; \
 	export XPILOT_SDL_CORE_CONTEXT_TEST_BINARY; \
+	XPILOT_X11_TEXT_TEST_BINARY='$(abs_builddir)/test-x11-text'; \
+	export XPILOT_X11_TEXT_TEST_BINARY; \
 	XPILOT_SDL_OBJECT_DIR='$(abs_top_builddir)/src/client/sdl'; \
 	export XPILOT_SDL_OBJECT_DIR; \
 	XPILOT_SDL_BINARY='$(abs_top_builddir)/src/client/sdl/xpilot-ng-sdl'; \
 	export XPILOT_SDL_BINARY; \
 	XPILOT_BUILD_WRAPPER='$(abs_top_srcdir)/build.sh'; \
 	export XPILOT_BUILD_WRAPPER; \
+	XPILOT_BUILD_PACKAGE='$(abs_top_srcdir)/build_package.sh'; \
+	export XPILOT_BUILD_PACKAGE; \
+	XPILOT_WINDOWS_ARCHIVER='$(abs_top_srcdir)/config/package-windows.mjs'; \
+	export XPILOT_WINDOWS_ARCHIVER; \
+	XPILOT_WINDOWS_PACKAGER='$(abs_top_srcdir)/config/package-windows.sh'; \
+	export XPILOT_WINDOWS_PACKAGER; \
+	XPILOT_C23_CC='$(CC)'; export XPILOT_C23_CC; \
+	XPILOT_C23_SOURCE_DIR='$(abs_top_srcdir)'; export XPILOT_C23_SOURCE_DIR; \
+	XPILOT_C23_BUILD_DIR='$(abs_top_builddir)'; export XPILOT_C23_BUILD_DIR; \
 	XPILOT_VENDOR_ZLIB_SOURCE='$(abs_top_srcdir)/vendor/zlib'; \
 	export XPILOT_VENDOR_ZLIB_SOURCE;
 
 EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
-	tcp-reconnect-proxy.mjs \
+	tcp-reconnect-proxy.mjs session-reconnect-proxy.mjs \
 	run-gl-core-resources.sh \
 	run-renderer-gl-core.sh run-sdl-core-boundary.sh \
-	run-sdl-renderer-core-context.sh run-vendored-zlib.sh \
-	run-wine-suite.sh test_helpers.h
+	run-sdl-renderer-core-context.sh run-c23-server-build.sh \
+	run-vendored-zlib.sh \
+	run-wine-suite.sh run-build-package.sh run-package-windows.sh \
+	run-windows-archive.sh \
+	test-windows-archive.mjs test_helpers.h
 
 run-sdl-core-boundary.log: \
 	$(top_builddir)/src/client/sdl/xpilot-ng-sdl

@@ -7,7 +7,7 @@ xpilot-ng-server \- server for multiplayer space war game.
 [ \fIoptions \fR]
 .SH DESCRIPTION
 .IP
-Copyright © 1991\-2005 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha Lindström, Kristian Söderblom and Erik Andersson.
+Copyright Â© 1991\-2005 by BjÃ¸rn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha LindstrÃ¶m, Kristian SÃ¶derblom and Erik Andersson.
 XPilot NG 4.7.2 comes with ABSOLUTELY NO WARRANTY; for details see the
 provided COPYING file.
 .PP
@@ -36,7 +36,11 @@ Select TCP for both contact/lobby and gameplay.
 .IP
 Select UDP for both contact/lobby and gameplay.  This is the default.
 .HP
-\fB\-transport\fR <udp|tcp>
+\fB\-websocket\fR
+.IP
+Select WebSocket for both contact/lobby and gameplay.
+.HP
+\fB\-transport\fR <udp|tcp|websocket>
 .IP
 Select one transport for both contact/lobby and gameplay.
 Transport options are applied from left to right.
@@ -254,20 +258,22 @@ Block map topology.
 .HP
 \fB\-contactPort\fR or port <integer>
 .IP
-The server contact port number.
+The numeric server contact port, using the selected contact transport.
 [ Flags: command, defaults ]
 .HP
 \fB\-contactTransport\fR <string>
 .IP
-Contact and lobby transport for direct connections: udp or tcp.
+Contact and lobby transport for direct connections: udp, tcp, or websocket.
 This value must match the client; there is no automatic fallback.
+WebSocket must also be selected for gameplay.
 LAN broadcast discovery is available only in udp mode.
 [ Flags: command, defaults ]
 .HP
 \fB\-gameTransport\fR <string>
 .IP
-Gameplay transport for player connections: udp or tcp.
+Gameplay transport for player connections: udp, tcp, or websocket.
 This value must match every client; there is no automatic fallback.
+WebSocket must also be selected for contact and lobby traffic.
 [ Flags: command, defaults ]
 .HP
 \fB\-serverHost\fR <string>

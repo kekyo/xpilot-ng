@@ -229,9 +229,6 @@ Steven Singer (S.Singer@ph.surrey.ac.uk). Additional development was
 performed by Bert Gijsbers (bert@xpilot.org). \fBxpilot-ng-replay\fP
 is a slightly improved version.
 
-The scaling and gamma correction code was taken from the \fBpbmplus\fP
-package, which is Copyright (C) 1989, 1991 by Jef Poskanzer.
-
 
 .SH BUG REPORTS
 
@@ -243,4 +240,3 @@ xpilot-ng-x11(6), xpilot-ng-server(6), ppm(5), gzip(1)
 .\"
 .\" index		\fIxpilot-ng-x11\fP \- multiplayer war game
 .\" index		\fIxpilot-ng-server\fP \- @PACKAGE_NAME@ server
-

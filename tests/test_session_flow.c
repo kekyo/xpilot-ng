@@ -19,9 +19,9 @@ static session_game_request_t make_game_request(void)
     memset(&request, 0, sizeof(request));
     request.polygon_version = GAME_PROTOCOL_TCP_POLYGON_VERSION;
     request.legacy_version = GAME_PROTOCOL_TCP_LEGACY_VERSION;
-    strlcpy(request.user, "test-user", sizeof(request.user));
+    strlcpy(request.user, "Jos\xc3\xa9", sizeof(request.user));
     strlcpy(request.nick, "test-nick", sizeof(request.nick));
-    strlcpy(request.display, "test-display", sizeof(request.display));
+    strlcpy(request.display, "\xe6\x97\xa5\xe6\x9c\xac", sizeof(request.display));
     strlcpy(request.host, "test-host", sizeof(request.host));
     request.team = TEAM_NOT_SET;
     return request;
@@ -84,6 +84,34 @@ static int send_control_reply(record_session_t *session,
     return 0;
 }
 
+static session_token_t make_resume_token(void)
+{
+    session_token_t token = { {
+        UINT32_C(0x01234567), UINT32_C(0x89abcdef),
+        UINT32_C(0xfedcba98), UINT32_C(0x76543210)
+    } };
+
+    return token;
+}
+
+static int send_resume_reply(record_session_t *session,
+                             unsigned char status, const char *reason)
+{
+    char payload[SESSION_PROTOCOL_MAX_RECORD_SIZE];
+    session_resume_reply_t reply;
+    size_t length;
+
+    memset(&reply, 0, sizeof(reply));
+    reply.status = status;
+    strlcpy(reply.reason, reason, sizeof(reply.reason));
+    TEST_CHECK(Session_protocol_encode_resume_reply(
+                   payload, sizeof(payload), &length, &reply) == 0);
+    TEST_CHECK(Record_session_send(
+                   session, payload, length,
+                   RECORD_DELIVERY_REQUIRED) == RECORD_SEND_ACCEPTED);
+    return 0;
+}
+
 static int test_protocol_round_trip_and_exact_record_validation(void)
 {
     char payload[SESSION_PROTOCOL_MAX_RECORD_SIZE + 1];
@@ -118,6 +146,119 @@ static int test_protocol_round_trip_and_exact_record_validation(void)
     errno = 0;
     TEST_CHECK(Session_protocol_decode_open(payload, length, &open) == -1);
     TEST_CHECK(errno == EPROTO);
+    return 0;
+}
+
+static int test_resume_protocol_round_trip_and_exact_validation(void)
+{
+    char payload[SESSION_PROTOCOL_MAX_RECORD_SIZE + 1];
+    session_resume_request_t request;
+    session_resume_reply_t decoded_reply;
+    session_resume_reply_t reply;
+    session_open_t open;
+    size_t length;
+
+    request.token = make_resume_token();
+    TEST_CHECK(Session_protocol_encode_resume_open(
+                   payload, sizeof(payload), &length, &request) == 0);
+    TEST_CHECK(Session_protocol_decode_open(payload, length, &open) == 0);
+    TEST_CHECK(open.purpose == SESSION_PURPOSE_RESUME);
+    TEST_CHECK(Session_token_equal(
+                   &open.request.resume.token, &request.token));
+    payload[length] = 'x';
+    errno = 0;
+    TEST_CHECK(Session_protocol_decode_open(
+                   payload, length + 1, &open) == -1);
+    TEST_CHECK(errno == EPROTO);
+
+    memset(&reply, 0, sizeof(reply));
+    reply.status = E_NOT_FOUND;
+    strlcpy(reply.reason, "unknown session", sizeof(reply.reason));
+    TEST_CHECK(Session_protocol_encode_resume_reply(
+                   payload, sizeof(payload), &length, &reply) == 0);
+    TEST_CHECK(Session_protocol_decode_resume_reply(
+                   payload, length, &decoded_reply) == 0);
+    TEST_CHECK(decoded_reply.status == E_NOT_FOUND);
+    TEST_CHECK(strcmp(decoded_reply.reason, "unknown session") == 0);
+    payload[length] = 'x';
+    errno = 0;
+    TEST_CHECK(Session_protocol_decode_resume_reply(
+                   payload, length + 1, &decoded_reply) == -1);
+    TEST_CHECK(errno == EPROTO);
+    return 0;
+}
+
+static int test_resume_exchange_transfers_transport_to_stable_session(void)
+{
+    static const char continued[] = "continued gameplay";
+    char received[SESSION_PROTOCOL_MAX_RECORD_SIZE];
+    session_token_t token = make_resume_token();
+    session_open_t open;
+    record_session_id_t stable_id;
+    record_session_t *client_session;
+    record_session_t *incoming_session;
+    record_session_t *stable_session;
+    record_transport_t *abandoned_client_transport;
+    record_transport_t *abandoned_server_transport;
+    record_transport_t *client_transport;
+    record_transport_t *server_transport;
+    client_resume_t *resume;
+    session_acceptor_t *acceptor;
+    size_t received_length;
+
+    TEST_CHECK(Record_transport_create_memory_pair(
+                   4, SESSION_PROTOCOL_MAX_RECORD_SIZE * 4,
+                   &abandoned_client_transport,
+                   &abandoned_server_transport) == 0);
+    stable_session = Record_session_create(abandoned_server_transport);
+    TEST_CHECK(stable_session != NULL);
+    stable_id = Record_session_id(stable_session);
+    Record_session_close(stable_session);
+    TEST_CHECK(Record_transport_receive(
+                   abandoned_client_transport, received, sizeof(received),
+                   &received_length) == RECORD_RECEIVE_CLOSED);
+
+    TEST_CHECK(Record_transport_create_memory_pair(
+                   4, SESSION_PROTOCOL_MAX_RECORD_SIZE * 4,
+                   &client_transport, &server_transport) == 0);
+    client_session = Record_session_create(client_transport);
+    incoming_session = Record_session_create(server_transport);
+    TEST_CHECK(client_session != NULL);
+    TEST_CHECK(incoming_session != NULL);
+    resume = Client_resume_create(client_session, &token);
+    acceptor = Session_acceptor_create(incoming_session);
+    TEST_CHECK(resume != NULL);
+    TEST_CHECK(acceptor != NULL);
+
+    TEST_CHECK(Client_resume_step(resume) == CLIENT_RESUME_PENDING);
+    TEST_CHECK(Session_acceptor_step(
+                   acceptor, &open) == SESSION_ACCEPTOR_RESUME_READY);
+    TEST_CHECK(Session_token_equal(&open.request.resume.token, &token));
+    incoming_session = Session_acceptor_take_session(acceptor);
+    TEST_CHECK(incoming_session != NULL);
+    TEST_CHECK(send_resume_reply(
+                   incoming_session, SUCCESS, "resumed") == 0);
+    TEST_CHECK(Record_session_replace_from(
+                   stable_session, incoming_session) == 0);
+    incoming_session = NULL;
+    TEST_CHECK(Record_session_id(stable_session) == stable_id);
+    TEST_CHECK(Client_resume_step(resume) == CLIENT_RESUME_ACCEPTED);
+
+    TEST_CHECK(Record_session_send(
+                   stable_session, continued, sizeof(continued) - 1,
+                   RECORD_DELIVERY_REQUIRED) == RECORD_SEND_ACCEPTED);
+    TEST_CHECK(Record_session_receive(
+                   client_session, received, sizeof(received),
+                   &received_length) == RECORD_RECEIVE_READY);
+    TEST_CHECK(received_length == sizeof(continued) - 1);
+    TEST_CHECK(memcmp(received, continued, received_length) == 0);
+
+    Session_acceptor_destroy(acceptor);
+    Client_resume_destroy(resume);
+    Record_session_destroy(incoming_session);
+    Record_session_destroy(stable_session);
+    Record_session_destroy(client_session);
+    Record_transport_destroy(abandoned_client_transport);
     return 0;
 }
 
@@ -364,6 +505,9 @@ int main(void)
 {
     TEST_CHECK(sock_startup() == 0);
     TEST_CHECK(test_protocol_round_trip_and_exact_record_validation() == 0);
+    TEST_CHECK(test_resume_protocol_round_trip_and_exact_validation() == 0);
+    TEST_CHECK(test_resume_exchange_transfers_transport_to_stable_session()
+               == 0);
     TEST_CHECK(test_game_admission_survives_transport_replacement() == 0);
     TEST_CHECK(test_control_session_returns_one_reply_per_step() == 0);
     TEST_CHECK(test_game_admission_uses_the_same_state_machine_over_tcp() == 0);

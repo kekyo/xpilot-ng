@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -218,6 +218,18 @@ typedef struct {
     char	host_name[MAX_CHARS];
     char	id_string[MAX_CHARS];
 } other_t;
+
+/**
+ * Return the printable marker occupying a player's alliance column.
+ *
+ * @param alliance Alliance marker from score metadata, or NUL before the
+ * first score packet has arrived.
+ * @return The character to place in the fixed-width alliance column.
+ */
+static inline int Player_alliance_display_char(int alliance)
+{
+    return alliance == '\0' ? ' ' : alliance;
+}
 
 typedef struct {
     int		pos;		/* Block index */
@@ -555,7 +567,7 @@ extern int	packet_lag;		/* approximate lag in frames */
 extern char	*packet_measure;	/* packet measurement in a second */
 extern long	packet_loop;		/* start of measurement */
 
-extern bool	showUserName;		/* Show username instead of nickname */
+extern bool	showUserName;		/* Show nick=user@host details */
 extern char	servername[MAX_CHARS];	/* Name of server connecting to */
 extern unsigned	version;		/* Version of the server */
 extern bool	scoresChanged;
@@ -940,11 +952,6 @@ extern int Contact_local_servers(const Connect_defaults_t *defaults,
 				 char **server_addresses, char **server_names,
 				 unsigned *server_versions,
 				 Connect_param_t *conpar);
-
-/*
- * usleep.c
- */
-extern int micro_delay(unsigned usec);
 
 /*
  * welcome.c

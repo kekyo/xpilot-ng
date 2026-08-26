@@ -657,6 +657,7 @@ LIBOBJS
 COND_SOUND_FALSE
 COND_SOUND_TRUE
 SOUND_LIBS
+SOUND_CFLAGS
 COND_SDL_CLIENT_FALSE
 COND_SDL_CLIENT_TRUE
 COND_X11_CLIENT_FALSE
@@ -671,12 +672,18 @@ COND_WINDOWS_FALSE
 COND_WINDOWS_TRUE
 COND_CLIENT_FALSE
 COND_CLIENT_TRUE
+NATIVE_TEXT_LIBS
+NATIVE_TEXT_CFLAGS
+XRENDER_LIBS
+XRENDER_CFLAGS
+FONTCONFIG_LIBS
+FONTCONFIG_CFLAGS
 GL_LIBS
 GL_CFLAGS
-SDL3_TTF_LIBS
-SDL3_TTF_CFLAGS
 SDL3_IMAGE_LIBS
 SDL3_IMAGE_CFLAGS
+SDL3_TTF_LIBS
+SDL3_TTF_CFLAGS
 SDL3_LIBS
 SDL3_CFLAGS
 X_EXTENSIONS_LIB
@@ -844,12 +851,18 @@ XMKMF
 CPP
 SDL3_CFLAGS
 SDL3_LIBS
-SDL3_IMAGE_CFLAGS
-SDL3_IMAGE_LIBS
 SDL3_TTF_CFLAGS
 SDL3_TTF_LIBS
+SDL3_IMAGE_CFLAGS
+SDL3_IMAGE_LIBS
 GL_CFLAGS
-GL_LIBS'
+GL_LIBS
+FONTCONFIG_CFLAGS
+FONTCONFIG_LIBS
+XRENDER_CFLAGS
+XRENDER_LIBS
+SOUND_CFLAGS
+SOUND_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1499,7 +1512,7 @@ Optional Features:
   --disable-sdl-client    disable SDL/OpenGL client
   --disable-mingw-vendored-deps
                           use externally prepared dependencies for MinGW
-  --enable-sound          enable OpenAL sound
+  --disable-sound         disable OpenAL sound
   --enable-dependency-tracking
                           do not reject slow dependency extractors
   --disable-dependency-tracking
@@ -1533,16 +1546,27 @@ Some influential environment variables:
   CPP         C preprocessor
   SDL3_CFLAGS C compiler flags for SDL3, overriding pkg-config
   SDL3_LIBS   linker flags for SDL3, overriding pkg-config
-  SDL3_IMAGE_CFLAGS
-              C compiler flags for SDL3_IMAGE, overriding pkg-config
-  SDL3_IMAGE_LIBS
-              linker flags for SDL3_IMAGE, overriding pkg-config
   SDL3_TTF_CFLAGS
               C compiler flags for SDL3_TTF, overriding pkg-config
   SDL3_TTF_LIBS
               linker flags for SDL3_TTF, overriding pkg-config
+  SDL3_IMAGE_CFLAGS
+              C compiler flags for SDL3_IMAGE, overriding pkg-config
+  SDL3_IMAGE_LIBS
+              linker flags for SDL3_IMAGE, overriding pkg-config
   GL_CFLAGS   C compiler flags for GL, overriding pkg-config
   GL_LIBS     linker flags for GL, overriding pkg-config
+  FONTCONFIG_CFLAGS
+              C compiler flags for FONTCONFIG, overriding pkg-config
+  FONTCONFIG_LIBS
+              linker flags for FONTCONFIG, overriding pkg-config
+  XRENDER_CFLAGS
+              C compiler flags for XRENDER, overriding pkg-config
+  XRENDER_LIBS
+              linker flags for XRENDER, overriding pkg-config
+  SOUND_CFLAGS
+              C compiler flags for SOUND, overriding pkg-config
+  SOUND_LIBS  linker flags for SOUND, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -3775,8 +3799,17 @@ fi
 if test ${enable_sound+y}
 then :
   enableval=$enable_sound;
+else $as_nop
+  enable_sound=yes
 fi
 
+case "$enable_sound" in
+	yes|no)
+		;;
+	*)
+		as_fn_error $? "--enable-sound accepts yes or no" "$LINENO" 5
+		;;
+esac
 
 
 
@@ -6440,7 +6473,7 @@ printf "%s\n" "#define XP_MAPEDIT 1" >>confdefs.h
 
 fi
 
-if test x$enable_sdl_client = xyes; then
+if test x$enable_sdl_client = xyes || test x$enable_x11_client = xyes; then
 	if test x$mingw_vendored_deps = xyes; then
 		SDL3_CFLAGS=
 		SDL3_LIBS=
@@ -6465,11 +6498,15 @@ if test x$enable_sdl_client = xyes; then
 			if test ! -d "$with_sdl3_prefix/lib/pkgconfig"; then
 				as_fn_error $? "vendored SDL3 pkg-config directory not found: $with_sdl3_prefix/lib/pkgconfig" "$LINENO" 5
 			fi
-			for sdl3_pc_file in sdl3.pc sdl3-image.pc sdl3-ttf.pc; do
+			for sdl3_pc_file in sdl3.pc sdl3-ttf.pc; do
 				if test ! -f "$with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file"; then
 					as_fn_error $? "vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file" "$LINENO" 5
 				fi
 			done
+			if test x$enable_sdl_client = xyes \
+				&& test ! -f "$with_sdl3_prefix/lib/pkgconfig/sdl3-image.pc"; then
+				as_fn_error $? "vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/sdl3-image.pc" "$LINENO" 5
+			fi
 
 			if test "${PKG_CONFIG_PATH+set}" = set; then
 				saved_sdl3_pkg_config_path=$PKG_CONFIG_PATH
@@ -6575,6 +6612,98 @@ printf "%s\n" "yes" >&6; }
 fi
 
 pkg_failed=no
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for sdl3-ttf >= 3.2.0" >&5
+printf %s "checking for sdl3-ttf >= 3.2.0... " >&6; }
+
+if test -n "$SDL3_TTF_CFLAGS"; then
+    pkg_cv_SDL3_TTF_CFLAGS="$SDL3_TTF_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"sdl3-ttf >= 3.2.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "sdl3-ttf >= 3.2.0") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SDL3_TTF_CFLAGS=`$PKG_CONFIG --cflags "sdl3-ttf >= 3.2.0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$SDL3_TTF_LIBS"; then
+    pkg_cv_SDL3_TTF_LIBS="$SDL3_TTF_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"sdl3-ttf >= 3.2.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "sdl3-ttf >= 3.2.0") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SDL3_TTF_LIBS=`$PKG_CONFIG --libs "sdl3-ttf >= 3.2.0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+                SDL3_TTF_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "sdl3-ttf >= 3.2.0" 2>&1`
+        else
+                SDL3_TTF_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "sdl3-ttf >= 3.2.0" 2>&1`
+        fi
+        # Put the nasty error message in config.log where it belongs
+        echo "$SDL3_TTF_PKG_ERRORS" >&5
+
+        as_fn_error $? "Package requirements (sdl3-ttf >= 3.2.0) were not met:
+
+$SDL3_TTF_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables SDL3_TTF_CFLAGS
+and SDL3_TTF_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+        { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables SDL3_TTF_CFLAGS
+and SDL3_TTF_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+        SDL3_TTF_CFLAGS=$pkg_cv_SDL3_TTF_CFLAGS
+        SDL3_TTF_LIBS=$pkg_cv_SDL3_TTF_LIBS
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+fi
+		if test x$enable_sdl_client = xyes; then
+
+pkg_failed=no
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for sdl3-image >= 3.2.0" >&5
 printf %s "checking for sdl3-image >= 3.2.0... " >&6; }
 
@@ -6666,123 +6795,6 @@ printf "%s\n" "yes" >&6; }
 fi
 
 pkg_failed=no
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for sdl3-ttf >= 3.2.0" >&5
-printf %s "checking for sdl3-ttf >= 3.2.0... " >&6; }
-
-if test -n "$SDL3_TTF_CFLAGS"; then
-    pkg_cv_SDL3_TTF_CFLAGS="$SDL3_TTF_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"sdl3-ttf >= 3.2.0\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "sdl3-ttf >= 3.2.0") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_SDL3_TTF_CFLAGS=`$PKG_CONFIG --cflags "sdl3-ttf >= 3.2.0" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$SDL3_TTF_LIBS"; then
-    pkg_cv_SDL3_TTF_LIBS="$SDL3_TTF_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"sdl3-ttf >= 3.2.0\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "sdl3-ttf >= 3.2.0") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_SDL3_TTF_LIBS=`$PKG_CONFIG --libs "sdl3-ttf >= 3.2.0" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-                SDL3_TTF_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "sdl3-ttf >= 3.2.0" 2>&1`
-        else
-                SDL3_TTF_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "sdl3-ttf >= 3.2.0" 2>&1`
-        fi
-        # Put the nasty error message in config.log where it belongs
-        echo "$SDL3_TTF_PKG_ERRORS" >&5
-
-        as_fn_error $? "Package requirements (sdl3-ttf >= 3.2.0) were not met:
-
-$SDL3_TTF_PKG_ERRORS
-
-Consider adjusting the PKG_CONFIG_PATH environment variable if you
-installed software in a non-standard prefix.
-
-Alternatively, you may set the environment variables SDL3_TTF_CFLAGS
-and SDL3_TTF_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details." "$LINENO" 5
-elif test $pkg_failed = untried; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-        { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
-is in your PATH or set the PKG_CONFIG environment variable to the full
-path to pkg-config.
-
-Alternatively, you may set the environment variables SDL3_TTF_CFLAGS
-and SDL3_TTF_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-
-To get pkg-config, see <http://pkg-config.freedesktop.org/>.
-See \`config.log' for more details" "$LINENO" 5; }
-else
-        SDL3_TTF_CFLAGS=$pkg_cv_SDL3_TTF_CFLAGS
-        SDL3_TTF_LIBS=$pkg_cv_SDL3_TTF_LIBS
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
-
-fi
-
-		if test x$with_sdl3 = xvendored; then
-			{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static vendored SDL3 linker flags" >&5
-printf %s "checking for static vendored SDL3 linker flags... " >&6; }
-			SDL3_LIBS=`$PKG_CONFIG --static --libs sdl3`
-			if test $? -ne 0; then
-				as_fn_error $? "could not resolve static SDL3 linker flags" "$LINENO" 5
-			fi
-			SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
-			if test $? -ne 0; then
-				as_fn_error $? "could not resolve static SDL3_image linker flags" "$LINENO" 5
-			fi
-			SDL3_TTF_LIBS=`$PKG_CONFIG --static --libs sdl3-ttf`
-			if test $? -ne 0; then
-				as_fn_error $? "could not resolve static SDL3_ttf linker flags" "$LINENO" 5
-			fi
-			{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
-
-			if test x$sdl3_pkg_config_path_was_set = xyes; then
-				PKG_CONFIG_PATH=$saved_sdl3_pkg_config_path
-				export PKG_CONFIG_PATH
-			else
-				unset PKG_CONFIG_PATH
-			fi
-		fi
-
-pkg_failed=no
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gl" >&5
 printf %s "checking for gl... " >&6; }
 
@@ -6872,13 +6884,251 @@ else
 printf "%s\n" "yes" >&6; }
 
 fi
+		else
+			SDL3_IMAGE_CFLAGS=
+			SDL3_IMAGE_LIBS=
+			GL_CFLAGS=
+			GL_LIBS=
+		fi
+
+		if test x$with_sdl3 = xvendored; then
+			{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static vendored SDL3 linker flags" >&5
+printf %s "checking for static vendored SDL3 linker flags... " >&6; }
+			SDL3_LIBS=`$PKG_CONFIG --static --libs sdl3`
+			if test $? -ne 0; then
+				as_fn_error $? "could not resolve static SDL3 linker flags" "$LINENO" 5
+			fi
+			SDL3_TTF_LIBS=`$PKG_CONFIG --static --libs sdl3-ttf`
+			if test $? -ne 0; then
+				as_fn_error $? "could not resolve static SDL3_ttf linker flags" "$LINENO" 5
+			fi
+			if test x$enable_sdl_client = xyes; then
+				SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
+				if test $? -ne 0; then
+					as_fn_error $? "could not resolve static SDL3_image linker flags" "$LINENO" 5
+				fi
+			fi
+			{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+			if test x$sdl3_pkg_config_path_was_set = xyes; then
+				PKG_CONFIG_PATH=$saved_sdl3_pkg_config_path
+				export PKG_CONFIG_PATH
+			else
+				unset PKG_CONFIG_PATH
+			fi
+		fi
 	fi
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: SDL3 dependency provider: $with_sdl3" >&5
 printf "%s\n" "$as_me: SDL3 dependency provider: $with_sdl3" >&6;}
+	if test x$enable_sdl_client = xyes; then
 
 printf "%s\n" "#define HAVE_SDL_IMAGE 1" >>confdefs.h
 
+	fi
 fi
+
+NATIVE_TEXT_CFLAGS=
+NATIVE_TEXT_LIBS=
+if test x$enable_sdl_client = xyes || test x$enable_x11_client = xyes; then
+	if test x$windows_target = xyes; then
+		NATIVE_TEXT_LIBS="-lgdi32"
+	else
+
+pkg_failed=no
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for fontconfig >= 2.8.0" >&5
+printf %s "checking for fontconfig >= 2.8.0... " >&6; }
+
+if test -n "$FONTCONFIG_CFLAGS"; then
+    pkg_cv_FONTCONFIG_CFLAGS="$FONTCONFIG_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"fontconfig >= 2.8.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "fontconfig >= 2.8.0") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_FONTCONFIG_CFLAGS=`$PKG_CONFIG --cflags "fontconfig >= 2.8.0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$FONTCONFIG_LIBS"; then
+    pkg_cv_FONTCONFIG_LIBS="$FONTCONFIG_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"fontconfig >= 2.8.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "fontconfig >= 2.8.0") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_FONTCONFIG_LIBS=`$PKG_CONFIG --libs "fontconfig >= 2.8.0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+                FONTCONFIG_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "fontconfig >= 2.8.0" 2>&1`
+        else
+                FONTCONFIG_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "fontconfig >= 2.8.0" 2>&1`
+        fi
+        # Put the nasty error message in config.log where it belongs
+        echo "$FONTCONFIG_PKG_ERRORS" >&5
+
+        as_fn_error $? "Package requirements (fontconfig >= 2.8.0) were not met:
+
+$FONTCONFIG_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables FONTCONFIG_CFLAGS
+and FONTCONFIG_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+        { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables FONTCONFIG_CFLAGS
+and FONTCONFIG_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+        FONTCONFIG_CFLAGS=$pkg_cv_FONTCONFIG_CFLAGS
+        FONTCONFIG_LIBS=$pkg_cv_FONTCONFIG_LIBS
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+fi
+		NATIVE_TEXT_CFLAGS=$FONTCONFIG_CFLAGS
+		NATIVE_TEXT_LIBS=$FONTCONFIG_LIBS
+	fi
+fi
+
+XRENDER_CFLAGS=
+XRENDER_LIBS=
+if test x$enable_x11_client = xyes; then
+
+pkg_failed=no
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for xrender >= 0.9.0" >&5
+printf %s "checking for xrender >= 0.9.0... " >&6; }
+
+if test -n "$XRENDER_CFLAGS"; then
+    pkg_cv_XRENDER_CFLAGS="$XRENDER_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"xrender >= 0.9.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "xrender >= 0.9.0") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_XRENDER_CFLAGS=`$PKG_CONFIG --cflags "xrender >= 0.9.0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$XRENDER_LIBS"; then
+    pkg_cv_XRENDER_LIBS="$XRENDER_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"xrender >= 0.9.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "xrender >= 0.9.0") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_XRENDER_LIBS=`$PKG_CONFIG --libs "xrender >= 0.9.0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+                XRENDER_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "xrender >= 0.9.0" 2>&1`
+        else
+                XRENDER_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "xrender >= 0.9.0" 2>&1`
+        fi
+        # Put the nasty error message in config.log where it belongs
+        echo "$XRENDER_PKG_ERRORS" >&5
+
+        as_fn_error $? "Package requirements (xrender >= 0.9.0) were not met:
+
+$XRENDER_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables XRENDER_CFLAGS
+and XRENDER_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+        { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables XRENDER_CFLAGS
+and XRENDER_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+        XRENDER_CFLAGS=$pkg_cv_XRENDER_CFLAGS
+        XRENDER_LIBS=$pkg_cv_XRENDER_LIBS
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+fi
+fi
+
+
+
+
 
 
 
@@ -6946,97 +7196,96 @@ else
 fi
 
 
-if test x$enable_sound = xyes; then
-	have_openal=no
-	have_alut=no
-	have_sound=no
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for main in -lopenal" >&5
-printf %s "checking for main in -lopenal... " >&6; }
-if test ${ac_cv_lib_openal_main+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lopenal  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+have_sound=no
+SOUND_CFLAGS=
+SOUND_LIBS=
+if test x$enable_sound = xyes && test x$need_libxpclient = xyes; then
+	if test x$mingw_vendored_deps = xyes; then
+		have_sound=yes
+	else
 
+pkg_failed=no
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for freealut openal" >&5
+printf %s "checking for freealut openal... " >&6; }
 
-int
-main (void)
-{
-return main ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_lib_openal_main=yes
-else $as_nop
-  ac_cv_lib_openal_main=no
+if test -n "$SOUND_CFLAGS"; then
+    pkg_cv_SOUND_CFLAGS="$SOUND_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"freealut openal\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "freealut openal") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SOUND_CFLAGS=`$PKG_CONFIG --cflags "freealut openal" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+ else
+    pkg_failed=untried
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_openal_main" >&5
-printf "%s\n" "$ac_cv_lib_openal_main" >&6; }
-if test "x$ac_cv_lib_openal_main" = xyes
-then :
-  have_openal=yes
+if test -n "$SOUND_LIBS"; then
+    pkg_cv_SOUND_LIBS="$SOUND_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"freealut openal\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "freealut openal") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SOUND_LIBS=`$PKG_CONFIG --libs "freealut openal" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
 fi
-
-	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for main in -lalut" >&5
-printf %s "checking for main in -lalut... " >&6; }
-if test ${ac_cv_lib_alut_main+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lalut  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-int
-main (void)
-{
-return main ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_lib_alut_main=yes
-else $as_nop
-  ac_cv_lib_alut_main=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_alut_main" >&5
-printf "%s\n" "$ac_cv_lib_alut_main" >&6; }
-if test "x$ac_cv_lib_alut_main" = xyes
-then :
-  have_alut=yes
+ else
+    pkg_failed=untried
 fi
 
-	if test x$have_openal = xyes; then
-		if test x$have_alut = xyes; then
-			have_sound=yes
-			SOUND_LIBS="-lopenal -lalut"
+
+
+if test $pkg_failed = yes; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+                SOUND_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "freealut openal" 2>&1`
+        else
+                SOUND_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "freealut openal" 2>&1`
+        fi
+        # Put the nasty error message in config.log where it belongs
+        echo "$SOUND_PKG_ERRORS" >&5
+
+
+			as_fn_error $? "OpenAL and freealut are required for client sound; install their development packages or use --disable-sound" "$LINENO" 5
+
+elif test $pkg_failed = untried; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+			as_fn_error $? "OpenAL and freealut are required for client sound; install their development packages or use --disable-sound" "$LINENO" 5
+
+else
+        SOUND_CFLAGS=$pkg_cv_SOUND_CFLAGS
+        SOUND_LIBS=$pkg_cv_SOUND_LIBS
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+fi
+		have_sound=yes
+	fi
 
 printf "%s\n" "#define SOUND 1" >>confdefs.h
 
-		else
-			echo "*** Client sound disabled. Check that you have OpenAL installed."
-		fi
-	fi
-
 fi
+
+
 
  if test x$have_sound = xyes; then
   COND_SOUND_TRUE=
