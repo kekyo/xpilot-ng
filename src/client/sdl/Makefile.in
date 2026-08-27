@@ -135,7 +135,8 @@ am__xpilot_infinity_sdl_SOURCES_DIST = asteroid_data.h DT_drawtext.c \
 	sdlclipboard.h sdlcompat.c sdlcompat.h sdlevent.c sdlevent.h \
 	sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h sdlgameframe.c \
 	sdlgameframe.h sdlmetaframe.c sdlmetaframe.h sdlrenderer.c \
-	sdlrenderer.h sdluiimage.c sdluiimage.h sdlpaint.c \
+	sdlrenderer.h sdl_server_browser.c sdl_server_browser.h \
+	sdluiimage.c sdluiimage.h sdlpaint.c \
 	surface_primitives.c surface_primitives.h surface_rgba8.c \
 	surface_rgba8.h sdlpaint.h sdlwindow.c sdlwindow.h text.c \
 	text.h text_atlas.c text_atlas.h text_geometry.c \
@@ -154,7 +155,8 @@ am_xpilot_infinity_sdl_OBJECTS = DT_drawtext.$(OBJEXT) SDL_console.$(OBJEXT) \
 	sdlclipboard.$(OBJEXT) sdlcompat.$(OBJEXT) sdlevent.$(OBJEXT) \
 	sdlgui.$(OBJEXT) sdlinit.$(OBJEXT) sdlkeys.$(OBJEXT) \
 	sdlgameframe.$(OBJEXT) sdlmetaframe.$(OBJEXT) \
-	sdlrenderer.$(OBJEXT) sdluiimage.$(OBJEXT) sdlpaint.$(OBJEXT) \
+	sdlrenderer.$(OBJEXT) sdl_server_browser.$(OBJEXT) \
+	sdluiimage.$(OBJEXT) sdlpaint.$(OBJEXT) \
 	surface_primitives.$(OBJEXT) surface_rgba8.$(OBJEXT) \
 	sdlwindow.$(OBJEXT) text.$(OBJEXT) text_atlas.$(OBJEXT) \
 	text_geometry.$(OBJEXT) text_renderer.$(OBJEXT) \
@@ -196,7 +198,8 @@ am__depfiles_remade = $(top_builddir)/vendor/libtess2/Source/$(DEPDIR)/bucketall
 	./$(DEPDIR)/paint_transform.Po ./$(DEPDIR)/polygon_geometry.Po \
 	./$(DEPDIR)/radar.Po ./$(DEPDIR)/renderer.Po \
 	./$(DEPDIR)/renderer_gl_core.Po ./$(DEPDIR)/score_font.Po \
-	./$(DEPDIR)/sdlclipboard.Po ./$(DEPDIR)/sdlcompat.Po \
+	./$(DEPDIR)/sdl_server_browser.Po ./$(DEPDIR)/sdlclipboard.Po \
+	./$(DEPDIR)/sdlcompat.Po \
 	./$(DEPDIR)/sdlevent.Po ./$(DEPDIR)/sdlgameframe.Po \
 	./$(DEPDIR)/sdlgui.Po ./$(DEPDIR)/sdlinit.Po \
 	./$(DEPDIR)/sdlkeys.Po ./$(DEPDIR)/sdlmeta.Po \
@@ -446,7 +449,8 @@ xpilot_infinity_sdl_SOURCES = asteroid_data.h DT_drawtext.c DT_drawtext.h \
 	sdlclipboard.h sdlcompat.c sdlcompat.h sdlevent.c sdlevent.h \
 	sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h sdlgameframe.c \
 	sdlgameframe.h sdlmetaframe.c sdlmetaframe.h sdlrenderer.c \
-	sdlrenderer.h sdluiimage.c sdluiimage.h sdlpaint.c \
+	sdlrenderer.h sdl_server_browser.c sdl_server_browser.h \
+	sdluiimage.c sdluiimage.h sdlpaint.c \
 	surface_primitives.c surface_primitives.h surface_rgba8.c \
 	surface_rgba8.h sdlpaint.h sdlwindow.c sdlwindow.h text.c \
 	text.h text_atlas.c text_atlas.h text_geometry.c \
@@ -608,6 +612,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer_gl_core.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/score_font.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdl_server_browser.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlclipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlcompat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlevent.Po@am__quote@ # am--include-marker
@@ -806,6 +811,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/renderer.Po
 	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
 	-rm -f ./$(DEPDIR)/score_font.Po
+	-rm -f ./$(DEPDIR)/sdl_server_browser.Po
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
@@ -897,6 +903,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/renderer.Po
 	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
 	-rm -f ./$(DEPDIR)/score_font.Po
+	-rm -f ./$(DEPDIR)/sdl_server_browser.Po
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po

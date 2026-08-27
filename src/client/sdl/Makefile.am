@@ -62,6 +62,7 @@ xpilot_infinity_sdl_SOURCES = \
 	sdlevent.c sdlevent.h sdlgui.c sdlinit.c sdlkeys.c sdlkeys.h \
 	sdlgameframe.c sdlgameframe.h \
 	sdlmetaframe.c sdlmetaframe.h sdlrenderer.c sdlrenderer.h \
+	sdl_server_browser.c sdl_server_browser.h \
 	sdluiimage.c sdluiimage.h \
 	sdlpaint.c surface_primitives.c surface_primitives.h \
 	surface_rgba8.c surface_rgba8.h \

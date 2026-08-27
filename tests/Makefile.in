@@ -104,6 +104,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-randommt$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-ppm-image$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-micro-delay$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-server-browser$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-score-font$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-native-text$(EXEEXT) \
@@ -167,6 +168,7 @@ target_triplet = @target@
 @COND_WINDOWS_TRUE@	test-randommt$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-ppm-image$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-micro-delay$(EXEEXT) \
+@COND_WINDOWS_TRUE@	test-sdl-server-browser$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-score-font$(EXEEXT) \
 @COND_WINDOWS_TRUE@	test-native-text$(EXEEXT) \
@@ -187,6 +189,7 @@ target_triplet = @target@
 @COND_WINDOWS_FALSE@	test-randommt$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-ppm-image$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-micro-delay$(EXEEXT) \
+@COND_WINDOWS_FALSE@	test-sdl-server-browser$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-sdl-versions$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-score-font$(EXEEXT) \
 @COND_WINDOWS_FALSE@	test-native-text$(EXEEXT) \
@@ -488,6 +491,13 @@ test_sdl_renderer_scissor_DEPENDENCIES = $(am__DEPENDENCIES_1)
 test_sdl_renderer_scissor_LINK = $(CCLD) \
 	$(test_sdl_renderer_scissor_CFLAGS) $(CFLAGS) \
 	$(test_sdl_renderer_scissor_LDFLAGS) $(LDFLAGS) -o $@
+am_test_sdl_server_browser_OBJECTS =  \
+	test_sdl_server_browser.$(OBJEXT) sdl_server_browser.$(OBJEXT)
+test_sdl_server_browser_OBJECTS =  \
+	$(am_test_sdl_server_browser_OBJECTS)
+test_sdl_server_browser_DEPENDENCIES =  \
+	$(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a
 am_test_sdl_surface_OBJECTS = test_sdl_surface.$(OBJEXT) \
 	sdlcompat.$(OBJEXT)
 test_sdl_surface_OBJECTS = $(am_test_sdl_surface_OBJECTS)
@@ -680,7 +690,8 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/gameloop.Po ./$(DEPDIR)/gfx2d.Po \
 	./$(DEPDIR)/image_geometry.Po ./$(DEPDIR)/paint_transform.Po \
 	./$(DEPDIR)/polygon_geometry.Po ./$(DEPDIR)/renderer.Po \
-	./$(DEPDIR)/renderer_gl_core.Po ./$(DEPDIR)/sdlclipboard.Po \
+	./$(DEPDIR)/renderer_gl_core.Po \
+	./$(DEPDIR)/sdl_server_browser.Po ./$(DEPDIR)/sdlclipboard.Po \
 	./$(DEPDIR)/sdlcompat.Po ./$(DEPDIR)/sdlevent.Po \
 	./$(DEPDIR)/sdlgameframe.Po ./$(DEPDIR)/sdlkeys.Po \
 	./$(DEPDIR)/sdlmetaframe.Po ./$(DEPDIR)/sdlrenderer.Po \
@@ -750,6 +761,7 @@ am__depfiles_remade = ./$(DEPDIR)/SDL_console.Po \
 	./$(DEPDIR)/test_sdl_renderer_scissor-renderer.Po \
 	./$(DEPDIR)/test_sdl_renderer_scissor-sdlrenderer.Po \
 	./$(DEPDIR)/test_sdl_renderer_scissor-test_sdl_renderer_scissor.Po \
+	./$(DEPDIR)/test_sdl_server_browser.Po \
 	./$(DEPDIR)/test_sdl_surface.Po \
 	./$(DEPDIR)/test_sdl_ui_image-glwidgets.Po \
 	./$(DEPDIR)/test_sdl_ui_image-sdlcompat.Po \
@@ -848,7 +860,8 @@ SOURCES = $(test_audio_device_SOURCES) $(test_checknames_SOURCES) \
 	$(test_sdl_meta_frame_SOURCES) \
 	$(test_sdl_renderer_core_context_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
-	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
+	$(test_sdl_server_browser_SOURCES) $(test_sdl_surface_SOURCES) \
+	$(test_sdl_ui_image_SOURCES) \
 	$(test_sdl_versions_SOURCES) $(test_sdl_window_SOURCES) \
 	$(test_sdlgui_appearing_SOURCES) \
 	$(test_sdlgui_asteroids_SOURCES) \
@@ -893,7 +906,8 @@ DIST_SOURCES = $(test_audio_device_SOURCES) $(test_checknames_SOURCES) \
 	$(test_sdl_meta_frame_SOURCES) \
 	$(test_sdl_renderer_core_context_SOURCES) \
 	$(test_sdl_renderer_scissor_SOURCES) \
-	$(test_sdl_surface_SOURCES) $(test_sdl_ui_image_SOURCES) \
+	$(test_sdl_server_browser_SOURCES) $(test_sdl_surface_SOURCES) \
+	$(test_sdl_ui_image_SOURCES) \
 	$(test_sdl_versions_SOURCES) $(test_sdl_window_SOURCES) \
 	$(test_sdlgui_appearing_SOURCES) \
 	$(test_sdlgui_asteroids_SOURCES) \
@@ -1375,6 +1389,11 @@ test_meta_environment_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 
 test_meta_environment_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+test_sdl_server_browser_SOURCES = test_sdl_server_browser.c \
+	$(top_srcdir)/src/client/sdl/sdl_server_browser.c
+test_sdl_server_browser_LDADD = \
+	$(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a
 test_sdl_versions_SOURCES = test_sdl_versions.c
 test_sdl_versions_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)
 test_score_font_SOURCES = test_score_font.c \
@@ -2065,6 +2084,10 @@ test-sdl-renderer-scissor$(EXEEXT): $(test_sdl_renderer_scissor_OBJECTS) $(test_
 	@rm -f test-sdl-renderer-scissor$(EXEEXT)
 	$(AM_V_CCLD)$(test_sdl_renderer_scissor_LINK) $(test_sdl_renderer_scissor_OBJECTS) $(test_sdl_renderer_scissor_LDADD) $(LIBS)
 
+test-sdl-server-browser$(EXEEXT): $(test_sdl_server_browser_OBJECTS) $(test_sdl_server_browser_DEPENDENCIES) $(EXTRA_test_sdl_server_browser_DEPENDENCIES)
+	@rm -f test-sdl-server-browser$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_sdl_server_browser_OBJECTS) $(test_sdl_server_browser_LDADD) $(LIBS)
+
 test-sdl-surface$(EXEEXT): $(test_sdl_surface_OBJECTS) $(test_sdl_surface_DEPENDENCIES) $(EXTRA_test_sdl_surface_DEPENDENCIES)
 	@rm -f test-sdl-surface$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sdl_surface_OBJECTS) $(test_sdl_surface_LDADD) $(LIBS)
@@ -2185,6 +2208,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/polygon_geometry.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/renderer_gl_core.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdl_server_browser.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlclipboard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlcompat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdlevent.Po@am__quote@ # am--include-marker
@@ -2261,6 +2285,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_renderer_scissor-renderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_renderer_scissor-sdlrenderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_renderer_scissor-test_sdl_renderer_scissor.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_server_browser.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_surface.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_ui_image-glwidgets.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sdl_ui_image-sdlcompat.Po@am__quote@ # am--include-marker
@@ -3164,6 +3189,20 @@ test_sdl_renderer_scissor-sdlrenderer.obj: $(top_srcdir)/src/client/sdl/sdlrende
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdlrenderer.c' object='test_sdl_renderer_scissor-sdlrenderer.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_sdl_renderer_scissor_CFLAGS) $(CFLAGS) -c -o test_sdl_renderer_scissor-sdlrenderer.obj `if test -f '$(top_srcdir)/src/client/sdl/sdlrenderer.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdlrenderer.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdlrenderer.c'; fi`
+
+sdl_server_browser.o: $(top_srcdir)/src/client/sdl/sdl_server_browser.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdl_server_browser.o -MD -MP -MF $(DEPDIR)/sdl_server_browser.Tpo -c -o sdl_server_browser.o `test -f '$(top_srcdir)/src/client/sdl/sdl_server_browser.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdl_server_browser.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/sdl_server_browser.Tpo $(DEPDIR)/sdl_server_browser.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdl_server_browser.c' object='sdl_server_browser.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdl_server_browser.o `test -f '$(top_srcdir)/src/client/sdl/sdl_server_browser.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdl_server_browser.c
+
+sdl_server_browser.obj: $(top_srcdir)/src/client/sdl/sdl_server_browser.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdl_server_browser.obj -MD -MP -MF $(DEPDIR)/sdl_server_browser.Tpo -c -o sdl_server_browser.obj `if test -f '$(top_srcdir)/src/client/sdl/sdl_server_browser.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdl_server_browser.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdl_server_browser.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/sdl_server_browser.Tpo $(DEPDIR)/sdl_server_browser.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_srcdir)/src/client/sdl/sdl_server_browser.c' object='sdl_server_browser.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sdl_server_browser.obj `if test -f '$(top_srcdir)/src/client/sdl/sdl_server_browser.c'; then $(CYGPATH_W) '$(top_srcdir)/src/client/sdl/sdl_server_browser.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/client/sdl/sdl_server_browser.c'; fi`
 
 sdlcompat.o: $(top_srcdir)/src/client/sdl/sdlcompat.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sdlcompat.o -MD -MP -MF $(DEPDIR)/sdlcompat.Tpo -c -o sdlcompat.o `test -f '$(top_srcdir)/src/client/sdl/sdlcompat.c' || echo '$(srcdir)/'`$(top_srcdir)/src/client/sdl/sdlcompat.c
@@ -4107,6 +4146,13 @@ test-micro-delay.log: test-micro-delay$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-sdl-server-browser.log: test-sdl-server-browser$(EXEEXT)
+	@p='test-sdl-server-browser$(EXEEXT)'; \
+	b='test-sdl-server-browser'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-sdl-versions.log: test-sdl-versions$(EXEEXT)
 	@p='test-sdl-versions$(EXEEXT)'; \
 	b='test-sdl-versions'; \
@@ -4523,6 +4569,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
 	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
+	-rm -f ./$(DEPDIR)/sdl_server_browser.Po
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
@@ -4599,6 +4646,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-renderer.Po
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-test_sdl_renderer_scissor.Po
+	-rm -f ./$(DEPDIR)/test_sdl_server_browser.Po
 	-rm -f ./$(DEPDIR)/test_sdl_surface.Po
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-sdlcompat.Po
@@ -4711,6 +4759,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/polygon_geometry.Po
 	-rm -f ./$(DEPDIR)/renderer.Po
 	-rm -f ./$(DEPDIR)/renderer_gl_core.Po
+	-rm -f ./$(DEPDIR)/sdl_server_browser.Po
 	-rm -f ./$(DEPDIR)/sdlclipboard.Po
 	-rm -f ./$(DEPDIR)/sdlcompat.Po
 	-rm -f ./$(DEPDIR)/sdlevent.Po
@@ -4787,6 +4836,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-renderer.Po
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-sdlrenderer.Po
 	-rm -f ./$(DEPDIR)/test_sdl_renderer_scissor-test_sdl_renderer_scissor.Po
+	-rm -f ./$(DEPDIR)/test_sdl_server_browser.Po
 	-rm -f ./$(DEPDIR)/test_sdl_surface.Po
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-glwidgets.Po
 	-rm -f ./$(DEPDIR)/test_sdl_ui_image-sdlcompat.Po

@@ -1457,6 +1457,7 @@ int Contact_servers(int count, const Connect_target_t *targets,
 }
 
 static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
+				      int max_retries,
 				      int auto_connect, int list_servers,
 				      int auto_shutdown,
 				      char *shutdown_reason,
@@ -1467,7 +1468,6 @@ static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
 				      Connect_param_t *found_servers,
 				      Connect_param_t *conpar)
 {
-    const int max_retries = 2;
     Connect_param_t legacy_connection;
     Connect_target_t target;
     int connected = false;
@@ -1497,7 +1497,7 @@ static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
 
     if (Init_contact_buffer(&sbuf, GAME_TRANSPORT_UDP) == -1) {
 	error("Could not initialize contact socket");
-	exit(1);
+	return false;
     }
 
     do {
@@ -1510,7 +1510,9 @@ static int Contact_local_servers_impl(const Connect_defaults_t *defaults,
 	if (Query_all(&sbuf.sock, target.contact_port,
 		      sbuf.buf, (size_t)sbuf.len) == -1) {
 	    error("Couldn't send contact requests");
-	    exit(1);
+	    Close_contact_socket(&sbuf);
+	    Sockbuf_cleanup(&sbuf);
+	    return false;
 	}
 	if (retries == 0) {
 	    printf("Searching for an XPilot server on the local net...\n");
@@ -1573,7 +1575,7 @@ int Contact_local_servers(const Connect_defaults_t *defaults,
 			  Connect_param_t *conpar)
 {
     return Contact_local_servers_impl(
-	defaults, auto_connect, list_servers, auto_shutdown, shutdown_reason,
+	defaults, 2, auto_connect, list_servers, auto_shutdown, shutdown_reason,
 	find_max, num_found, server_addresses, server_names, server_versions,
 	NULL, conpar);
 }
@@ -1586,6 +1588,19 @@ int Contact_local_servers_detailed(const Connect_defaults_t *defaults,
 				   Connect_param_t *conpar)
 {
     return Contact_local_servers_impl(
-	defaults, auto_connect, list_servers, auto_shutdown, shutdown_reason,
+	defaults, 2, auto_connect, list_servers, auto_shutdown, shutdown_reason,
 	find_max, num_found, NULL, NULL, NULL, found_servers, conpar);
+}
+
+int Discover_local_servers(const Connect_defaults_t *defaults,
+			   int find_max,
+			   Connect_param_t *found_servers,
+			   Connect_param_t *conpar)
+{
+    int num_found = 0;
+
+    Contact_local_servers_impl(
+	defaults, 0, 0, 2, 0, NULL,
+	find_max, &num_found, NULL, NULL, NULL, found_servers, conpar);
+    return num_found;
 }

@@ -172,6 +172,24 @@ int Contact_local_servers_detailed(
     struct Connect_param *conpar);
 
 /**
+ * Perform one nonfatal UDP LAN discovery pass for the SDL server browser.
+ *
+ * Socket creation, broadcast, or query failures are reported and return no
+ * results instead of terminating the client. The returned connection records
+ * contain every negotiated field needed to join a selected server later.
+ *
+ * @param defaults Default contact port and expected gameplay transport.
+ * @param find_max Capacity of `found_servers`.
+ * @param found_servers Array receiving complete discovered connections.
+ * @param conpar Client identity used in discovery requests.
+ * @return Number of stored discovery results, from zero through `find_max`.
+ */
+int Discover_local_servers(const Connect_defaults_t *defaults,
+                           int find_max,
+                           struct Connect_param *found_servers,
+                           struct Connect_param *conpar);
+
+/**
  * Return a user-facing explanation for a connection target status.
  *
  * @param status Status returned by a connection target parser.

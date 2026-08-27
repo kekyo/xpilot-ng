@@ -207,6 +207,15 @@ meta_ui_ready()
         "$runtime_dir/meta.log" 2>/dev/null
 }
 
+sdl_local_browser_ready()
+{
+    if ! kill -0 "$client_pid" 2>/dev/null; then
+	fail "SDL client stopped before the LAN server browser was drawn"
+    fi
+    grep -q '^Metaserver UI ready: background=semantic, buttons=3/3, draws=4$' \
+	"$game_client_log" 2>/dev/null
+}
+
 meta_fixture_ready()
 {
     if ! kill -0 "$meta_fixture_pid" 2>/dev/null; then
@@ -1253,6 +1262,66 @@ run_x11_local_discovery_case()
     stop_local_server
 }
 
+run_sdl_local_discovery_case()
+{
+    game_case=sdl-local-discovery
+    expected_contact_transport=UDP
+    expected_gameplay_transport=UDP
+    port=$(reserve_contact_port)
+    game_server_log="$runtime_dir/server-$game_case.log"
+    game_client_log="$runtime_dir/client-$game_case.log"
+    game_client_name=SDL3Local
+
+    "$server" -map "$map" -port "$port" -noQuit +reportMeta -udp \
+	>"$game_server_log" 2>&1 &
+    server_pid=$!
+    wait_until "$game_case server readiness" 20 server_ready
+
+    "$client" -port "$port" -name "$game_client_name" \
+	-user "$game_client_user" -messagesToStdout 2 \
+	>"$game_client_log" 2>&1 &
+    client_pid=$!
+    window_owner_pid=$client_pid
+    wait_until "$game_case LAN query" 20 \
+	grep -q 'Searching for an XPilot server on the local net' \
+	    "$game_client_log"
+    wait_until "$game_case browser UI" 30 sdl_local_browser_ready
+    grep -q "Couldn't get meta list" "$game_client_log" \
+	|| fail "$game_case did not continue after metaserver failure"
+    if grep -q 'Searching once more' "$game_client_log"; then
+	fail "$game_case performed more than one LAN discovery pass"
+    fi
+    wait_until "$game_case browser window" 10 find_game_window
+
+    # The combined browser prioritizes LAN entries and selects its first row.
+    # Activating that row proves the discovery result is present and joinable.
+    xdotool mousemove --window "$window_id" 280 220 click 1 \
+	>/dev/null 2>&1 \
+	|| fail "$game_case could not activate the first LAN server row"
+    wait_until "$game_case local client acceptance" 20 client_accepted
+    wait_until "$game_case gameplay transport window title" 10 \
+	x11_local_game_window_transport_visible
+    wait_until "$game_case semantic game frame presentation" 20 \
+	game_frame_ready
+    grep -Fq '[Contact/Lobby: UDP, Gameplay: UDP]' "$game_client_log" \
+	|| fail "$game_case did not report the LAN connection transports"
+
+    quit_game_client "$game_case"
+    finished_client_pid=$client_pid
+    set +e
+    wait "$client_pid"
+    client_status=$?
+    set -e
+    client_pid=
+    window_id=
+    test "$client_status" -eq 0 \
+	|| fail "$game_case client returned status $client_status"
+    wait_until "$game_case game window teardown" 5 process_window_absent \
+	"$finished_client_pid"
+    wait_until "$game_case server-side client departure" 5 client_departed
+    stop_local_server
+}
+
 run_transport_mismatch()
 {
     server_transport=$1
@@ -1392,10 +1461,10 @@ export XPILOT_META_HOST_TWO=127.0.0.1
 XPILOT_META_PORT=$(sed -n '1p' "$runtime_dir/meta-fixture.port")
 export XPILOT_META_PORT
 
-# With no arguments the SDL client takes the graphical metaserver path.  This
-# scenario requires a completed metaserver fetch so it exercises the actual
-# semantic background and button draw, presentation, and graceful teardown.
-"$client" >"$runtime_dir/meta.log" 2>&1 &
+# With no server target the SDL client takes the graphical browser path.  LAN
+# discovery is disabled here so this scenario isolates a completed metaserver
+# fetch, semantic drawing, presentation, and graceful teardown.
+"$client" -localDiscovery no >"$runtime_dir/meta.log" 2>&1 &
 meta_pid=$!
 window_owner_pid=$meta_pid
 wait_until "no-argument SDL initialization" 15 meta_initialized
@@ -1434,6 +1503,11 @@ if test "$meta_status" -ne 0; then
 fi
 wait_until "metaserver window teardown" 5 process_window_absent \
     "$finished_meta_pid"
+
+kill -TERM "$meta_fixture_pid" 2>/dev/null || true
+wait "$meta_fixture_pid" 2>/dev/null || true
+meta_fixture_pid=
+run_sdl_local_discovery_case
 
 run_invalid_target_rejection
 run_server_transport_option_help

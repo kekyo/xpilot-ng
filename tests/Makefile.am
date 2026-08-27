@@ -31,6 +31,7 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 	test-transport-display test-session-token test-socket-io \
 	test-native-socket-handle test-recording-input test-session-flow \
 	test-randommt test-ppm-image test-micro-delay \
+	test-sdl-server-browser \
 	test-sdl-versions test-score-font test-native-text test-game-input
 TESTS =
 else
@@ -42,6 +43,7 @@ check_PROGRAMS = test-framed-stream test-websocket-transport \
 	test-recording-input \
 	test-session-flow \
 	test-meta-environment test-randommt test-ppm-image test-micro-delay \
+	test-sdl-server-browser \
 	test-sdl-versions test-score-font test-native-text \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
@@ -69,6 +71,7 @@ TESTS = test-framed-stream test-websocket-transport \
 	test-recording-input \
 	test-session-flow \
 	test-meta-environment test-randommt test-ppm-image test-micro-delay \
+	test-sdl-server-browser \
 	test-sdl-versions test-score-font test-native-text \
 	test-game-input test-gameloop test-sdl-keys test-sdl-console \
 	test-sdl-surface \
@@ -177,6 +180,12 @@ test_meta_environment_CPPFLAGS = $(AM_CPPFLAGS) -DXPILOT_META_TEST_HOOKS
 test_meta_environment_CFLAGS = $(AM_CFLAGS) \
 	-ffunction-sections -fdata-sections
 test_meta_environment_LDFLAGS = $(AM_LDFLAGS) -Wl,--gc-sections
+
+test_sdl_server_browser_SOURCES = test_sdl_server_browser.c \
+	$(top_srcdir)/src/client/sdl/sdl_server_browser.c
+test_sdl_server_browser_LDADD = \
+	$(top_builddir)/src/client/libxpclient.a \
+	$(top_builddir)/src/common/libxpcommon.a
 
 test_sdl_versions_SOURCES = test_sdl_versions.c
 test_sdl_versions_LDADD = $(XP_SDL3_IMAGE_LIBS) $(XP_SDL3_TTF_LIBS) $(XP_SDL3_LIBS)

@@ -23,6 +23,15 @@
 
 #include "xpclient_sdl.h"
 
+/** Register SDL server-browser options before command-line parsing. */
+void Store_sdlmeta_options(void);
+
+/**
+ * Display the combined metaserver and LAN server browser.
+ *
+ * @param conpar Client identity input and selected connection output.
+ * @return Zero after joining, one to refresh, or a negative value to quit.
+ */
 int Meta_window(Connect_param_t *conpar);
 
 #ifdef XPILOT_SDLMETA_TEST_HOOKS

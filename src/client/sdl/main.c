@@ -137,6 +137,7 @@ int main(int argc, char *argv[])
     Store_sdlinit_options();
     Store_sdlgui_options();
     Store_radar_options();
+    Store_sdlmeta_options();
 
     memset(&xpArgs, 0, sizeof(xp_args_t));
     Parse_options(&argc, argv);
