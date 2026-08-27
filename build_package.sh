@@ -421,7 +421,7 @@ validate_deb_package()
     assert_file "$extract_dir/usr/share/games/xpilot-infinity/sound/sounds.txt"
     assert_file "$extract_dir/usr/share/games/xpilot-infinity/sound/bfire.wav"
     assert_file "$extract_dir/usr/share/man/man6/xpilot-infinity-sdl.6"
-    assert_file "$extract_dir/usr/share/doc/xpilot-infinity/README"
+    assert_file "$extract_dir/usr/share/doc/xpilot-infinity/README.md"
     assert_file "$extract_dir/usr/share/doc/xpilot-infinity/COPYING"
 
     rm -rf "$extract_dir"

@@ -656,7 +656,6 @@ fi
 
 AC_CONFIG_FILES([ \
 	Makefile \
-	README \
 	contrib/Makefile \
 	contrib/xpicc/Makefile \
 	doc/Makefile \

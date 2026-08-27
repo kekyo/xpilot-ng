@@ -119,7 +119,7 @@ rm -rf $RPM_BUILD_ROOT
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%doc AUTHORS doc/BUGS doc/ChangeLog doc/CREDITS doc/FAQ doc/FIXED FEATURES INSTALL NEWS README TODO
+%doc AUTHORS doc/BUGS doc/ChangeLog doc/CREDITS doc/FAQ doc/FIXED FEATURES INSTALL NEWS README.md TODO
 /usr/local/bin/xpilot-infinity-sdl
 /usr/local/share/xpilot-infinity-sdl/xpilot-infinity/fonts/VeraMoBd.ttf
 /usr/local/share/xpilot-infinity-sdl/xpilot-infinity/fonts

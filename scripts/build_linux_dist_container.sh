@@ -180,7 +180,7 @@ assert_file "$stage_dir/usr/share/games/xpilot-infinity/sound/bfire.wav"
 
 doc_dir="$stage_dir/usr/share/doc/$XPILOT_PACKAGE_NAME"
 mkdir -p "$doc_dir"
-cp COPYING README INSTALL ChangeLog "$doc_dir/"
+cp COPYING README.md INSTALL ChangeLog "$doc_dir/"
 
 deb_arch=$(dpkg-architecture -qDEB_HOST_ARCH)
 runtime_dependencies=$(calculate_runtime_dependencies)

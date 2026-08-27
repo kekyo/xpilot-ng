@@ -101,7 +101,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = config.h
-CONFIG_CLEAN_FILES = README
+CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -186,13 +186,12 @@ am__define_uniq_tagged_files = \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
 DIST_SUBDIRS = src lib doc contrib tests vendor/mingw
-am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/README.in \
-	$(srcdir)/config.h.in $(top_srcdir)/config/compile \
-	$(top_srcdir)/config/config.guess \
+am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/config.h.in \
+	$(top_srcdir)/config/compile $(top_srcdir)/config/config.guess \
 	$(top_srcdir)/config/config.sub \
 	$(top_srcdir)/config/install-sh $(top_srcdir)/config/missing \
 	$(top_srcdir)/config/mkinstalldirs AUTHORS COPYING ChangeLog \
-	INSTALL NEWS README TODO config/compile config/config.guess \
+	INSTALL NEWS README.md TODO config/compile config/config.guess \
 	config/config.sub config/depcomp config/install-sh \
 	config/missing config/mkinstalldirs
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -445,8 +444,6 @@ $(srcdir)/config.h.in: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 
 distclean-hdr:
 	-rm -f config.h stamp-h1
-README: $(top_builddir)/config.status $(srcdir)/README.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
 install-dist_pkgdataDATA: $(dist_pkgdata_DATA)
 	@$(NORMAL_INSTALL)
 	@list='$(dist_pkgdata_DATA)'; test -n "$(pkgdatadir)" || list=; \
