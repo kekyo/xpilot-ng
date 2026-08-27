@@ -15,6 +15,11 @@ acknowledgement; \fB\-text\fR and \fB\-list\fR report through the terminal
 without opening the dialog.  A responding fallback target or a completed
 server listing is not treated as a connection failure.
 .PP
+With no explicit server target, the graphical browser combines metaserver
+results with one UDP LAN discovery pass. LAN entries are shown first and a
+Source column identifies LAN, Meta, and merged results. Use
+\fB\-localDiscovery no\fR to disable the LAN query.
+.PP
 Where options include:
 .HP
 \fB\-newbie\fR <value>
@@ -261,6 +266,12 @@ WebSocket must be selected for both transport settings.
 Direct connections must match the server; metaserver selections apply the
 advertised value.
 The default value is: udp.
+.HP
+\fB\-localDiscovery\fR <value>
+.IP
+Search for UDP servers on the local network in the SDL server browser.
+The default value is: yes.
+Set the value to no to disable the LAN query.
 .HP
 \fB\-outlineWorld\fR <value>
 .IP

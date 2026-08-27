@@ -119,6 +119,11 @@ A \fBws://\fP, \fBtcp://\fP, or \fBudp://\fP target overrides both transport def
 that target.  A server selected from the metaserver list applies its
 advertised value.  WebSocket must be selected for both transport settings.
 .TP 15
+.B -localDiscovery boolean
+Enables or disables the one-pass UDP LAN query in the graphical SDL server
+browser.  It is enabled by default and is available only when the contact
+transport is UDP.  Use \fB-localDiscovery no\fP to disable it.
+.TP 15
 .B -text
 Invokes the old text-based \fBcommand prompt\fP interface instead
 of the new \fBWelcome Window\fP.  If no \fIserver-target\fP is specified,
@@ -165,122 +170,23 @@ options.  See \fIxpilots(6)\fP.
 
 .SH THE WELCOME WINDOW
 
-When you startup \fBxpilot\fP without specifying a server name you will
-be presented with a Welcome window with three buttons in the upper left
-corner.  These buttons are:
-.RS 5
-.TP 12
-.B Local
-Search for \fBxpilot\fP servers on the local network using UDP contact
-and display a list of matches.  TCP and WebSocket contact do not support LAN
-broadcast discovery.  Press the \fBJoin game\fP button beside the desired server name
-to start playing.  If no servers are listed, you will need to start one.
-See \fIxpilots(6)\fP.
+When \fBxpilot\fP starts without a server target, the SDL Welcome window
+automatically queries the xpilot metaservers and, when UDP contact is selected,
+performs one broadcast discovery pass on the local network.  Failure of one
+query does not hide results from the other.
 
-.TP 12
-.B Internet
-Search the xpilot meta servers (see \fBnotes\fP section) for currently
-running xpilot servers on the Internet.
+LAN results are listed first.  Entries with the same numeric address, contact
+port, and contact/gameplay transports are combined with matching metaserver
+data.  The \fBSource\fP column identifies rows as \fBLAN\fP, \fBMeta\fP, or
+\fBLAN + Meta\fP.  Fields unavailable from LAN discovery are displayed as
+unknown rather than preventing the server from being listed.
 
-If the meta servers could be contacted, a list of servers will be
-displayed.  Selecting an entry applies its advertised contact and gameplay
-transports automatically.  Legacy entries without transport metadata use
-UDP for both.
-
-.TP 12
-.B Quit
-Press this button to exit the program.
-
-.RS -5
-
-When the \fBInternet\fP button is pressed and successfully retrieves the
-list of xpilot servers from the meta servers, additional buttons appear
-at the bottom and one under the \fBserver\fP column for each server
-listed:
-
-.RS 5
-.TP 12
-.B Next Page
-If there is more than a screenful of servers, this will allow you to see
-the rest of them.  A \fBFirst Page\fP button will appear to return to the
-top of the list when you are not on the first page.  The page is initially
-sorted by the \fBpl\fP column in descending order.
-
-.TP 12
-.B Measure Lag
-This will fill the \fBping\fP column with the round-trip time for a packet
-to reach each server (in milliseconds).  If the server is not reachable,
-\fBnone\fP will appear in this column.  The results will be sorted by
-\fBPl\fP in descending order and subsorted in ascending order by \fBPing\fP
-time.
-
-.TP 12
-.B Server
-The hostname of the server is displayed as a red button to join that server.
-
-The button is highlighted when the program is attempting to establish a
-connection to the server.  If the server cannot be contacted after two
-retries, the button will revert to its unhighlighted state.  If the
-button stays highlighted and you do not enter the game immediately,
-this means you have been \fIqueued\fP to enter the game as soon as a
-base is available.
-
-The xpilot client does not handle the connection attempt in its
-own thread and therefore blocks the current execution thread and will
-not update the display or respond to button presses until a connection
-is established or it gives up.  Thus, the only way to exit the queued
-state is to close the xpilot client, either by using the window manager
-to close the window, or forcibly with \fBkill(1)\fP or ^C.
-
-Incorrectly configured server hosts may report a false hostname.
-However, behind the scenes, the meta server sends us the IP number.  A
-connection will be established to that IP number when the server button
-is pressed so long as there isn't a network problem (such as a firewall
-at either the client or server end not configured to permit access) that
-prevents contact.
-.RS -5
-
-The columns of the Internet server table, from left to right are as
-follows:
-
-.RS 5
-.TP 12
-.B Pl
-The number of human players on the server.
-
-.TP 12
-.B Q
-The number of players currently queued to join the server.
-
-.TP 12
-.B Ba
-The number of bases on this map.
-
-.TP 12
-.B Tm
-The number of teams, if the map is a teamplay map.
-
-.TP 12
-.B FPS
-The framerate of the server in frames-per-second.
-
-.TP 12
-.B Stat
-The status of the game, e.g. \fBlock\fP if the game is locked.
-
-.TP 12
-.B Version
-The version number of the server.
-
-.TP 12
-.B Map
-The name of the map.
-
-.TP 12
-.B Server
-The hostname of the server.
-
-.RS -5
+Select a row and press \fBJoin\fP, or activate an already selected row, to
+connect.  \fBRefresh\fP repeats both enabled queries, and \fBQuit\fP exits.
+Metaserver rows apply their advertised transports; LAN rows retain the full
+connection parameters negotiated during discovery.  TCP and WebSocket do not
+support LAN broadcast discovery.  Use \fB-localDiscovery no\fP to suppress
+the UDP LAN query.
 
 .SH THE GRAPHICAL USER INTERFACE
 

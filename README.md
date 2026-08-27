@@ -59,8 +59,10 @@ You can connect to the server and start a game.
 As indicated by the `udp://` URL, the UDP protocol is used.
 You can also use TCP or WebSocket.
 
-If you launch the SDL client without specifying a URL, it will query the metaserver and display the available servers.
-You can join xpilot servers hosted around the world and play games.
+If you launch the SDL client without specifying a URL, it will query the
+metaserver and perform one UDP discovery pass on the local network. The server
+browser combines both result sets, identifies their source, and places LAN
+servers first. You can disable the LAN query with `-localDiscovery no`.
 
 There are still plenty of other features, but I can't cover them all here.
 
@@ -128,7 +130,11 @@ target. Target hosts are DNS names or IPv4 addresses. IPv6 literals and
 general URI features such as credentials, paths, queries, fragments, and
 percent encoding are not supported. TCP and WebSocket contact require an
 explicit target or a metaserver entry because LAN broadcast discovery is
-available only with UDP.
+available only with UDP. With no explicit target, the SDL server browser makes
+one UDP LAN discovery pass alongside its metaserver query. LAN and metaserver
+results remain usable if the other query fails, and matching endpoint and
+transport pairs are shown as one `LAN + Meta` entry. Use
+`-localDiscovery no` to disable the LAN query.
 
 If every explicit target fails to return a valid contact response after its
 retries, the SDL client writes a final summary containing the last endpoint
