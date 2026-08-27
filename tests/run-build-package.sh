@@ -210,24 +210,52 @@ test -f "$DEB_ARTIFACT_ROOT/xpilot-infinity-4.7.99-debian-bookworm-amd64.deb" \
     || fail "the Debian artifact was not created"
 
 all_args="$test_root/build-all.args"
+windows_args="$test_root/build-windows.args"
 cat > "$fixture_tools/build-package-stub" <<'EOF'
 #!/bin/sh
 set -eu
 printf '%s\n' "$@" > "$XPILOT_PACKAGE_ALL_ARGS"
 EOF
-chmod +x "$fixture_tools/build-package-stub"
+cat > "$fixture_tools/build-windows-stub" <<'EOF'
+#!/bin/sh
+set -eu
+printf '%s\n' "$@" > "$XPILOT_WINDOWS_PACKAGE_ARGS"
+EOF
+chmod +x "$fixture_tools/build-package-stub" \
+    "$fixture_tools/build-windows-stub"
 
 XPILOT_PACKAGE_ALL_ARGS=$all_args \
+XPILOT_WINDOWS_PACKAGE_ARGS=$windows_args \
 BUILD_PACKAGE_SCRIPT="$fixture_tools/build-package-stub" \
-    "$package_all_script" --arch amd64 --jobs 2
+BUILD_WINDOWS_PACKAGE_SCRIPT="$fixture_tools/build-windows-stub" \
+    "$package_all_script" --version 4.7.99 \
+    --distro ubuntu --release 24.04 --arch amd64 --jobs 2 --debug
 
 assert_equal "--target
-all
+deb
+--version
+4.7.99
+--distro
+ubuntu
+--release
+24.04
 --arch
 amd64
 --jobs
-2" "$(cat "$all_args")" \
+2
+--debug" "$(cat "$all_args")" \
     "the complete package wrapper did not forward its arguments"
+assert_equal "--target
+windows
+--arch
+all
+--package-version
+4.7.99
+--jobs
+2
+--build-type
+Debug" "$(cat "$windows_args")" \
+    "the complete package wrapper did not build every Windows package"
 
 prereq_project="$test_root/prereq-project"
 prereq_log="$test_root/prereq.log"
