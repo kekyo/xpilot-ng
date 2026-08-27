@@ -1,5 +1,9 @@
 # XPilot Infinity
 
+Multiplayer online space action since 1991.
+
+![XPilot Infinity](./images/xpilot-infinity.png)
+
 Copyright © 1991-2005 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers,
 Dick Balaska, Uoti Urpala, Juha Lindström, Kristian Söderblom and Erik
 Andersson.
@@ -13,6 +17,32 @@ project without all the documentation, source code, and the COPYING file.
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
 ---
+
+## What is this?
+
+[From www.xpilot.org](https://www.xpilot.org/about/):
+
+XPilot is a multi-player 2D space game. Some features are borrowed from classics like the Atari coin-ups Asteroids and Gravitar, and the home-computer games Thrust (Commodore 64) and Gravity Force (Commodore Amiga), but XPilot has many new aspects too.
+
+![XPilot](./images/game-client.png)
+
+Highlights include:
+
+- True client/server based game; optimal speed for every player.
+- Meta server with up to date information about servers hosting games around the world.
+- A web of world-wide rating servers; compare your skills with pilots from all around the world, and climb the ladder of the world-wide rating list.
+- 'Real physics'; particles of explosions and sparks from your engines all affect you if you're hit by them. This makes it possible to kill someone by lowing them into a wall with engine thrust or shock waves from explosions.
+- Specialized editors for editing ship-shapes and maps.
+- Game objective and gameplay adjustable through a number of options, specified on the commandline, in special option files, or in the map files. Examples f modes of the game:
+  - classical dogfight; equipped with only your gun, you have to rely on your maneuvering and tactical skills
+  - team; fight together, steal other teams's treasures (involves flying around with a ball in a string, much like in Thrust) and blow up their targets (which are, no doubt, heavily guarded)
+  - all out nuclear war; chose carefully between more than twenty weapon and defense systems to stay alive and annihilate your enemies
+  - race; make it through the deadly course before your opponents 
+- Adjustable gravity; adjustable by putting special attractors or deflectors in the world, or by adjusting the global gravity in various ways.
+- Cannons and personalized and vengeful robot fighters give you a hard time.
+- Watch your energy, and remember to 'dock' with a fuel station to refuel before it's too late.
+- Defend your home base, or terrorize and steal someone else's.
+- Equip your ship with the 15+ defense and weapon systems: afterburners, cloaking devices, sensors, transporters, extra cannons, mines and bombs, rockets smarts, torpedos and nuclear), ECM, laser, extra tanks, autopilot etc.
 
 ## Installation and documentation
 
@@ -53,6 +83,8 @@ While the server is running, just type it to enter the world:
 ```bash
 xpilot-infinity-sdl udp://localhost
 ```
+
+![Server list](./images/server-list.png)
 
 You can connect to the server and start a game.
 
