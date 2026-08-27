@@ -1,9 +1,9 @@
 /*
- * XPilotNG/SDL, an SDL/OpenGL XPilot client.
+ * XPilot Infinity/SDL, an SDL/OpenGL XPilot client.
  *
  * Copyright (C) 2003-2004 by
  *
- *      Juha Lindström       <juhal@users.sourceforge.net>
+ *      Juha LindstrÃ¶m       <juhal@users.sourceforge.net>
  *      Darel Cullen         <darelcullen@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -24,9 +24,15 @@
 #include "xpclient_sdl.h"
 
 #include "sdlmeta.h"
+#include "sdl_server_browser.h"
+#include "sdlinit.h"
 #include "sdlwindow.h"
+#include "sdlmetaframe.h"
+#include "sdluiimage.h"
+#include "paint_transform.h"
 #include "text.h"
 #include "glwidgets.h"
+#include "gl_diagnostics.h"
 
 #define EVENT_JOIN 0
 #define EVENT_REFRESH 1
@@ -37,7 +43,7 @@
 #define ROW_BG2 0x000070ff
 #define HEADER_FG 0xffff00ff
 #define HEADER_BG 0xff0000ff
-#define STATUS_ROWS 7
+#define STATUS_ROWS 8
 #define STATUS_COLS 4
 #define STATUS_FIELD_FG 0xffff00ff
 #define STATUS_FIELD_BG 0xff0000ff
@@ -48,7 +54,9 @@
 #define PLIST_ITEM_FG 0xffff00ff
 #define PLIST_ITEM_BG 0x000070ff
 #define ROW_HEIGHT 19
+#define SOURCE_WIDTH 82
 #define VERSION_WIDTH 100
+#define TRANSPORT_WIDTH 105
 #define COUNT_WIDTH 20
 #define META_WIDTH 837
 #define META_HEIGHT 768
@@ -62,18 +70,20 @@
 #define STATUSWIDGET      104
 #define PLAYERLISTWIDGET  105
 
-static int status_column_widths[] = { 100, 0, 100, 70 };
+static int status_column_widths[] = { 120, 0, 100, 70 };
+static bool localDiscovery = true;
 
 typedef struct {
     GLWidget   *table;
     GLWidget   *status;
     GLWidget   *players;
-    GLuint     texture;
-    texcoord_t txc;
+    SdlRenderer *sdl_renderer;
+    SdlUiDrawState *draw_state;
+    SdlUiImage background;
 } MetaWidget;
 
 typedef struct {
-    list_t                server_list;
+    SdlServerBrowser      *browser;
     GLWidget              *meta;
     GLWidget	          *scrollbar;
     GLWidget              *header;
@@ -85,7 +95,7 @@ typedef struct _MetaRowWidget {
     Uint32          fg;
     Uint32          bg;
     MetaTableWidget *table;
-    server_info_t   *sip;
+    SdlServerBrowserEntry *entry;
     bool            is_selected;
 } MetaRowWidget;
 
@@ -96,9 +106,9 @@ typedef struct {
 
 typedef struct {
     Uint32         name_fg, name_bg, value_fg, value_bg;
-    char           address_str[22];
-    char           fps_str[4];
-    server_info_t  *sip;
+    char           address_str[MAX_HOST_LEN + 8];
+    char           fps_str[16];
+    SdlServerBrowserEntry *entry;
 } StatusWidget;
 
 typedef struct {
@@ -110,7 +120,7 @@ typedef struct {
 } PlayerListWidget;
 
 
-static void Scroll_PlayerListWidget(GLfloat pos, void *data)
+static void Scroll_PlayerListWidget(float pos, void *data)
 {
     PlayerListWidget *info;
     GLWidget *widget, *row;
@@ -142,7 +152,7 @@ static void SetBounds_PlayerListWidget(GLWidget *widget, SDL_Rect *b)
     int y;
     GLWidget *row;
     PlayerListWidget *info;
-    GLfloat list_height;
+    float list_height;
     SDL_Rect *wb, sb, rb, hb;
 
     if (widget->WIDGET != PLAYERLISTWIDGET) {
@@ -174,7 +184,7 @@ static void SetBounds_PlayerListWidget(GLWidget *widget, SDL_Rect *b)
 
     if (list_height > b->h) {
 	info->scrollbar = 
-	    Init_ScrollbarWidget(false, 0.0f, ((GLfloat)b->h) / list_height, 
+	    Init_ScrollbarWidget(false, 0.0f, ((float)b->h) / list_height,
 				 SB_VERTICAL, Scroll_PlayerListWidget, widget);
 	if (info->scrollbar != NULL) {
 	    wb = &(widget->bounds);
@@ -211,6 +221,45 @@ static list_t create_player_list(char *players_str)
     return players;
 }
 
+static RendererStatus Paint_meta_background(int x, int y, int width,
+					     int height, Uint32 rgba)
+{
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+    Renderer *renderer;
+    RendererStatus status;
+
+    if (sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    renderer = Sdl_renderer_frontend(sdl_renderer);
+    if (renderer == NULL) {
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    }
+    if (width <= 0 || height <= 0)
+	return RENDERER_STATUS_OK;
+
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer,
+	Renderer_set_blend(renderer, RENDERER_BLEND_ALPHA));
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer,
+	    Renderer_fill_rect(
+		renderer, (float)x, (float)y, (float)width, (float)height,
+		Renderer_color_from_rgba32(rgba)));
+    }
+    if (status == RENDERER_STATUS_OK) {
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer,
+	    Sdl_renderer_flush(sdl_renderer));
+    }
+    return status;
+}
+
 static void Close_PlayerListWidget(GLWidget *widget) 
 {
     PlayerListWidget *info;
@@ -230,16 +279,16 @@ static void Close_PlayerListWidget(GLWidget *widget)
 static void Paint_PlayerListWidget(GLWidget *widget)
 {
     SDL_Rect *b = &(widget->bounds);
-    set_alphacolor(PLIST_ITEM_BG);
-    glBegin(GL_QUADS);
-    glVertex2i(b->x, b->y);
-    glVertex2i(b->x + b->w - 10, b->y);
-    glVertex2i(b->x + b->w - 10, b->y + b->h);
-    glVertex2i(b->x, b->y + b->h);
-    glEnd();
+    int width = b->w > 10 ? b->w - 10 : 0;
+
+    if (Paint_meta_background(
+	    b->x, b->y, width, b->h, PLIST_ITEM_BG)
+	!= RENDERER_STATUS_OK) {
+	warn("Could not draw player-list background");
+    }
 }
 
-static GLWidget *Init_PlayerListWidget(server_info_t *sip)
+static GLWidget *Init_PlayerListWidget(SdlServerBrowserEntry *entry)
 {
     char *player, *players_str;
     list_t players;
@@ -247,7 +296,7 @@ static GLWidget *Init_PlayerListWidget(server_info_t *sip)
     GLWidget *tmp, *header, *row;
     PlayerListWidget *info;
 
-    if (!(players_str = strdup(sip->playlist))) {
+    if (!(players_str = strdup(entry->display.playlist))) {
 	error("out of memory");
 	return NULL;
     }
@@ -365,7 +414,7 @@ static void SetBounds_StatusWidget(GLWidget *widget, SDL_Rect *wb)
     }
 }
 
-static void add_status_entry(const char *name, char *value, GLWidget *parent)
+static void add_status_entry(const char *name, const char *value, GLWidget *parent)
 {
     GLWidget *name_label, *value_label;
     StatusWidget *info;
@@ -388,7 +437,7 @@ static void add_status_entry(const char *name, char *value, GLWidget *parent)
     }
 }
 
-static GLWidget *Init_StatusWidget(server_info_t *sip)
+static GLWidget *Init_StatusWidget(SdlServerBrowserEntry *entry)
 {
     GLWidget *tmp;
     StatusWidget *info;
@@ -402,9 +451,10 @@ static GLWidget *Init_StatusWidget(server_info_t *sip)
 	free(tmp);
 	return NULL;
     }
-    sprintf(info->address_str, "%s:%u", sip->ip_str, sip->port);
-    sprintf(info->fps_str, "%u", sip->fps);
-    info->sip           = sip;
+    snprintf(info->address_str, sizeof(info->address_str), "%s:%u",
+	     entry->display.address, entry->display.port);
+    strlcpy(info->fps_str, entry->display.fps, sizeof(info->fps_str));
+    info->entry         = entry;
     info->name_fg       = STATUS_FIELD_FG;
     info->name_bg       = STATUS_FIELD_BG;
     info->value_fg      = STATUS_VALUE_FG;
@@ -413,20 +463,24 @@ static GLWidget *Init_StatusWidget(server_info_t *sip)
     tmp->WIDGET     	= STATUSWIDGET;
     tmp->SetBounds      = SetBounds_StatusWidget;
 
-    add_status_entry(" Server", sip->hostname, tmp);
+    add_status_entry(" Server", entry->display.hostname, tmp);
     add_status_entry(" Address", info->address_str, tmp);
-    add_status_entry(" Version", sip->version, tmp);
-    add_status_entry(" Map name", sip->mapname, tmp);
-    add_status_entry(" Map size", sip->mapsize, tmp);
-    add_status_entry(" Map author", sip->author, tmp);
-    add_status_entry(" Status", sip->status, tmp);
-    add_status_entry(" Bases", sip->bases_str, tmp);
-    add_status_entry(" Teams", sip->teambases_str, tmp);
-    add_status_entry(" Free bases", sip->freebases, tmp);
-    add_status_entry(" Queue", sip->queue_str, tmp);
+    add_status_entry(" Version", entry->display.version, tmp);
+    add_status_entry(" Contact/Lobby",
+		     Transport_display_name(entry->display.contact_transport), tmp);
+    add_status_entry(" Gameplay",
+		     Transport_display_name(entry->display.game_transport), tmp);
+    add_status_entry(" Map name", entry->display.mapname, tmp);
+    add_status_entry(" Map size", entry->display.mapsize, tmp);
+    add_status_entry(" Map author", entry->display.author, tmp);
+    add_status_entry(" Status", entry->display.status, tmp);
+    add_status_entry(" Bases", entry->display.bases, tmp);
+    add_status_entry(" Teams", entry->display.teambases, tmp);
+    add_status_entry(" Free bases", entry->display.freebases, tmp);
+    add_status_entry(" Queue", entry->display.queue, tmp);
     add_status_entry(" FPS", info->fps_str, tmp);
-    add_status_entry(" Sound", sip->sound, tmp);
-    add_status_entry(" Timing", sip->timing, tmp);
+    add_status_entry(" Sound", entry->display.sound, tmp);
+    add_status_entry(" Timing", entry->display.timing, tmp);
 
     return tmp;
 }
@@ -451,7 +505,7 @@ static void SelectRow_MetaWidget(GLWidget *widget, MetaRowWidget *row)
     status_bounds.y = widget->bounds.y + 598;
     status_bounds.w = 792 * 3 / 5;
     status_bounds.h = ROW_HEIGHT * STATUS_ROWS;
-    if ((meta->status = Init_StatusWidget(row->sip))) {
+    if ((meta->status = Init_StatusWidget(row->entry))) {
 	SetBounds_GLWidget(meta->status, &status_bounds);
 	AppendGLWidgetList(&(widget->children), meta->status);
     } else {
@@ -466,7 +520,7 @@ static void SelectRow_MetaWidget(GLWidget *widget, MetaRowWidget *row)
     plist_bounds.y = status_bounds.y;
     plist_bounds.h = status_bounds.h;
     plist_bounds.w = 792 - status_bounds.w;
-    if ((meta->players = Init_PlayerListWidget(row->sip))) {
+    if ((meta->players = Init_PlayerListWidget(row->entry))) {
 	SetBounds_GLWidget(meta->players, &plist_bounds);
 	AppendGLWidgetList(&(widget->children), meta->players);
     } else {
@@ -479,7 +533,7 @@ static void SelectRow_MetaWidget(GLWidget *widget, MetaRowWidget *row)
     table->selected = row;
 }
 
-static server_info_t *GetSelectedServer_MetaWidget(GLWidget *widget)
+static SdlServerBrowserEntry *GetSelectedServer_MetaWidget(GLWidget *widget)
 {
     MetaWidget *meta;
 
@@ -488,7 +542,9 @@ static server_info_t *GetSelectedServer_MetaWidget(GLWidget *widget)
 	return NULL;
     }
     meta = (MetaWidget*)widget->wid_info;
-    return ((MetaTableWidget*)meta->table->wid_info)->selected->sip;
+    if (((MetaTableWidget*)meta->table->wid_info)->selected == NULL)
+	return NULL;
+    return ((MetaTableWidget*)meta->table->wid_info)->selected->entry;
 }
 
 static void Paint_MetaRowWidget(GLWidget *widget)
@@ -503,15 +559,40 @@ static void Paint_MetaRowWidget(GLWidget *widget)
 
     b = &(widget->bounds);
     row = (MetaRowWidget*)widget->wid_info;
-    set_alphacolor(row->is_selected ? SELECTED_BG : row->bg);
-
-    glBegin(GL_QUADS);
-    glVertex2i(b->x, b->y);
-    glVertex2i(b->x + b->w, b->y);
-    glVertex2i(b->x + b->w, b->y + b->h);
-    glVertex2i(b->x, b->y + b->h);
-    glEnd();
+    if (Paint_meta_background(
+	    b->x, b->y, b->w, b->h,
+	    row->is_selected ? SELECTED_BG : row->bg)
+	!= RENDERER_STATUS_OK) {
+	warn("Could not draw metaserver row background");
+    }
 }
+
+#ifdef XPILOT_SDLMETA_TEST_HOOKS
+void Sdl_meta_test_paint_player_list(SDL_Rect bounds)
+{
+    PlayerListWidget info = {0};
+    GLWidget widget = {0};
+
+    widget.WIDGET = PLAYERLISTWIDGET;
+    widget.wid_info = &info;
+    widget.bounds = bounds;
+    Paint_PlayerListWidget(&widget);
+}
+
+void Sdl_meta_test_paint_row(SDL_Rect bounds, Uint32 background,
+                             bool selected)
+{
+    MetaRowWidget row = {0};
+    GLWidget widget = {0};
+
+    row.bg = background;
+    row.is_selected = selected;
+    widget.WIDGET = METAROWWIDGET;
+    widget.wid_info = &row;
+    widget.bounds = bounds;
+    Paint_MetaRowWidget(&widget);
+}
+#endif
 
 static void SetBounds_MetaRowWidget(GLWidget *row, SDL_Rect *rb)
 {
@@ -520,23 +601,38 @@ static void SetBounds_MetaRowWidget(GLWidget *row, SDL_Rect *rb)
     GLWidget *col;
 
     row->bounds = *rb;
-    free_width = MAX(rb->w - (VERSION_WIDTH + COUNT_WIDTH), 0);
+    free_width = MAX(rb->w
+		     - (SOURCE_WIDTH + VERSION_WIDTH + TRANSPORT_WIDTH
+			+ COUNT_WIDTH), 0);
 
     if (!(col = row->children)) return;
     cb.x = rb->x; 
-    cb.w = free_width / 2;
+    cb.w = SOURCE_WIDTH;
     cb.y = rb->y; cb.h = rb->h;
     SetBounds_GLWidget(col, &cb);
 
     if (!(col = col->next)) return;
     cb.x = cb.x + cb.w;
     cb.y = rb->y; cb.h = rb->h;
+    cb.w = free_width / 2;
+    SetBounds_GLWidget(col, &cb);
+
+    if (!(col = col->next)) return;
+    cb.x = cb.x + cb.w;
+    cb.y = rb->y; cb.h = rb->h;
+    cb.w = free_width - free_width / 2;
     SetBounds_GLWidget(col, &cb);
 
     if (!(col = col->next)) return;
     cb.x = cb.x + cb.w;
     cb.y = rb->y; cb.h = rb->h;
     cb.w = VERSION_WIDTH;
+    SetBounds_GLWidget(col, &cb);
+
+    if (!(col = col->next)) return;
+    cb.x = cb.x + cb.w;
+    cb.y = rb->y; cb.h = rb->h;
+    cb.w = TRANSPORT_WIDTH;
     SetBounds_GLWidget(col, &cb);
 
     if (!(col = col->next)) return;
@@ -551,9 +647,9 @@ static void Button_MetaRowWidget(Uint8 button, Uint8 state, Uint16 x,
 {
     GLWidget *widget;
     MetaRowWidget *row;
-    SDL_Event evt;
+    SDL_Event evt = {0};
 
-    if (state != SDL_PRESSED) return;
+    if (state != true) return;
     if (button != 1) return;
 
     widget = (GLWidget*)data;
@@ -564,45 +660,16 @@ static void Button_MetaRowWidget(Uint8 button, Uint8 state, Uint16 x,
 
     row = (MetaRowWidget*)widget->wid_info;
     if (row->is_selected) {
-	evt.type = SDL_USEREVENT;
+	evt.type = SDL_EVENT_USER;
 	evt.user.code = EVENT_JOIN;
-	evt.user.data1 = row->sip;
+	evt.user.data1 = row->entry;
 	SDL_PushEvent(&evt);
     } else {
 	SelectRow_MetaWidget(row->table->meta, row);
-#if 0
-	printf("version: %s\n", row->sip->version);
-	printf("hostname: %s\n", row->sip->hostname);
-	printf("users_str: %s\n", row->sip->users_str);
-	printf("mapname: %s\n", row->sip->mapname);
-	printf("mapsize: %s\n", row->sip->mapsize);
-	printf("author: %s\n", row->sip->author);
-	printf("status: %s\n", row->sip->status);
-	printf("bases_str: %s\n", row->sip->bases_str);
-	printf("fps_str: %s\n", row->sip->fps_str);
-	printf("playlist: %s\n", row->sip->playlist);
-	printf("sound: %s\n", row->sip->sound);
-	printf("teambases_str: %s\n", row->sip->teambases_str);
-	printf("timing: %s\n", row->sip->timing);
-	printf("ip_str: %s\n", row->sip->ip_str);
-	printf("freebases: %s\n", row->sip->freebases);
-	printf("queue_str: %s\n", row->sip->queue_str);
-	printf("domain: %s\n", row->sip->domain);
-	printf("pingtime_str: %s\n", row->sip->pingtime_str);
-	printf("port: %u\n", row->sip->port);
-	printf("ip: %u\n", row->sip->ip);
-	printf("users: %u\n", row->sip->users);
-	printf("bases: %u\n", row->sip->bases);
-	printf("fps: %u\n", row->sip->fps);
-	printf("uptime: %u\n", row->sip->uptime);
-	printf("queue: %u\n", row->sip->queue);
-	printf("pingtime: %u\n", row->sip->pingtime);
-	printf("serial: %c\n", row->sip->serial);
-#endif
     }
 }
 
-static GLWidget *Init_MetaRowWidget(server_info_t *sip, 
+static GLWidget *Init_MetaRowWidget(SdlServerBrowserEntry *entry,
 				    MetaTableWidget *table, 
 				    bool is_selected,
 				    unsigned int bg)
@@ -621,7 +688,7 @@ static GLWidget *Init_MetaRowWidget(server_info_t *sip,
     }
     row->fg             = ROW_FG;
     row->bg             = bg;
-    row->sip            = sip;
+    row->entry          = entry;
     row->table          = table;
     row->is_selected    = is_selected;
     tmp->wid_info       = row;
@@ -637,10 +704,12 @@ static GLWidget *Init_MetaRowWidget(server_info_t *sip,
         col->buttondata = tmp; \
 	AppendGLWidgetList(&(tmp->children), col); \
     }
-    COLUMN(sip->hostname);
-    COLUMN(sip->mapname);
-    COLUMN(sip->version);
-    COLUMN(sip->users_str);
+    COLUMN(entry->display.source);
+    COLUMN(entry->display.hostname);
+    COLUMN(entry->display.mapname);
+    COLUMN(entry->display.version);
+    COLUMN(entry->display.transport_pair);
+    COLUMN(entry->display.users);
 #undef COLUMN
 
     return tmp;
@@ -670,16 +739,18 @@ static GLWidget *Init_MetaHeaderWidget(void)
     if ((col = Init_LabelWidget((TEXT), &(info->fg), &(info->bg), LEFT, CENTER))) { \
 	AppendGLWidgetList(&(tmp->children), col); \
     }
+    HEADER("Source");
     HEADER("Server");
     HEADER("Map");
     HEADER("Version");
+    HEADER("C/L -> Game");
     HEADER("Pl");
-#undef COLUMN
+#undef HEADER
 
     return tmp;    
 }
 
-static void Scroll_MetaTableWidget(GLfloat pos, void *data)
+static void Scroll_MetaTableWidget(float pos, void *data)
 {
     MetaTableWidget *info;
     GLWidget *widget, *row;
@@ -694,7 +765,7 @@ static void Scroll_MetaTableWidget(GLfloat pos, void *data)
 
     info = (MetaTableWidget*)widget->wid_info;
     y = widget->bounds.y + ROW_HEIGHT
-	- (int)(List_size(info->server_list) * ROW_HEIGHT * pos);
+	- (int)(info->browser->entry_count * ROW_HEIGHT * pos);
 
     for (row = widget->children; row; row = row->next) {
 	if (row->WIDGET == METAROWWIDGET) {
@@ -711,7 +782,7 @@ static void SetBounds_MetaTableWidget(GLWidget *widget, SDL_Rect *b)
     int y;
     GLWidget *row;
     MetaTableWidget *info;
-    GLfloat table_height;
+    float table_height;
     SDL_Rect *wb, sb, rb, hb;
 
     if (widget->WIDGET != METATABLEWIDGET) {
@@ -721,7 +792,7 @@ static void SetBounds_MetaTableWidget(GLWidget *widget, SDL_Rect *b)
 
     widget->bounds = *b;
     info = (MetaTableWidget*)widget->wid_info;
-    table_height = List_size(info->server_list) * ROW_HEIGHT;
+    table_height = info->browser->entry_count * ROW_HEIGHT;
 
     if (info->scrollbar != NULL) {
 	DelGLWidgetListItem(&(widget->children), info->scrollbar);
@@ -743,7 +814,7 @@ static void SetBounds_MetaTableWidget(GLWidget *widget, SDL_Rect *b)
 
     if (table_height > b->h) {
 	info->scrollbar = 
-	    Init_ScrollbarWidget(false, 0.0f, ((GLfloat)b->h) / table_height, 
+	    Init_ScrollbarWidget(false, 0.0f, ((float)b->h) / table_height,
 				 SB_VERTICAL, Scroll_MetaTableWidget, widget);
 	if (info->scrollbar != NULL) {
 	    wb = &(widget->bounds);
@@ -767,12 +838,12 @@ static void SetBounds_MetaTableWidget(GLWidget *widget, SDL_Rect *b)
     }
 }
 
-static GLWidget *Init_MetaTableWidget(GLWidget *meta, list_t servers)
+static GLWidget *Init_MetaTableWidget(GLWidget *meta,
+				      SdlServerBrowser *browser)
 {
     GLWidget *tmp, *row;
-    list_iter_t iter;
-    server_info_t *sip;
     MetaTableWidget *info;
+    size_t index;
     bool bg = true;
 
     if (!(tmp = Init_EmptyBaseGLWidget())) {
@@ -785,7 +856,7 @@ static GLWidget *Init_MetaTableWidget(GLWidget *meta, list_t servers)
 	return NULL;
     }
     info->meta          = meta;
-    info->server_list   = servers;
+    info->browser       = browser;
     info->scrollbar     = NULL;
     info->header        = NULL;
     info->selected      = NULL;
@@ -795,11 +866,9 @@ static GLWidget *Init_MetaTableWidget(GLWidget *meta, list_t servers)
     tmp->WIDGET     	= METATABLEWIDGET;
     tmp->SetBounds      = SetBounds_MetaTableWidget;
     
-    for (iter = List_begin(servers); 
-	 iter != List_end(servers); 
-	 LI_FORWARD(iter)) {
-	sip = SI_DATA(iter);
-	row = Init_MetaRowWidget(sip, info, false, bg ? ROW_BG1 : ROW_BG2);
+    for (index = 0; index < browser->entry_count; index++) {
+	row = Init_MetaRowWidget(&browser->entries[index], info, false,
+				 bg ? ROW_BG1 : ROW_BG2);
 	if (!row) break;
 	if (info->first_row == NULL) 
 	    info->first_row = (MetaRowWidget*)row->wid_info;
@@ -818,32 +887,26 @@ static GLWidget *Init_MetaTableWidget(GLWidget *meta, list_t servers)
 static void Paint_MetaWidget(GLWidget *widget)
 {
     MetaWidget *info;
-    SDL_Rect *b;
+    RendererRect bounds;
+    RendererStatus status;
 
     if (widget->WIDGET != METAWIDGET) {
 	error("expected METAWIDGET got [%d]", widget->WIDGET);
 	return;
     }
     info = (MetaWidget*)widget->wid_info;
-    if (info->texture == 0) return;
-    
-    b = &(widget->bounds);
-    glColor4ub(255, 255, 255, 255);
-    glBindTexture(GL_TEXTURE_2D, info->texture);
-    glEnable(GL_TEXTURE_2D);
+    if (info->background.texture == NULL)
+	return;
 
-    glBegin(GL_QUADS);
-    glTexCoord2f(info->txc.MinX, info->txc.MinY); 
-    glVertex2i(b->x, b->y);
-    glTexCoord2f(info->txc.MaxX, info->txc.MinY); 
-    glVertex2i(b->x + b->w , b->y);
-    glTexCoord2f(info->txc.MaxX, info->txc.MaxY); 
-    glVertex2i(b->x + b->w , b->y + b->h);
-    glTexCoord2f(info->txc.MinY, info->txc.MaxY); 
-    glVertex2i(b->x, b->y + b->h);
-    glEnd();
-
-    glDisable(GL_TEXTURE_2D);
+    bounds.x = widget->bounds.x;
+    bounds.y = widget->bounds.y;
+    bounds.width = widget->bounds.w;
+    bounds.height = widget->bounds.h;
+    status = Sdl_ui_image_draw_tracked(
+	info->draw_state, info->sdl_renderer, &info->background, &bounds,
+	Renderer_color_from_rgba32(whiteRGBA));
+    if (status != RENDERER_STATUS_OK)
+	warn("Could not draw the metaserver background (%d)", (int)status);
 }
 
 static void Close_MetaWidget(GLWidget *widget)
@@ -855,13 +918,14 @@ static void Close_MetaWidget(GLWidget *widget)
 	return;
     }
     info = (MetaWidget*)widget->wid_info;
-    if (info->texture) glDeleteTextures(1, &(info->texture));
+    if (Sdl_ui_image_cleanup(&info->background) != RENDERER_STATUS_OK)
+	warn("Could not release the metaserver background");
 }
 
 static void OnClick_Join(GLWidget *widget)
 {
-    SDL_Event evt;
-    evt.type = SDL_USEREVENT;
+    SDL_Event evt = {0};
+    evt.type = SDL_EVENT_USER;
     evt.user.code = EVENT_JOIN;
     evt.user.data1 = NULL;
     SDL_PushEvent(&evt);
@@ -869,8 +933,8 @@ static void OnClick_Join(GLWidget *widget)
 
 static void OnClick_Refresh(GLWidget *widget)
 {
-    SDL_Event evt;
-    evt.type = SDL_USEREVENT;
+    SDL_Event evt = {0};
+    evt.type = SDL_EVENT_USER;
     evt.user.code = EVENT_REFRESH;
     evt.user.data1 = NULL;
     SDL_PushEvent(&evt);
@@ -878,12 +942,14 @@ static void OnClick_Refresh(GLWidget *widget)
 
 static void OnClick_Quit(GLWidget *widget)
 {
-    SDL_Event evt;
-    evt.type = SDL_QUIT;
+    SDL_Event evt = {0};
+    evt.type = SDL_EVENT_QUIT;
     SDL_PushEvent(&evt);
 }
 
-static GLWidget *Init_MetaWidget(list_t servers)
+static GLWidget *Init_MetaWidget(SdlRenderer *sdl_renderer,
+				 SdlUiDrawState *draw_state,
+				 SdlServerBrowser *browser)
 {
     GLWidget *tmp;
     MetaWidget *info;
@@ -900,10 +966,9 @@ static GLWidget *Init_MetaWidget(list_t servers)
 	free(tmp);
 	return NULL;
     }
-    info->table         = NULL;
-    info->status        = NULL;
-    info->players       = NULL;
-    info->texture       = 0;
+    memset(info, 0, sizeof(*info));
+    info->sdl_renderer  = sdl_renderer;
+    info->draw_state    = draw_state;
     tmp->WIDGET     	= METAWIDGET;
     tmp->bounds.x       = (draw_width - META_WIDTH) / 2;
     tmp->bounds.y       = (draw_height - META_HEIGHT) / 2;
@@ -913,7 +978,8 @@ static GLWidget *Init_MetaWidget(list_t servers)
     tmp->Draw           = Paint_MetaWidget;
     tmp->Close          = Close_MetaWidget;
 
-    if (!(info->table = Init_MetaTableWidget(tmp, servers))) {
+    if (!(info->table = Init_MetaTableWidget(tmp, browser))) {
+	free(info);
 	free(tmp);
 	return NULL;
     }
@@ -928,8 +994,12 @@ static GLWidget *Init_MetaWidget(list_t servers)
 #ifdef HAVE_SDL_IMAGE
     surface = IMG_Load(CONF_TEXTUREDIR "sdlmetabg.png");
     if (surface) {
-	info->texture = SDL_GL_LoadTexture(surface, &(info->txc));
-	SDL_FreeSurface(surface);
+	RendererStatus status = Sdl_ui_image_init(
+	    &info->background, Sdl_renderer_frontend(sdl_renderer), surface);
+	if (status != RENDERER_STATUS_OK)
+	    warn("Could not create the metaserver background (%d)",
+		 (int)status);
+	SDL_DestroySurface(surface);
     }
 #endif
 
@@ -939,43 +1009,60 @@ static GLWidget *Init_MetaWidget(list_t servers)
     return tmp;
 }
 
-static bool join_server(Connect_param_t *conpar, server_info_t *sip)
+static bool join_server(Connect_param_t *conpar,
+			SdlServerBrowserEntry *entry)
 {
-    char *server_addr_ptr = conpar->server_addr;
-    strlcpy(conpar->server_name, sip->hostname,
-            sizeof(conpar->server_name));
-    strlcpy(conpar->server_addr, sip->ip_str, sizeof(conpar->server_addr));
-    conpar->contact_port = sip->port;
-    if (Contact_servers(1, &server_addr_ptr, 1, 0, 0, NULL,
-			0, NULL, NULL, NULL, NULL, conpar)) {
+    Connect_param_t attempt = *conpar;
+    Contact_servers_result_t result;
+    Connect_target_t target;
+
+    if (entry->has_local_connection) {
+	attempt = entry->local_connection;
+	if (Connect_to_server(1, 0, 0, NULL, &attempt)) {
+	    *conpar = attempt;
+	    return true;
+	}
+	printf("Could not join LAN server %s (%s) on port %u\n",
+	       entry->display.hostname, entry->display.address,
+	       entry->display.port);
+	return false;
+    }
+
+    if (entry->metadata == NULL
+	|| !Meta_server_to_connect_target(entry->metadata, &target)) {
+	printf("Server %s has an invalid connection endpoint\n",
+	       entry->display.hostname);
+	return false;
+    }
+    result = Contact_servers_detailed(1, &target, 1, 0, 0, NULL, &attempt);
+    if (result.connected) {
+	*conpar = attempt;
 	return true;
     }
-    printf("Server %s (%s) didn't respond on port %d\n",
-	   conpar->server_name, conpar->server_addr,
-	   conpar->contact_port);
+    if (!result.contacted) {
+	printf("Server %s (%s) didn't respond on port %d\n",
+	       entry->display.hostname, target.address, target.contact_port);
+    } else {
+	printf("Could not join server %s (%s) on port %d\n",
+	       entry->display.hostname, target.address, target.contact_port);
+    }
     return false;
 }
 
-static void handleKeyPress(GLWidget *meta, SDL_keysym *keysym )
+static void handleKeyPress(GLWidget *meta, SDL_Keycode key)
 {
     /*static unsigned int row = 1;*/
-    SDL_Event evt;
+    SDL_Event evt = {0};
     
-    switch ( keysym->sym )
+    switch (key)
     {
     case SDLK_ESCAPE:
 	/* ESC key was pressed */
-	evt.type = SDL_QUIT;
+	evt.type = SDL_EVENT_QUIT;
 	SDL_PushEvent(&evt);
 	break;
     case SDLK_F11:
-	/* F11 key was pressed
-	 * this toggles fullscreen mode
-	 */
-#ifndef _WINDOWS
-		/* This segfaults */
-		/* SDL_WM_ToggleFullScreen(MainSDLSurface); */
-#endif
+	/* Fullscreen changes are available after joining a game. */
 	break;
     case SDLK_UP: 
 	/* move the cursor up */
@@ -990,14 +1077,124 @@ static void handleKeyPress(GLWidget *meta, SDL_keysym *keysym )
     return;
 }
 
+typedef struct {
+    SdlRenderer *sdl_renderer;
+    SdlUiDrawState *draw_state;
+    GLWidget *widgets;
+} MetaFrameContext;
+
+static RendererStatus Begin_meta_frame(void *context)
+{
+    MetaFrameContext *frame = context;
+
+    return Sdl_renderer_begin_frame(
+	frame->sdl_renderer, draw_width, draw_height,
+	Renderer_color_from_rgba32(blackRGBA));
+}
+
+static RendererStatus Draw_meta_frame(void *context)
+{
+    MetaFrameContext *frame = context;
+    Renderer *renderer = Sdl_renderer_frontend(frame->sdl_renderer);
+    RendererTransform2D transform;
+    RendererStatus status;
+    int drawable_width;
+    int drawable_height;
+
+    Sdl_ui_draw_state_init(frame->draw_state);
+    status = Sdl_renderer_get_drawable_size(
+	frame->sdl_renderer, &drawable_width, &drawable_height);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    if (Paint_transform_hud(draw_width, draw_height,
+			    drawable_width, drawable_height,
+			    &transform) != 0) {
+	return RENDERER_STATUS_INVALID_ARGUMENT;
+    }
+    status = Renderer_set_transform_2d(renderer, transform);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    status = DrawGLWidgetsi_checked(
+	frame->widgets, 0, 0, draw_width, draw_height,
+	frame->sdl_renderer, frame->draw_state);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    if (Gl_diagnostics_check("meta frame end") != 0)
+	return RENDERER_STATUS_BACKEND_ERROR;
+    return RENDERER_STATUS_OK;
+}
+
+static RendererStatus End_meta_frame(void *context)
+{
+    MetaFrameContext *frame = context;
+
+    return Sdl_renderer_end_frame(frame->sdl_renderer);
+}
+
+static RendererStatus Meta_frame_result(void *context)
+{
+    MetaFrameContext *frame = context;
+
+    return Sdl_renderer_frame_result(frame->sdl_renderer);
+}
+
+static void Swap_meta_frame(void *context)
+{
+    (void)context;
+    Swap_buffers();
+}
+
+static const SdlMetaFrameOps meta_frame_ops = {
+    Begin_meta_frame,
+    Draw_meta_frame,
+    Meta_frame_result,
+    End_meta_frame,
+    Swap_meta_frame
+};
+
+static xp_option_t sdlmeta_options[] = {
+    XP_BOOL_OPTION(
+	"localDiscovery",
+	true,
+	&localDiscovery,
+	NULL,
+	XP_OPTFLAG_CONFIG_DEFAULT,
+	"Search for UDP servers on the local network in the SDL server "
+	"browser.\n")
+};
+
+void Store_sdlmeta_options(void)
+{
+    STORE_OPTIONS(sdlmeta_options);
+}
+
 int Meta_window(Connect_param_t *conpar)
 {
     static char err[MSG_LEN] = {0};
+    Connect_param_t local_servers[MAX_LOCAL_SERVERS];
+    SdlServerBrowser browser = {0};
+    int num_local = 0;
     int num_serv = 0;
     int btn_x, btn_y, btn_h;
+    int semantic_button_count = 0;
+    int ui_ready_reported = 0;
+    int exit_requested = 0;
+    int result = -1;
     GLWidget *btn, *root, *meta, *target = NULL;
     SDL_Event evt;
-    server_info_t *server = NULL;
+    SdlServerBrowserEntry *server = NULL;
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+    SdlUiDrawState ui_draw_state;
+    SdlMetaFrameState frame_state;
+    MetaFrameContext frame_context;
+    RendererStatus renderer_status;
+
+    if (sdl_renderer == NULL
+	|| Sdl_renderer_frontend(sdl_renderer) == NULL) {
+	error("Metaserver renderer is not available");
+	return -1;
+    }
+    Sdl_ui_draw_state_init(&ui_draw_state);
     
     if (!server_list ||
 	List_size(server_list) < 10 ||
@@ -1005,67 +1202,85 @@ int Meta_window(Connect_param_t *conpar)
 	
 	Delete_server_list();
 	if ((num_serv = Get_meta_data(err)) <= 0) {
-	    error("Couldn't get meta list.");
-	    return -1;
+	    warn("Couldn't get meta list: %s", err);
 	} else
 	    warn("Got %d servers.", num_serv);
     }
     
-    if (Welcome_sort_server_list() == -1) {
+    if (server_list != NULL && Welcome_sort_server_list() == -1) {
 	Delete_server_list();
 	error("out of memory");
 	return -1;
     }
 
+    if (localDiscovery) {
+	num_local = Discover_local_servers(
+	    &connectDefaults, MAX_LOCAL_SERVERS, local_servers, conpar);
+    }
+    if (!Sdl_server_browser_init(
+	    &browser, server_list, local_servers, (size_t)num_local)) {
+	error("Could not build the SDL server list");
+	return -1;
+    }
+
     if (!(root = Init_EmptyBaseGLWidget())) {
         error("Widget init failed");
+	Sdl_server_browser_cleanup(&browser);
 	return -1;
     }
     root->bounds.x = root->bounds.y = 0;
     root->bounds.w = draw_width;
-    root->bounds.w = draw_height;
+    root->bounds.h = draw_height;
 
-    if (!(meta = Init_MetaWidget(server_list))) {
+    if (!(meta = Init_MetaWidget(
+	      sdl_renderer, &ui_draw_state, &browser))) {
 	free(root);
+	Sdl_server_browser_cleanup(&browser);
 	return -1;
     }
     AppendGLWidgetList(&(root->children), meta);
 
     btn_x = (draw_width - META_WIDTH) / 2 - 80;
     btn_y = (draw_height - META_HEIGHT) / 2 + 60;
-    btn = Init_ImageButtonWidget("Join", 
+    btn = Init_ImageButtonWidget(sdl_renderer, &ui_draw_state, "Join",
 				 "metabtnup.png", 
 				 "metabtndown.png",
 				 BUTTON_BG,
 				 BUTTON_FG,
 				 OnClick_Join);
     if (btn) {
+	if (ImageButtonWidget_has_semantic_images(btn))
+	    semantic_button_count++;
 	btn->bounds.x = btn_x;
 	btn->bounds.y = btn_y;
 	btn_h = btn->bounds.h;
 	btn_y += btn_h + 5;
 	AppendGLWidgetList(&(root->children), btn);
     }
-    btn = Init_ImageButtonWidget("Refresh", 
+    btn = Init_ImageButtonWidget(sdl_renderer, &ui_draw_state, "Refresh",
 				 "metabtnup.png", 
 				 "metabtndown.png",
 				 BUTTON_BG,
 				 BUTTON_FG,
 				 OnClick_Refresh);
     if (btn) {
+	if (ImageButtonWidget_has_semantic_images(btn))
+	    semantic_button_count++;
 	btn->bounds.x = btn_x;
 	btn->bounds.y = btn_y;
 	btn_h = btn->bounds.h;
 	btn_y += btn_h + 5;
 	AppendGLWidgetList(&(root->children), btn);
     }
-    btn = Init_ImageButtonWidget("Quit", 
+    btn = Init_ImageButtonWidget(sdl_renderer, &ui_draw_state, "Quit",
 				 "metabtnup.png", 
 				 "metabtndown.png",
 				 BUTTON_BG,
 				 BUTTON_FG,
 				 OnClick_Quit);
     if (btn) {
+	if (ImageButtonWidget_has_semantic_images(btn))
+	    semantic_button_count++;
 	btn->bounds.x = btn_x;
 	btn->bounds.y = btn_y;
 	btn_h = btn->bounds.h;
@@ -1073,101 +1288,116 @@ int Meta_window(Connect_param_t *conpar)
 	AppendGLWidgetList(&(root->children), btn);
     }
     
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluOrtho2D(0, draw_width, draw_height, 0);
-    glDisable(GL_BLEND);
-    
-    while(1) {
-
-	set_alphacolor(blackRGBA);
-	glBegin(GL_QUADS);
-	glVertex2i(0,0);
-	glVertex2i(draw_width,0);
-	glVertex2i(draw_width,draw_height);
-	glVertex2i(0,draw_height);
-	glEnd();
-	glEnable(GL_SCISSOR_TEST);
-	DrawGLWidgetsi(meta, 0, 0, draw_width, draw_height);
-	glDisable(GL_SCISSOR_TEST);
-	SDL_GL_SwapBuffers();
+    Sdl_meta_frame_state_init(&frame_state);
+    frame_context.sdl_renderer = sdl_renderer;
+    frame_context.draw_state = &ui_draw_state;
+    frame_context.widgets = meta;
+    while (!exit_requested) {
+	renderer_status = Sdl_meta_frame_tick(
+	    &frame_state, &meta_frame_ops, &frame_context);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Could not render the metaserver frame (%d)",
+		  (int)renderer_status);
+	    if (!Sdl_meta_frame_cleanup_allowed(&frame_state)) {
+		SDL_Delay(1);
+		continue;
+	    }
+	    break;
+	}
+	if (!ui_ready_reported) {
+	    xpprintf("Metaserver UI ready: background=%s, buttons=%d/3, "
+		     "draws=%lu\n",
+		     ((MetaWidget *)meta->wid_info)->background.texture != NULL
+		     ? "semantic" : "fallback", semantic_button_count,
+		     (unsigned long)Sdl_ui_draw_state_successful_draws(
+			 &ui_draw_state));
+	    fflush(stdout);
+	    ui_ready_reported = 1;
+	}
 	
-	SDL_WaitEvent(&evt);
+	if (!SDL_WaitEvent(&evt)) {
+	    error("Could not wait for an SDL event: %s", SDL_GetError());
+	    break;
+	}
 	do {
 	    
 	    switch(evt.type) {
-	    case SDL_QUIT: 
-		return -1;
+	    case SDL_EVENT_QUIT:
+		exit_requested = 1;
+		result = -1;
+		break;
 		
-	    case SDL_USEREVENT:
+	    case SDL_EVENT_USER:
 		if (evt.user.code == EVENT_JOIN) {
-		    server = (server_info_t*)evt.user.data1;
+		    server = (SdlServerBrowserEntry*)evt.user.data1;
 		    if (server == NULL)
 			server = GetSelectedServer_MetaWidget(meta);
 		    if (!server) break;
 		    if (join_server(conpar, server)) {
-			Close_Widget(&root);
-			glEnable(GL_BLEND);
-			glMatrixMode(GL_PROJECTION);
-			glLoadIdentity();
-			gluOrtho2D(0, draw_width, 0, draw_height);
-			return 0;
+			exit_requested = 1;
+			result = 0;
 		    }
 		} else if (evt.user.code == EVENT_REFRESH) {
-		    Close_Widget(&root);
-		    return 1;
+		    exit_requested = 1;
+		    result = 1;
 		}
 		break;
 
-	    case SDL_KEYDOWN:
+	    case SDL_EVENT_KEY_DOWN:
 	        /* handle key presses */
-	        handleKeyPress( meta, &evt.key.keysym );
+	        handleKeyPress(meta, evt.key.key);
 	        break;
 
-	    case SDL_MOUSEBUTTONDOWN:
-		target = FindGLWidgeti(meta, evt.button.x, evt.button.y);
+	    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+		target = FindGLWidgeti(meta, (int)evt.button.x,
+				       (int)evt.button.y);
 		if (target && target->button)
 		    target->button(evt.button.button, 
-				   evt.button.state,
-				   evt.button.x,
-				   evt.button.y,
+				   evt.button.down,
+				   (Uint16)evt.button.x,
+				   (Uint16)evt.button.y,
 				   target->buttondata);
 		break;
 		
-	    case SDL_MOUSEBUTTONUP:
+	    case SDL_EVENT_MOUSE_BUTTON_UP:
 		if (target && target->button) {
 		    target->button(evt.button.button, 
-				   evt.button.state,
-				   evt.button.x,
-				   evt.button.y,
+				   evt.button.down,
+				   (Uint16)evt.button.x,
+				   (Uint16)evt.button.y,
 				   target->buttondata);
 		    target = NULL;
 		}
 		break;
 		
-	    case SDL_MOUSEMOTION:
+	case SDL_EVENT_MOUSE_MOTION:
 		if (target && target->motion)
 		    target->motion(evt.motion.xrel,
 				   evt.motion.yrel,
-				   evt.button.x,
-				   evt.button.y,
+				   evt.motion.x,
+				   evt.motion.y,
 				   target->motiondata);
 		break;
 
-	    case SDL_VIDEOEXPOSE:
-		glDisable(GL_SCISSOR_TEST);
-		set_alphacolor(blackRGBA);
-		glBegin(GL_QUADS);
-		glVertex2i(0,0);
-		glVertex2i(draw_width,0);
-		glVertex2i(draw_width,draw_height);
-		glVertex2i(0,draw_height);
-		glEnd();
-		glEnable(GL_SCISSOR_TEST);
+	    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+		Window_size_changed(evt.window.data1, evt.window.data2);
+		root->bounds.w = draw_width;
+		root->bounds.h = draw_height;
+		break;
+
+	    case SDL_EVENT_WINDOW_EXPOSED:
 		break;
 	    }
-	} while (SDL_PollEvent(&evt));
-    }	
+	} while (!exit_requested && SDL_PollEvent(&evt));
+    }
+
+    if (!Sdl_meta_frame_cleanup_allowed(&frame_state)) {
+	error("Metaserver frame remained active during cleanup");
+	return -1;
+    }
+    Close_Widget(&root);
+    Sdl_server_browser_cleanup(&browser);
+    if (result == 1)
+	Delete_server_list();
+    return result;
 }

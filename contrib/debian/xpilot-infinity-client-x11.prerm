@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = remove ]; then
+    update-alternatives --remove xpilot /usr/games/xpilot-infinity-x11
+    update-alternatives --remove xpilot-infinity /usr/games/xpilot-infinity-x11
+fi
+
+#DEBHELPER#

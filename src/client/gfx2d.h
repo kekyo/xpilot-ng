@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -69,7 +69,30 @@ typedef struct {
     bbox_t	*bbox;
 } xp_picture_t;
 
+/**
+ * Load a PPM image or horizontal frame atlas into owned CPU memory.
+ *
+ * @param picture Output storage.
+ * @param filename Texture filename resolved through the configured path.
+ * @param count Positive to generate rotated frames, or negative when the
+ *        source already contains that many horizontal frames.
+ * @return 0 on success, or -1 on failure.
+ *
+ * @remarks On failure @p picture is empty and may be passed to
+ * Picture_cleanup(). A successful picture must be released with
+ * Picture_cleanup().
+ */
 int Picture_init(xp_picture_t *picture, const char *filename, int count);
+
+/**
+ * Release every allocation owned by a picture and reset it to empty.
+ *
+ * @param picture Picture to release, or NULL for no operation.
+ *
+ * @remarks Calling this function repeatedly is safe.
+ */
+void Picture_cleanup(xp_picture_t *picture);
+
 int Picture_load( xp_picture_t *picture, const char *path);
 int Picture_rotate(xp_picture_t *picture);
 

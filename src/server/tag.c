@@ -1,10 +1,10 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 2002-2004 by
  *
  *      Kimiko Koopman       <kimiko@xpilot.org
- *      Kristian Söderblom   <kps@users.sourceforge.net>
+ *      Kristian SÃ¶derblom   <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

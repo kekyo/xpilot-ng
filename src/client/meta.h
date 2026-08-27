@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -25,6 +25,9 @@
 
 #ifndef META_H
 #define META_H
+
+#include "connect_target.h"
+#include "transport_display.h"
 
 /*
  * max number of servers we can find on the local network.
@@ -73,8 +76,11 @@ struct ServerInfo {
 	*sound,
 	*teambases_str,
 	*timing, *ip_str, *freebases, *queue_str, *domain, pingtime_str[5];
+    /** Contact/lobby and gameplay transports formatted for server lists. */
+    char transport_pair[TRANSPORT_DISPLAY_PAIR_SIZE];
     unsigned port,
 	ip, users, bases, fps, uptime, teambases, queue, pingtime;
+    game_transport_t contact_transport, game_transport;
     struct timeval start;
     unsigned char serial;
 };
@@ -119,11 +125,18 @@ int   Welcome_sort_server_list(void);
 int   Add_server_info(server_info_t * sip);
 char *my_strtok(char *buf, const char *sep);
 void  Add_meta_line(char *meta_line);
+/**
+ * Convert a listed server into an independent connection target.
+ *
+ * @param server Selected metaserver entry.
+ * @param target Receives its address, contact port, and advertised transports.
+ * @return `true` when the complete metaserver endpoint is valid.
+ */
+bool  Meta_server_to_connect_target(const server_info_t *server,
+                                    Connect_target_t *target);
 void  Meta_connect(int *connections_ptr, int *maxfd_ptr);
 void  Meta_dns_lookup(void);
 void  Ping_servers(void);
 int   Get_meta_data(char *errorstr);
 
 #endif
-
-

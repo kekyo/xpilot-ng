@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -36,8 +36,8 @@ void Make_treasure_ball(treasure_t *t)
     if (t->empty)
 	return;
     if (t->have) {
-	xpprintf("%s Failed Make_treasure_ball(treasure=%ld):\n",
-		 showtime(), (long)t);
+	xpprintf("%s Failed Make_treasure_ball(treasure=%p):\n",
+		 showtime(), (void *)t);
 	xpprintf("\ttreasure: destroyed = %d, team = %d, have = %d\n",
 		 t->destroyed, t->team, t->have);
 	return;

@@ -1,9 +1,9 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -30,6 +30,7 @@ client_data_t	clData = { 0, };
 char	*geometry;
 xp_args_t xpArgs;
 Connect_param_t connectParam;
+Connect_defaults_t connectDefaults;
 
 bool	newbie;
 int	baseWarningType;	/* Which type of base warning you prefer */
@@ -132,7 +133,7 @@ int	packet_lag;		/* approximate lag in frames */
 char	*packet_measure;	/* packet measurement in a second */
 long	packet_loop;		/* start of measurement */
 
-bool	showUserName = false;	/* Show user name instead of nick name */
+bool	showUserName = false;	/* Show nick=user@host details */
 char	servername[MAX_CHARS];	/* Name of server connecting to */
 unsigned	version;	/* Version of the server */
 bool	toggle_shield;		/* Are shields toggled by a press? */
@@ -151,10 +152,10 @@ int	maxMouseTurnsPS = 0;
 int	mouseMovementInterval = 0;
 int	cumulativeMouseMovement = 0;
 
-int	clientPortStart = 0;	/* First UDP port for clients */
+int	clientPortStart = 0;	/* First network port for clients */
 int	clientPortEnd = 0;	/* Last one (these are for firewalls) */
 
-byte	lose_item;		/* index for dropping owned item */
+u_byte	lose_item;		/* index for dropping owned item */
 int	lose_item_active;	/* one of the lose keys is pressed */
 
 static double       teamscores[MAX_TEAMS];
@@ -1373,6 +1374,9 @@ int Handle_player(int id, int player_team, int mychar,
 	self = other;
     }
     memset(other, 0, sizeof(other_t));
+    /* PKT_SCORE follows PKT_PLAYER and supplies the alliance marker. Keep
+     * its fixed-width score-list column occupied until that packet arrives. */
+    other->alliance = ' ';
     other->id = id;
     other->team = player_team;
     other->mychar = mychar;
@@ -2223,7 +2227,6 @@ void Client_cleanup(void)
     int i;
 
     Pointer_control_set_state(false);
-    Platform_specific_cleanup();
     Free_selectionAndHistory();
     Free_msgs();
     if (max_others > 0) {
@@ -2317,6 +2320,7 @@ void Client_cleanup(void)
     }
     Map_cleanup();
     Paint_cleanup();
+    Platform_specific_cleanup();
 }
 
 int Client_pointer_move(int movement)

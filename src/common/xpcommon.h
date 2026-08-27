@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -227,22 +227,11 @@
 # include <values.h>
 #endif
 
-/* Evil Windows hacks. Yuck. */
+/* Windows platform declarations and POSIX compatibility aliases. */
 #ifdef _WINDOWS
-# include "NT/winNet.h"
-  /* need this for printf wrappers. */
-# ifdef	_XPILOTNTSERVER_
-#  include "../server/NT/winServer.h"
-#  include "../server/NT/winSvrThread.h"
-extern char *showtime(void);
-/*# elif !defined(_XPMONNT_)
-#  include "NT/winX.h"
-#  include "../client/NT/winClient.h"*/
-# endif
-static void Win_show_error(char *errmsg);
+# include "win32.h"
 # include <io.h>
 # include <process.h>
-# include "NT/winNet.h"
   /* Windows needs specific hacks for sockets: */
 # undef close
 # define close(x__) closesocket(x__)
@@ -254,10 +243,6 @@ static void Win_show_error(char *errmsg);
 # define write(x__, y__, z__) send(x__, y__, z__,0)
   /* Windows some more hacks: */
 # define getpid() _getpid()
-#ifdef _MSC_VER
-typedef int socklen_t;
-#define inline __inline
-#endif
 #endif
 
 /* Common XPilot header files. */
@@ -272,6 +257,7 @@ typedef int socklen_t;
 #include "commonproto.h"
 #include "const.h"
 #include "error.h"
+#include "game_transport.h"
 #include "item.h"
 #include "list.h"
 #include "metaserver.h"

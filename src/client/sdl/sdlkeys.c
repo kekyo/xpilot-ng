@@ -1,7 +1,7 @@
 /*
- * XPilotNG/SDL, an SDL/OpenGL XPilot client.
+ * XPilot Infinity/SDL, an SDL/OpenGL XPilot client.
  *
- * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,16 +24,17 @@
 
 typedef struct {
 	const char *name;
-	SDLKey	key;
+	SDL_Keycode key;
 } sdlkey_t;
 
 static sdlkey_t sdlkeys[] = {
    { "BackSpace",    SDLK_BACKSPACE },
    { "Tab",          SDLK_TAB },
    { "Return",       SDLK_RETURN },
+   { "Linefeed",     SDLK_RETURN },
    { "Pause",        SDLK_PAUSE },
-   { "Scroll_Lock",  SDLK_SCROLLOCK },
-   { "Print",        SDLK_PRINT },
+   { "Scroll_Lock",  SDLK_SCROLLLOCK },
+   { "Print",        SDLK_PRINTSCREEN },
    { "Escape",       SDLK_ESCAPE },
    { "Delete",       SDLK_DELETE },
    { "Home",         SDLK_HOME },
@@ -47,25 +48,25 @@ static sdlkey_t sdlkeys[] = {
    { "Next",         SDLK_PAGEDOWN },
    { "End",          SDLK_END },
    { "Insert",       SDLK_INSERT },
-   { "Num_Lock",     SDLK_NUMLOCK },
+   { "Num_Lock",     SDLK_NUMLOCKCLEAR },
    { "KP_Enter",     SDLK_KP_ENTER },
    { "KP_Multiply",  SDLK_KP_MULTIPLY },
    { "KP_Add",       SDLK_KP_PLUS },
    { "KP_Subtract",  SDLK_KP_MINUS },
    { "KP_Decimal",   SDLK_KP_PERIOD },
    { "KP_Divide",    SDLK_KP_DIVIDE },
-   { "KP_Insert",    SDLK_KP0 },
+   { "KP_Insert",    SDLK_KP_0 },
    { "KP_Delete",    SDLK_KP_PERIOD },
-   { "KP_0",         SDLK_KP0 },
-   { "KP_1",         SDLK_KP1 },
-   { "KP_2",         SDLK_KP2 },
-   { "KP_3",         SDLK_KP3 },
-   { "KP_4",         SDLK_KP4 },
-   { "KP_5",         SDLK_KP5 },
-   { "KP_6",         SDLK_KP6 },
-   { "KP_7",         SDLK_KP7 },
-   { "KP_8",         SDLK_KP8 },
-   { "KP_9",         SDLK_KP9 },
+   { "KP_0",         SDLK_KP_0 },
+   { "KP_1",         SDLK_KP_1 },
+   { "KP_2",         SDLK_KP_2 },
+   { "KP_3",         SDLK_KP_3 },
+   { "KP_4",         SDLK_KP_4 },
+   { "KP_5",         SDLK_KP_5 },
+   { "KP_6",         SDLK_KP_6 },
+   { "KP_7",         SDLK_KP_7 },
+   { "KP_8",         SDLK_KP_8 },
+   { "KP_9",         SDLK_KP_9 },
    { "F1",           SDLK_F1 },
    { "F2",           SDLK_F2 },
    { "F3",           SDLK_F3 },
@@ -84,8 +85,8 @@ static sdlkey_t sdlkeys[] = {
    { "Control_R",    SDLK_RCTRL },
    { "Caps_Lock",    SDLK_CAPSLOCK },
    { "space",        SDLK_SPACE },
-   { "apostrophe",   SDLK_QUOTE },
-   { "quoteright",   SDLK_QUOTE },
+   { "apostrophe",   SDLK_APOSTROPHE },
+   { "quoteright",   SDLK_APOSTROPHE },
    { "comma",        SDLK_COMMA },
    { "plus",         SDLK_PLUS },
    { "minus",        SDLK_MINUS },
@@ -103,69 +104,69 @@ static sdlkey_t sdlkeys[] = {
    { "9",            SDLK_9 },
    { "semicolon",    SDLK_SEMICOLON },
    { "equal",        SDLK_EQUALS },
-   { "A",            SDLK_a },
-   { "B",            SDLK_b },
-   { "C",            SDLK_c },
-   { "D",            SDLK_d },
-   { "E",            SDLK_e },
-   { "F",            SDLK_f },
-   { "G",            SDLK_g },
-   { "H",            SDLK_h },
-   { "I",            SDLK_i },
-   { "J",            SDLK_j },
-   { "K",            SDLK_k },
-   { "L",            SDLK_l },
-   { "M",            SDLK_m },
-   { "N",            SDLK_n },
-   { "O",            SDLK_o },
-   { "P",            SDLK_p },
-   { "Q",            SDLK_q },
-   { "R",            SDLK_r },
-   { "S",            SDLK_s },
-   { "T",            SDLK_t },
-   { "U",            SDLK_u },
-   { "V",            SDLK_v },
-   { "W",            SDLK_w },
-   { "X",            SDLK_x },
-   { "Y",            SDLK_y },
-   { "Z",            SDLK_z },
-   { "a",            SDLK_a },
-   { "b",            SDLK_b },
-   { "c",            SDLK_c },
-   { "d",            SDLK_d },
-   { "e",            SDLK_e },
-   { "f",            SDLK_f },
-   { "g",            SDLK_g },
-   { "h",            SDLK_h },
-   { "i",            SDLK_i },
-   { "j",            SDLK_j },
-   { "k",            SDLK_k },
-   { "l",            SDLK_l },
-   { "m",            SDLK_m },
-   { "n",            SDLK_n },
-   { "o",            SDLK_o },
-   { "p",            SDLK_p },
-   { "q",            SDLK_q },
-   { "r",            SDLK_r },
-   { "s",            SDLK_s },
-   { "t",            SDLK_t },
-   { "u",            SDLK_u },
-   { "v",            SDLK_v },
-   { "w",            SDLK_w },
-   { "x",            SDLK_x },
-   { "y",            SDLK_y },
-   { "z",            SDLK_z },
+   { "A",            SDLK_A },
+   { "B",            SDLK_B },
+   { "C",            SDLK_C },
+   { "D",            SDLK_D },
+   { "E",            SDLK_E },
+   { "F",            SDLK_F },
+   { "G",            SDLK_G },
+   { "H",            SDLK_H },
+   { "I",            SDLK_I },
+   { "J",            SDLK_J },
+   { "K",            SDLK_K },
+   { "L",            SDLK_L },
+   { "M",            SDLK_M },
+   { "N",            SDLK_N },
+   { "O",            SDLK_O },
+   { "P",            SDLK_P },
+   { "Q",            SDLK_Q },
+   { "R",            SDLK_R },
+   { "S",            SDLK_S },
+   { "T",            SDLK_T },
+   { "U",            SDLK_U },
+   { "V",            SDLK_V },
+   { "W",            SDLK_W },
+   { "X",            SDLK_X },
+   { "Y",            SDLK_Y },
+   { "Z",            SDLK_Z },
+   { "a",            SDLK_A },
+   { "b",            SDLK_B },
+   { "c",            SDLK_C },
+   { "d",            SDLK_D },
+   { "e",            SDLK_E },
+   { "f",            SDLK_F },
+   { "g",            SDLK_G },
+   { "h",            SDLK_H },
+   { "i",            SDLK_I },
+   { "j",            SDLK_J },
+   { "k",            SDLK_K },
+   { "l",            SDLK_L },
+   { "m",            SDLK_M },
+   { "n",            SDLK_N },
+   { "o",            SDLK_O },
+   { "p",            SDLK_P },
+   { "q",            SDLK_Q },
+   { "r",            SDLK_R },
+   { "s",            SDLK_S },
+   { "t",            SDLK_T },
+   { "u",            SDLK_U },
+   { "v",            SDLK_V },
+   { "w",            SDLK_W },
+   { "x",            SDLK_X },
+   { "y",            SDLK_Y },
+   { "z",            SDLK_Z },
    { "bracketleft", 	SDLK_LEFTBRACKET },
    { "backslash",   	SDLK_BACKSLASH },
    { "bracketright",	SDLK_RIGHTBRACKET },
-   { "grave",	    	SDLK_BACKQUOTE },
-   { "quoteleft",   	SDLK_BACKQUOTE },
-   { "quotedbl",   	SDLK_QUOTEDBL },
-   { "section",   	SDLK_WORLD_7 },
+   { "grave",	    	SDLK_GRAVE },
+   { "quoteleft",   	SDLK_GRAVE },
+   { "quotedbl",   	SDLK_DBLAPOSTROPHE },
+   { "section",   	(SDL_Keycode)0x00a7 },
    { NULL,  	    	SDLK_UNKNOWN },
 };
 
-SDLKey Get_key_by_name(const char* name)
+SDL_Keycode Get_key_by_name(const char *name)
 {
     sdlkey_t *k;
 
@@ -177,20 +178,20 @@ SDLKey Get_key_by_name(const char* name)
     return SDLK_UNKNOWN;
 }
 
-char *Get_name_by_key(SDLKey key)
+const char *Get_name_by_key(SDL_Keycode key)
 {
     sdlkey_t *k;
 
     for (k = &sdlkeys[0]; k->name != NULL; k++)
         if (key == k->key)
-            return (char *)(k->name);
+            return k->name;
 
     return NULL;
 }
 
-xp_keysym_t String_to_xp_keysym(/*const*/ char *name)
+xp_keysym_t String_to_xp_keysym(const char *name)
 {
-    SDLKey sdlk = Get_key_by_name(name);
+    SDL_Keycode sdlk = Get_key_by_name(name);
     if (sdlk == SDLK_UNKNOWN) return XP_KS_UNKNOWN;
     return (xp_keysym_t)sdlk;
 }

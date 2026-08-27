@@ -1,7 +1,7 @@
 /* 
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -40,14 +40,6 @@ extern void warn(const char *fmt, ...);
 extern void error(const char *fmt, ...);
 extern void fatal(const char *fmt, ...);
 extern void dumpcore(const char *fmt, ...);
-
-#ifdef _WINDOWS
-# ifdef	_DEBUG
-#  define	Trace _Trace
-# else
-#  define	Trace
-# endif
-#endif
 
 extern void init_error(const char *prog);
 

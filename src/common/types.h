@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -31,15 +31,8 @@ typedef signed char	byte;
 #endif
 typedef unsigned char	u_byte;
 
-/*
- * On some systems an enum is smaller than an int.
- * On others bool is already a builtin type.
- * Using preprocessor macros to circumvent both situations.
- */
 #ifndef __cplusplus
-# define false	0
-# define true	1
-# define bool	char
+# include <stdbool.h>
 #endif
 
 typedef struct { float x, y; }		vector_t;
@@ -51,8 +44,12 @@ typedef struct { int bx, by; }		blkvec_t;
 typedef blkvec_t			blkpos_t;
 
 #ifdef _WINDOWS
-# define strncasecmp(__s, __t, __l)	strnicmp(__s, __t, __l)
-# define strcasecmp(__s, __t)	stricmp(__s, __t)
+# ifndef strncasecmp
+#  define strncasecmp(__s, __t, __l)	_strnicmp(__s, __t, __l)
+# endif
+# ifndef strcasecmp
+#  define strcasecmp(__s, __t)	_stricmp(__s, __t)
+# endif
 #endif
 
 #endif

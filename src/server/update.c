@@ -1,14 +1,14 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 2000-2004 by
  *
  *      Uoti Urpala          <uau@users.sourceforge.net>
- *      Kristian Söderblom   <kps@users.sourceforge.net>
+ *      Kristian SÃ¶derblom   <kps@users.sourceforge.net>
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -989,7 +989,7 @@ static void Update_players(void)
 		f = AFTER_BURN_FUEL(f, a);
 	    }
 
-	    if (!options.ngControls) {
+	    if (!options.infinityControls) {
 		pl->acc.x = power * tcos(pl->dir) / inert;
 		pl->acc.y = power * tsin(pl->dir) / inert;
 	    } else {

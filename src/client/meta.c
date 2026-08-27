@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -25,14 +25,86 @@
 
 #include "xpclient.h"
 
+#ifdef XPILOT_META_TEST_HOOKS
+#include "meta_test_support.h"
+#endif
+
 static struct Meta metas[NUM_METAS] = {
     {META_HOST,     META_IP,     META_INIT_SOCK, MetaConnecting},
     {META_HOST_TWO, META_IP_TWO, META_INIT_SOCK, MetaConnecting}
 };
+static int meta_program_port = META_PROG_PORT;
+static int meta_environment_applied;
 
 list_t server_list;
 time_t server_list_creation_time;
 list_iter_t server_it;
+
+static void Meta_apply_environment(void)
+{
+    const char *host;
+    const char *host_two;
+    const char *port_text;
+    char *port_end;
+    long port;
+
+    if (meta_environment_applied)
+	return;
+    meta_environment_applied = 1;
+
+    /* These overrides make the existing protocol usable with private meta
+     * services and let the renderer E2E use a deterministic local peer. */
+    host = getenv("XPILOT_META_HOST");
+    host_two = getenv("XPILOT_META_HOST_TWO");
+    if (host != NULL && host[0] != '\0') {
+	strlcpy(metas[0].name, host, sizeof(metas[0].name));
+	metas[0].addr[0] = '\0';
+    }
+    if (host_two != NULL && host_two[0] != '\0') {
+	strlcpy(metas[1].name, host_two, sizeof(metas[1].name));
+	metas[1].addr[0] = '\0';
+    }
+
+    port_text = getenv("XPILOT_META_PORT");
+    if (port_text == NULL || port_text[0] == '\0')
+	return;
+    errno = 0;
+    port = strtol(port_text, &port_end, 10);
+    if (errno == 0 && port_end != port_text && port_end[0] == '\0'
+	&& port > 0 && port <= 65535) {
+	meta_program_port = (int)port;
+    }
+}
+
+#ifdef XPILOT_META_TEST_HOOKS
+void Meta_test_reset_environment(void)
+{
+    strlcpy(metas[0].name, META_HOST, sizeof(metas[0].name));
+    strlcpy(metas[0].addr, META_IP, sizeof(metas[0].addr));
+    strlcpy(metas[1].name, META_HOST_TWO, sizeof(metas[1].name));
+    strlcpy(metas[1].addr, META_IP_TWO, sizeof(metas[1].addr));
+    meta_program_port = META_PROG_PORT;
+    meta_environment_applied = 0;
+}
+
+void Meta_test_apply_environment(void)
+{
+    Meta_apply_environment();
+}
+
+int Meta_test_environment(int index, const char **name,
+			  const char **address, int *port)
+{
+    if (index < 0 || index >= NUM_METAS || name == NULL
+	|| address == NULL || port == NULL) {
+	return -1;
+    }
+    *name = metas[index].name;
+    *address = metas[index].addr;
+    *port = meta_program_port;
+    return 0;
+}
+#endif
 
 /*
  * Convert a string to lowercase.
@@ -251,6 +323,7 @@ void Add_meta_line(char *meta_line)
     unsigned ip0, ip1, ip2, ip3 = 0;
     char *text = xp_strdup(meta_line);
     server_info_t *sip;
+    size_t version_length;
 
     if (!text) {
         error("Not enough memory\n");
@@ -281,6 +354,8 @@ void Add_meta_line(char *meta_line)
     }
     memset(sip, 0, sizeof(*sip));
     sip->pingtime = PING_UNKNOWN;
+    sip->contact_transport = GAME_TRANSPORT_UDP;
+    sip->game_transport = GAME_TRANSPORT_UDP;
     sip->version = fields[0];
     sip->hostname = fields[1];
     sip->users_str = fields[3];
@@ -297,6 +372,18 @@ void Add_meta_line(char *meta_line)
     sip->ip_str = fields[15];
     sip->freebases = fields[16];
     sip->queue_str = fields[17];
+    if (Game_transport_parse_meta_version(
+	    sip->version, &sip->contact_transport,
+	    &sip->game_transport, &version_length)) {
+	sip->version[version_length] = '\0';
+    }
+    if (!Transport_display_pair(sip->transport_pair,
+				sizeof(sip->transport_pair),
+				sip->contact_transport,
+				sip->game_transport)) {
+	strlcpy(sip->transport_pair, "UNKNOWN",
+		sizeof(sip->transport_pair));
+    }
     if (sscanf(fields[i = 2], "%u", &sip->port) != 1 ||
 	sscanf(fields[i = 3], "%u", &sip->users) != 1 ||
 	sscanf(fields[i = 8], "%u", &sip->bases) != 1 ||
@@ -320,6 +407,16 @@ void Add_meta_line(char *meta_line)
     }
 }
 
+bool Meta_server_to_connect_target(const server_info_t *server,
+                                   Connect_target_t *target)
+{
+    if (server == NULL || server->port > 65535)
+	return false;
+    return Connect_target_init(target, server->ip_str, (int)server->port,
+			       server->contact_transport,
+			       server->game_transport);
+}
+
 /*
  * Connect to the meta servers asynchronously.
  * Return the number of connections made,
@@ -335,10 +432,12 @@ void Meta_connect(int *connections_ptr, int *maxfd_ptr)
     for (i = 0; i < NUM_METAS; i++) {
 	if (metas[i].sock.fd != SOCK_FD_INVALID)
 	    sock_close(&metas[i].sock);
+	if (metas[i].addr[0] == '\0')
+	    continue;
 
 	status = sock_open_tcp_connected_non_blocking(&metas[i].sock,
 						      metas[i].addr,
-						      META_PROG_PORT);
+						      meta_program_port);
 	if (status == SOCK_IS_ERROR) {
 	    error("%s\n", metas[i].addr);
 	} else {
@@ -440,7 +539,7 @@ void Ping_servers(void)
 		 */
 		Sockbuf_clear(&sbuf);
 		Packet_printf(&sbuf, "%u%s%hu%c",
-			      MAGIC & 0xffff, "p",
+			      MAGIC_WORD, "p",
 			      sock_get_port(&sock), serial);
 
 		/*
@@ -591,6 +690,8 @@ int Get_meta_data(char *errorstr)
     struct MetaData md[NUM_METAS];
 
     
+    Meta_apply_environment();
+
     /* lookup addresses. */
     Meta_dns_lookup();
 

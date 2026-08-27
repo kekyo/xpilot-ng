@@ -1,11 +1,11 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 2000-2004 Uoti Urpala <uau@users.sourceforge.net>
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -66,21 +66,15 @@
  * but should not get frame updates yet until it has acknowledged its last
  * reliable data.
  *
- * Communication between the server and the clients is only done
- * using UDP datagrams.  The first client/serverized version of XPilot
- * was using TCP only, but this was too unplayable across the Internet,
- * because TCP is a data stream always sending the next byte.
- * If a packet gets lost then the server has to wait for a
- * timeout before a retransmission can occur.  This is too slow
- * for a real-time program like this game, which is more interested
- * in recent events than in sequenced/reliable events.
- * Therefore UDP is now used which gives more network control to the
- * program.
- * Because some data is considered crucial, like the names of
- * new players and so on, there also had to be a mechanism which
- * enabled reliable data transmission.  Here this is done by creating
- * a data stream which is piggybacked on top of the unreliable data
- * packets.  The client acknowledges this reliable data by sending
+ * Gameplay communication can use either UDP datagrams or TCP streams.  TCP
+ * keeps each former datagram payload as a logical packet prefixed with a
+ * two-byte payload length.  Contact/lobby transport is selected separately;
+ * LAN broadcast discovery remains UDP-only.
+ *
+ * Because some data is considered crucial, like the names of new players,
+ * the application-level reliable stream remains in both transport modes.
+ * It repairs UDP loss and preserves the existing packet semantics over TCP.
+ * The client acknowledges this reliable data by sending
  * its byte position in the reliable data stream.  So if the client gets
  * a new reliable data packet and it has not had this data before and
  * there is also no data packet missing inbetween, then it advances
@@ -94,11 +88,16 @@
 
 #include "xpserver.h"
 
+#include "record_drain.h"
+#include "record_session.h"
+
 static int Init_setup(void);
 static int Handle_listening(connection_t *connp);
+static int Handle_reconnect(connection_t *connp);
 static int Handle_setup(connection_t *connp);
 static int Handle_login(connection_t *connp, char *errmsg, size_t errsize);
-static void Handle_input(int fd, void *arg);
+static void Handle_input(socket_handle_t fd, void *arg);
+static record_receive_result_t Handle_session_input(void *context);
 
 static int Receive_keyboard(connection_t *connp);
 static int Receive_quit(connection_t *connp);
@@ -121,8 +120,10 @@ static int Receive_audio_request(connection_t *connp);
 static int Receive_fps_request(connection_t *connp);
 
 static int Send_motd(connection_t *connp);
+static int Suspend_connection(connection_t *connp, const char *reason);
 
 #define MAX_SELECT_FD			(sizeof(int) * 8 - 1)
+#define MAX_INPUT_RECORDS_PER_TICK	64
 #define MAX_RELIABLE_DATA_PACKET_SIZE	1024
 
 #define MAX_MOTD_CHUNK			512
@@ -130,6 +131,11 @@ static int Send_motd(connection_t *connp);
 #define MAX_MOTD_LOOPS			(10*FPS)
 
 static connection_t	*Conn = NULL;
+typedef struct {
+    record_session_t *session;
+    record_session_id_t resume_claim_id;
+} connection_io_t;
+static connection_io_t *Conn_io = NULL;
 static int		max_connections = 0;
 static setup_t		*Setup = NULL;
 static setup_t		*Oldsetup = NULL;
@@ -138,6 +144,56 @@ static int		(*playing_receive[256])(connection_t *connp),
 			(*drain_receive[256])(connection_t *connp);
 int			login_in_progress;
 static int		num_logins, num_logouts;
+
+static connection_io_t *Connection_io(connection_t *connp)
+{
+    return &Conn_io[connp->ind];
+}
+
+static bool Connection_uses_session(connection_t *connp)
+{
+    return Conn_io != NULL && Connection_io(connp)->session != NULL;
+}
+
+static int Connection_send_record(connection_t *connp,
+				  record_delivery_t delivery)
+{
+    record_send_result_t result;
+    int length = connp->w.len;
+
+    if (!Connection_uses_session(connp))
+	return Sockbuf_flushRec(&connp->w);
+    if (length <= 0)
+	return 0;
+    result = Record_session_send(Connection_io(connp)->session,
+				 connp->w.buf, (size_t)length, delivery);
+    if (result == RECORD_SEND_ACCEPTED) {
+	Sockbuf_clear(&connp->w);
+	return length;
+    }
+    if (result == RECORD_SEND_DROPPED) {
+	Sockbuf_clear(&connp->w);
+	errno = EAGAIN;
+	return 0;
+    }
+    if (result == RECORD_SEND_BACKPRESSURED) {
+	errno = EAGAIN;
+	return 0;
+    }
+    return -1;
+}
+
+static int Connection_flush_session(connection_t *connp)
+{
+    record_flush_result_t result;
+
+    if (!Connection_uses_session(connp))
+	return 0;
+    result = Record_session_flush(Connection_io(connp)->session);
+    if (result == RECORD_FLUSH_ERROR || result == RECORD_FLUSH_CLOSED)
+	return -1;
+    return result == RECORD_FLUSH_PENDING ? 0 : 1;
+}
 
 static void Feature_init(connection_t *connp)
 {
@@ -315,8 +371,18 @@ int Setup_net_server(void)
 	error("Cannot allocate memory for connections");
 	return -1;
     }
+    if ((Conn_io = XCALLOC(connection_io_t, max_connections)) == NULL) {
+	error("Cannot allocate memory for connection sessions");
+	XFREE(Conn);
+	return -1;
+    }
 
     return 0;
+}
+
+int Net_server_connection_limit(void)
+{
+    return max_connections;
 }
 
 static void Conn_set_state(connection_t *connp, int state, int drain_state)
@@ -347,6 +413,8 @@ static void Conn_set_state(connection_t *connp, int state, int drain_state)
 	connp->timeout = SETUP_TIMEOUT;
     else if (connp->state == CONN_LISTENING)
 	connp->timeout = LISTEN_TIMEOUT;
+    else if (connp->state == CONN_RECONNECT)
+	connp->timeout = GAME_RECONNECT_GRACE_SECONDS;
     else if (connp->state == CONN_FREE) {
 	num_conn_busy--;
 	connp->timeout = IDLE_TIMEOUT;
@@ -356,14 +424,15 @@ static void Conn_set_state(connection_t *connp, int state, int drain_state)
 }
 
 /*
- * Cleanup a connection.  The client may not know yet that
- * it is thrown out of the game so we send it a quit packet.
- * We send it twice because of UDP it could get lost.
- * Since 3.0.6 the client receives a short message
- * explaining why the connection was terminated.
+ * Cleanup a connection.  The client may not know yet that it is thrown out
+ * of the game, so send a quit packet.  TCP sends one framed packet after the
+ * stream is accepted; UDP retains the repeated best-effort sends.  Since
+ * 3.0.6 the client receives a short termination message.
  */
 void Destroy_connection(connection_t *connp, const char *reason)
 {
+    connection_io_t *io;
+    bool session_connection;
     int id, len;
     sock_t *sock;
     char pkt[MAX_CHARS];
@@ -372,16 +441,35 @@ void Destroy_connection(connection_t *connp, const char *reason)
 	warn("Cannot destroy empty connection (\"%s\")", reason);
 	return;
     }
-
+    io = Connection_io(connp);
+    session_connection = io->session != NULL;
     sock = &connp->w.sock;
-    remove_input(sock->fd);
+    if (!session_connection && sock->fd != SOCK_FD_INVALID)
+	remove_input(sock->fd);
 
-    pkt[0] = PKT_QUIT;
-    strlcpy(&pkt[1], reason, sizeof(pkt) - 1);
-    len = strlen(pkt) + 1;
-    if (sock_writeRec(sock, pkt, len) != len) {
-	sock_get_errorRec(sock);
-	sock_writeRec(sock, pkt, len);
+    len = 0;
+    if (session_connection) {
+	Sockbuf_clear(&connp->w);
+	if (Packet_printf(&connp->w, "%c%s", PKT_QUIT,
+			  (char *)reason) > 0) {
+	    Connection_send_record(connp, RECORD_DELIVERY_REQUIRED);
+	    Connection_flush_session(connp);
+	}
+    } else if (BIT(sock->flags, SOCK_FLAG_TCP) != 0) {
+	if (BIT(sock->flags, SOCK_FLAG_CONNECT) != 0) {
+	    Sockbuf_clear(&connp->w);
+	    if (Packet_printf(&connp->w, "%c%s", PKT_QUIT,
+			      (char *)reason) > 0)
+		Sockbuf_flushRec(&connp->w);
+	}
+    } else if (BIT(sock->flags, SOCK_FLAG_UDP) != 0) {
+	pkt[0] = PKT_QUIT;
+	strlcpy(&pkt[1], reason, sizeof(pkt) - 1);
+	len = strlen(pkt) + 1;
+	if (sock_writeRec(sock, pkt, len) != len) {
+	    sock_get_errorRec(sock);
+	    sock_writeRec(sock, pkt, len);
+	}
     }
     xpprintf("%s Goodbye %s=%s@%s|%s (\"%s\")\n",
 	     showtime(),
@@ -418,11 +506,17 @@ void Destroy_connection(connection_t *connp, const char *reason)
 
     num_logouts++;
 
-    if (sock_writeRec(sock, pkt, len) != len) {
-	sock_get_errorRec(sock);
-	sock_writeRec(sock, pkt, len);
+    if (!session_connection && BIT(sock->flags, SOCK_FLAG_UDP) != 0) {
+	if (sock_writeRec(sock, pkt, len) != len) {
+	    sock_get_errorRec(sock);
+	    sock_writeRec(sock, pkt, len);
+	}
     }
-    sock_closeRec(sock);
+    if (!session_connection && sock->fd != SOCK_FD_INVALID)
+	sock_closeRec(sock);
+
+    Record_session_destroy(io->session);
+    memset(io, 0, sizeof(*io));
 
     memset(connp, 0, sizeof(*connp));
 }
@@ -461,20 +555,28 @@ static void Create_client_socket(sock_t *sock, int *port)
 
     if (!options.clientPortStart || !options.clientPortEnd ||
 	(options.clientPortStart > options.clientPortEnd)) {
+        int status = gameTransport == GAME_TRANSPORT_TCP
+	    ? sock_open_tcp_listener(sock, serverAddr, 0, 1)
+	    : sock_open_udp(sock, serverAddr, 0);
 
-        if (sock_open_udp(sock, serverAddr, 0) == SOCK_IS_ERROR) {
-            error("Cannot create datagram socket (%d)", sock->error.error);
-	    sock->fd = -1;
+	if (status == SOCK_IS_ERROR) {
+	    error("Cannot create %s gameplay socket (%d)",
+		  Game_transport_name(gameTransport), sock->error.error);
+	    sock->fd = SOCK_FD_INVALID;
 	    return;
         }
     }
     else {
         for (i = options.clientPortStart; i <= options.clientPortEnd; i++) {
-            if (sock_open_udp(sock, serverAddr, i) != SOCK_IS_ERROR)
+	    int status = gameTransport == GAME_TRANSPORT_TCP
+		? sock_open_tcp_listener(sock, serverAddr, i, 1)
+		: sock_open_udp(sock, serverAddr, i);
+
+	    if (status != SOCK_IS_ERROR)
 		goto found;
 	}
 	error("Could not find a usable port in given port range");
-	sock->fd = -1;
+	sock->fd = SOCK_FD_INVALID;
 	return;
     }
  found:
@@ -495,8 +597,195 @@ static void Create_client_socket(sock_t *sock, int *port)
     return;
  error:
     sock_close(sock);
-    sock->fd = -1;
+    sock->fd = SOCK_FD_INVALID;
     return;
+}
+
+static int Create_reconnect_listener(sock_t *listener, int port)
+{
+    if (sock_open_tcp_listener(listener, serverAddr, port, 1)
+	== SOCK_IS_ERROR) {
+	error("Cannot recreate TCP gameplay listener on port %d", port);
+	return -1;
+    }
+    if (sock_set_non_blocking(listener, 1) == SOCK_IS_ERROR) {
+	error("Cannot make replacement TCP gameplay listener non-blocking");
+	sock_close(listener);
+	return -1;
+    }
+    if (sock_set_receive_buffer_size(listener, SERVER_RECV_SIZE + 256)
+	== SOCK_IS_ERROR)
+	error("Cannot set receive buffer size to %d", SERVER_RECV_SIZE + 256);
+    if (sock_set_send_buffer_size(listener, SERVER_SEND_SIZE + 256)
+	== SOCK_IS_ERROR)
+	error("Cannot set send buffer size to %d", SERVER_SEND_SIZE + 256);
+    return 0;
+}
+
+static void Attach_connection_socket(connection_t *connp, const sock_t *sock)
+{
+    sockbuf_t *buffers[2] = { &connp->r, &connp->w };
+    int i;
+
+    for (i = 0; i < 2; i++) {
+	sockbuf_t *buffer = buffers[i];
+
+	buffer->sock = *sock;
+	buffer->state &= ~SOCKBUF_ERROR;
+	Sockbuf_clear(buffer);
+	buffer->frame_header[0] = buffer->frame_header[1] = 0;
+	buffer->frame_header_len = 0;
+	buffer->frame_length = -1;
+	buffer->frame_received = 0;
+	buffer->frame_output_len = 0;
+	buffer->frame_output_offset = 0;
+    }
+}
+
+static void Release_held_keys(connection_t *connp)
+{
+    player_t *pl;
+
+    if (connp->id == NO_ID)
+	return;
+    pl = Player_by_id(connp->id);
+    memset(pl->last_keyv, 0, sizeof(pl->last_keyv));
+    Handle_keyboard(pl);
+}
+
+static int Suspend_connection(connection_t *connp, const char *reason)
+{
+    connection_io_t *io = Connection_io(connp);
+    sock_t disconnected = connp->w.sock;
+    sock_t listener;
+    sock_t invalid;
+
+    if (connp->state != CONN_PLAYING
+	|| !Game_transport_protocol_supports_reconnect(connp->version)) {
+	Destroy_connection(connp, reason);
+	return -1;
+    }
+
+    if (io->session != NULL) {
+	game_transport_t transport;
+
+	Record_session_close(io->session);
+	io->resume_claim_id = RECORD_SESSION_ID_INVALID;
+	Sockbuf_clear(&connp->r);
+	Sockbuf_clear(&connp->w);
+	Release_held_keys(connp);
+	Conn_set_state(connp, CONN_RECONNECT, CONN_FREE);
+	Game_transport_from_protocol_version(connp->version, &transport);
+	xpprintf("%s %s gameplay session suspended for %s (%s); "
+		 "waiting %d seconds.\n", showtime(),
+		 Game_transport_name(transport), connp->nick, reason,
+		 GAME_RECONNECT_GRACE_SECONDS);
+	return 0;
+    }
+
+    if (BIT(connp->w.state, SOCKBUF_FRAMED) == 0) {
+	Destroy_connection(connp, reason);
+	return -1;
+    }
+
+    remove_input(disconnected.fd);
+    sock_close(&disconnected);
+    if (Create_reconnect_listener(&listener, connp->my_port) == -1) {
+	sock_init(&invalid);
+	Attach_connection_socket(connp, &invalid);
+	Destroy_connection(connp, "cannot create reconnect listener");
+	return -1;
+    }
+    Attach_connection_socket(connp, &listener);
+    if (install_input(Handle_input, listener.fd, connp) == SOCK_IS_ERROR) {
+	Destroy_connection(connp, "scheduler capacity for reconnect");
+	return -1;
+    }
+
+    Release_held_keys(connp);
+    Conn_set_state(connp, CONN_RECONNECT, CONN_FREE);
+    xpprintf("%s TCP gameplay connection suspended for %s (%s); "
+	     "waiting %d seconds.\n", showtime(), connp->nick, reason,
+	     GAME_RECONNECT_GRACE_SECONDS);
+    return 0;
+}
+
+int Net_server_claim_session_resume(
+    const session_token_t *token, const char *address,
+    record_session_id_t claim_id, int *connection_index)
+{
+    int i;
+
+    if (token == NULL || address == NULL
+	|| claim_id == RECORD_SESSION_ID_INVALID
+	|| connection_index == NULL)
+	return E_INVAL;
+    for (i = 0; i < max_connections; i++) {
+	connection_t *connp = &Conn[i];
+	connection_io_t *io = &Conn_io[i];
+
+	if (connp->state != CONN_RECONNECT || io->session == NULL
+	    || !Game_transport_protocol_supports_reconnect(connp->version)
+	    || strcmp(connp->addr, address) != 0
+	    || !Session_token_equal(token, &connp->resume_token))
+	    continue;
+	if (io->resume_claim_id != RECORD_SESSION_ID_INVALID)
+	    return E_IN_USE;
+	io->resume_claim_id = claim_id;
+	*connection_index = i;
+	return SUCCESS;
+    }
+    return E_NOT_FOUND;
+}
+
+int Net_server_complete_session_resume(
+    int connection_index, record_session_id_t claim_id,
+    record_session_t *replacement, int peer_port)
+{
+    connection_t *connp;
+    connection_io_t *io;
+    game_transport_t transport;
+
+    if (connection_index < 0 || connection_index >= max_connections
+	|| claim_id == RECORD_SESSION_ID_INVALID || replacement == NULL
+	|| peer_port < 0 || peer_port > 65535) {
+	errno = EINVAL;
+	return -1;
+    }
+    connp = &Conn[connection_index];
+    io = &Conn_io[connection_index];
+    if (connp->state != CONN_RECONNECT || io->session == NULL
+	|| io->resume_claim_id != claim_id) {
+	errno = EINVAL;
+	return -1;
+    }
+    if (Record_session_replace_from(io->session, replacement) == -1)
+	return -1;
+
+    io->resume_claim_id = RECORD_SESSION_ID_INVALID;
+    connp->his_port = peer_port;
+    connp->last_send_loops = 0;
+    connp->retransmit_at_loop = main_loops;
+    Sockbuf_clear(&connp->r);
+    Sockbuf_clear(&connp->w);
+    Conn_set_state(connp, CONN_PLAYING, CONN_FREE);
+    Game_transport_from_protocol_version(connp->version, &transport);
+    xpprintf("%s %s gameplay session resumed for %s.\n",
+	     showtime(), Game_transport_name(transport), connp->nick);
+    return 0;
+}
+
+void Net_server_cancel_session_resume(
+    int connection_index, record_session_id_t claim_id)
+{
+    connection_io_t *io;
+
+    if (connection_index < 0 || connection_index >= max_connections
+	|| claim_id == RECORD_SESSION_ID_INVALID)
+	return;
+    io = &Conn_io[connection_index];
+    if (io->resume_claim_id == claim_id)
+	io->resume_claim_id = RECORD_SESSION_ID_INVALID;
 }
 
 
@@ -615,12 +904,13 @@ int CheckAllowed(char *user, char *nick, char *addr, char *host)
  * client connection is still in the CONN_LISTENING state.
  */
 
-extern int min_fd;
-
 int Setup_connection(char *user, char *nick, char *dpy, int team,
 		     char *addr, char *host, unsigned version)
 {
-    int i, free_conn_index = max_connections, my_port;
+    int i, free_conn_index = max_connections, my_port, transport_state;
+    int handler_slot;
+    int *recorded_handler_slot = NULL;
+    bool supports_reconnect;
     sock_t sock;
     connection_t *connp;
 
@@ -681,23 +971,29 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
     if (!playback) {
 	Create_client_socket(&sock, &my_port);
 	if (rrecord) {
-	    *playback_ei++ = sock.fd - min_fd;
+	    recorded_handler_slot = playback_ei++;
+	    *recorded_handler_slot = SOCK_IS_ERROR;
 	    *playback_ei++ = my_port;
 	}
     } else {
 	sock_init(&sock);
-	sock.flags |= SOCK_FLAG_UDP;
-	sock.fd = *playback_ei++;
+	if (gameTransport == GAME_TRANSPORT_TCP)
+	    sock.flags |= SOCK_FLAG_TCP | SOCK_FLAG_CONNECT;
+	else
+	    sock.flags |= SOCK_FLAG_UDP;
+	sock.fd = (socket_handle_t)*playback_ei++;
 	my_port = *playback_ei++;
     }
-    if (sock.fd == -1)
+    if (sock.fd == SOCK_FD_INVALID)
  	return -1;
 
+    transport_state = gameTransport == GAME_TRANSPORT_TCP
+	? SOCKBUF_FRAMED : SOCKBUF_DGRAM;
     Sockbuf_init(&connp->w, &sock, SERVER_SEND_SIZE,
-		 SOCKBUF_WRITE | SOCKBUF_DGRAM);
+		 SOCKBUF_WRITE | transport_state);
 
     Sockbuf_init(&connp->r, &sock, SERVER_RECV_SIZE,
-		 SOCKBUF_READ | SOCKBUF_DGRAM);
+		 SOCKBUF_READ | transport_state);
 
     Sockbuf_init(&connp->c, (sock_t *) NULL, MAX_SOCKBUF_SIZE,
 		 SOCKBUF_WRITE | SOCKBUF_READ | SOCKBUF_LOCK);
@@ -712,9 +1008,11 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
     connp->ship = NULL;
     connp->team = team;
     connp->version = version;
+    supports_reconnect = Game_transport_protocol_supports_reconnect(version);
     Feature_init(connp);
     connp->start = main_loops;
-    connp->magic = /*randomMT() +*/ my_port + sock.fd + team + main_loops;
+    connp->magic = /*randomMT() +*/ my_port + team + main_loops
+	+ free_conn_index;
     connp->id = NO_ID;
     connp->timeout = LISTEN_TIMEOUT;
     connp->last_key_change = 0;
@@ -751,12 +1049,203 @@ int Setup_connection(char *user, char *nick, char *dpy, int team,
 	Destroy_connection(connp, "no memory");
 	return -1;
     }
+    if (supports_reconnect
+	&& !Session_token_generate(&connp->resume_token)) {
+	error("Cannot generate TCP gameplay resumption token");
+	Destroy_connection(connp, "no secure session token");
+	return -1;
+    }
 
-    install_input(Handle_input, sock.fd, connp);
+    handler_slot = install_input(Handle_input, sock.fd, connp);
+    if (handler_slot == SOCK_IS_ERROR) {
+	Destroy_connection(connp, "scheduler capacity");
+	return -1;
+    }
+    if (recorded_handler_slot != NULL)
+	*recorded_handler_slot = handler_slot;
 
     return my_port;
 }
 
+int Setup_session_connection(record_session_t *session, char *user,
+			     char *nick, char *dpy, int team,
+			     char *addr, char *host, unsigned version,
+			     int peer_port)
+{
+    connection_t *connp;
+    connection_io_t *io;
+    int free_conn_index = max_connections;
+    int i;
+
+    if (session == NULL || user == NULL || nick == NULL || dpy == NULL
+	|| addr == NULL || host == NULL
+	|| !Game_transport_protocol_uses_session(version)) {
+	Record_session_destroy(session);
+	errno = EINVAL;
+	return -1;
+    }
+    if (rrecord || playback) {
+	Record_session_destroy(session);
+	errno = ENOTSUP;
+	return -1;
+    }
+
+    for (i = 0; i < max_connections; i++) {
+	connp = &Conn[i];
+	if (connp->state == CONN_FREE) {
+	    if (free_conn_index == max_connections)
+		free_conn_index = i;
+	    continue;
+	}
+	if (strcasecmp(connp->nick, nick) == 0) {
+	    Record_session_destroy(session);
+	    errno = EEXIST;
+	    return -1;
+	}
+    }
+    if (free_conn_index >= max_connections) {
+	xpprintf("%s Full house for %s(%s)@%s(%s)\n",
+		 showtime(), user, nick, host, dpy);
+	Record_session_destroy(session);
+	errno = EBUSY;
+	return -1;
+    }
+
+    connp = &Conn[free_conn_index];
+    io = &Conn_io[free_conn_index];
+    connp->ind = free_conn_index;
+    io->session = session;
+    Sockbuf_init(&connp->w, NULL, SERVER_SEND_SIZE,
+		 SOCKBUF_WRITE | SOCKBUF_LOCK);
+    Sockbuf_init(&connp->r, NULL, SERVER_RECV_SIZE,
+		 SOCKBUF_READ | SOCKBUF_LOCK);
+    Sockbuf_init(&connp->c, NULL, MAX_SOCKBUF_SIZE,
+		 SOCKBUF_WRITE | SOCKBUF_READ | SOCKBUF_LOCK);
+
+    connp->my_port = options.contactPort;
+    connp->his_port = peer_port;
+    connp->user = xp_strdup(user);
+    connp->nick = xp_strdup(nick);
+    connp->dpy = xp_strdup(dpy);
+    connp->addr = xp_strdup(addr);
+    connp->host = xp_strdup(host);
+    connp->ship = NULL;
+    connp->team = team;
+    connp->version = version;
+    Feature_init(connp);
+    connp->start = main_loops;
+    connp->magic = (unsigned)(options.contactPort + team + main_loops
+			      + free_conn_index);
+    connp->id = NO_ID;
+    connp->last_key_change = 0;
+    connp->reliable_offset = 0;
+    connp->reliable_unsent = 0;
+    connp->last_send_loops = 0;
+    connp->retransmit_at_loop = 0;
+    connp->rtt_retransmit = DEFAULT_RETRANSMIT;
+    connp->rtt_smoothed = 0;
+    connp->rtt_dev = 0;
+    connp->rtt_timeouts = 0;
+    connp->acks = 0;
+    connp->setup = 0;
+    connp->motd_offset = -1;
+    connp->motd_stop = 0;
+    connp->view_width = DEF_VIEW_SIZE;
+    connp->view_height = DEF_VIEW_SIZE;
+    connp->debris_colors = 0;
+    connp->spark_rand = DEF_SPARK_RAND;
+    connp->last_mouse_pos = 0;
+    connp->rectype = rplayback ? 2 - playback : 0;
+    /* A split TCP connection reaches DRAIN from LISTENING and therefore
+     * already has a timeout.  A fixed-endpoint session starts here. */
+    connp->timeout = SETUP_TIMEOUT;
+    Conn_set_state(connp, CONN_DRAIN, CONN_SETUP);
+
+    if (connp->w.buf == NULL || connp->r.buf == NULL
+	|| connp->c.buf == NULL || connp->user == NULL
+	|| connp->nick == NULL || connp->dpy == NULL
+	|| connp->addr == NULL || connp->host == NULL) {
+	error("Not enough memory for session connection");
+	Destroy_connection(connp, "no memory");
+	return -1;
+    }
+    if (Game_transport_protocol_supports_reconnect(version)
+	&& !Session_token_generate(&connp->resume_token)) {
+	error("Cannot generate gameplay session resumption token");
+	Destroy_connection(connp, "no secure session token");
+	return -1;
+    }
+
+    xpprintf("%s Gameplay session established on contact port %d.\n",
+	     showtime(), options.contactPort);
+    xpprintf("%s Welcome %s=%s@%s|%s (%s/%d) (version %04x)\n",
+	     showtime(), nick, user, host, dpy, addr, peer_port, version);
+    if (Packet_printf(&connp->c, "%c%u", PKT_MAGIC, connp->magic) <= 0
+	|| (Game_transport_protocol_supports_reconnect(version)
+	    && Packet_printf(&connp->c, "%c%u%u%u%u",
+			     PKT_SESSION_TOKEN,
+			     connp->resume_token.words[0],
+			     connp->resume_token.words[1],
+			     connp->resume_token.words[2],
+			     connp->resume_token.words[3]) <= 0)
+	|| Send_reliable(connp) < 0) {
+	Destroy_connection(connp, "session confirmation failed");
+	return -1;
+    }
+    return 0;
+}
+
+static int Accept_client_connection(connection_t *connp)
+{
+    socket_handle_t listener_fd = connp->w.sock.fd;
+    sock_t accepted;
+    char *peer_addr;
+
+    errno = 0;
+    if (sock_accept(&connp->w.sock, &accepted) == SOCK_IS_ERROR) {
+	if (sock_error_is_temporary(&accepted))
+	    return 0;
+	error("Cannot accept TCP gameplay connection (%d)",
+	      accepted.error.error);
+	return -1;
+    }
+
+    peer_addr = sock_get_last_addr(&accepted);
+    if (strcmp(peer_addr, connp->addr) != 0) {
+	warn("Ignoring TCP gameplay connection from %s; expected %s",
+	     peer_addr, connp->addr);
+	sock_close(&accepted);
+	return 0;
+    }
+    connp->his_port = sock_get_last_port(&accepted);
+
+    if (sock_set_non_blocking(&accepted, 1) == SOCK_IS_ERROR
+	|| sock_set_tcp_nodelay(&accepted, 1) == SOCK_IS_ERROR) {
+	error("Cannot configure accepted TCP gameplay connection");
+	sock_close(&accepted);
+	return -1;
+    }
+    if (sock_set_receive_buffer_size(&accepted,
+				     SERVER_RECV_SIZE + 256) == SOCK_IS_ERROR)
+	error("Cannot set receive buffer size to %d", SERVER_RECV_SIZE + 256);
+    if (sock_set_send_buffer_size(&accepted,
+				  SERVER_SEND_SIZE + 256) == SOCK_IS_ERROR)
+	error("Cannot set send buffer size to %d", SERVER_SEND_SIZE + 256);
+
+    if (replace_input(listener_fd, accepted.fd) == SOCK_IS_ERROR) {
+	error("Cannot replace TCP gameplay listener in scheduler");
+	sock_close(&accepted);
+	return -1;
+    }
+    if (sock_close(&connp->w.sock) == SOCK_IS_ERROR)
+	warn("Cannot close accepted TCP gameplay listener");
+
+    connp->w.sock = accepted;
+    connp->r.sock = accepted;
+    xpprintf("%s TCP gameplay connection established on port %d.\n",
+	     showtime(), connp->my_port);
+    return 1;
+}
 /*
  * Handle a connection that is in the listening state.
  */
@@ -770,40 +1259,58 @@ static int Handle_listening(connection_t *connp)
 	Destroy_connection(connp, "not listening");
 	return -1;
     }
-    Sockbuf_clear(&connp->r);
-    errno = 0;
-    n = sock_receive_anyRec(&connp->r.sock, connp->r.buf, connp->r.size);
+    if (BIT(connp->r.state, SOCKBUF_FRAMED) != 0) {
+	if (BIT(connp->w.sock.flags, SOCK_FLAG_CONNECT) == 0) {
+	    n = Accept_client_connection(connp);
+	    if (n <= 0) {
+		if (n < 0)
+		    Destroy_connection(connp, "accept error");
+		return n;
+	    }
+	}
+	Sockbuf_clear(&connp->r);
+	errno = 0;
+	n = Sockbuf_readRec(&connp->r);
+    } else {
+	Sockbuf_clear(&connp->r);
+	errno = 0;
+	n = sock_receive_anyRec(&connp->r.sock, connp->r.buf, connp->r.size);
+	if (n > 0) {
+	    connp->r.len = n;
+	    connp->his_port = sock_get_last_portRec(&connp->r.sock);
+	    if (sock_connectRec(&connp->w.sock, connp->addr,
+			       connp->his_port) == -1) {
+		error("Cannot connect datagram socket (%s,%d,%d,%d,%d)",
+		      connp->addr, connp->his_port,
+		      connp->w.sock.error.error,
+		      connp->w.sock.error.call,
+		      connp->w.sock.error.line);
+		if (sock_get_error(&connp->w.sock)) {
+		    error("sock_get_error fails too, giving up");
+		    Destroy_connection(connp, "connect error");
+		    return -1;
+		}
+		errno = 0;
+		if (sock_connectRec(&connp->w.sock, connp->addr,
+				     connp->his_port) == -1) {
+		    error("Still cannot connect datagram socket "
+			  "(%s,%d,%d,%d,%d)",
+			  connp->addr, connp->his_port,
+			  connp->w.sock.error.error,
+			  connp->w.sock.error.call,
+			  connp->w.sock.error.line);
+		    Destroy_connection(connp, "connect error");
+		    return -1;
+		}
+	    }
+	}
+    }
     if (n <= 0) {
 	if (n == 0 || errno == EWOULDBLOCK || errno == EAGAIN)
 	    n = 0;
-	else if (n != 0)
+	else
 	    Destroy_connection(connp, "read first packet error");
 	return n;
-    }
-    connp->r.len = n;
-    connp->his_port = sock_get_last_portRec(&connp->r.sock);
-    if (sock_connectRec(&connp->w.sock, connp->addr, connp->his_port) == -1) {
-	error("Cannot connect datagram socket (%s,%d,%d,%d,%d)",
-	      connp->addr, connp->his_port,
-	      connp->w.sock.error.error,
-	      connp->w.sock.error.call,
-	      connp->w.sock.error.line);
-	if (sock_get_error(&connp->w.sock)) {
-	    error("sock_get_error fails too, giving up");
-	    Destroy_connection(connp, "connect error");
-	    return -1;
-	}
-	errno = 0;
-	if (sock_connectRec(&connp->w.sock, connp->addr, connp->his_port)
-	    == -1) {
-	    error("Still cannot connect datagram socket (%s,%d,%d,%d,%d)",
-		  connp->addr, connp->his_port,
-		  connp->w.sock.error.error,
-		  connp->w.sock.error.call,
-		  connp->w.sock.error.line);
-	    Destroy_connection(connp, "connect error");
-	    return -1;
-	}
     }
     xpprintf("%s Welcome %s=%s@%s|%s (%s/%d)", showtime(),
 	     connp->nick, connp->user, connp->host, connp->dpy,
@@ -835,6 +1342,13 @@ static int Handle_listening(connection_t *connp)
     Sockbuf_clear(&connp->w);
     if (Send_reply(connp, PKT_VERIFY, PKT_SUCCESS) == -1
 	|| Packet_printf(&connp->c, "%c%u", PKT_MAGIC, connp->magic) <= 0
+	|| (Game_transport_protocol_supports_reconnect(connp->version)
+	    && Packet_printf(&connp->c, "%c%u%u%u%u",
+			     PKT_SESSION_TOKEN,
+			     connp->resume_token.words[0],
+			     connp->resume_token.words[1],
+			     connp->resume_token.words[2],
+			     connp->resume_token.words[3]) <= 0)
 	|| Send_reliable(connp) <= 0) {
 	Destroy_connection(connp, "confirm failed");
 	return -1;
@@ -843,6 +1357,88 @@ static int Handle_listening(connection_t *connp)
     Conn_set_state(connp, CONN_DRAIN, CONN_SETUP);
 
     return 1;	/* success! */
+}
+
+static int Restore_reconnect_listener(connection_t *connp)
+{
+    sock_t disconnected = connp->w.sock;
+    sock_t listener;
+
+    if (Create_reconnect_listener(&listener, connp->my_port) == -1) {
+	Destroy_connection(connp, "cannot restore reconnect listener");
+	return -1;
+    }
+    if (replace_input(disconnected.fd, listener.fd) == SOCK_IS_ERROR) {
+	sock_close(&listener);
+	Destroy_connection(connp, "cannot schedule reconnect listener");
+	return -1;
+    }
+    sock_close(&disconnected);
+    Attach_connection_socket(connp, &listener);
+    return 0;
+}
+
+static int Send_resume_reply(connection_t *connp, int result)
+{
+    int status;
+
+    Sockbuf_clear(&connp->w);
+    if (Packet_printf(&connp->w, "%c%c%c", PKT_REPLY, PKT_RESUME, result)
+	<= 0)
+	return -1;
+    status = Sockbuf_flushRec(&connp->w);
+    Sockbuf_clear(&connp->w);
+    return status > 0 ? 0 : -1;
+}
+
+static int Handle_reconnect(connection_t *connp)
+{
+    session_token_t received_token;
+    unsigned char type;
+    unsigned words[SESSION_TOKEN_WORDS] = { 0 };
+    int i;
+    int n;
+
+    if (connp->state != CONN_RECONNECT) {
+	Destroy_connection(connp, "not reconnecting");
+	return -1;
+    }
+    if (BIT(connp->w.sock.flags, SOCK_FLAG_CONNECT) == 0) {
+	n = Accept_client_connection(connp);
+	if (n <= 0) {
+	    if (n < 0)
+		Destroy_connection(connp, "reconnect accept error");
+	    return n;
+	}
+    }
+
+    Sockbuf_clear(&connp->r);
+    n = Sockbuf_readRec(&connp->r);
+    if (n <= 0) {
+	if (n == 0 || errno == EWOULDBLOCK || errno == EAGAIN)
+	    return 0;
+	return Restore_reconnect_listener(connp);
+    }
+    n = Packet_scanf(&connp->r, "%c%u%u%u%u", &type,
+		     &words[0], &words[1], &words[2], &words[3]);
+    for (i = 0; i < SESSION_TOKEN_WORDS; i++)
+	received_token.words[i] = words[i];
+    if (n != SESSION_TOKEN_WORDS + 1 || type != PKT_RESUME
+	|| connp->r.ptr != connp->r.buf + connp->r.len
+	|| !Session_token_equal(&received_token, &connp->resume_token)) {
+	warn("Rejected invalid TCP gameplay resumption for %s", connp->nick);
+	Send_resume_reply(connp, PKT_FAILURE);
+	return Restore_reconnect_listener(connp);
+    }
+    if (Send_resume_reply(connp, PKT_SUCCESS) == -1)
+	return Restore_reconnect_listener(connp);
+
+    connp->last_send_loops = 0;
+    connp->retransmit_at_loop = main_loops;
+    Conn_set_state(connp, CONN_PLAYING, CONN_FREE);
+    xpprintf("%s TCP gameplay connection resumed for %s.\n",
+	     showtime(), connp->nick);
+    return 1;
 }
 
 /*
@@ -890,7 +1486,11 @@ static int Handle_setup(connection_t *connp)
     else if (connp->setup < S->setup_size) {
 	if (connp->c.len > 0) {
 	    /* If there is still unacked reliable data test for acks. */
-	    Handle_input(-1, connp);
+	    if (Connection_uses_session(connp))
+		Record_drain_ready(Handle_session_input, connp,
+				   MAX_INPUT_RECORDS_PER_TICK);
+	    else
+		Handle_input(SOCK_FD_INVALID, connp);
 	    if (connp->state == CONN_FREE)
 		return -1;
 	}
@@ -1041,13 +1641,13 @@ static int Handle_login(connection_t *connp, char *errmsg, size_t errsize)
     strlcpy(pl->username, connp->user, MAX_CHARS);
     strlcpy(pl->hostname, connp->host, MAX_CHARS);
 
+    pl->version = connp->version;
     LegalizeName(pl->name, true);
-    LegalizeName(pl->username, false);
+    if (!Game_transport_protocol_uses_session(pl->version))
+	LegalizeName(pl->username, false);
     LegalizeHost(pl->hostname);
 
     pl->team = connp->team;
-    pl->version = connp->version;
-
     if (pl->rectype < 2) {
 	if (BIT(world->rules->mode, TEAM_PLAY) && pl->team == TEAM_NOT_SET) {
 	    Player_set_state(pl, PL_STATE_PAUSED);
@@ -1142,10 +1742,7 @@ static int Handle_login(connection_t *connp, char *errmsg, size_t errsize)
     }
 
     if (pl->rectype < 2) {
-	if (NumPlayers == 1)
-	    Set_message_f("Welcome to \"%s\", made by %s.",
-			  world->name, world->author);
-	else if (BIT(world->rules->mode, TEAM_PLAY))
+	if (BIT(world->rules->mode, TEAM_PLAY))
 	    Set_message_f("%s (%s, team %d) has entered \"%s\", made by %s.",
 			  pl->name, pl->username, pl->team,
 			  world->name, world->author);
@@ -1267,7 +1864,7 @@ static int bytes[256];
 static int bytes2;
 int recSpecial;
 
-static void Handle_input(int fd, void *arg)
+static void Handle_input(socket_handle_t fd, void *arg)
 {
     connection_t *connp = (connection_t *)arg;
     int type, result, (**receive_tbl)(connection_t *);
@@ -1284,6 +1881,9 @@ static void Handle_input(int fd, void *arg)
     else if (connp->state == CONN_LISTENING) {
 	Handle_listening(connp);
 	return;
+    } else if (connp->state == CONN_RECONNECT) {
+	Handle_reconnect(connp);
+	return;
     } else {
 	if (connp->state != CONN_FREE)
 	    Destroy_connection(connp, "not input");
@@ -1295,14 +1895,14 @@ static void Handle_input(int fd, void *arg)
 
     if (!recOpt || (!record && !playback)) {
 	if (Sockbuf_readRec(&connp->r) == -1) {
-	    Destroy_connection(connp, "input error");
+	    Suspend_connection(connp, "input error");
 	    return;
 	}
     }
     else if (record) {
 	if (Sockbuf_read(&connp->r) == -1) {
-	    Destroy_connection(connp, "input error");
-	    *playback_shorts++ = (short)0xffff;
+	    if (Suspend_connection(connp, "input error") == -1)
+		*playback_shorts++ = (short)0xffff;
 	    return;
 	}
 	*playback_shorts++ = connp->r.len;
@@ -1372,6 +1972,62 @@ static void Handle_input(int fd, void *arg)
     }
 }
 
+static record_receive_result_t Handle_session_input(void *context)
+{
+    connection_t *connp = context;
+    record_receive_result_t receive_result;
+    size_t record_length = 0;
+    int type, result, (**receive_tbl)(connection_t *);
+
+    if (connp->state & (CONN_PLAYING | CONN_READY))
+	receive_tbl = &playing_receive[0];
+    else if (connp->state == CONN_LOGIN)
+	receive_tbl = &login_receive[0];
+    else if (connp->state & (CONN_DRAIN | CONN_SETUP))
+	receive_tbl = &drain_receive[0];
+    else {
+	if (connp->state == CONN_FREE)
+	    return RECORD_RECEIVE_CLOSED;
+	Destroy_connection(connp, "not session input");
+	return RECORD_RECEIVE_ERROR;
+    }
+
+    connp->num_keyboard_updates = 0;
+    Sockbuf_clear(&connp->r);
+    receive_result = Record_session_receive(
+	Connection_io(connp)->session, connp->r.buf,
+	(size_t)connp->r.size, &record_length);
+    if (receive_result == RECORD_RECEIVE_ERROR
+	|| receive_result == RECORD_RECEIVE_CLOSED) {
+	Suspend_connection(connp, "session input error");
+	return receive_result;
+    }
+    if (receive_result == RECORD_RECEIVE_EMPTY)
+	return RECORD_RECEIVE_EMPTY;
+
+    connp->r.len = (int)record_length;
+    connp->r.ptr = connp->r.buf;
+    while (connp->r.ptr < connp->r.buf + connp->r.len) {
+	char *packet = connp->r.ptr;
+
+	type = (connp->r.ptr[0] & 0xFF);
+	recSpecial = 0;
+	result = (*receive_tbl[type])(connp);
+	if (result == -1)
+	    return RECORD_RECEIVE_ERROR;
+	bytes[type] += connp->r.ptr - packet;
+	bytes2 += connp->r.ptr - packet;
+	if (result == 0) {
+	    Sockbuf_clear(&connp->r);
+	    xpprintf("Incomplete session record\n");
+	    break;
+	}
+	if (connp->state == CONN_PLAYING)
+	    connp->start = main_loops;
+    }
+    return RECORD_RECEIVE_READY;
+}
+
 int Input(void)
 {
     int i, num_reliable = 0;
@@ -1383,6 +2039,24 @@ int Input(void)
 	playback = (connp->rectype == 1);
 	if (connp->state == CONN_FREE)
 	    continue;
+	if (Connection_uses_session(connp)
+	    && connp->state != CONN_RECONNECT) {
+	    if (Record_drain_ready(
+		    Handle_session_input, connp,
+		    MAX_INPUT_RECORDS_PER_TICK) == -1
+		&& connp->state != CONN_FREE
+		&& connp->state != CONN_RECONNECT) {
+		Suspend_connection(connp, "session input dispatch error");
+		continue;
+	    }
+	    if (connp->state == CONN_FREE
+		|| connp->state == CONN_RECONNECT)
+		continue;
+	    if (Connection_flush_session(connp) == -1) {
+		Suspend_connection(connp, "session output error");
+		continue;
+	    }
+	}
 	if ((!(playback && recOpt)
 	     && connp->start + connp->timeout * FPS < main_loops)
 	    || (playback && recOpt && *playback_opttout == main_loops
@@ -1397,14 +2071,19 @@ int Input(void)
 	     * Timeout this fellow if we have not heard a single thing
 	     * from him for a long time.
 	     */
-	    if (connp->state & (CONN_PLAYING | CONN_READY))
+	    if (connp->state == CONN_RECONNECT
+		|| ((connp->state & (CONN_PLAYING | CONN_READY)) != 0
+		    && !Game_transport_protocol_supports_reconnect(
+			connp->version)))
 		Set_message_f("%s mysteriously disappeared!?", connp->nick);
 
 	    snprintf(msg, sizeof(msg), "timeout %02x", connp->state);
-	    Destroy_connection(connp, msg);
+	    Suspend_connection(connp, msg);
 	    continue;
 	}
 	if (connp->state != CONN_PLAYING) {
+	    if (connp->state == CONN_RECONNECT)
+		continue;
 	    input_reliable[num_reliable++] = connp;
 	    if (connp->state == CONN_SETUP) {
 		Handle_setup(connp);
@@ -1562,7 +2241,7 @@ int Send_self(connection_t *connp,
  */
 int Send_leave(connection_t *connp, int id)
 {
-    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY | CONN_RECONNECT)) {
 	warn("Connection not ready for leave info (%d,%d)",
 	      connp->state, connp->id);
 	return 0;
@@ -1579,7 +2258,7 @@ int Send_player(connection_t *connp, int id)
     int n, sbuf_len = connp->c.len, himself = (pl->conn == connp);
     char buf[MSG_LEN], ext[MSG_LEN];
 
-    if (!BIT(connp->state, CONN_PLAYING|CONN_READY)) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY | CONN_RECONNECT)) {
 	warn("Connection not ready for player info (%d,%d)",
 	     connp->state, connp->id);
 	return 0;
@@ -1611,7 +2290,7 @@ int Send_team(connection_t *connp, int id, int team)
     if (!FEATURE(connp, F_SENDTEAM))
 	return Send_player(connp, id);
 
-    if (!BIT(connp->state, CONN_PLAYING|CONN_READY)) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY | CONN_RECONNECT)) {
 	warn("Connection not ready for team info (%d,%d)",
 	      connp->state, connp->id);
 	return 0;
@@ -1626,7 +2305,7 @@ int Send_team(connection_t *connp, int id, int team)
 int Send_score(connection_t *connp, int id, double score,
 	       int life, int mychar, int alliance)
 {
-    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY | CONN_RECONNECT)) {
 	warn("Connection not ready for score(%d,%d)",
 	    connp->state, connp->id);
 	return 0;
@@ -1660,7 +2339,7 @@ int Send_timing(connection_t *connp, int id, int check, int round)
 {
     int num_checks = OLD_MAX_CHECKS;
 
-    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY | CONN_RECONNECT)) {
 	warn("Connection not ready for timing(%d,%d)",
 	      connp->state, connp->id);
 	return 0;
@@ -1676,7 +2355,7 @@ int Send_timing(connection_t *connp, int id, int check, int round)
  */
 int Send_base(connection_t *connp, int id, int num)
 {
-    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY | CONN_RECONNECT)) {
 	warn("Connection not ready for base info (%d,%d)",
 	    connp->state, connp->id);
 	return 0;
@@ -1698,7 +2377,7 @@ int Send_score_object(connection_t *connp, double score, clpos_t pos,
 {
     blkpos_t bpos = Clpos_to_blkpos(pos);
 
-    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY | CONN_RECONNECT)) {
 	warn("Connection not ready for base info (%d,%d)",
 	    connp->state, connp->id);
 	return 0;
@@ -2013,7 +2692,7 @@ int Send_eyes(connection_t *connp, int id)
 
 int Send_message(connection_t *connp, const char *msg)
 {
-    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY | CONN_RECONNECT)) {
 	warn("Connection not ready for message (%d,%d)",
 	    connp->state, connp->id);
 	return 0;
@@ -2079,8 +2758,9 @@ int Send_end_of_frame(connection_t *connp)
 	if (connp->w.len == 0)
 	    return 1;
     }
-    if (Sockbuf_flushRec(&connp->w) == -1) {
-	Destroy_connection(connp, "flush error");
+    if (Connection_send_record(
+	    connp, RECORD_DELIVERY_TRANSIENT) == -1) {
+	Suspend_connection(connp, "flush error");
 	return -1;
     }
     Sockbuf_clear(&connp->w);
@@ -2297,7 +2977,8 @@ int Send_reliable(connection_t *connp)
 	    Destroy_connection(connp, "write error");
 	    return -1;
 	}
-	if ((n = Sockbuf_flushRec(&connp->w)) < len) {
+	if ((n = Connection_send_record(
+		 connp, RECORD_DELIVERY_TRANSIENT)) < len) {
 	    if (n == 0
 		&& (errno == EWOULDBLOCK
 		    || errno == EAGAIN)) {
@@ -2305,7 +2986,7 @@ int Send_reliable(connection_t *connp)
 		break;
 	    } else {
 		error("Cannot flush reliable data (%d)", n);
-		Destroy_connection(connp, "flush error");
+		Suspend_connection(connp, "flush error");
 		return -1;
 	    }
 	}
@@ -2823,6 +3504,7 @@ static int Receive_motd(connection_t *connp)
  * then on the next access the MOTD file is checked for changes.
  */
 #ifdef _WINDOWS
+#undef close
 #define	close(__a)	_close(__a)
 #endif
 static int Get_motd(char *buf, int offset, int maxlen, int *size_ptr)

@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -58,6 +58,20 @@ static void Parse_help(char *progname)
 	   "\n");
     printf("The possible options include:\n"
 	   "\n");
+    printf("    -tcp\n"
+	   "\tSelect TCP for both contact/lobby and gameplay.\n"
+	   "\n"
+	   "    -udp\n"
+	   "\tSelect UDP for both contact/lobby and gameplay.  This is the "
+	       "default.\n"
+	   "\n"
+	   "    -websocket\n"
+	   "\tSelect WebSocket for both contact/lobby and gameplay.\n"
+	   "\n"
+	   "    -transport <udp|tcp|websocket>\n"
+	   "\tSelect one transport for both contact/lobby and gameplay.\n"
+	   "\tTransport options are applied from left to right.\n"
+	   "\n");
     for (j = 0; j < option_count; j++) {
 	printf("    %s%s",
 	       option_descs[j].type == valBool ? "-/+" : "-",
@@ -103,8 +117,8 @@ static void Parse_help(char *progname)
 "    probability that an event will occur in a block per second.\n"
 "    Boolean options are turned off by using +<option>.\n"
 "    \n"
-"    Please refer to the manual pages, xpilot-ng-server(6),\n"
-"    xpilot-ng-x11(6) and xpilot-ng-sdl(6) for more specific help.\n"
+"    Please refer to the manual pages, xpilot-infinity-server(6),\n"
+"    xpilot-infinity-x11(6) and xpilot-infinity-sdl(6) for more specific help.\n"
 	  );
 }
 
@@ -319,6 +333,41 @@ static bool Parse_check_info_request(char **argv, int i)
 
 
 /*
+ * Parse command-line-only shortcuts which update both transport options.
+ * Applying them while walking argv preserves ordering with the individual
+ * contactTransport and gameTransport options.
+ */
+static bool Parse_transport_option(int argc, char **argv, int *index)
+{
+    const char *arg = argv[*index];
+    const char *transport;
+
+    if (arg[0] != '-')
+	return false;
+    if (!strcasecmp(arg + 1, "tcp"))
+	transport = "tcp";
+    else if (!strcasecmp(arg + 1, "udp"))
+	transport = "udp";
+    else if (!strcasecmp(arg + 1, "websocket"))
+	transport = "websocket";
+    else if (!strcasecmp(arg + 1, "transport")) {
+	if (*index + 1 == argc) {
+	    warn("Option '%s' needs an argument", arg);
+	    return true;
+	}
+	(*index)++;
+	transport = argv[*index];
+    }
+    else
+	return false;
+
+    Option_set_value("contactTransport", transport, 1, OPT_COMMAND);
+    Option_set_value("gameTransport", transport, 1, OPT_COMMAND);
+    return true;
+}
+
+
+/*
  * Parse all command line arguments
  * and read the server defaults file and map file.
  * Then convert the map data into a World structure.
@@ -339,6 +388,8 @@ bool Parser(int argc, char **argv)
     for (i = 1; i < argc; i++) {
 	if (Parse_check_info_request(argv, i))
 	    return false;
+	if (Parse_transport_option(argc, argv, &i))
+	    continue;
 
 	if (argv[i][0] == '-' || argv[i][0] == '+') {
 	    desc = Find_option_by_name(argv[i] + 1);

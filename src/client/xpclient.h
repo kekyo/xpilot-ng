@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -37,16 +37,13 @@
 #endif
 
 #ifdef _WINDOWS
-#ifdef _MSC_VER
 # include <direct.h>
-# define snprintf _snprintf
-# define printf Trace
-# define X_OK 0
-#endif
 # define F_OK 0
 # define W_OK 2
 # define R_OK 4
 # define mkdir(A,B) _mkdir(A)
+/** Report Windows client startup progress. */
+void Progress(const char *format, ...);
 extern bool threadedDraw; /* default.c */
 #endif
 
@@ -64,6 +61,7 @@ extern bool threadedDraw; /* default.c */
 #include "guimap.h"
 #include "guiobjects.h"
 #include "meta.h"
+#include "micro_delay.h"
 #include "netclient.h"
 #include "option.h"
 #include "paint.h"

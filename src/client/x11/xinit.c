@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -25,6 +25,7 @@
 
 #include "xpclient_x11.h"
 #include "icon.h"
+#include "transport_display.h"
 
 /*
  * Item structures.
@@ -500,6 +501,20 @@ int Init_top(void)
     return 0;
 }
 
+static void Set_gameplay_window_title(void)
+{
+    char title[sizeof(TITLE) + MAX_CHARS + 32];
+
+    if (!Transport_display_gameplay_title(
+	    title, sizeof(title), TITLE, servername,
+	    connectParam.game_transport)) {
+	warn("Could not format the gameplay window title");
+	return;
+    }
+    XStoreName(dpy, topWindow, title);
+    XSetIconName(dpy, topWindow, title);
+}
+
 
 /*
  * Creates the playing windows.
@@ -515,6 +530,7 @@ int Init_playing_windows(void)
 	if (Init_top())
 	    return -1;
     }
+    Set_gameplay_window_title();
 
     Scale_dashes();
 
@@ -750,6 +766,7 @@ void Platform_specific_cleanup(void)
 	    XChangePointerControl(dpy, True, True, pre_acc_num,
 				  pre_acc_denom, pre_threshold);
 	XAutoRepeatOn(dpy);
+	Xp_x11_text_shutdown(dpy);
 	Colors_cleanup();
 	XCloseDisplay(dpy);
 	dpy = NULL;

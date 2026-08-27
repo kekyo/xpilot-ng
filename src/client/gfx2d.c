@@ -1,9 +1,9 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -25,6 +25,9 @@
 
 #include "xpclient.h"
 
+#include <limits.h>
+#include <stdint.h>
+
 char	*texturePath = NULL;    /* Configured list of texture directories */
 char    *realTexturePath = NULL; /* Real texture lookup path */
 
@@ -38,28 +41,64 @@ char    *realTexturePath = NULL; /* Real texture lookup path */
 
 int Picture_init (xp_picture_t *picture, const char *filename, int count)
 {
-    picture->count = count;
-    picture->data = XMALLOC(RGB_COLOR *, ABS(count));
-    if (!picture->data) {
-	error("Not enough memory.");
+    size_t frame_count;
+
+    if (picture == NULL)
+	return -1;
+    memset(picture, 0, sizeof(*picture));
+    if (filename == NULL || filename[0] == '\0'
+	|| count == 0 || count == INT_MIN) {
 	return -1;
     }
 
+    frame_count = count < 0 ? (size_t)(-(int64_t)count) : (size_t)count;
+    picture->count = count;
+    picture->data = XCALLOC(RGB_COLOR *, frame_count);
+    if (!picture->data) {
+	error("Not enough memory.");
+	goto failure;
+    }
+
     if (Picture_load(picture, filename) == -1)
-	return -1;
+	goto failure;
 
     if (count > 1)
         if (Picture_rotate(picture) == -1)
-	    return -1;
+	    goto failure;
 
-    picture->bbox = XMALLOC(bbox_t, ABS(count));
+    picture->bbox = XMALLOC(bbox_t, frame_count);
     if (!picture->bbox) {
 	error("Not enough memory.");
-	return -1;
+	goto failure;
     }
     Picture_get_bounding_box(picture);
 
     return 0;
+
+failure:
+    Picture_cleanup(picture);
+    return -1;
+}
+
+void Picture_cleanup(xp_picture_t *picture)
+{
+    size_t frame_count;
+    size_t frame;
+
+    if (picture == NULL)
+	return;
+    frame_count = picture->count < 0
+	? (size_t)(-(int64_t)picture->count)
+	: (size_t)picture->count;
+    if (picture->data != NULL) {
+	for (frame = 0; frame < frame_count; frame++)
+	    XFREE(picture->data[frame]);
+	XFREE(picture->data);
+    }
+    XFREE(picture->bbox);
+    picture->width = 0;
+    picture->height = 0;
+    picture->count = 0;
 }
 
 
@@ -218,6 +257,7 @@ int Picture_load(xp_picture_t *picture, const char *filename)
 	if (!(picture->data[p] =
 	      XMALLOC(RGB_COLOR, picture->width * picture->height))) {
 	    error("Not enough memory.");
+	    fclose(f);
 	    return -1;
 	}
     }

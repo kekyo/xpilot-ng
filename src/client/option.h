@@ -1,7 +1,7 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
- * Copyright (C) 2003 Kristian Söderblom <kps@users.sourceforge.net>
+ * Copyright (C) 2003 Kristian SÃ¶derblom <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -349,8 +349,7 @@ XP_INT_OPTION(name, defval, 0, MAX_COLORS-1, valptr, setfunc, XP_OPTFLAG_CONFIG_
 
 #define XP_KS_UNKNOWN (-1)
 typedef int xp_keysym_t;
-/* no const because of mfc client */
-extern xp_keysym_t String_to_xp_keysym(/*const*/ char *str);
+extern xp_keysym_t String_to_xp_keysym(const char *str);
 extern keys_t Generic_lookup_key(xp_keysym_t ks, bool reset);
 
 typedef struct {

@@ -1,7 +1,7 @@
 /*
- * XPilotNG/SDL, an SDL/OpenGL XPilot client.
+ * XPilot Infinity/SDL, an SDL/OpenGL XPilot client.
  *
- * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,94 +22,347 @@
 
 #include "sdlwindow.h"
 #include "error.h"
+#include "sdlinit.h"
+#include "sdlrenderer.h"
 
-static int next_p2(int t) 
+#include <limits.h>
+#include <stddef.h>
+#include <string.h>
+
+static int next_power_of_two(int value, int *result)
 {
-    int r = 1;
-    while (r < t) r <<= 1;
-    return r;   
+    int power = 1;
+
+    if (value <= 0 || result == NULL)
+	return -1;
+    while (power < value) {
+	if (power > INT_MAX / 2)
+	    return -1;
+	power *= 2;
+    }
+    *result = power;
+    return 0;
 }
 
-int sdl_window_init(sdl_window_t *win, int x, int y, int w, int h)
+static SDL_Surface *create_surface(int width, int height)
 {
-    glGenTextures(1, &win->tx_id);
-    win->surface = NULL;
-    if (sdl_window_resize(win, w, h)) {
-	warn("failed to resize window");
+    SDL_Surface *surface;
+    int texture_width;
+    int texture_height;
+
+    if (next_power_of_two(width, &texture_width) != 0
+	|| next_power_of_two(height, &texture_height) != 0) {
+	error("off-screen window dimensions are too large");
+	return NULL;
+    }
+
+    surface = SDL_CreateSurface(texture_width, texture_height,
+				SDL_PIXELFORMAT_RGBA32);
+    if (surface == NULL) {
+	error("failed to create SDL surface: %s", SDL_GetError());
+	return NULL;
+    }
+    if (!SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE)) {
+	error("failed to disable SDL surface blending: %s", SDL_GetError());
+	SDL_DestroySurface(surface);
+	return NULL;
+    }
+    if (!SDL_FillSurfaceRect(surface, NULL, 0)) {
+	error("failed to clear SDL surface: %s", SDL_GetError());
+	SDL_DestroySurface(surface);
+	return NULL;
+    }
+    return surface;
+}
+
+static int create_texture(Renderer *renderer, SDL_Surface *surface,
+			  RendererTexture **texture)
+{
+    RendererTextureDesc desc;
+
+    if (renderer == NULL || surface == NULL || surface->pixels == NULL
+	|| surface->pitch <= 0 || texture == NULL) {
 	return -1;
     }
-    sdl_window_move(win, x, y);
+
+    desc.width = surface->w;
+    desc.height = surface->h;
+    desc.filter = RENDERER_TEXTURE_FILTER_NEAREST;
+    desc.wrap = RENDERER_TEXTURE_WRAP_CLAMP;
+    if (Renderer_texture_create_with_desc(
+	    renderer, &desc, surface->pixels, (size_t)surface->pitch,
+	    texture) != RENDERER_STATUS_OK) {
+	warn("failed to create off-screen window texture");
+	return -1;
+    }
+    return 0;
+}
+
+static int update_texture(Renderer *renderer, RendererTexture *texture,
+			  SDL_Surface *surface)
+{
+    RendererRect region;
+
+    if (renderer == NULL || texture == NULL || surface == NULL
+	|| surface->pixels == NULL || surface->pitch <= 0) {
+	return -1;
+    }
+    region = (RendererRect){0, 0, surface->w, surface->h};
+    if (Renderer_texture_update(
+	    renderer, texture, region, surface->pixels,
+	    (size_t)surface->pitch) != RENDERER_STATUS_OK) {
+	warn("failed to update off-screen window texture");
+	return -1;
+    }
+    return 0;
+}
+
+static int replace_texture(sdl_window_t *win, Renderer *renderer,
+			   SDL_Surface *surface,
+			   RendererTexture **replacement)
+{
+    RendererTexture *candidate = NULL;
+
+    if (create_texture(renderer, surface, &candidate) != 0)
+	return -1;
+
+    if (win->texture != NULL
+	&& Renderer_texture_destroy(win->renderer, win->texture)
+	   != RENDERER_STATUS_OK) {
+	warn("failed to replace off-screen window texture");
+	if (Renderer_texture_destroy(renderer, candidate)
+	    != RENDERER_STATUS_OK) {
+	    warn("failed to release replacement off-screen window texture");
+	}
+	return -1;
+    }
+
+    *replacement = candidate;
+    return 0;
+}
+
+int sdl_window_init(sdl_window_t *win, int x, int y, int width, int height)
+{
+    SDL_Surface *surface;
+
+    if (win == NULL)
+	return -1;
+    memset(win, 0, sizeof(*win));
+    if (width <= 0 || height <= 0)
+	return -1;
+
+    surface = create_surface(width, height);
+    if (surface == NULL)
+	return -1;
+
+    win->surface = surface;
+    win->x = x;
+    win->y = y;
+    win->w = width;
+    win->h = height;
+    win->dirty = 1;
+    return 0;
+}
+
+int sdl_window_prepare(sdl_window_t *win, Renderer *renderer)
+{
+    RendererTexture *replacement;
+
+    if (win == NULL || renderer == NULL || win->surface == NULL)
+	return -1;
+    if (win->texture != NULL && win->renderer != renderer)
+	return -1;
+    if (win->texture != NULL && !win->dirty)
+	return 0;
+
+    if (win->texture != NULL) {
+	if (update_texture(renderer, win->texture, win->surface) != 0)
+	    return -1;
+	win->dirty = 0;
+	return 0;
+    }
+
+    if (replace_texture(win, renderer, win->surface, &replacement) != 0)
+	return -1;
+
+    win->renderer = renderer;
+    win->texture = replacement;
+    win->dirty = 0;
     return 0;
 }
 
 void sdl_window_move(sdl_window_t *win, int x, int y)
 {
+    if (win == NULL)
+	return;
     win->x = x;
     win->y = y;
 }
 
 int sdl_window_resize(sdl_window_t *win, int width, int height)
 {
-    SDL_Surface *surface = 
-	SDL_CreateRGBSurface(SDL_SWSURFACE, 
-			     next_p2(width), next_p2(height), 
-			     32, RMASK, GMASK, BMASK, AMASK);
-    if (!surface) {
-	error("failed to create SDL surface: %s", SDL_GetError());
+    SDL_Surface *surface;
+    RendererTexture *replacement = NULL;
+
+    if (win == NULL || width <= 0 || height <= 0)
+	return -1;
+
+    surface = create_surface(width, height);
+    if (surface == NULL)
+	return -1;
+    if (win->surface != NULL
+	&& !SDL_BlitSurface(win->surface, NULL, surface, NULL)) {
+	error("failed to copy SDL surface: %s", SDL_GetError());
+	SDL_DestroySurface(surface);
 	return -1;
     }
 
-    if (win->surface != NULL) {
-	SDL_FreeSurface(win->surface);
+    if (win->texture != NULL) {
+	if (win->surface != NULL
+	    && win->surface->w == surface->w
+	    && win->surface->h == surface->h) {
+	    if (update_texture(win->renderer, win->texture, surface) != 0) {
+		SDL_DestroySurface(surface);
+		return -1;
+	    }
+	    replacement = win->texture;
+	} else if (replace_texture(
+		       win, win->renderer, surface, &replacement) != 0) {
+	    SDL_DestroySurface(surface);
+	    return -1;
+	}
     }
 
+    if (win->surface != NULL)
+	SDL_DestroySurface(win->surface);
     win->surface = surface;
     win->w = width;
     win->h = height;
+    if (replacement != NULL) {
+	win->texture = replacement;
+	win->dirty = 0;
+    } else {
+	win->dirty = 1;
+    }
     return 0;
 }
 
 void sdl_window_refresh(sdl_window_t *win)
 {
-    glBindTexture(GL_TEXTURE_2D, win->tx_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 
-		 win->surface->w, win->surface->h, 
-                 0, GL_RGBA, GL_UNSIGNED_BYTE, 
-		 win->surface->pixels);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, 
-                    GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
-                    GL_NEAREST);
+    if (win != NULL && win->surface != NULL)
+	win->dirty = 1;
 }
 
-void sdl_window_paint(sdl_window_t *win)
+RendererStatus sdl_window_paint(
+    sdl_window_t *win, const RendererColor *background)
 {
-    glBindTexture(GL_TEXTURE_2D, win->tx_id);
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glColor4ub(255, 255, 255, 255);
+    SdlRenderer *sdl_renderer;
+    Renderer *renderer;
+    RendererColor white = {255, 255, 255, 255};
+    RendererColor black = {0, 0, 0, 255};
+    RendererColor green = {0, 144, 0, 255};
+    RendererPoint2D border_points[4];
+    RendererColor border_colors[4];
+    RendererStatus status;
+    RendererStatus operation_status;
+    int accepted_commands = 0;
 
-    glBegin(GL_QUADS);
-    glTexCoord2f(0, 0); 
-    glVertex2i(win->x, win->y);
-    glTexCoord2f((GLfloat)win->w / win->surface->w, 0); 
-    glVertex2i(win->x + win->w , win->y);
-    glTexCoord2f((GLfloat)win->w / win->surface->w, 
-		 (GLfloat)win->h / win->surface->h);
-    glVertex2i(win->x + win->w , win->y + win->h);
-    glTexCoord2f(0, (GLfloat)win->h / win->surface->h);
-    glVertex2i(win->x, win->y + win->h);
-    glEnd();
+    if (win == NULL)
+	return RENDERER_STATUS_INVALID_ARGUMENT;
 
-    glDisable(GL_BLEND);
-    glDisable(GL_TEXTURE_2D);
+    sdl_renderer = Get_sdl_renderer();
+    if (sdl_renderer == NULL)
+	return RENDERER_STATUS_INVALID_STATE;
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, RENDERER_STATUS_OK);
+    if (status != RENDERER_STATUS_OK)
+	return status;
+    if (win->surface == NULL || win->texture == NULL
+	|| win->renderer == NULL || win->w <= 0 || win->h <= 0) {
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    }
+    renderer = Sdl_renderer_frontend(sdl_renderer);
+    if (renderer == NULL)
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_INVALID_STATE);
+    if (renderer != win->renderer)
+	return Sdl_renderer_track_frame_result(
+	    sdl_renderer, RENDERER_STATUS_RESOURCE_MISMATCH);
+
+    border_points[0] = (RendererPoint2D){
+	(float)win->x, (float)win->y + (float)win->h + 2.0f};
+    border_points[1] = (RendererPoint2D){
+	(float)win->x, (float)win->y};
+    border_points[2] = (RendererPoint2D){
+	(float)win->x + (float)win->w, (float)win->y};
+    border_points[3] = (RendererPoint2D){
+	(float)win->x + (float)win->w,
+	(float)win->y + (float)win->h + 2.0f};
+    border_colors[0] = black;
+    border_colors[1] = green;
+    border_colors[2] = black;
+    border_colors[3] = green;
+
+    operation_status = Renderer_set_blend(
+	renderer, RENDERER_BLEND_ALPHA);
+    status = Sdl_renderer_track_frame_result(
+	sdl_renderer, operation_status);
+    if (status == RENDERER_STATUS_OK && background != NULL) {
+	operation_status = Renderer_fill_rect(
+	    renderer,
+	    (float)win->x, (float)win->y,
+	    (float)win->w, (float)win->h + 2.0f,
+	    *background);
+	if (operation_status == RENDERER_STATUS_OK)
+	    accepted_commands = 1;
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, operation_status);
+    }
+    if (status == RENDERER_STATUS_OK) {
+	operation_status = Renderer_draw_sprite(
+	    renderer, win->texture,
+	    (float)win->x, (float)win->y,
+	    (float)win->x + (float)win->w,
+	    (float)win->y + (float)win->h,
+	    0.0f, 0.0f,
+	    (float)win->w / (float)win->surface->w,
+	    (float)win->h / (float)win->surface->h,
+	    white);
+	if (operation_status == RENDERER_STATUS_OK)
+	    accepted_commands = 1;
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, operation_status);
+    }
+    if (status == RENDERER_STATUS_OK) {
+	operation_status = Renderer_stroke_colored_path(
+	    renderer, border_points, border_colors, 4, 1.0f, 1);
+	if (operation_status == RENDERER_STATUS_OK)
+	    accepted_commands = 1;
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, operation_status);
+    }
+    if (accepted_commands) {
+	operation_status = Sdl_renderer_flush(sdl_renderer);
+	status = Sdl_renderer_track_frame_result(
+	    sdl_renderer, operation_status);
+    }
+    return status;
 }
 
 void sdl_window_destroy(sdl_window_t *win)
 {
-    glDeleteTextures(1, &win->tx_id);
+    if (win == NULL)
+	return;
+    if (win->texture != NULL) {
+	if (win->renderer == NULL
+	    || Renderer_texture_destroy(win->renderer, win->texture)
+	       != RENDERER_STATUS_OK) {
+	    warn("failed to destroy off-screen window texture");
+	    return;
+	}
+    }
     if (win->surface != NULL)
-	SDL_FreeSurface(win->surface);
+	SDL_DestroySurface(win->surface);
+    memset(win, 0, sizeof(*win));
 }
-

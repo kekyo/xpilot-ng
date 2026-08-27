@@ -1,7 +1,7 @@
 /*
- * XPilotNG/SDL, an SDL/OpenGL XPilot client.
+ * XPilot Infinity/SDL, an SDL/OpenGL XPilot client.
  *
- * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,47 +20,114 @@
 
 #include "xpclient_sdl.h"
 
-extern int Process_event(SDL_Event *evt);
+#include "gameinput.h"
+
+static void Check_pointer_move_interval(void)
+{
+    if (maxMouseTurnsPS > 0)
+	Client_check_pointer_move_interval();
+}
+
+static GameLoopResult Refresh_network_fd(GameLoopState *state)
+{
+    state->network_fd = Net_fd();
+    if (state->network_fd == SOCK_FD_INVALID) {
+	error("Bad socket filedescriptor");
+	return GAME_LOOP_STOP;
+    }
+    return GAME_LOOP_CONTINUE;
+}
+
+GameLoopResult Game_loop_prepare(GameLoopState *state)
+{
+    int result;
+
+    if (state == NULL)
+	return GAME_LOOP_STOP;
+    state->network_fd = SOCK_FD_INVALID;
+    state->previous_network_result = 0;
+
+    result = Net_input();
+    if (result == -1) {
+	error("Bad server input");
+	return GAME_LOOP_STOP;
+    }
+    state->previous_network_result = result;
+    if (Game_input_process_batch())
+	return GAME_LOOP_STOP;
+    if (Net_flush() == -1)
+	return GAME_LOOP_STOP;
+    if (Refresh_network_fd(state) != GAME_LOOP_CONTINUE)
+	return GAME_LOOP_STOP;
+    Net_key_change();
+    return GAME_LOOP_CONTINUE;
+}
+
+static GameLoopResult Advance_game_loop(GameLoopState *state,
+					int network_ready)
+{
+    int result;
+
+    if (network_ready || state->previous_network_result > 1) {
+	result = Net_input();
+	state->previous_network_result = result;
+	if (result == -1) {
+	    warn("Bad net input.  Have a nice day!");
+	    return GAME_LOOP_STOP;
+	}
+    }
+    if (Game_input_process_batch())
+	return GAME_LOOP_STOP;
+    if (Net_flush() == -1) {
+	error("Bad net flush");
+	return GAME_LOOP_STOP;
+    }
+    return Refresh_network_fd(state);
+}
+
+GameLoopResult Game_loop_step(GameLoopState *state, int network_ready)
+{
+    if (state == NULL)
+	return GAME_LOOP_STOP;
+    Check_pointer_move_interval();
+    return Advance_game_loop(state, network_ready);
+}
 
 void Game_loop(void)
 {
+    GameLoopState state;
     fd_set rfds;
-    int n, netfd;
+    int n;
     struct timeval tv;
-    SDL_Event evt;
 
-    if ((netfd = Net_fd()) == -1) {
-        error("Bad net fd");
-        return;
-    }
+    if (Game_loop_prepare(&state) != GAME_LOOP_CONTINUE)
+	return;
 
     while (1) {
-        FD_ZERO(&rfds);
-        FD_SET(netfd, &rfds);
-        tv.tv_sec = 0;
-        tv.tv_usec = 5000; /* wait max 5 ms */
+	FD_ZERO(&rfds);
+	FD_SET(state.network_fd, &rfds);
+	tv.tv_sec = 0;
+	tv.tv_usec = 5000; /* wait max 5 ms */
 
-	/*
-	 * don't bother about return value, since we wait only 5 ms anyway
-	 */
-	if (maxMouseTurnsPS > 0)
-	    Client_check_pointer_move_interval();
+	Check_pointer_move_interval();
 
-        n = select(netfd + 1, &rfds, NULL, NULL, &tv);
-	if (n == -1) {
+/* Winsock retains nfds only for Berkeley compatibility and ignores it. */
+#ifdef _WINDOWS
+        n = select(0, &rfds, NULL, NULL, &tv);
+#else
+        n = select(state.network_fd + 1, &rfds, NULL, NULL, &tv);
+#endif
+	if (n == SOCK_IS_ERROR) {
+#ifdef _WINDOWS
+	    if (WSAGetLastError() == WSAEINTR)
+#else
 	    if (errno == EINTR)
+#endif
 		continue;
 	    error("Select failed");
 	    return;
         }
-	if (n > 0) {
-	    if (Net_input() == -1) {
-		warn("Bad net input.  Have a nice day!");
-		return;
-	    }
-	}
-	while (SDL_PollEvent(&evt)) 
-	    Process_event(&evt);
+	if (Advance_game_loop(&state, n > 0) != GAME_LOOP_CONTINUE)
+	    return;
     }
 }
-

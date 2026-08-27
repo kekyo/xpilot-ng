@@ -1,14 +1,14 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
  *
- * Copyright (C) 2003-2004 Kristian Söderblom <kps@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Kristian SÃ¶derblom <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -967,9 +967,9 @@ void Fire_general_shot(int id, int team,
 	    pl->vel.x += options.constantSpeed * pl->acc.x;
 	    pl->vel.y += options.constantSpeed * pl->acc.y;
 	}
-	if (options.ngControls && pl && ldir == pl->dir) {
+	if (options.infinityControls && pl && ldir == pl->dir) {
 	    /*
-	     * If using "NG controls", use float dir when shooting
+	     * If using "Infinity controls", use float dir when shooting
 	     * straight ahead.
 	     */
 	    shot->vel.x = mv.x + pl->vel.x + pl->float_dir_cos * speed;

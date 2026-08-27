@@ -5,16 +5,16 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>XPilotNG</string>
+	<string>XPilotInfinity</string>
 	<key>CFBundleIconFile</key>
-	<string>XPilotNG.icns</string>
+	<string>XPilotInfinity.icns</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleSignature</key>
-	<string>XpNG</string>
+	<string>XpIF</string>
 	<key>CFBundleVersion</key>
-	<string>4.7.2ng</string>
+	<string>4.7.2infinity</string>
 </dict>
 </plist>

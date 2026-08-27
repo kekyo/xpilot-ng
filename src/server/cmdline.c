@@ -1,14 +1,14 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 2000-2004 by
  *
  *      Uoti Urpala          <uau@users.sourceforge.net>
- *      Kristian Söderblom   <kps@users.sourceforge.net>
+ *      Kristian SÃ¶derblom   <kps@users.sourceforge.net>
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -605,6 +605,32 @@ static option_desc opts[] = {
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
+	"contactTransport",
+	"contactTransport",
+	"udp",
+	&options.contactTransport,
+	valString,
+	tuner_dummy,
+	"Contact and lobby transport for direct connections: udp, tcp, or "
+	"websocket.\n"
+	"This value must match the client; there is no automatic fallback.\n"
+	"WebSocket must also be selected for gameplay.\n"
+	"LAN broadcast discovery is available only in udp mode.\n",
+	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
+    },
+    {
+	"gameTransport",
+	"gameTransport",
+	"udp",
+	&options.gameTransport,
+	valString,
+	tuner_dummy,
+	"Gameplay transport for player connections: udp, tcp, or websocket.\n"
+	"This value must match every client; there is no automatic fallback.\n"
+	"WebSocket must also be selected for contact and lobby traffic.\n",
+	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
+    },
+    {
 	"serverHost",
 	"serverHost",
 	NULL,
@@ -951,7 +977,8 @@ static option_desc opts[] = {
 	&options.reportToMetaServer,
 	valBool,
 	tuner_none,
-	"Keep the meta server informed about our game?\n",
+	"Keep the meta server informed about our game?\n"
+	"Advertisements include the selected contact and gameplay transports.\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
@@ -1972,7 +1999,7 @@ static option_desc opts[] = {
     {
 	"framesPerSecond",
 	"FPS",
-	"50",
+	"60",
 	&options.framesPerSecond,
 	valInt,
 	Timing_setup,
@@ -3543,7 +3570,8 @@ static option_desc opts[] = {
 	&options.clientPortStart,
 	valInt,
 	tuner_dummy,
-	"Use UDP ports clientPortStart - clientPortEnd (for firewalls)\n",
+	"Restrict selected gameplay transport ports to clientPortStart - "
+	"clientPortEnd (for firewalls)\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
@@ -3553,7 +3581,8 @@ static option_desc opts[] = {
 	&options.clientPortEnd,
 	valInt,
 	tuner_dummy,
-	"Use UDP ports clientPortStart - clientPortEnd (for firewalls)\n",
+	"Restrict selected gameplay transport ports to clientPortStart - "
+	"clientPortEnd (for firewalls)\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {
@@ -3619,7 +3648,8 @@ static option_desc opts[] = {
 	"in the file specified by recordFileName. If set to 2 at startup,\n"
 	"the server replays the recorded game. Joining players are\n"
 	"spectators who can watch the recorded game from anyone's\n"
-	"viewpoint. Can be set to 0 in the middle of a game to stop"
+	"viewpoint. Playback must use the same gameTransport value as the\n"
+	"recording. Can be set to 0 in the middle of a game to stop "
 	"recording.\n",
 	OPT_COMMAND | OPT_DEFAULTS
     },
@@ -3713,10 +3743,10 @@ static option_desc opts[] = {
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
-	"ngControls",
-	"ngControls",
+	"infinityControls",
+	"infinityControls",
 	"false",
-	&options.ngControls,
+	&options.infinityControls,
 	valBool,
 	tuner_dummy,
 	"Enable improved precision steering and aiming of main gun.\n",

@@ -1,21 +1,21 @@
 
-How to set up an XPilot NG ranking server
+How to set up an XPilot Infinity ranking server
 -----------------------------------------
 
 Written by kps at users.sourceforge.net.
 
-The XPilot NG server contains a modified version of Marcus Sundberg's
+The XPilot Infinity server contains a modified version of Marcus Sundberg's
 ranking patch.
 [ Look for the original at http://www.stacken.kth.se/~mackan/xpilot/ ]
 
 Short tutorial:
 ---------------
 
-Install XPilot NG.
+Install XPilot Infinity.
 
 Start server, using options rankFileName and rankWebpageFileName, e.g.
 
-xpilot-ng-server -rankFileName rank.txt -rankWebpageFileName rank.html
+xpilot-infinity-server -rankFileName rank.txt -rankWebpageFileName rank.html
 
 In this example ranking info will be stored in rank.txt and the webpage
 in rank.html. You might want to put the webpage in some public html
@@ -34,7 +34,7 @@ editor.
 1.   Install / make sure you have expat and zlib on your system.
      Expat is needed to read the new XML map files (file extension xp2)
      and the rank file. If you install binary packages of your favorite
-     OS distro, and want to compile XPilot NG yourself, make sure you
+     OS distro, and want to compile XPilot Infinity yourself, make sure you
      install both the libraries and the development headers,
 
      For example on Debian:
@@ -46,21 +46,21 @@ editor.
      zlib:
      http://www.gzip.org/zlib/
 
-2.   Install XPilot NG. There are several ways to do this, either
+2.   Install XPilot Infinity. There are several ways to do this, either
      download source code from xpilot.sourceforge.net, compile and install
      or download binaries from xpilot.sourceforge.net and install
-     or install XPilot NG if that exists as software available for your
+     or install XPilot Infinity if that exists as software available for your
      platform, e.g. Debian package or FreeBSD port.
      How to install from source code is described in files INSTALL or
      INSTALL.txt.
 
 3.   Select a directory where you will have server data (e.g. ranking data
-     and password file) for example you can select "$HOME/xpilot-ng/".
+     and password file) for example you can select "$HOME/xpilot-infinity/".
      Create the directory and specify an environment variable for the
      directory.
 
-     $ mkdir "$HOME/xpilot-ng"
-     $ export SERVERDIR="$HOME/xpilot-ng/"
+     $ mkdir "$HOME/xpilot-infinity"
+     $ export SERVERDIR="$HOME/xpilot-infinity/"
 
 4.   Specify a password file and password for the server.
 
@@ -84,7 +84,7 @@ editor.
      Contents of the script should be something like this:
 
      #! /bin/bash
-     export SERVERDIR="$HOME/xpilot-ng/"
+     export SERVERDIR="$HOME/xpilot-infinity/"
      export RANKFILE="$SERVERDIR/rankfile.txt"
      # possibly change this to something else
      export RANKWEBPAGE="$HOME/public_html/rank.html"
@@ -93,7 +93,7 @@ editor.
      touch "$RANKWEBPAGE"
      chmod 644 "$RANKWEBPAGE"
 
-     xpilot-ng-server -passwordFileName "$SERVERDIR/password.txt" \
+     xpilot-infinity-server -passwordFileName "$SERVERDIR/password.txt" \
      -rankFileName "$RANKFILE" -rankWebpage "$RANKWEBPAGE" \
      -map polybloods.xp2 -FPS 50 -gameSpeed 12 -noQuit $@ >> "$LOGFILE"
 

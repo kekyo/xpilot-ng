@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = remove ]; then
+    update-alternatives --remove xpilot /usr/games/xpilot-infinity-sdl
+    update-alternatives --remove xpilot-infinity /usr/games/xpilot-infinity-sdl
+fi
+
+#DEBHELPER#

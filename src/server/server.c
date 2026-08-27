@@ -1,14 +1,14 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 2000-2004 by
  *
  *      Uoti Urpala          <uau@users.sourceforge.net>
- *      Kristian Söderblom   <kps@users.sourceforge.net>
+ *      Kristian SÃ¶derblom   <kps@users.sourceforge.net>
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -49,6 +49,8 @@ bool			is_server = true;	/* used in common code */
 static bool		NoPlayersEnteredYet = true;
 bool			game_lock = false;
 bool			mute_baseless = false;
+game_transport_t	gameTransport = GAME_TRANSPORT_UDP;
+game_transport_t	contactTransport = GAME_TRANSPORT_UDP;
 
 time_t			gameOverTime = 0;
 time_t			serverStartTime = 0;
@@ -112,6 +114,23 @@ int main(int argc, char **argv)
 
     if (!Parser(argc, argv))
 	exit(1);
+
+    if (!Game_transport_parse(options.contactTransport, &contactTransport)) {
+	warn("Invalid contactTransport '%s'; expected 'udp', 'tcp', or "
+	     "'websocket'",
+	     options.contactTransport);
+	return 1;
+    }
+    if (!Game_transport_parse(options.gameTransport, &gameTransport)) {
+	warn("Invalid gameTransport '%s'; expected 'udp', 'tcp', or "
+	     "'websocket'",
+	     options.gameTransport);
+	return 1;
+    }
+    if (!Game_transport_pair_is_supported(contactTransport, gameTransport)) {
+	warn("WebSocket must be selected for both contact/lobby and gameplay");
+	return 1;
+    }
 
     Init_recording();
     /* Lock the server into memory */
@@ -522,7 +541,7 @@ void Server_info(char *str, size_t max_size)
 	     "      SIZE......: %dx%d pixels\n"
 	     "PLAYERS.........: %2d/%2d\n"
 	     "\n"
-	     "XPILOT NG SERVER, see\n"
+	     "XPILOT INFINITY SERVER, see\n"
 	     "http://xpilot.sourceforge.net/\n"
 	     "\n",
 	     VERSION,
@@ -854,4 +873,3 @@ void Hitmasks_init(void)
     Target_init();
     Team_immunity_init();
 }
-

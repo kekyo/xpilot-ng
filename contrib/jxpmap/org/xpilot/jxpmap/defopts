@@ -1,12 +1,12 @@
-# /opt2/projects/xpilot/src/server/xpilot-ng-server option dump
+# /opt2/projects/xpilot/src/server/xpilot-infinity-server option dump
 # 
-# CONF_DATADIR = /usr/local/share/xpilot-ng/
-# CONF_DEFAULTS_FILE_NAME = /usr/local/share/xpilot-ng/defaults.txt
-# CONF_PASSWORD_FILE_NAME = /usr/local/share/xpilot-ng/password.txt
-# CONF_MAPDIR = /usr/local/share/xpilot-ng/maps/
+# CONF_DATADIR = /usr/local/share/xpilot-infinity/
+# CONF_DEFAULTS_FILE_NAME = /usr/local/share/xpilot-infinity/defaults.txt
+# CONF_PASSWORD_FILE_NAME = /usr/local/share/xpilot-infinity/password.txt
+# CONF_MAPDIR = /usr/local/share/xpilot-infinity/maps/
 # CONF_DEFAULT_MAP = polybloods.xp2
-# CONF_SERVERMOTDFILE = /usr/local/share/xpilot-ng/servermotd.txt
-# CONF_ROBOTFILE = /usr/local/share/xpilot-ng/robots.txt
+# CONF_SERVERMOTDFILE = /usr/local/share/xpilot-infinity/servermotd.txt
+# CONF_ROBOTFILE = /usr/local/share/xpilot-infinity/robots.txt
 # 
 expand:                                  
 gravity:                                 0.0
@@ -24,7 +24,7 @@ pulseLength:                             85.0
 laserRepeatRate:                         2.0
 maxRobots:                               4
 minRobots:                               -1
-robotFile:                               /usr/local/share/xpilot-ng/robots.txt
+robotFile:                               /usr/local/share/xpilot-infinity/robots.txt
 robotsTalk:                              false
 robotsLeave:                             true
 robotLeaveLife:                          50
@@ -169,11 +169,11 @@ wormholeVisible:                         true
 itemConcentratorVisible:                 true
 asteroidConcentratorVisible:             true
 wormholeStableTicks:                     64.0
-defaultsFileName:                        /usr/local/share/xpilot-ng/defaults.txt
-passwordFileName:                        /usr/local/share/xpilot-ng/password.txt
-motdFileName:                            /usr/local/share/xpilot-ng/servermotd.txt
+defaultsFileName:                        /usr/local/share/xpilot-infinity/defaults.txt
+passwordFileName:                        /usr/local/share/xpilot-infinity/password.txt
+motdFileName:                            /usr/local/share/xpilot-infinity/servermotd.txt
 scoreTableFileName:                      
-adminMessageFileName:                    /usr/local/share/xpilot-ng/log.txt
+adminMessageFileName:                    /usr/local/share/xpilot-infinity/log.txt
 adminMessageFileSizeLimit:               20202
 rankFileName:                            
 rankWebpageFileName:                     
@@ -344,7 +344,7 @@ elimination:                             false
 dataURL:                                 
 polygonMode:                             false
 fastAim:                                 false
-ngControls:                              false
+infinityControls:                              false
 legacyMode:                              false
 constantSpeed:                           1.0
 thrustWidth:                             0.25

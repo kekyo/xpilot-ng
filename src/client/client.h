@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -43,6 +43,10 @@
 #ifndef CONNECTPARAM_H
 /* need Connect_param_t */
 #include "connectparam.h"
+#endif
+#ifndef CONNECT_TARGET_H
+/* need Connect_defaults_t and Connect_target_t */
+#include "connect_target.h"
 #endif
 #ifndef OPTION_H
 /* need xp_keysym_t */
@@ -214,6 +218,18 @@ typedef struct {
     char	host_name[MAX_CHARS];
     char	id_string[MAX_CHARS];
 } other_t;
+
+/**
+ * Return the printable marker occupying a player's alliance column.
+ *
+ * @param alliance Alliance marker from score metadata, or NUL before the
+ * first score packet has arrived.
+ * @return The character to place in the fixed-width alliance column.
+ */
+static inline int Player_alliance_display_char(int alliance)
+{
+    return alliance == '\0' ? ' ' : alliance;
+}
 
 typedef struct {
     int		pos;		/* Block index */
@@ -448,6 +464,8 @@ extern bool		newbie;
 extern char		*geometry;
 extern xp_args_t	xpArgs;
 extern Connect_param_t	connectParam;
+/** Default endpoint settings for direct client connections. */
+extern Connect_defaults_t connectDefaults;
 extern message_t	*TalkMsg[];
 extern message_t	*GameMsg[];
 extern message_t	*TalkMsg_pending[];	/* store incoming messages */
@@ -549,7 +567,7 @@ extern int	packet_lag;		/* approximate lag in frames */
 extern char	*packet_measure;	/* packet measurement in a second */
 extern long	packet_loop;		/* start of measurement */
 
-extern bool	showUserName;		/* Show username instead of nickname */
+extern bool	showUserName;		/* Show nick=user@host details */
 extern char	servername[MAX_CHARS];	/* Name of server connecting to */
 extern unsigned	version;		/* Version of the server */
 extern bool	scoresChanged;
@@ -569,11 +587,11 @@ extern int	cumulativeMouseMovement;
 
 extern char	modBankStr[][MAX_CHARS];/* modifier banks strings */
 
-extern int	clientPortStart;	/* First UDP port for clients */
+extern int	clientPortStart;	/* First network port for clients */
 extern int	clientPortEnd;		/* Last one (these are for firewalls) */
 extern int	baseWarningType;	/* Which type of base warning you prefer */
 extern int	maxCharsInNames;
-extern byte	lose_item;		/* flag and index to drop item */
+extern u_byte	lose_item;		/* flag and index to drop item */
 extern int	lose_item_active;	/* one of the lose keys is pressed */
 
 /* mapdata accessible to outside world */
@@ -649,7 +667,6 @@ extern long		time_left;
 
 extern bool roundend;
 extern bool played_this_round;
-extern int protocolVersion;
 
 /*
  * somewhere
@@ -846,6 +863,16 @@ extern void xpilotShutdown(void);
 /*
  * mapdata.c
  */
+/**
+ * Makes the texture package referenced by a map available to the client.
+ *
+ * An already extracted package is reused first.  A bundled package whose
+ * filename matches the URL is copied and extracted before a network download
+ * is attempted.
+ *
+ * @param urlstr HTTP URL supplied by the map.
+ * @return Nonzero when the map texture directory is available, zero on error.
+ */
 extern int Mapdata_setup(const char *);
 
 
@@ -881,18 +908,50 @@ extern int Query_all(sock_t *sockfd, int port, char *msg, size_t msglen);
 extern int Connect_to_server(int auto_connect, int list_servers,
 			     int auto_shutdown, char *shutdown_reason,
 			     Connect_param_t *conpar);
-extern int Contact_servers(int count, char **servers,
+/**
+ * Contact explicit endpoints in order until one joins successfully.
+ *
+ * A failed attempt is isolated from subsequent targets. `conpar` is updated
+ * with endpoint and negotiated connection data only after a successful join.
+ *
+ * @param count Number of entries in `targets`.
+ * @param targets Connection targets to try in command-line order.
+ * @param auto_connect Whether to request joining without an interactive prompt.
+ * @param list_servers Whether to request and print server status.
+ * @param auto_shutdown Whether to request server shutdown.
+ * @param shutdown_message Shutdown reason used when `auto_shutdown` is set.
+ * @param conpar Client identity input and successful connection output.
+ * @return Nonzero after a successful join, otherwise zero.
+ */
+extern int Contact_servers(int count, const Connect_target_t *targets,
 			   int auto_connect, int list_servers,
 			   int auto_shutdown, char *shutdown_message,
-			   int find_max, int *num_found,
-			   char **server_addresses, char **server_names,
-			   unsigned *server_versions,
 			   Connect_param_t *conpar);
-
-/*
- * usleep.c
+/**
+ * Discover and optionally contact servers using UDP LAN broadcast.
+ *
+ * @param defaults Default contact port and expected gameplay transport.
+ * @param auto_connect Whether to request joining without an interactive prompt.
+ * @param list_servers Set to 2 to collect discovery results, or 1 to print
+ * server status; zero performs the normal contact interaction.
+ * @param auto_shutdown Whether to request server shutdown.
+ * @param shutdown_message Shutdown reason used when `auto_shutdown` is set.
+ * @param find_max Capacity of each optional discovery output array.
+ * @param num_found Receives the number of stored discovery results, or `NULL`.
+ * @param server_addresses Optional array of `MAX_HOST_LEN`-byte buffers.
+ * @param server_names Optional array of `MAX_HOST_LEN`-byte buffers.
+ * @param server_versions Optional protocol-version output array.
+ * @param conpar Client identity input and successful connection output.
+ * @return Nonzero after a successful join, otherwise zero. Discovery-only
+ * operation reports its result count through `num_found` and returns zero.
  */
-extern int micro_delay(unsigned usec);
+extern int Contact_local_servers(const Connect_defaults_t *defaults,
+				 int auto_connect, int list_servers,
+				 int auto_shutdown, char *shutdown_message,
+				 int find_max, int *num_found,
+				 char **server_addresses, char **server_names,
+				 unsigned *server_versions,
+				 Connect_param_t *conpar);
 
 /*
  * welcome.c

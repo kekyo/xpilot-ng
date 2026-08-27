@@ -280,24 +280,24 @@
 /* #undef MBX */
 
 /* Name of package */
-#define PACKAGE "xpilot-ng"
+#define PACKAGE "xpilot-infinity"
 
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "xpilot-hacks@lists.sourceforge.net"
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME "XPilot NG"
+#define PACKAGE_NAME "XPilot Infinity"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "XPilot NG 4.7.2ng"
+#define PACKAGE_STRING "XPilot Infinity 4.7.2infinity"
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "xpilot-ng"
+#define PACKAGE_TARNAME "xpilot-infinity"
 
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "4.7.2"
 
-/* lock the xpilot-ng server into memory */
+/* lock the xpilot-infinity server into memory */
 /* #undef PLOCKSERVER */
 
 /* Define to 1 if the C compiler supports function prototypes. */
@@ -311,9 +311,6 @@
 
 /* enable sdl client */
 #define SDL_CLIENT 1
-
-/* enable sdl gameloop in sdl client */
-#define SDL_GAMELOOP 1
 
 /* enable new server scheduling most useful on Linux 2.6 */
 /* #undef SELECT_SCHED */
@@ -345,7 +342,7 @@
 /* #undef TM_IN_SYS_TIME */
 
 /* Version number of package */
-#define VERSION "4.7.2ng"
+#define VERSION "4.7.2infinity"
 
 /* enable x11 client */
 /* #undef X11_CLIENT */
@@ -385,5 +382,5 @@ typedef int socklen_t
    code using `volatile' can become incorrect without. Disable with care. */
 /* #undef volatile */
 
-#define CONF_DATADIR "/usr/share/xpilot-ng/"
+#define CONF_DATADIR "/usr/share/xpilot-infinity/"
 #define MACOSX_FRAMEWORKS 1

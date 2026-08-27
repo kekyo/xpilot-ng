@@ -1,7 +1,7 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
- * Copyright (C) 2001 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2001 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,9 @@ typedef struct {
 
 static int Mapdata_extract(const char *name);
 static int Mapdata_download(const URL *url, const char *filePath);
+static int Mapdata_copy(const char *sourcePath, const char *filePath);
+static int Mapdata_join_path(char *path, size_t pathSize,
+			     const char *dir, const char *name);
 static int Url_parse(const char *urlstr, URL *url);
 static void Url_free_parsed(URL *url);
 
@@ -43,7 +46,7 @@ int Mapdata_setup(const char *urlstr)
 {
     URL url;
     const char *name, *dir = NULL;
-    char path[1024], buf[1024], *ptr;
+    char path[1024], buf[1024], bundledPath[1024], *ptr;
     int rv = false;
 
     if (setup_done)
@@ -51,6 +54,7 @@ int Mapdata_setup(const char *urlstr)
 
     memset(path, 0, sizeof(path));
     memset(buf, 0, sizeof(buf));
+    memset(bundledPath, 0, sizeof(bundledPath));
 
     if (!Url_parse(urlstr, &url)) {
 	warn("malformed URL: %s", urlstr);
@@ -68,9 +72,26 @@ int Mapdata_setup(const char *urlstr)
     }
 
     if (realTexturePath != NULL) {
-	for (dir = strtok(realTexturePath, ":"); dir; dir = strtok(NULL, ":"))
-	    if (access(dir, R_OK | W_OK | X_OK) == 0)
-		break;
+	char *pathList = strdup(realTexturePath);
+	char *candidate;
+
+	if (pathList == NULL) {
+	    error("not enough memory to inspect realTexturePath");
+	    goto end;
+	}
+	for (candidate = strtok(pathList, ":"); candidate;
+	     candidate = strtok(NULL, ":")) {
+	    if (access(candidate, R_OK | W_OK | X_OK) != 0)
+		continue;
+	    if (strlen(candidate) >= sizeof buf) {
+		warn("texture directory path is too long: %s", candidate);
+		continue;
+	    }
+	    strlcpy(buf, candidate, sizeof buf);
+	    dir = buf;
+	    break;
+	}
+	free(pathList);
     }
 	
     if (dir == NULL) {
@@ -101,12 +122,10 @@ int Mapdata_setup(const char *urlstr)
 	dir = buf;
     }
 
-    if (strlen(dir) == 0)
-	sprintf(path, "%s", name);
-    else if (dir[strlen(dir) - 1] == PATHNAME_SEP)
-	sprintf(path, "%s%s", dir, name);
-    else
-	sprintf(path, "%s%c%s", dir, PATHNAME_SEP, name);
+    if (!Mapdata_join_path(path, sizeof path, dir, name)) {
+	error("map data path is too long for %s", name);
+	goto end;
+    }
 
     if (strrchr(path, '.') == NULL) {
 	error("no extension in file name %s.", name);
@@ -139,11 +158,21 @@ int Mapdata_setup(const char *urlstr)
     /* reset path so that it points to the package file name */
     *ptr = '.';
 
-    warn("Downloading map data from %s to %s.", urlstr, path);
+    if (Mapdata_join_path(bundledPath, sizeof bundledPath,
+			  Conf_mapdir(), name)
+	&& access(bundledPath, R_OK) == 0) {
+	warn("Using bundled map data from %s.", bundledPath);
+	if (!Mapdata_copy(bundledPath, path)) {
+	    warn("copying bundled map data failed");
+	    goto end;
+	}
+    } else {
+	warn("Downloading map data from %s to %s.", urlstr, path);
 
-    if (!Mapdata_download(&url, path)) {
-	warn("downloading map data failed");
-	goto end;
+	if (!Mapdata_download(&url, path)) {
+	    warn("downloading map data failed");
+	    goto end;
+	}
     }
 
     if (!Mapdata_extract(path)) {
@@ -157,6 +186,77 @@ int Mapdata_setup(const char *urlstr)
  end:
     Url_free_parsed(&url);
     return rv;
+}
+
+
+static int Mapdata_copy(const char *sourcePath, const char *filePath)
+{
+    FILE *source = NULL, *destination = NULL;
+    char buf[COPY_BUF_SIZE];
+    size_t length;
+    int rv = false;
+
+    if (strcmp(sourcePath, filePath) == 0)
+	return true;
+
+    source = fopen(sourcePath, "rb");
+    if (source == NULL) {
+	error("failed to open bundled map data %s", sourcePath);
+	goto end;
+    }
+
+    destination = fopen(filePath, "wb");
+    if (destination == NULL) {
+	error("failed to open %s for writing", filePath);
+	goto end;
+    }
+
+    while ((length = fread(buf, 1, sizeof buf, source)) > 0) {
+	if (fwrite(buf, 1, length, destination) != length) {
+	    error("failed to write bundled map data to %s", filePath);
+	    goto end;
+	}
+    }
+    if (ferror(source)) {
+	error("failed to read bundled map data %s", sourcePath);
+	goto end;
+    }
+    if (fclose(destination) != 0) {
+	destination = NULL;
+	error("failed to close bundled map data %s", filePath);
+	goto end;
+    }
+    destination = NULL;
+    rv = true;
+
+ end:
+    if (source != NULL)
+	fclose(source);
+    if (destination != NULL)
+	fclose(destination);
+    if (!rv)
+	unlink(filePath);
+    return rv;
+}
+
+
+static int Mapdata_join_path(char *path, size_t pathSize,
+			     const char *dir, const char *name)
+{
+    int length;
+
+    if (path == NULL || pathSize == 0 || dir == NULL || name == NULL)
+	return false;
+
+    if (dir[0] == '\0')
+	length = snprintf(path, pathSize, "%s", name);
+    else if (dir[strlen(dir) - 1] == PATHNAME_SEP)
+	length = snprintf(path, pathSize, "%s%s", dir, name);
+    else
+	length = snprintf(path, pathSize, "%s%c%s",
+			  dir, PATHNAME_SEP, name);
+
+    return length >= 0 && (size_t)length < pathSize;
 }
 
 

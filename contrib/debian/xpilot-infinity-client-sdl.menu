@@ -1,0 +1,3 @@
+?package(xpilot-infinity-client-sdl):needs="x11" section="Games/Arcade" \
+	title="XPilot Infinity (modern)" command="xpilot-infinity-sdl" \
+	icon="/usr/share/pixmaps/xpilot-infinity.xpm"

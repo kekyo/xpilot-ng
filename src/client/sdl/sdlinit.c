@@ -1,7 +1,7 @@
 /*
- * XPilotNG/SDL, an SDL/OpenGL XPilot client. Copyright (C) 2003-2004 by 
+ * XPilot Infinity/SDL, an SDL/OpenGL XPilot client. Copyright (C) 2003-2004 by
  *
- *      Juha Lindström       <juhal@users.sourceforge.net>
+ *      Juha LindstrÃ¶m       <juhal@users.sourceforge.net>
  *      Erik Andersson       <deity_at_home.se>
  *      Darel Cullen         <darelcullen@users.sourceforge.net>
  *
@@ -28,7 +28,12 @@
 #include "glwidgets.h"
 #include "sdlpaint.h"
 #include "sdlinit.h"
-#include "scrap.h"
+#include "gl_diagnostics.h"
+#include "sdlrenderer.h"
+#include "images.h"
+#include "transport_display.h"
+#include "native_text.h"
+#include "text_config.h"
 
 /* These are only needed for the polygon tessellation */
 /* I'd like to move them to Paint_init/cleanup but because it */
@@ -37,20 +42,41 @@
 extern int Gui_init(void);
 extern void Gui_cleanup(void);
 
-int draw_depth;
-
-/* This holds video information assigned at initialise */
-const SDL_VideoInfo *videoInfo;
-
-/* Flags to pass to SDL_SetVideoMode */
-int videoFlags;
-SDL_Surface  *MainSDLSurface = NULL;
+static SDL_Window *main_window;
+static SDL_GLContext main_gl_context;
+static SdlRenderer *main_renderer;
+static XpTextSystem *text_system;
+static bool sdl_initialized;
+static bool ttf_initialized;
+static bool cleanup_registered;
+static bool playing_windows_initialized;
+static bool fullscreen;
+static int windowed_width;
+static int windowed_height;
+static bool gamefont_initialized;
+static bool mapfont_initialized;
 
 font_data gamefont;
 font_data mapfont;
 int gameFontSize;
 int mapFontSize;
 char *gamefontname;
+
+static void set_gameplay_window_title(void)
+{
+    char title[sizeof(TITLE) + MAX_CHARS + 32];
+
+    if (!Transport_display_gameplay_title(
+	    title, sizeof(title), TITLE, servername,
+	    connectParam.game_transport)) {
+	warn("Could not format the gameplay window title");
+	return;
+    }
+    if (!SDL_SetWindowTitle(main_window, title)) {
+	warn("Could not set the SDL gameplay window title: %s",
+	     SDL_GetError());
+    }
+}
 
 /* ugly kps hack */
 static bool file_exists(const char *path) 
@@ -71,6 +97,15 @@ static bool file_exists(const char *path)
 
 int Init_playing_windows(void)
 {
+    SdlRenderer *sdl_renderer = Get_sdl_renderer();
+
+    if (sdl_renderer == NULL
+	|| Images_prepare(Sdl_renderer_frontend(sdl_renderer)) != 0) {
+	error("image preparation failed");
+	return -1;
+    }
+    set_gameplay_window_title();
+
     /*
     sdl_init_colors();
     Init_spark_colors();
@@ -79,103 +114,186 @@ int Init_playing_windows(void)
 	error("widget initialization failed");
 	return -1;
     }
-    if (Console_init()) {
+    if (Console_init(main_window)) {
 	error("console initialization failed");
+	Close_Widget(&MainWidget);
 	return -1;
     }
     if (Gui_init()) {
 	error("gui initialization failed");
+	Console_cleanup();
+	Close_Widget(&MainWidget);
 	return -1;
     }
+
+    playing_windows_initialized = true;
 
     return 0;
 }
 
-static bool find_size(int *w, int *h)
+static void cleanup_window_system(void)
 {
-    SDL_Rect **modes, *m;
-    int i, d, best_i, best_d;
+    if (gamefont_initialized || mapfont_initialized) {
+	error("Refusing to destroy the window system while fonts remain initialized");
+	return;
+    }
+    if (main_renderer != NULL) {
+	Sdl_renderer_destroy(main_renderer);
+	main_renderer = NULL;
+    }
+    if (main_gl_context != NULL) {
+	SDL_GL_DestroyContext(main_gl_context);
+	main_gl_context = NULL;
+    }
+    if (main_window != NULL) {
+	SDL_DestroyWindow(main_window);
+	main_window = NULL;
+    }
+    if (ttf_initialized) {
+	Xp_text_system_destroy(&text_system);
+	TTF_Quit();
+	ttf_initialized = false;
+    }
+    if (sdl_initialized) {
+	SDL_Quit();
+	sdl_initialized = false;
+    }
+    fullscreen = false;
+}
 
-    modes = SDL_ListModes(NULL, videoFlags);
-    if (modes == NULL) return false;
-    if (modes == (SDL_Rect**)-1) return true;
-    
-    best_i = 0;
-    best_d = INT_MAX;
-    for (i = 0; modes[i]; i++) {
-	m = modes[i];
-	d = (m->w - *w)*(m->w - *w) + (m->h - *h)*(m->h - *h);
-	if (d < best_d) {
-	    best_d = d;
-	    best_i = i;
+static void apply_window_size(int width, int height)
+{
+    SDL_Rect bounds = {0, 0, 0, 0};
+
+    if (width <= 0 || height <= 0)
+	return;
+
+    bounds.w = draw_width = width;
+    bounds.h = draw_height = height;
+    if (MainWidget != NULL)
+	SetBounds_GLWidget(MainWidget, &bounds);
+
+}
+
+static bool cleanup_fonts(void)
+{
+    bool cleaned = true;
+    RendererStatus status;
+
+    if (mapfont_initialized) {
+	status = fontclean(&mapfont);
+	if (status == RENDERER_STATUS_OK) {
+	    mapfont_initialized = false;
+	} else {
+	    error("Could not clean up the map font (%d)", (int)status);
+	    cleaned = false;
 	}
     }
-    *w = modes[best_i]->w;
-    *h = modes[best_i]->h;
-    return true;
+    if (gamefont_initialized) {
+	status = fontclean(&gamefont);
+	if (status == RENDERER_STATUS_OK) {
+	    gamefont_initialized = false;
+	} else {
+	    error("Could not clean up the game font (%d)", (int)status);
+	    cleaned = false;
+	}
+    }
+    return cleaned;
+}
+
+static bool closest_display_mode(int width, int height, SDL_DisplayMode *mode)
+{
+    SDL_DisplayID display_id;
+
+    display_id = SDL_GetDisplayForWindow(main_window);
+    if (display_id == 0)
+	return false;
+
+    return SDL_GetClosestFullscreenDisplayMode(display_id, width, height,
+					       0.0f, false, mode);
 }
 
 int Init_window(void)
 {
     int value;
+    RendererStatus renderer_status;
     char defaultfontname[] = CONF_FONTDIR "FreeSansBoldOblique.ttf";
     bool gf_exists = true,df_exists = true,gf_init = false, mf_init = false;
-    
-    if (TTF_Init()) {
-    	error("SDL_ttf initialization failed: %s", SDL_GetError());
-    	return -1;
-    }
-    warn("SDL_ttf initialized.\n");
 
     Conf_print();
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE) < 0) {
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         error("failed to initialize SDL: %s", SDL_GetError());
         return -1;
     }
+    sdl_initialized = true;
+    if (!cleanup_registered) {
+	atexit(Platform_specific_cleanup);
+	cleanup_registered = true;
+    }
 
-    atexit(SDL_Quit);
-
-    /* Fetch the video info */
-    videoInfo = SDL_GetVideoInfo( );
+    if (!TTF_Init()) {
+	error("SDL_ttf initialization failed: %s", SDL_GetError());
+	goto fail;
+    }
+    ttf_initialized = true;
+    warn("SDL_ttf initialized.\n");
 
     num_spark_colors=8;
 
-    /* the flags to pass to SDL_SetVideoMode */
-    videoFlags  = SDL_OPENGL;          /* Enable OpenGL in SDL          */
-    videoFlags |= SDL_GL_DOUBLEBUFFER; /* Enable double buffering       */
-    videoFlags |= SDL_HWPALETTE;       /* Store the palette in hardware */
-#ifndef _WINDOWS
-    videoFlags |= SDL_RESIZABLE;       /* Enable window resizing        */
-#else
-    videoFlags |= SDL_FULLSCREEN;
-#endif
-
-    /** This checks to see if surfaces can be stored in memory */
-    if ( videoInfo->hw_available )
-        videoFlags |= SDL_HWSURFACE;
-    else
-        videoFlags |= SDL_SWSURFACE;
-
-    /* This checks if hardware blits can be done */
-    if ( videoInfo->blit_hw )
-        videoFlags |= SDL_HWACCEL;
-
-    draw_depth =  videoInfo->vfmt->BitsPerPixel;
-
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-    if (videoFlags & SDL_FULLSCREEN)
-      if (!find_size((int*)&draw_width, (int*)&draw_height))
-      	videoFlags ^= SDL_FULLSCREEN;
-
-    if ((MainSDLSurface = SDL_SetVideoMode(draw_width,
-			 draw_height,
-			 draw_depth,
-			 videoFlags )) == NULL) {
-      error("Could not find a valid GLX visual for your display");
-	  return -1;
+    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3)) {
+	error("Could not request OpenGL context major version 3: %s",
+	      SDL_GetError());
+	goto fail;
     }
+    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3)) {
+	error("Could not request OpenGL context minor version 3: %s",
+	      SDL_GetError());
+	goto fail;
+    }
+    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+			     SDL_GL_CONTEXT_PROFILE_CORE)) {
+	error("Could not request an OpenGL core profile: %s", SDL_GetError());
+	goto fail;
+    }
+    if (!SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1)) {
+	error("Could not enable OpenGL double buffering: %s", SDL_GetError());
+	goto fail;
+    }
+
+    main_window = SDL_CreateWindow(TITLE, draw_width, draw_height,
+				   SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    if (main_window == NULL) {
+	error("Could not create an SDL3 OpenGL window: %s", SDL_GetError());
+	goto fail;
+    }
+    if (!SDL_SetWindowPosition(main_window, SDL_WINDOWPOS_CENTERED,
+			       SDL_WINDOWPOS_CENTERED)) {
+	warn("Could not center the SDL window: %s", SDL_GetError());
+    }
+
+    main_gl_context = SDL_GL_CreateContext(main_window);
+    if (main_gl_context == NULL) {
+	error("Could not create an OpenGL context: %s", SDL_GetError());
+	goto fail;
+    }
+    Gl_diagnostics_log_context();
+    Gl_diagnostics_check("context creation");
+    renderer_status = Sdl_renderer_create(main_window, &main_renderer);
+    if (renderer_status != RENDERER_STATUS_OK) {
+	error("Could not initialize the OpenGL core renderer (%d)",
+	      (int)renderer_status);
+	goto fail;
+    }
+    if (Xp_text_system_create(CONF_FONTDIR, &text_system)
+	!= XP_TEXT_STATUS_OK) {
+	error("Could not initialize system font resolution: %s",
+	      SDL_GetError());
+	goto fail;
+    }
+    SDL_StopTextInput(main_window);
+    windowed_width = draw_width;
+    windowed_height = draw_height;
 
     SDL_GL_GetAttribute(SDL_GL_RED_SIZE, &value);
     printf("RGB bpp %d/", value);
@@ -186,17 +304,6 @@ int Init_window(void)
     SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &value);
     printf("Bit Depth is %d\n",value);
 
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glViewport(0, 0, draw_width, draw_height);
-    glMatrixMode(GL_PROJECTION);
-    gluOrtho2D(0, draw_width, 0, draw_height);
-    glMatrixMode(GL_MODELVIEW);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    /* Set title for window */
-    SDL_WM_SetCaption(TITLE, NULL);
-    
     /* this prevents a freetype crash if you pass non existant fonts */
     if (!file_exists(gamefontname)) {
     	error("cannot find your game font '%s'.\n" \
@@ -211,100 +318,206 @@ int Init_window(void)
     
     if (!gf_exists && !df_exists) {
     	error("Failed to find any font files!\n" \
-	    	"Probably you forgot to run 'make install',use '-TTFont <font.ttf>' argument" \
+	     "Probably you forgot to run 'make install',use '-TTFont <font.ttf>' argument" \
 		" until you do");
-	return -1;
+	goto fail;
     }
       
     if (gf_exists) {
-    	if (fontinit(&gamefont,gamefontname,gameFontSize)) {
-    	    error("Font initialization failed with %s", gamefontname);
+	renderer_status = fontinit(&gamefont,
+				   Sdl_renderer_frontend(main_renderer),
+				   gamefontname, gameFontSize);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Font initialization failed with %s", gamefontname);
 	} else gf_init = true;
     }
     if (!gf_init && df_exists) {
-    	if (fontinit(&gamefont,defaultfontname,gameFontSize)) {
-    	    error("Default font initialization failed with %s", defaultfontname);
-    	} else gf_init = true;
+	renderer_status = fontinit(&gamefont,
+				   Sdl_renderer_frontend(main_renderer),
+				   defaultfontname, gameFontSize);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Default font initialization failed with %s", defaultfontname);
+	} else gf_init = true;
     }
     
     if (!gf_init) {
     	error("Failed to initialize any game font! (quitting)");
-	return -1;
+	goto fail;
     }
+    gamefont_initialized = true;
     
     if (gf_exists) {
-    	if (fontinit(&mapfont,gamefontname,mapFontSize)) {
-    	    error("Font initialization failed with %s", gamefontname);
+	renderer_status = fontinit(&mapfont,
+				   Sdl_renderer_frontend(main_renderer),
+				   gamefontname, mapFontSize);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Font initialization failed with %s", gamefontname);
 	} else mf_init = true;
     }
     if (!mf_init && df_exists) {
-    	if (fontinit(&mapfont,defaultfontname,mapFontSize)) {
-    	    error("Default font initialization failed with %s", defaultfontname);
-    	} else mf_init = true;
+	renderer_status = fontinit(&mapfont,
+				   Sdl_renderer_frontend(main_renderer),
+				   defaultfontname, mapFontSize);
+	if (renderer_status != RENDERER_STATUS_OK) {
+	    error("Default font initialization failed with %s", defaultfontname);
+	} else mf_init = true;
     }
 
     if (!mf_init) {
     	error("Failed to initialize any map font! (quitting)");
-	return -1;
+	goto fail;
     }
+    mapfont_initialized = true;
 
-    /* Set up the clipboard */
-    if ( init_scrap() < 0 ) {
-    	error("Couldn't init clipboard: %s\n");
+    renderer_status = font_text_renderer_attach(&gamefont, main_renderer);
+    if (renderer_status == RENDERER_STATUS_OK) {
+	renderer_status = font_text_renderer_attach(&mapfont, main_renderer);
     }
+    if (renderer_status == RENDERER_STATUS_OK) {
+	renderer_status = font_unicode_renderer_attach(
+	    &gamefont, text_system, main_renderer,
+	    Xp_text_config_families(XP_TEXT_SPACING_PROPORTIONAL));
+    }
+    if (renderer_status == RENDERER_STATUS_OK) {
+	renderer_status = font_unicode_renderer_attach(
+	    &mapfont, text_system, main_renderer,
+	    Xp_text_config_families(XP_TEXT_SPACING_PROPORTIONAL));
+    }
+    if (renderer_status != RENDERER_STATUS_OK
+	|| gamefont.text_renderer == NULL || mapfont.text_renderer == NULL
+	|| gamefont.unicode_renderer == NULL
+	|| mapfont.unicode_renderer == NULL) {
+	error("Font text renderer initialization failed (%d)",
+	      (int)renderer_status);
+	goto fail;
+    }
+    printf("Font text renderers ready: game=renderer map=renderer\n");
+    fflush(stdout);
 
     return 0;
+
+fail:
+    mapfont_initialized = mf_init;
+    gamefont_initialized = gf_init;
+    if (cleanup_fonts())
+	cleanup_window_system();
+    return -1;
+}
+
+SdlRenderer *Get_sdl_renderer(void)
+{
+    return main_renderer;
+}
+
+XpTextSystem *Get_text_system(void)
+{
+    return text_system;
 }
 
 /* function to reset our viewport after a window resize */
-int Resize_Window( int width, int height )
+int Resize_Window(int width, int height)
 {
-    SDL_Rect b = {0,0,0,0};
+    SDL_DisplayMode mode;
 
-	if (videoFlags & SDL_FULLSCREEN)
-		if (!find_size(&width, &height))
-			return -1;
-    
-    b.w = draw_width = width;
-    b.h = draw_height = height;
-    
-    SetBounds_GLWidget(MainWidget,&b);
-    
-    if (!SDL_SetVideoMode( width,
-			   height,
-			   draw_depth, 
-			   videoFlags ))
+    if (main_window == NULL || width <= 0 || height <= 0)
 	return -1;
-    
 
-    /* change to the projection matrix and set our viewing volume. */
-    glMatrixMode( GL_PROJECTION );
-
-    glLoadIdentity( );
-
-    gluOrtho2D(0, draw_width, 0, draw_height);
-    
-    /* Make sure we're chaning the model view and not the projection */
-    glMatrixMode( GL_MODELVIEW );
-    
-    /* Reset The View */
-    glLoadIdentity( );
-
-    /* Setup our viewport. */
-    glViewport( 0, 0, ( GLint )draw_width, ( GLint )draw_height );
+    if (fullscreen) {
+	if (!closest_display_mode(width, height, &mode) ||
+	    !SDL_SetWindowFullscreenMode(main_window, &mode))
+	    return -1;
+	width = mode.w;
+	height = mode.h;
+    } else {
+	SDL_SetWindowSize(main_window, width, height);
+	SDL_GetWindowSize(main_window, &width, &height);
+	windowed_width = width;
+	windowed_height = height;
+    }
+    apply_window_size(width, height);
     return 0;
 }
 
+void Window_size_changed(int width, int height)
+{
+    if (width <= 0 || height <= 0)
+	return;
+
+    if (!fullscreen) {
+	windowed_width = width;
+	windowed_height = height;
+    }
+    apply_window_size(width, height);
+}
+
+void Swap_buffers(void)
+{
+    if (main_window != NULL) {
+	SDL_GL_SwapWindow(main_window);
+        Gl_diagnostics_check("buffer swap");
+    }
+}
+
+void Set_window_grab(bool on)
+{
+    if (main_window != NULL)
+	SDL_SetWindowMouseGrab(main_window, on ? true : false);
+}
+
+bool Set_relative_mouse_mode(bool on)
+{
+    if (main_window == NULL) {
+	SDL_SetError("The application window is not initialized");
+	return false;
+    }
+    return SDL_SetWindowRelativeMouseMode(main_window, on);
+}
+
+void Toggle_fullscreen(void)
+{
+    SDL_DisplayMode mode;
+    int width, height;
+
+    if (main_window == NULL)
+	return;
+
+    if (fullscreen) {
+	if (!SDL_SetWindowFullscreen(main_window, false)) {
+	    Add_message("Failed to leave fullscreen mode. [*Client reply*]");
+	    return;
+	}
+	fullscreen = false;
+	SDL_SetWindowFullscreenMode(main_window, NULL);
+	SDL_SetWindowSize(main_window, windowed_width, windowed_height);
+    } else {
+	SDL_GetWindowSize(main_window, &windowed_width, &windowed_height);
+	if (!closest_display_mode(windowed_width, windowed_height, &mode) ||
+	    !SDL_SetWindowFullscreenMode(main_window, &mode) ||
+	    !SDL_SetWindowFullscreen(main_window, true)) {
+	    SDL_SetWindowFullscreen(main_window, false);
+	    SDL_SetWindowFullscreenMode(main_window, NULL);
+	    SDL_SetWindowSize(main_window, windowed_width, windowed_height);
+	    Add_message("Failed to change video mode. [*Client reply*]");
+	    return;
+	}
+	fullscreen = true;
+    }
+
+    SDL_GetWindowSize(main_window, &width, &height);
+    apply_window_size(width, height);
+}
 
 void Platform_specific_cleanup(void)
 {
-    Close_Widget(&MainWidget);
-    Gui_cleanup();
-    Console_cleanup();
-    fontclean(&gamefont);
-    fontclean(&mapfont);
-    TTF_Quit();
-    SDL_Quit();
+    if (playing_windows_initialized) {
+	if (MainWidget != NULL)
+	    Close_Widget(&MainWidget);
+	Gui_cleanup();
+	Console_cleanup();
+	playing_windows_initialized = false;
+    }
+    if (cleanup_fonts())
+	cleanup_window_system();
 }
 
 static bool Set_geometry(xp_option_t *opt, const char *s)
@@ -317,7 +530,7 @@ static bool Set_geometry(xp_option_t *opt, const char *s)
 	sscanf(s, "%d%*c%d", &w, &h);
     }
     if (w == 0 || h == 0) return false;
-    if (MainSDLSurface != NULL) {
+    if (main_window != NULL) {
 	Resize_Window(w, h);
     } else {
 	draw_width = w;

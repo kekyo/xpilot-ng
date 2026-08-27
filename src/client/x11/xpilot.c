@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -44,7 +44,7 @@ static void printfile(const char *filename)
 
 const char *Program_name(void)
 {
-    return "xpilot-ng-x11";
+    return "xpilot-infinity-x11";
 }
 
 /*
@@ -55,6 +55,10 @@ int main(int argc, char *argv[])
     int result, retval = 1;
     bool auto_shutdown = false;
     Connect_param_t *conpar = &connectParam;
+    Connect_target_t *targets = NULL;
+    Connect_target_status_t target_status;
+    int target_count;
+    int invalid_target_index;
 
     /*
      * --- Output copyright notice ---
@@ -101,6 +105,21 @@ int main(int argc, char *argv[])
      */
     memset(&xpArgs, 0, sizeof(xp_args_t));
     Parse_options(&argc, argv);
+    target_count = argc - 1;
+    target_status = Connect_targets_parse(target_count, &argv[1],
+					  &connectDefaults, &targets,
+					  &invalid_target_index);
+    if (target_status != CONNECT_TARGET_STATUS_OK) {
+	if (invalid_target_index >= 0) {
+	    error("Invalid server target '%s': %s",
+		  argv[invalid_target_index + 1],
+		  Connect_target_status_message(target_status));
+	} else {
+	    error("Cannot prepare server targets: %s",
+		  Connect_target_status_message(target_status));
+	}
+	return 1;
+    }
     /*strcpy(clientname,connectParam.nick_name); */
 
     Config_init();
@@ -126,11 +145,16 @@ int main(int argc, char *argv[])
 	if (xpArgs.list_servers)
 	    printf("LISTING AVAILABLE SERVERS:\n");
 
-	result = Contact_servers(argc - 1, &argv[1],
-				 xpArgs.auto_connect, xpArgs.list_servers,
-				 auto_shutdown, xpArgs.shutdown_reason,
-				 0, NULL, NULL, NULL, NULL,
-				 conpar);
+	result = target_count > 0
+	    ? Contact_servers(target_count, targets,
+			      xpArgs.auto_connect, xpArgs.list_servers,
+			      auto_shutdown, xpArgs.shutdown_reason, conpar)
+	    : Contact_local_servers(&connectDefaults,
+				    xpArgs.auto_connect, xpArgs.list_servers,
+				    auto_shutdown, xpArgs.shutdown_reason,
+				    0, NULL, NULL, NULL, NULL, conpar);
+	free(targets);
+	targets = NULL;
     }
     else
 	result = Welcome_screen(conpar);

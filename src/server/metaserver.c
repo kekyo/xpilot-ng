@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -25,7 +25,12 @@
 
 #include "xpserver.h"
 
-#define META_VERSION	VERSION "ng"
+#define META_VERSION	VERSION "infinity"
+
+static sock_t metaSocket;
+static bool meta_socket_open;
+static bool meta_reporting_ready;
+static int meta_report_port = META_PORT;
 
 struct MetaServer {
     char name[64];
@@ -42,19 +47,58 @@ struct MetaServer meta_servers[2] = {
     },
 };
 
+static void Meta_apply_environment(void)
+{
+    const char *host = getenv("XPILOT_META_REPORT_HOST");
+    const char *host_two = getenv("XPILOT_META_REPORT_HOST_TWO");
+    const char *port_text = getenv("XPILOT_META_REPORT_PORT");
+    char *port_end;
+    long port;
+
+    if (host != NULL && host[0] != '\0') {
+	strlcpy(meta_servers[0].name, host, sizeof(meta_servers[0].name));
+	meta_servers[0].addr[0] = '\0';
+    }
+    if (host_two != NULL && host_two[0] != '\0') {
+	strlcpy(meta_servers[1].name, host_two,
+		 sizeof(meta_servers[1].name));
+	meta_servers[1].addr[0] = '\0';
+    }
+    if (port_text == NULL || port_text[0] == '\0')
+	return;
+
+    errno = 0;
+    port = strtol(port_text, &port_end, 10);
+    if (errno == 0 && port_end != port_text && port_end[0] == '\0'
+	&& port > 0 && port <= 65535)
+	meta_report_port = (int)port;
+}
+
+static sock_t *Meta_report_socket(void)
+{
+    if (!meta_reporting_ready)
+	return NULL;
+    return contactTransport != GAME_TRANSPORT_UDP
+	? &metaSocket : &contactSocket;
+}
+
 void Meta_send(char *mesg, size_t len)
 {
+    sock_t *socket;
     int i;
 
     if (!options.reportToMetaServer)
 	return;
+    socket = Meta_report_socket();
+    if (socket == NULL)
+	return;
 
     for (i = 0; i < NELEM(meta_servers); i++) {
-	if (sock_send_dest(&contactSocket, meta_servers[i].addr,
-			   META_PORT, mesg, (int)len) != (int)len) {
-	    sock_get_error(&contactSocket);
-	    sock_send_dest(&contactSocket, meta_servers[i].addr,
-			   META_PORT, mesg, (int)len);
+	if (sock_send_dest(socket, meta_servers[i].addr,
+			   meta_report_port, mesg, (int)len) != (int)len) {
+	    sock_get_error(socket);
+	    sock_send_dest(socket, meta_servers[i].addr,
+			   meta_report_port, mesg, (int)len);
 	}
     }
 }
@@ -65,7 +109,7 @@ int Meta_from(char *addr, int port)
 
     for (i = 0; i < NELEM(meta_servers); i++) {
 	if (!strcmp(addr, meta_servers[i].addr))
-	    return (port == META_PORT);
+	    return (port == meta_report_port);
     }
     return 0;
 }
@@ -78,6 +122,11 @@ void Meta_gone(void)
 	snprintf(msg, sizeof(msg), "server %s\nremove", Server.host);
 	Meta_send(msg, strlen(msg) + 1);
     }
+    meta_reporting_ready = false;
+    if (meta_socket_open) {
+	sock_close(&metaSocket);
+	meta_socket_open = false;
+    }
 }
 
 void Meta_init(void)
@@ -85,8 +134,28 @@ void Meta_init(void)
     int i;
     char *addr;
 
+    sock_init(&metaSocket);
+    meta_socket_open = false;
+    meta_reporting_ready = false;
     if (!options.reportToMetaServer)
 	return;
+
+    Meta_apply_environment();
+    if (contactTransport != GAME_TRANSPORT_UDP) {
+	/*
+	 * Current metaservers publish the UDP source port of each update.
+	 * Stream transports and UDP can share the same numeric port, so keep
+	 * reporting compatible without reopening the contact listener as UDP.
+	 */
+	if (sock_open_udp(&metaSocket, serverAddr, options.contactPort)
+	    == SOCK_IS_ERROR) {
+	    warn("Could not open UDP metaserver reporting socket on port %d",
+		 options.contactPort);
+	    return;
+	}
+	meta_socket_open = true;
+    }
+    meta_reporting_ready = true;
 
     xpprintf("%s Locating Internet Meta server... ", showtime());
     fflush(stdout);
@@ -139,6 +208,7 @@ void Meta_update(bool change)
 #define GIVE_META_SERVER_A_HINT	180
 
     char *string = meta_update_string, freebases[120];
+    char meta_version[64];
     int i, num_active_players, active_per_team[MAX_TEAMS];
     size_t len, max_size;
     time_t currentTime;
@@ -211,6 +281,13 @@ void Meta_update(bool change)
 	snprintf(freebases, sizeof(freebases), "=%d",
 		 Num_bases() - num_active_players - login_in_progress);
 
+    if (!Game_transport_format_meta_version(
+	    meta_version, sizeof(meta_version), META_VERSION,
+	    contactTransport, gameTransport)) {
+	warn("Could not format metaserver transport metadata");
+	return;
+    }
+
     snprintf(string, max_size,
 	     "add server %s\n"
 	     "add users %d\n"
@@ -229,7 +306,7 @@ void Meta_update(bool change)
 	     "add queue %d\n"
 	     "add sound %s\n",
 	     Server.host, num_active_players,
-	     META_VERSION, world->name, world->x, world->y, world->author,
+	     meta_version, world->name, world->x, world->y, world->author,
 	     Num_bases(), FPS, options.contactPort,
 	     game_mode, world->NumTeamBases, freebases,
 	     BIT(world->rules->mode, TIMING) ? 1:0,

@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -25,6 +25,60 @@
 
 #include "xpserver.h"
 
+#include "utf8_names.h"
+
+#include "contact_stream.h"
+#include "contact_session.h"
+#include "record_session.h"
+#include "session_acceptor.h"
+#include "session_protocol.h"
+#include "websocket_transport.h"
+
+#define MAX_PENDING_SESSIONS 4
+#define MAX_PENDING_PER_IP 2
+#define SESSION_ADMISSION_TIMEOUT 4
+
+typedef enum {
+    PENDING_READING,
+    PENDING_GAME_REPLY,
+    PENDING_RESUME_REPLY,
+    PENDING_CONTROL_REPLY,
+    PENDING_CONTROL_CLOSE
+} pending_state_t;
+
+typedef enum {
+    CONTROL_RESPONSE_DONE,
+    CONTROL_RESPONSE_TEXT,
+    CONTROL_RESPONSE_OPTIONS
+} control_response_t;
+
+typedef struct {
+    bool active;
+    pending_state_t state;
+    time_t opened_at;
+    session_acceptor_t *acceptor;
+    record_session_t *session;
+    char address[SOCK_HOSTNAME_LENGTH];
+    int peer_port;
+    session_game_request_t game;
+    unsigned selected_version;
+    bool promote_game;
+    bool promote_resume;
+    int resume_connection;
+    record_session_id_t resume_claim_id;
+    session_control_request_t control;
+    control_response_t control_response;
+    unsigned char control_status;
+    char response_text[SERVER_SEND_SIZE];
+    size_t response_offset;
+    int option_index;
+    char option_value[MSG_LEN];
+    bool option_ready;
+    char output[SESSION_PROTOCOL_MAX_RECORD_SIZE];
+    size_t output_length;
+    bool output_accepted;
+} pending_session_t;
+
 /*
  * Global variables
  */
@@ -35,44 +89,135 @@ int			NumPseudoPlayers = 0;
 sock_t			contactSocket;
 
 static sockbuf_t	ibuf;
+static bool		contact_initialized;
+static bool		session_listener;
+static pending_session_t pending_sessions[MAX_PENDING_SESSIONS];
 
 static bool Owner(int request, char *user_name, char *host_addr,
 		  int host_port, int pass);
 static int Queue_player(char *real, char *nick, char *disp, int team,
 			char *addr, char *host, unsigned version, int port,
-			int *qpos);
+			game_transport_t transport, int *qpos,
+			int *login_port);
 static int Check_address(char *addr);
+static void Contact_process(sockbuf_t *request, sockbuf_t *reply,
+			    const char *peer_address, int peer_port,
+			    bool stream);
+static int Contact_stream_request(sockbuf_t *request, sockbuf_t *reply,
+			  const char *peer_address, int peer_port);
+static void Contact_accept_session(socket_handle_t fd, void *arg);
+static void Contact_session_poll(void);
+static void Pending_cleanup(pending_session_t *pending);
+
+static bool Contact_uses_session(void)
+{
+    return contactTransport == gameTransport
+	&& Game_transport_session_protocol_version(
+	       contactTransport, true) != 0;
+}
+
+static unsigned Contact_session_protocol_version(bool polygon_map)
+{
+    return Game_transport_session_protocol_version(
+	gameTransport, polygon_map);
+}
 
 void Contact_cleanup(void)
 {
-    sock_close(&contactSocket);
+    int i;
+
+    if (!contact_initialized)
+	return;
+    if (session_listener) {
+	for (i = 0; i < MAX_PENDING_SESSIONS; i++) {
+	    if (pending_sessions[i].active)
+		Pending_cleanup(&pending_sessions[i]);
+	}
+	remove_input(contactSocket.fd);
+	sock_close(&contactSocket);
+	session_listener = false;
+    } else if (contactTransport == GAME_TRANSPORT_TCP)
+	Contact_stream_cleanup();
+    else {
+	remove_input(contactSocket.fd);
+	sock_close(&contactSocket);
+    }
+    if (ibuf.buf != NULL)
+	Sockbuf_cleanup(&ibuf);
+    contact_initialized = false;
 }
 
 int Contact_init(void)
 {
     int status;
 
-    /*
-     * Create a socket which we can listen on.
-     */
-    if ((status = sock_open_udp(&contactSocket, serverAddr,
-			        options.contactPort)) == -1) {
-	error("Could not create Dgram contactSocket");
-	error("Perhaps %s is already running?", APPNAME);
-	return false;
-    }
-    sock_set_timeout(&contactSocket, 0, 0);
-    if (sock_set_non_blocking(&contactSocket, 1) == -1) {
-	error("Can't make contact socket non-blocking");
-	return false;
-    }
-    if (Sockbuf_init(&ibuf, &contactSocket, SERVER_SEND_SIZE,
-		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
-	error("No memory for contact buffer");
-	return false;
-    }
+    sock_init(&contactSocket);
+    if (Contact_uses_session()) {
+	int backlog = Net_server_connection_limit() + MAX_PENDING_SESSIONS;
 
-    install_input(Contact, contactSocket.fd, (void *) &contactSocket);
+	if (backlog < MAX_PENDING_SESSIONS)
+	    backlog = MAX_PENDING_SESSIONS;
+	status = sock_open_tcp_listener(&contactSocket, serverAddr,
+				       options.contactPort, backlog);
+	if (status == SOCK_IS_ERROR
+	    || sock_set_non_blocking(&contactSocket, 1) == SOCK_IS_ERROR
+	    || install_input(Contact_accept_session, contactSocket.fd, NULL)
+	       == SOCK_IS_ERROR) {
+	    error("Could not create fixed %s session listener",
+		  Game_transport_name(contactTransport));
+	    if (contactSocket.fd != SOCK_FD_INVALID)
+		sock_close(&contactSocket);
+	    return false;
+	}
+	session_listener = true;
+    } else if (contactTransport == GAME_TRANSPORT_TCP) {
+	if (Sockbuf_init(&ibuf, NULL, SERVER_SEND_SIZE,
+			 SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_LOCK) == -1) {
+	    error("No memory for contact buffer");
+	    return false;
+	}
+	status = Contact_stream_init(&contactSocket, serverAddr,
+				     options.contactPort,
+				     Contact_stream_request);
+	if (status == SOCK_IS_ERROR) {
+	    error("Could not create TCP contact listener");
+	    error("Perhaps %s is already running?", APPNAME);
+	    Sockbuf_cleanup(&ibuf);
+	    return false;
+	}
+    }
+    else {
+	/* Create the datagram socket used by the traditional contact path. */
+	status = sock_open_udp(&contactSocket, serverAddr,
+			       options.contactPort);
+	if (status == SOCK_IS_ERROR) {
+	    error("Could not create UDP contact socket");
+	    error("Perhaps %s is already running?", APPNAME);
+	    return false;
+	}
+	sock_set_timeout(&contactSocket, 0, 0);
+	if (sock_set_non_blocking(&contactSocket, 1) == SOCK_IS_ERROR) {
+	    error("Can't make contact socket non-blocking");
+	    sock_close(&contactSocket);
+	    return false;
+	}
+	if (Sockbuf_init(&ibuf, &contactSocket, SERVER_SEND_SIZE,
+			 SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
+	    error("No memory for contact buffer");
+	    sock_close(&contactSocket);
+	    return false;
+	}
+	if (install_input(Contact, contactSocket.fd, (void *)&contactSocket)
+	    == SOCK_IS_ERROR) {
+	    error("Cannot register contact socket with scheduler");
+	    Sockbuf_cleanup(&ibuf);
+	    sock_close(&contactSocket);
+	    return false;
+	}
+    }
+    contact_initialized = true;
+    xpprintf("Contact transport: %s on port %d.\n",
+	     Game_transport_name(contactTransport), options.contactPort);
     return true;
 }
 
@@ -187,15 +332,19 @@ static int Kick_paused_players(int team)
 }
 
 
-static int Reply(char *host_addr, int port)
+static int Reply(sockbuf_t *reply, char *host_addr, int port, bool stream)
 {
     int i, result = -1;
     const int max_send_retries = 3;
 
+    if (stream)
+	return reply->len;
+
     for (i = 0; i < max_send_retries; i++) {
-	if ((result = sock_send_dest(&ibuf.sock, host_addr, port,
-				     ibuf.buf, ibuf.len)) == -1)
-	    sock_get_error(&ibuf.sock);
+	result = sock_send_dest(&contactSocket, host_addr, port,
+			        reply->buf, reply->len);
+	if (result == SOCK_IS_ERROR)
+	    sock_get_error(&contactSocket);
 	else
 	    break;
     }
@@ -240,6 +389,668 @@ static int Check_names(char *nick_name, char *user_name, char *host_name)
     return SUCCESS;
 }
 
+static void Pending_cleanup(pending_session_t *pending)
+{
+    if (pending->resume_claim_id != RECORD_SESSION_ID_INVALID)
+	Net_server_cancel_session_resume(
+	    pending->resume_connection, pending->resume_claim_id);
+    Session_acceptor_destroy(pending->acceptor);
+    Record_session_destroy(pending->session);
+    memset(pending, 0, sizeof(*pending));
+}
+
+static pending_session_t *Pending_find_free(void)
+{
+    int i;
+
+    for (i = 0; i < MAX_PENDING_SESSIONS; i++) {
+	if (!pending_sessions[i].active)
+	    return &pending_sessions[i];
+    }
+    return NULL;
+}
+
+static int Pending_count_address(const char *address)
+{
+    int count = 0;
+    int i;
+
+    for (i = 0; i < MAX_PENDING_SESSIONS; i++) {
+	if (pending_sessions[i].active
+	    && strcmp(pending_sessions[i].address, address) == 0)
+	    count++;
+    }
+    return count;
+}
+
+int Contact_attach_transport(record_transport_t *transport,
+			     const char *address, int peer_port)
+{
+    pending_session_t *pending;
+    record_session_t *session;
+
+    if (transport == NULL || address == NULL || peer_port < 0
+	|| peer_port > 65535) {
+	Record_transport_destroy(transport);
+	errno = EINVAL;
+	return -1;
+    }
+    pending = Pending_find_free();
+    if (rplayback || pending == NULL
+	|| Pending_count_address(address) >= MAX_PENDING_PER_IP) {
+	Record_transport_destroy(transport);
+	errno = EBUSY;
+	return -1;
+    }
+    session = Record_session_create(transport);
+    if (session == NULL)
+	return -1;
+
+    memset(pending, 0, sizeof(*pending));
+    pending->acceptor = Session_acceptor_create(session);
+    if (pending->acceptor == NULL) {
+	Record_session_destroy(session);
+	return -1;
+    }
+    pending->active = true;
+    pending->state = PENDING_READING;
+    pending->resume_connection = -1;
+    pending->opened_at = time(NULL);
+    pending->peer_port = peer_port;
+    strlcpy(pending->address, address, sizeof(pending->address));
+    return 0;
+}
+
+static void Contact_accept_session(socket_handle_t fd, void *arg)
+{
+    sock_t accepted;
+    record_transport_t *transport;
+    char address[SOCK_HOSTNAME_LENGTH];
+    int peer_port;
+
+    UNUSED_PARAM(fd);
+    UNUSED_PARAM(arg);
+
+    for (;;) {
+	errno = 0;
+	if (sock_accept(&contactSocket, &accepted) == SOCK_IS_ERROR) {
+	    if (errno != EWOULDBLOCK && errno != EAGAIN && errno != EINTR)
+		error("Cannot accept %s session (%d)",
+		      Game_transport_name(contactTransport), errno);
+	    return;
+	}
+
+	strlcpy(address, sock_get_last_addr(&accepted), sizeof(address));
+	peer_port = sock_get_last_port(&accepted);
+	if (sock_set_non_blocking(&accepted, 1) == SOCK_IS_ERROR
+	    || sock_set_tcp_nodelay(&accepted, 1) == SOCK_IS_ERROR) {
+	    sock_close(&accepted);
+	    continue;
+	}
+	if (sock_set_receive_buffer_size(
+		&accepted, SERVER_RECV_SIZE + 256) == SOCK_IS_ERROR)
+	    error("Cannot set session receive buffer size");
+	if (sock_set_send_buffer_size(
+		&accepted, SERVER_SEND_SIZE + 256) == SOCK_IS_ERROR)
+	    error("Cannot set session send buffer size");
+	transport = contactTransport == GAME_TRANSPORT_WEBSOCKET
+	    ? Record_transport_create_websocket_server(
+		&accepted, SERVER_RECV_SIZE, SERVER_SEND_SIZE)
+	    : Record_transport_create_tcp(
+		&accepted, SERVER_RECV_SIZE, SERVER_SEND_SIZE);
+	if (transport == NULL) {
+	    sock_close(&accepted);
+	    continue;
+	}
+	Contact_attach_transport(transport, address, peer_port);
+    }
+}
+
+static int Pending_reserved_games(const pending_session_t *current,
+				  const char *nick)
+{
+    int reserved = 0;
+    int i;
+
+    for (i = 0; i < MAX_PENDING_SESSIONS; i++) {
+	const pending_session_t *pending = &pending_sessions[i];
+
+	if (pending == current || !pending->active || !pending->promote_game)
+	    continue;
+	reserved++;
+	if (strcasecmp(pending->game.nick, nick) == 0)
+	    return -1;
+    }
+    return reserved;
+}
+
+static int Admit_session_game(pending_session_t *pending)
+{
+    session_game_request_t *game = &pending->game;
+    int limit;
+    int reserved;
+    int status;
+
+    Fix_nick_name(game->nick);
+    Fix_host_name(game->host);
+    if (Check_utf8_user_name(game->user) == NAME_ERROR
+	|| Check_utf8_disp_name(game->display) == NAME_ERROR) {
+	return E_INVAL;
+    }
+    if (game->team < 0 || game->team >= MAX_TEAMS)
+	game->team = TEAM_NOT_SET;
+
+    if (game->polygon_version
+	    != Contact_session_protocol_version(true)
+	|| game->legacy_version
+	    != Contact_session_protocol_version(false))
+	return E_VERSION;
+    pending->selected_version = is_polygon_map
+	? Contact_session_protocol_version(true)
+	: Contact_session_protocol_version(false);
+    if (Check_address(pending->address))
+	return E_GAME_LOCKED;
+    status = Check_names(game->nick, game->user, game->host);
+    if (status != SUCCESS)
+	return status;
+
+    reserved = Pending_reserved_games(pending, game->nick);
+    if (reserved < 0)
+	return E_IN_USE;
+    if (game_lock && !rplayback && !options.baselessPausing)
+	return E_GAME_LOCKED;
+    if (Check_max_clients_per_IP(pending->address))
+	return E_GAME_LOCKED;
+
+    limit = (int)MIN(options.playerLimit,
+		     options.baselessPausing ? 1000000 : Num_bases());
+    if (NumPlayers - NumPseudoPlayers + login_in_progress + reserved
+	>= limit) {
+	if (game_lock
+	    || ((!Kick_robot_players(TEAM_NOT_SET)
+		 || NumPlayers - NumPseudoPlayers + login_in_progress
+		    + reserved >= limit)
+		&& (!Kick_paused_players(TEAM_NOT_SET)
+		    || NumPlayers - NumPseudoPlayers + login_in_progress
+		       + reserved >= limit)))
+	    return E_GAME_FULL;
+    }
+
+    if (BIT(world->rules->mode, TEAM_PLAY)) {
+	if (game->team >= 0 && game->team < MAX_TEAMS) {
+	    if (game_lock
+		|| (game->team == options.robotTeam
+		    && options.reserveRobotTeam)
+		|| (world->teams[game->team].NumMembers
+		    >= world->teams[game->team].NumBases
+		    && !Kick_robot_players(game->team)
+		    && !Kick_paused_players(game->team)))
+		game->team = TEAM_NOT_SET;
+	}
+	if (game->team == TEAM_NOT_SET)
+	    game->team = Pick_team(PL_TYPE_HUMAN);
+	if (game->team == TEAM_NOT_SET && !game_lock
+	    && NumRobots > world->teams[options.robotTeam].NumRobots) {
+	    Kick_robot_players(TEAM_NOT_SET);
+	    game->team = Pick_team(PL_TYPE_HUMAN);
+	}
+	if (game->team == TEAM_NOT_SET)
+	    return E_TEAM_FULL;
+    } else
+	game->team = TEAM_NOT_SET;
+
+    return SUCCESS;
+}
+
+static const char *Session_status_reason(int status)
+{
+    switch (status) {
+    case SUCCESS:
+	return "accepted";
+    case E_NOT_OWNER:
+	return "permission denied";
+    case E_GAME_FULL:
+	return "game is full";
+    case E_TEAM_FULL:
+	return "team is full";
+    case E_GAME_LOCKED:
+	return "game is locked";
+    case E_IN_USE:
+	return "name is already in use";
+    case E_INVAL:
+	return "invalid request";
+    case E_VERSION:
+	return "incompatible protocol version";
+    case E_NOT_FOUND:
+	return "player not found";
+    case E_NOENT:
+	return "option not found";
+    case E_UNDEFINED:
+	return "command is not supported";
+    default:
+	return "session failed";
+    }
+}
+
+static int Queue_session_game_reply(pending_session_t *pending, int status)
+{
+    session_game_reply_t reply;
+
+    memset(&reply, 0, sizeof(reply));
+    reply.status = (unsigned char)status;
+    reply.selected_version = (unsigned short)pending->selected_version;
+    strlcpy(reply.reason, Session_status_reason(status),
+	    sizeof(reply.reason));
+    if (Session_protocol_encode_game_reply(
+	    pending->output, sizeof(pending->output),
+	    &pending->output_length, &reply) == -1)
+	return -1;
+    pending->output_accepted = false;
+    pending->state = PENDING_GAME_REPLY;
+    pending->promote_game = status == SUCCESS;
+    return 0;
+}
+
+static int Queue_session_resume_reply(pending_session_t *pending, int status)
+{
+    session_resume_reply_t reply;
+    const char *reason;
+
+    memset(&reply, 0, sizeof(reply));
+    reply.status = (unsigned char)status;
+    reason = status == E_NOT_FOUND || status == E_IN_USE
+	? "session unavailable" : Session_status_reason(status);
+    strlcpy(reply.reason, reason, sizeof(reply.reason));
+    if (Session_protocol_encode_resume_reply(
+	    pending->output, sizeof(pending->output),
+	    &pending->output_length, &reply) == -1)
+	return -1;
+    pending->output_accepted = false;
+    pending->state = PENDING_RESUME_REPLY;
+    pending->promote_resume = status == SUCCESS;
+    return 0;
+}
+
+static bool Session_control_is_public(unsigned char command)
+{
+    return command == CONTACT_pack || command == REPORT_STATUS_pack
+	|| command == OPTION_LIST_pack;
+}
+
+static bool Session_control_is_owner(const pending_session_t *pending)
+{
+    return (strncmp(pending->address, "127.", 4) == 0
+	    || strcmp(pending->address, "::1") == 0)
+	&& strcmp(pending->control.user, Server.owner) == 0;
+}
+
+static bool Session_control_next_option(pending_session_t *pending,
+					char *value)
+{
+    int result;
+
+    for (;;) {
+	result = Parser_list_option(&pending->option_index, value);
+	if (result < 0)
+	    return false;
+	pending->option_index++;
+	if (result > 0)
+	    return true;
+    }
+}
+
+static int Queue_session_control_frame(pending_session_t *pending,
+				       const char *payload, bool more)
+{
+    session_control_reply_t reply;
+
+    memset(&reply, 0, sizeof(reply));
+    reply.command = pending->control.command;
+    reply.status = pending->control_status;
+    reply.more = more;
+    strlcpy(reply.payload, payload, sizeof(reply.payload));
+    if (Session_protocol_encode_control_reply(
+	    pending->output, sizeof(pending->output),
+	    &pending->output_length, &reply) == -1)
+	return -1;
+    pending->output_accepted = false;
+    pending->state = PENDING_CONTROL_REPLY;
+    return 0;
+}
+
+static int Queue_next_session_control_frame(pending_session_t *pending)
+{
+    char payload[MSG_LEN];
+    bool more;
+
+    if (pending->control_response == CONTROL_RESPONSE_TEXT) {
+	size_t total = strlen(pending->response_text);
+	size_t remaining = total - pending->response_offset;
+	size_t length = MIN(remaining, sizeof(payload) - 1);
+
+	memcpy(payload, pending->response_text + pending->response_offset,
+	       length);
+	payload[length] = '\0';
+	pending->response_offset += length;
+	more = pending->response_offset < total;
+	if (!more)
+	    pending->control_response = CONTROL_RESPONSE_DONE;
+	return Queue_session_control_frame(pending, payload, more);
+    }
+    if (pending->control_response == CONTROL_RESPONSE_OPTIONS) {
+	if (!pending->option_ready) {
+	    pending->option_ready = Session_control_next_option(
+		pending, pending->option_value);
+	    if (!pending->option_ready) {
+		pending->control_response = CONTROL_RESPONSE_DONE;
+		return Queue_session_control_frame(pending, "", false);
+	    }
+	}
+	strlcpy(payload, pending->option_value, sizeof(payload));
+	pending->option_ready = Session_control_next_option(
+	    pending, pending->option_value);
+	more = pending->option_ready;
+	if (!more)
+	    pending->control_response = CONTROL_RESPONSE_DONE;
+	return Queue_session_control_frame(pending, payload, more);
+    }
+    return -1;
+}
+
+static int Queue_simple_session_control_reply(pending_session_t *pending,
+					      int status)
+{
+    pending->control_status = (unsigned char)status;
+    pending->control_response = CONTROL_RESPONSE_DONE;
+    return Queue_session_control_frame(
+	pending, Session_status_reason(status), false);
+}
+
+static int Execute_session_control(pending_session_t *pending)
+{
+    session_control_request_t *control = &pending->control;
+    char argument[MSG_LEN];
+    char *separator;
+    int status = SUCCESS;
+
+    if (Check_utf8_user_name(control->user) == NAME_ERROR)
+	return Queue_simple_session_control_reply(pending, E_INVAL);
+    if (control->polygon_version
+	    != Contact_session_protocol_version(true)
+	|| control->legacy_version
+	    != Contact_session_protocol_version(false))
+	return Queue_simple_session_control_reply(pending, E_VERSION);
+    if (!Session_control_is_public(control->command)
+	&& !Session_control_is_owner(pending))
+	return Queue_simple_session_control_reply(pending, E_NOT_OWNER);
+
+    switch (control->command) {
+    case CONTACT_pack:
+	return Queue_simple_session_control_reply(pending, SUCCESS);
+    case REPORT_STATUS_pack:
+	xpprintf("%s %s@%s asked for info about current game.\n",
+		 showtime(), control->user, pending->address);
+	Server_info(pending->response_text, sizeof(pending->response_text));
+	pending->response_offset = 0;
+	pending->control_status = SUCCESS;
+	pending->control_response = CONTROL_RESPONSE_TEXT;
+	return Queue_next_session_control_frame(pending);
+    case OPTION_LIST_pack:
+	xpprintf("%s %s@%s asked for an option list.\n",
+		 showtime(), control->user, pending->address);
+	pending->option_index = 0;
+	pending->option_ready = false;
+	pending->control_status = SUCCESS;
+	pending->control_response = CONTROL_RESPONSE_OPTIONS;
+	return Queue_next_session_control_frame(pending);
+    case MESSAGE_pack:
+	if (control->argument[0] == '\0')
+	    status = E_INVAL;
+	else
+	    Set_message_f("%s [%s SPEAKING FROM ABOVE]",
+			  control->argument, control->user);
+	break;
+    case LOCK_GAME_pack:
+	if (!strcasecmp(control->argument, "1")
+	    || !strcasecmp(control->argument, "on")
+	    || !strcasecmp(control->argument, "true"))
+	    game_lock = true;
+	else if (!strcasecmp(control->argument, "0")
+		 || !strcasecmp(control->argument, "off")
+		 || !strcasecmp(control->argument, "false"))
+	    game_lock = false;
+	else
+	    status = E_INVAL;
+	break;
+    case SHUTDOWN_pack:
+	Server_shutdown(control->user, 1,
+		control->argument[0] != '\0'
+		? control->argument : "shutdown requested");
+	break;
+    case KICK_PLAYER_pack:
+    {
+	player_t *player = Get_player_by_name(control->argument, NULL, NULL);
+
+	if (player == NULL)
+	    status = E_NOT_FOUND;
+	else {
+	    Set_message_f("\"%s\" upset the gods and was kicked out "
+			  "of the game.", player->name);
+	    if (player->conn == NULL)
+		Delete_player(player);
+	    else
+		Destroy_connection(player->conn, "kicked out");
+	    updateScores = true;
+	}
+	break;
+    }
+    case OPTION_TUNE_pack:
+	strlcpy(argument, control->argument, sizeof(argument));
+	separator = strchr(argument, ':');
+	if (separator == NULL || separator == argument
+	    || separator[1] == '\0')
+	    status = E_INVAL;
+	else {
+	    int tune_result;
+
+	    *separator++ = '\0';
+	    tune_result = Tune_option(argument, separator);
+	    if (tune_result == 1) {
+		if (strcasecmp(argument, "password")) {
+		    char value[MAX_CHARS];
+
+		    Get_option_value(argument, value, sizeof(value));
+		    Set_message_f(" < Option %s set to %s by %s "
+				  "FROM ABOVE. >",
+				  argument, value, control->user);
+		}
+	    } else if (tune_result == -1)
+		status = E_UNDEFINED;
+	    else if (tune_result == -2)
+		status = E_NOENT;
+	    else if (tune_result != 1)
+		status = E_INVAL;
+	}
+	break;
+    default:
+	status = E_UNDEFINED;
+	break;
+    }
+    return Queue_simple_session_control_reply(pending, status);
+}
+
+static int Pending_flush_output(pending_session_t *pending)
+{
+    record_flush_result_t flush_result;
+    record_send_result_t send_result;
+
+    if (!pending->output_accepted && pending->output_length > 0) {
+	send_result = Record_session_send(
+	    pending->session, pending->output, pending->output_length,
+	    RECORD_DELIVERY_REQUIRED);
+	if (send_result == RECORD_SEND_BACKPRESSURED)
+	    return 0;
+	if (send_result != RECORD_SEND_ACCEPTED)
+	    return -1;
+	pending->output_length = 0;
+	pending->output_accepted = true;
+    }
+    flush_result = Record_session_flush(pending->session);
+    if (flush_result == RECORD_FLUSH_ERROR
+	|| flush_result == RECORD_FLUSH_CLOSED)
+	return -1;
+    if (flush_result == RECORD_FLUSH_PENDING)
+	return 0;
+    pending->output_accepted = false;
+    return 1;
+}
+
+static void Promote_session_game(pending_session_t *pending)
+{
+    session_game_request_t game = pending->game;
+    record_session_t *session = pending->session;
+    char address[SOCK_HOSTNAME_LENGTH];
+    int peer_port = pending->peer_port;
+
+    strlcpy(address, pending->address, sizeof(address));
+    pending->session = NULL;
+    memset(pending, 0, sizeof(*pending));
+    Setup_session_connection(
+	session, game.user, game.nick, game.display,
+	game.team, address, game.host,
+	Contact_session_protocol_version(is_polygon_map), peer_port);
+}
+
+static void Promote_session_resume(pending_session_t *pending)
+{
+    record_session_t *replacement = pending->session;
+
+    if (Net_server_complete_session_resume(
+	    pending->resume_connection, pending->resume_claim_id,
+	    replacement, pending->peer_port) == -1) {
+	Pending_cleanup(pending);
+	return;
+    }
+    pending->session = NULL;
+    memset(pending, 0, sizeof(*pending));
+}
+
+static void Process_pending_session(pending_session_t *pending)
+{
+    session_acceptor_result_t accept_result;
+    record_receive_result_t receive_result;
+    session_open_t open;
+    char ignored[SESSION_PROTOCOL_MAX_RECORD_SIZE];
+    size_t ignored_length;
+    int status;
+
+    if ((pending->state == PENDING_READING
+	 || pending->state == PENDING_CONTROL_CLOSE)
+	&& time(NULL) >= pending->opened_at + SESSION_ADMISSION_TIMEOUT) {
+	Pending_cleanup(pending);
+	return;
+    }
+
+    if (pending->state == PENDING_CONTROL_CLOSE) {
+	receive_result = Record_session_receive(
+	    pending->session, ignored, sizeof(ignored), &ignored_length);
+	if (receive_result == RECORD_RECEIVE_EMPTY)
+	    return;
+	Pending_cleanup(pending);
+	return;
+    }
+
+    if (pending->state == PENDING_READING) {
+	accept_result = Session_acceptor_step(pending->acceptor, &open);
+	if (accept_result == SESSION_ACCEPTOR_PENDING)
+	    return;
+	if (accept_result == SESSION_ACCEPTOR_ERROR) {
+	    Pending_cleanup(pending);
+	    return;
+	}
+	pending->session = Session_acceptor_take_session(pending->acceptor);
+	Session_acceptor_destroy(pending->acceptor);
+	pending->acceptor = NULL;
+	if (pending->session == NULL) {
+	    Pending_cleanup(pending);
+	    return;
+	}
+	if (accept_result == SESSION_ACCEPTOR_GAME_READY) {
+	    pending->game = open.request.game;
+	    status = Admit_session_game(pending);
+	    if (Queue_session_game_reply(pending, status) == -1) {
+		Pending_cleanup(pending);
+		return;
+	    }
+	} else if (accept_result == SESSION_ACCEPTOR_CONTROL_READY) {
+	    pending->control = open.request.control;
+	    if (Execute_session_control(pending) == -1) {
+		Pending_cleanup(pending);
+		return;
+	    }
+	} else {
+	    record_session_id_t claim_id = Record_session_id(
+		pending->session);
+
+	    pending->resume_connection = -1;
+	    status = Net_server_claim_session_resume(
+		&open.request.resume.token, pending->address,
+		claim_id, &pending->resume_connection);
+	    if (status == SUCCESS)
+		pending->resume_claim_id = claim_id;
+	    if (Queue_session_resume_reply(pending, status) == -1) {
+		Pending_cleanup(pending);
+		return;
+	    }
+	}
+    }
+
+    status = Pending_flush_output(pending);
+    if (status < 0) {
+	Pending_cleanup(pending);
+	return;
+    }
+    if (status == 0)
+	return;
+    if (pending->state == PENDING_GAME_REPLY) {
+	if (pending->promote_game)
+	    Promote_session_game(pending);
+	else
+	    Pending_cleanup(pending);
+	return;
+    }
+    if (pending->state == PENDING_RESUME_REPLY) {
+	if (pending->promote_resume)
+	    Promote_session_resume(pending);
+	else
+	    Pending_cleanup(pending);
+	return;
+    }
+    if (pending->control_response == CONTROL_RESPONSE_DONE) {
+	/* A WebSocket endpoint must let the client consume the final response
+	 * and start the close handshake before the server releases the stream. */
+	if (contactTransport == GAME_TRANSPORT_WEBSOCKET) {
+	    pending->state = PENDING_CONTROL_CLOSE;
+	    pending->opened_at = time(NULL);
+	    return;
+	}
+	Pending_cleanup(pending);
+	return;
+    }
+    if (Queue_next_session_control_frame(pending) == -1)
+	Pending_cleanup(pending);
+}
+
+static void Contact_session_poll(void)
+{
+    int i;
+
+    for (i = 0; i < MAX_PENDING_SESSIONS; i++) {
+	if (pending_sessions[i].active)
+	    Process_pending_session(&pending_sessions[i]);
+    }
+}
+
 
 /*
  * Support some older clients, which don't know
@@ -249,49 +1060,63 @@ static int Check_names(char *nick_name, char *user_name, char *host_name)
  */
 static unsigned Version_to_magic(unsigned version)
 {
-    if (version >= 0x4203  && version <= MY_VERSION)
+    game_transport_t requested_transport;
+
+    if (Game_transport_from_protocol_version(version, &requested_transport)
+	&& requested_transport == gameTransport
+	&& version >= 0x4203 && version <= MY_VERSION)
 	return VERSION2MAGIC(version);
     return MAGIC;
 }
 
-void Contact(int fd, void *arg)
+void Contact(socket_handle_t fd, void *arg)
 {
-    int i, team, bytes, delay, qpos, status;
-    char reply_to, ch;
-    unsigned magic, version, my_magic;
-    uint16_t port;
-    char user_name[MAX_CHARS], disp_name[MAX_CHARS], nick_name[MAX_CHARS];
-    char host_name[MAX_CHARS], host_addr[24], str[MSG_LEN];
+    int bytes;
 
-    UNUSED_PARAM(fd); UNUSED_PARAM(arg);
-    /*
-     * Someone connected to us, now try and decipher the message :)
-     */
+    UNUSED_PARAM(fd);
+    UNUSED_PARAM(arg);
     Sockbuf_clear(&ibuf);
-    if ((bytes = sock_receive_any(&contactSocket, ibuf.buf, ibuf.size)) <= 8) {
-	if (bytes < 0
-	    && errno != EWOULDBLOCK
-	    && errno != EAGAIN
+    bytes = sock_receive_any(&contactSocket, ibuf.buf, ibuf.size);
+    if (bytes <= 8) {
+	if (bytes < 0 && errno != EWOULDBLOCK && errno != EAGAIN
 	    && errno != EINTR)
-	    /*
-	     * Clear the error condition for the contact socket.
-	     */
 	    sock_get_error(&contactSocket);
 	return;
     }
     ibuf.len = bytes;
+    Contact_process(&ibuf, &ibuf, sock_get_last_addr(&contactSocket),
+		    sock_get_last_port(&contactSocket), false);
+}
 
-    strlcpy(host_addr, sock_get_last_addr(&contactSocket), sizeof(host_addr));
-    xpprintf("%s Checking Address:(%s)\n",showtime(),host_addr);
+static int Contact_stream_request(sockbuf_t *request, sockbuf_t *reply,
+			  const char *peer_address, int peer_port)
+{
+    Contact_process(request, reply, peer_address, peer_port, true);
+    return reply->len;
+}
+
+static void Contact_process(sockbuf_t *request, sockbuf_t *reply,
+			    const char *peer_address, int peer_port,
+			    bool stream)
+{
+    int i, team, delay, qpos, status, login_port;
+    char reply_to, ch;
+    unsigned magic, version, my_magic;
+    uint16_t port;
+    char user_name[MAX_CHARS], disp_name[MAX_CHARS], nick_name[MAX_CHARS];
+    char host_name[MAX_CHARS], host_addr[SOCK_HOSTNAME_LENGTH], str[MSG_LEN];
+
+    strlcpy(host_addr, peer_address, sizeof(host_addr));
+    xpprintf("%s Checking Address:(%s)\n", showtime(), host_addr);
     if (Check_address(host_addr)) {
-	xpprintf("%s Host blocked!:(%s)\n",showtime(),host_addr);
+	xpprintf("%s Host blocked!:(%s)\n", showtime(), host_addr);
 	return;
     }
-    
+
     /*
      * Determine if we can talk with this client.
      */
-    if (Packet_scanf(&ibuf, "%u", &magic) <= 0
+    if (Packet_scanf(request, "%u", &magic) <= 0
 	|| (magic & 0xFFFF) != (MAGIC & 0xFFFF)) {
 	D(printf("Incompatible packet from %s (0x%08x)", host_addr, magic));
 	return;
@@ -301,15 +1126,15 @@ void Contact(int fd, void *arg)
     /*
      * Read core of packet.
      */
-    if (Packet_scanf(&ibuf, "%s%hu%c", user_name, &port, &ch) <= 0) {
+    if (Packet_scanf(request, "%s%hu%c", user_name, &port, &ch) <= 0) {
 	D(printf("Incomplete packet from %s", host_addr));
 	return;
     }
     Fix_user_name(user_name);
     reply_to = (ch & 0xFF);	/* no sign extension. */
 
-    /* ignore port for termified clients. */
-    port = sock_get_last_port(&contactSocket);
+    /* Ignore the advertised port; replies target the observed peer port. */
+    port = (uint16_t)peer_port;
 
     /*
      * Now see if we have the same (or a compatible) version.
@@ -318,14 +1143,31 @@ void Contact(int fd, void *arg)
      * care about version incompatibilities, so that the client
      * can decide if it wants to conform to our version or not.
      */
+    if (version != 0
+	&& (reply_to == ENTER_GAME_pack || reply_to == ENTER_QUEUE_pack)) {
+	game_transport_t requested_transport;
+
+	if (!Game_transport_from_protocol_version(version,
+					      &requested_transport)
+	    || requested_transport != gameTransport) {
+	    D(error("Gameplay transport mismatch with %s@%s (%s,%04x)",
+		    user_name, host_addr,
+		    Game_transport_name(gameTransport), version));
+	    Sockbuf_clear(reply);
+	    Packet_printf(reply, "%u%c%c", MAGIC, reply_to, E_VERSION);
+	    Reply(reply, host_addr, port, stream);
+	    return;
+	}
+    }
+
     if (version < MIN_CLIENT_VERSION
 	|| (version > MAX_CLIENT_VERSION
 	    && reply_to != CONTACT_pack)) {
 	D(error("Incompatible version with %s@%s (%04x,%04x)",
 		user_name, host_addr, MY_VERSION, version));
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", MAGIC, reply_to, E_VERSION);
-	Reply(host_addr, port);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", MAGIC, reply_to, E_VERSION);
+	Reply(reply, host_addr, port, stream);
 	return;
     }
 
@@ -339,26 +1181,26 @@ void Contact(int fd, void *arg)
 
 	if (!credentials) {
 	    credentials = (time(NULL) * (time_t)Get_process_id());
-	    credentials ^= (long)Contact;
-	    credentials	+= (long)key + (long)&key;
+	    credentials ^= (long)(uintptr_t)Contact;
+	    credentials	+= (long)key + (long)(uintptr_t)&key;
 	    credentials ^= (long)randomMT() << 1;
 	    credentials &= 0xFFFFFFFF;
 	}
-	if (Packet_scanf(&ibuf, "%ld", &key) <= 0)
+	if (Packet_scanf(request, "%ld", &key) <= 0)
 	    return;
 
 	if (!Owner((int)reply_to, user_name, host_addr, port,
 		   key == credentials)) {
-	    Sockbuf_clear(&ibuf);
-	    Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, E_NOT_OWNER);
-	    Reply(host_addr, port);
+	    Sockbuf_clear(reply);
+	    Packet_printf(reply, "%u%c%c", my_magic, reply_to, E_NOT_OWNER);
+	    Reply(reply, host_addr, port, stream);
 	    return;
 	}
 	if (reply_to == CREDENTIALS_pack) {
-	    Sockbuf_clear(&ibuf);
-	    Packet_printf(&ibuf, "%u%c%c%ld", my_magic, reply_to, SUCCESS,
+	    Sockbuf_clear(reply);
+	    Packet_printf(reply, "%u%c%c%ld", my_magic, reply_to, SUCCESS,
 			  credentials);
-	    Reply(host_addr, port);
+	    Reply(reply, host_addr, port, stream);
 	    return;
 	}
     }
@@ -373,7 +1215,7 @@ void Contact(int fd, void *arg)
 	/*
 	 * Someone wants to be put on the player waiting queue.
 	 */
-	if (Packet_scanf(&ibuf, "%s%s%s%d", nick_name, disp_name, host_name,
+	if (Packet_scanf(request, "%s%s%s%d", nick_name, disp_name, host_name,
 			 &team) <= 0) {
 	    D(printf("Incomplete enter queue from %s@%s",
 		     user_name, host_addr));
@@ -389,12 +1231,19 @@ void Contact(int fd, void *arg)
 			      disp_name, team,
 			      host_addr, host_name,
 			      version, port,
-			      &qpos);
+			      stream ? GAME_TRANSPORT_TCP
+			             : GAME_TRANSPORT_UDP,
+			      &qpos, &login_port);
 	if (status < 0)
 	    return;
 
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c%hu", my_magic, reply_to, status, qpos);
+	Sockbuf_clear(reply);
+	if (status == SUCCESS && login_port > 0)
+	    Packet_printf(reply, "%u%c%c%hu", my_magic, ENTER_GAME_pack,
+			  status, login_port);
+	else
+	    Packet_printf(reply, "%u%c%c%hu", my_magic, reply_to,
+			  status, qpos);
     }
     break;
 
@@ -407,12 +1256,12 @@ void Contact(int fd, void *arg)
 
 	xpprintf("%s %s@%s asked for info about current game.\n",
 		 showtime(), user_name, host_addr);
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, SUCCESS);
-	assert(ibuf.size - ibuf.len >= 0);
-	Server_info(ibuf.buf + ibuf.len, (size_t)(ibuf.size - ibuf.len));
-	ibuf.buf[ibuf.size - 1] = '\0';
-	ibuf.len += strlen(ibuf.buf + ibuf.len) + 1;
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, SUCCESS);
+	assert(reply->size - reply->len >= 0);
+	Server_info(reply->buf + reply->len, (size_t)(reply->size - reply->len));
+	reply->buf[reply->size - 1] = '\0';
+	reply->len += strlen(reply->buf + reply->len) + 1;
     }
     break;
 
@@ -423,13 +1272,13 @@ void Contact(int fd, void *arg)
 	 * Someone wants to transmit a message to the server.
 	 */
 
-	if (Packet_scanf(&ibuf, "%s", str) <= 0)
+	if (Packet_scanf(request, "%s", str) <= 0)
 	    status = E_INVAL;
 	else
 	    Set_message_f("%s [%s SPEAKING FROM ABOVE]", str, user_name);
 
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
     }
     break;
 
@@ -441,8 +1290,8 @@ void Contact(int fd, void *arg)
 	 */
 
 	game_lock = game_lock ? false : true;
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
     }
     break;
 
@@ -454,8 +1303,8 @@ void Contact(int fd, void *arg)
 	 */
 
 	D(printf("Got CONTACT from %s.\n", host_addr));
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
     }
     break;
 
@@ -467,13 +1316,13 @@ void Contact(int fd, void *arg)
 	 * Shutdown the entire server.
 	 */
 
-	if (Packet_scanf(&ibuf, "%d%s", &delay, reason) <= 0)
+	if (Packet_scanf(request, "%d%s", &delay, reason) <= 0)
 	    status = E_INVAL;
 	else
 	    Server_shutdown(user_name, delay, reason);
 
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
     }
     break;
 
@@ -483,7 +1332,7 @@ void Contact(int fd, void *arg)
 	/*
 	 * Kick someone from the game.
 	 */
-	if (Packet_scanf(&ibuf, "%s", str) <= 0)
+	if (Packet_scanf(request, "%s", str) <= 0)
 	    status = E_INVAL;
 	else {
 	    player_t *pl_found = Get_player_by_name(str, NULL, NULL);
@@ -501,8 +1350,8 @@ void Contact(int fd, void *arg)
 	    }
 	}
 
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
     }
     break;
 
@@ -518,7 +1367,7 @@ void Contact(int fd, void *arg)
 
 	char *opt, *val;
 
-	if (Packet_scanf(&ibuf, "%S", str) <= 0
+	if (Packet_scanf(request, "%S", str) <= 0
 		 || (opt = strtok(str, ":")) == NULL
 		 || (val = strtok(NULL, "")) == NULL)
 	    status = E_INVAL;
@@ -543,8 +1392,8 @@ void Contact(int fd, void *arg)
 	    else
 		status = E_INVAL;
 	}
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
     }
     break;
 
@@ -559,8 +1408,8 @@ void Contact(int fd, void *arg)
 		 showtime(), user_name, host_addr);
 	i = 0;
 	do {
-	    Sockbuf_clear(&ibuf);
-	    Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+	    Sockbuf_clear(reply);
+	    Packet_printf(reply, "%u%c%c", my_magic, reply_to, status);
 
 	    for (change = false, full = false; !full && !bad; ) {
 		switch (Parser_list_option(&i, str)) {
@@ -571,7 +1420,7 @@ void Contact(int fd, void *arg)
 		    i++;
 		    break;
 		default:
-		    switch (Packet_printf(&ibuf, "%s", str)) {
+		    switch (Packet_printf(reply, "%s", str)) {
 		    case 0:
 			full = true;
 			bad = (change) ? false : true;
@@ -587,7 +1436,9 @@ void Contact(int fd, void *arg)
 		    break;
 		}
 	    }
-	    if (change && Reply(host_addr, port) == -1)
+	    if (change && Reply(reply, host_addr, port, stream) == -1)
+		bad = true;
+	    if (stream)
 		bad = true;
 
 	} while (!bad);
@@ -601,11 +1452,11 @@ void Contact(int fd, void *arg)
 	D(printf("Unknown packet type (%d) from %s@%s.\n",
 		 reply_to, user_name, host_addr));
 
-	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, E_VERSION);
+	Sockbuf_clear(reply);
+	Packet_printf(reply, "%u%c%c", my_magic, reply_to, E_VERSION);
     }
 
-    Reply(host_addr, port);
+    Reply(reply, host_addr, port, stream);
 }
 
 
@@ -620,6 +1471,7 @@ struct queued_player {
     int				team;
     unsigned			version;
     int				login_port;
+    game_transport_t		contact_transport;
     long			last_ack_sent;
     long			last_ack_recv;
 };
@@ -651,10 +1503,12 @@ void Queue_kick(const char *nick)
     if (!qp)
 	return;
 
-    magic = Version_to_magic(qp->version);
-    Sockbuf_clear(&ibuf);
-    Packet_printf(&ibuf, "%u%c%c", magic, ENTER_GAME_pack, E_IN_USE);
-    Reply(qp->host_addr, qp->port);
+    if (qp->contact_transport == GAME_TRANSPORT_UDP) {
+	magic = Version_to_magic(qp->version);
+	Sockbuf_clear(&ibuf);
+	Packet_printf(&ibuf, "%u%c%c", magic, ENTER_GAME_pack, E_IN_USE);
+	Reply(&ibuf, qp->host_addr, qp->port, false);
+    }
     Queue_remove(qp, prev);
 
     return;
@@ -664,6 +1518,10 @@ static void Queue_ack(struct queued_player *qp, int qpos)
 {
     unsigned my_magic = Version_to_magic(qp->version);
 
+    if (qp->contact_transport == GAME_TRANSPORT_TCP) {
+	qp->last_ack_sent = main_loops;
+	return;
+    }
     Sockbuf_clear(&ibuf);
     if (qp->login_port == -1)
 	Packet_printf(&ibuf, "%u%c%c%hu",
@@ -671,7 +1529,7 @@ static void Queue_ack(struct queued_player *qp, int qpos)
     else
 	Packet_printf(&ibuf, "%u%c%c%hu",
 		      my_magic, ENTER_GAME_pack, SUCCESS, qp->login_port);
-    Reply(qp->host_addr, qp->port);
+    Reply(&ibuf, qp->host_addr, qp->port, false);
     qp->last_ack_sent = main_loops;
 }
 
@@ -680,6 +1538,11 @@ void Queue_loop(void)
     struct queued_player *qp, *prev = 0, *next = 0;
     int qpos = 0, login_port;
     static long last_unqueued_loops;
+
+    if (Contact_uses_session())
+	Contact_session_poll();
+    else if (contactTransport == GAME_TRANSPORT_TCP)
+	Contact_stream_poll();
 
     for (qp = qp_list; qp && qp->login_port > 0; ) {
 	next = qp->next;
@@ -798,12 +1661,14 @@ void Queue_loop(void)
 
 static int Queue_player(char *user, char *nick, char *disp, int team,
 			char *addr, char *host, unsigned version, int port,
-			int *qpos)
+			game_transport_t transport, int *qpos,
+			int *login_port)
 {
     int status = SUCCESS, num_queued = 0, num_same_hosts = 0;
     struct queued_player *qp, *prev = 0;
 
     *qpos = 0;
+    *login_port = -1;
     if ((status = Check_names(nick, user, host)) != SUCCESS)
 	return status;
 
@@ -822,11 +1687,10 @@ static int Queue_player(char *user, char *nick, char *disp, int team,
 		qp->port = port;
 		qp->version = version;
 		qp->team = team;
-		/*
-		 * Still on the queue, so don't send an ack
-		 * since it will get one soon from Queue_loop().
-		 */
-		return -1;
+		qp->contact_transport = transport;
+		*login_port = qp->login_port;
+		/* UDP clients receive asynchronous queue acknowledgements. */
+		return transport == GAME_TRANSPORT_TCP ? SUCCESS : -1;
 	    }
 	    return E_IN_USE;
 	}
@@ -859,6 +1723,7 @@ static int Queue_player(char *user, char *nick, char *disp, int team,
     qp->team = team;
     qp->version = version;
     qp->login_port = -1;
+    qp->contact_transport = transport;
     qp->last_ack_sent = main_loops;
     qp->last_ack_recv = main_loops;
 

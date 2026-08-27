@@ -1,0 +1,9 @@
+#!/bin/bash
+
+adduser --system --home /var/run/xpilot-infinity-server --group \
+  --shell /bin/sh --disabled-password xpilotinfinity >/dev/null 2>&1
+chmod 700 /var/run/xpilot-infinity-server
+chown -R xpilotinfinity.xpilotinfinity /etc/xpilot-infinity
+chmod -f 600 /etc/xpilot-infinity/password.txt
+
+#DEBHELPER#

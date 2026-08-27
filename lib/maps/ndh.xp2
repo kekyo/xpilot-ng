@@ -84,7 +84,7 @@
 <Option name="missilesOnRadar" value="yes"/>
 <Option name="missilesWallBounce" value="no"/>
 <Option name="movingItemProb" value="0.4"/>
-<Option name="ngControls" value="true"/>
+<Option name="infinityControls" value="true"/>
 <Option name="nukeMinMines" value="5"/>
 <Option name="nukeMinSmarts" value="2"/>
 <Option name="nukesOnRadar" value="yes"/>

@@ -1,14 +1,14 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
  *
- * Copyright (C) 2003-2004 Kristian Söderblom <kps@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Kristian SÃ¶derblom <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,9 @@
  */
 
 #include "xpclient.h"
+
+#include "utf8_names.h"
+#include "text_config.h"
 
 static double	hudScale;	/* Scale for HUD drawing */
 
@@ -65,27 +68,31 @@ static bool Set_nickName(xp_option_t *opt, const char *value)
 
 static bool Set_userName(xp_option_t *opt, const char *value)
 {
+    char candidate[MAX_CHARS];
     char *cp = getenv("XPILOTUSER");
 
     UNUSED_PARAM(opt);
     assert(value);
 
+    candidate[0] = '\0';
     if (cp)
-	strlcpy(connectParam.user_name, cp, sizeof(connectParam.user_name));
+	strlcpy(candidate, cp, sizeof(candidate));
     else
-	Get_login_name(connectParam.user_name, sizeof(connectParam.user_name));
+	Get_login_name(candidate, sizeof(candidate));
 
     if (strlen(value) > 0)
-	strlcpy(connectParam.user_name, value, sizeof(connectParam.user_name));
+	strlcpy(candidate, value, sizeof(candidate));
 
-    if (Check_user_name(connectParam.user_name) == NAME_ERROR) {
-	char user[MAX_NAME_LEN];
+    if (Check_utf8_user_name(candidate) == NAME_ERROR) {
+	char user[MAX_CHARS];
 
-	strlcpy(user, connectParam.user_name, sizeof(user));
-	Fix_user_name(connectParam.user_name);
+	strlcpy(user, candidate, sizeof(user));
+	Fix_utf8_user_name(candidate);
 	warn("Fixing username from \"%s\" to \"%s\".\n",
-	     user, connectParam.user_name);
+	     user, candidate);
     }
+    strlcpy(connectParam.user_name, candidate,
+	    sizeof(connectParam.user_name));
 
     /* hack - if nickname is not set, set nickname to username */
     if (strlen(connectParam.nick_name) == 0)
@@ -158,11 +165,14 @@ static bool Set_team(xp_option_t *opt, int value)
 
 static bool Set_texturePath(xp_option_t *opt, const char *value)
 {
+    char *newTexturePath = xp_safe_strdup(value);
+    char *newRealTexturePath = xp_safe_strdup(value);
+
     UNUSED_PARAM(opt);
     XFREE(texturePath);
-    texturePath = xp_safe_strdup(value);
-    if (realTexturePath == NULL) 
-	realTexturePath = xp_safe_strdup(value);
+    XFREE(realTexturePath);
+    texturePath = newTexturePath;
+    realTexturePath = newRealTexturePath;
     return true;
 }
 static const char *Get_texturePath(xp_option_t *opt)
@@ -500,21 +510,38 @@ static bool Set_dirPrediction(xp_option_t *opt, bool val)
     return true;
 }
 
-int protocolVersion = POLYGON_VERSION;
-static char protocolVersionStr[32];
-
-static bool Set_protocolVersion(xp_option_t *opt, const char *value)
+static bool Set_contactTransport(xp_option_t *opt, const char *value)
 {
-    if (sscanf(value, "%x", &protocolVersion) <= 0)
+    UNUSED_PARAM(opt);
+    if (!Game_transport_parse(value, &connectDefaults.contact_transport)) {
+	warn("Invalid contactTransport '%s'; expected 'udp', 'tcp', or "
+	     "'websocket'", value);
 	return false;
+    }
     return true;
 }
 
-static const char *Get_protocolVersion(xp_option_t *opt)
+static const char *Get_contactTransport(xp_option_t *opt)
 {
-    snprintf(protocolVersionStr, sizeof protocolVersionStr, "%04x",
-	     protocolVersion);
-    return protocolVersionStr;
+    UNUSED_PARAM(opt);
+    return Game_transport_name(connectDefaults.contact_transport);
+}
+
+static bool Set_gameTransport(xp_option_t *opt, const char *value)
+{
+    UNUSED_PARAM(opt);
+    if (!Game_transport_parse(value, &connectDefaults.game_transport)) {
+	warn("Invalid gameTransport '%s'; expected 'udp', 'tcp', or "
+	     "'websocket'", value);
+	return false;
+    }
+    return true;
+}
+
+static const char *Get_gameTransport(xp_option_t *opt)
+{
+    UNUSED_PARAM(opt);
+    return Game_transport_name(connectDefaults.game_transport);
 }
 
 void defaultCleanup(void)
@@ -618,10 +645,12 @@ xp_option_t default_options[] = {
 	SERVER_PORT,
 	0,
 	65535,
-	&connectParam.contact_port,
+	&connectDefaults.contact_port,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Set the port number of the server.\n"
+	"Set the default contact port number for direct server targets.\n"
+	"A port in ws://HOST:PORT, tcp://HOST:PORT, or udp://HOST:PORT "
+	"overrides this value.\n"
 	"Almost all servers use the default port, which is the recommended\n"
 	"policy.  You can find out about which port is used by a server by\n"
 	"querying the XPilot Meta server.\n"),
@@ -634,7 +663,8 @@ xp_option_t default_options[] = {
 	&clientPortStart,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Use UDP ports clientPortStart - clientPortEnd (for firewalls).\n"
+	"Restrict contact and gameplay sockets to clientPortStart - "
+	"clientPortEnd (for firewalls).\n"
 	/* TODO: describe what value 0 means */),
 
     XP_INT_OPTION(
@@ -645,7 +675,8 @@ xp_option_t default_options[] = {
 	&clientPortEnd,
 	NULL,
 	XP_OPTFLAG_KEEP,
-	"Use UDP ports clientPortStart - clientPortEnd (for firewalls).\n"),
+	"Restrict contact and gameplay sockets to clientPortStart - "
+	"clientPortEnd (for firewalls).\n"),
 
     XP_DOUBLE_OPTION(
 	"power",
@@ -912,12 +943,32 @@ xp_option_t default_options[] = {
 	"Be warned that this needs a reasonably fast graphics system.\n"),
 
     XP_STRING_OPTION(
-	"protocolVersion",
-	"",
+	"contactTransport",
+	"udp",
 	NULL, 0,
-	Set_protocolVersion, NULL, Get_protocolVersion,
+	Set_contactTransport, NULL, Get_contactTransport,
 	XP_OPTFLAG_KEEP,
-	"Which protocol version to prefer when joining servers.\n"),
+	"Default contact and lobby transport for bare server targets: udp, tcp, "
+	"or websocket.\n"
+	"A ws://, tcp://, or udp:// target selects both transports for that "
+	"target.\n"
+	"WebSocket must be selected for both transport settings.\n"
+	"Direct connections must match the server; metaserver selections apply "
+	"the advertised value.\n"),
+
+    XP_STRING_OPTION(
+	"gameTransport",
+	"udp",
+	NULL, 0,
+	Set_gameTransport, NULL, Get_gameTransport,
+	XP_OPTFLAG_KEEP,
+	"Default gameplay transport for bare server targets: udp, tcp, or "
+	"websocket.\n"
+	"A ws://, tcp://, or udp:// target selects both transports for that "
+	"target.\n"
+	"WebSocket must be selected for both transport settings.\n"
+	"Direct connections must match the server; metaserver selections apply "
+	"the advertised value.\n"),
 
     XP_BOOL_OPTION(
 	"outlineWorld",
@@ -1361,4 +1412,5 @@ xp_option_t default_options[] = {
 void Store_default_options(void)
 {
     STORE_OPTIONS(default_options);
+    Store_text_options();
 }

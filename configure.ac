@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT([XPilot NG], 4.7.3, xpilot-hacks@lists.sourceforge.net, xpilot-ng)
+AC_INIT([XPilot Infinity], 4.7.3, xpilot-hacks@lists.sourceforge.net, xpilot-infinity)
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_SRCDIR(src/client/xpclient.h)
 
@@ -9,22 +9,38 @@ AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
+windows_target=no
+mingw_arch=
+case "$host" in
+	i686-w64-mingw32)
+		windows_target=yes
+		mingw_arch=x86
+		;;
+	x86_64-w64-mingw32)
+		windows_target=yes
+		mingw_arch=x86_64
+		;;
+	*-*-mingw32*)
+		AC_MSG_ERROR([unsupported MinGW host: $host])
+		;;
+esac
+
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
 AM_CONFIG_HEADER(config.h)
 
 dnl  Copyright & stuff.
-XP_AUTHORS="Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha Lindström, Kristian Söderblom and Erik Andersson"
+XP_AUTHORS="BjÃ¸rn Stabell, Ken Ronny Schouten, Bert Gijsbers, Dick Balaska, Uoti Urpala, Juha LindstrÃ¶m, Kristian SÃ¶derblom and Erik Andersson"
 AC_SUBST([XP_AUTHORS])
 
 XP_COPYRIGHTDATE="1991-2005"
 AC_SUBST([XP_COPYRIGHTDATE])
 
-XP_COPYRIGHT="Copyright © $XP_COPYRIGHTDATE by $XP_AUTHORS"
+XP_COPYRIGHT="Copyright Â© $XP_COPYRIGHTDATE by $XP_AUTHORS"
 AC_SUBST([XP_COPYRIGHT])
 
 AC_SUBST([XP_RELEASEDATE],["Sep 16, 2005"])
-AC_SUBST([XP_DATADIR],"$prefix/share/xpilot-ng")
+AC_SUBST([XP_DATADIR],"$prefix/share/xpilot-infinity")
 
 dnl  Checks for options.
 dnl  We should have some general macro for these.
@@ -44,9 +60,9 @@ fi])
 
 AC_ARG_ENABLE(plockserver,
 	AC_HELP_STRING([--enable-plockserver],
-			[lock the xpilot-ng server into memory]),
+			[lock the xpilot-infinity server into memory]),
 [if test x$enable_plockserver = xyes; then
-	AC_DEFINE([PLOCKSERVER], 1, [lock the xpilot-ng server into memory])
+	AC_DEFINE([PLOCKSERVER], 1, [lock the xpilot-infinity server into memory])
 fi])
 
 AC_ARG_ENABLE(development,
@@ -63,35 +79,173 @@ AC_ARG_ENABLE(select_sched,
 AC_ARG_ENABLE(replay,
 	AC_HELP_STRING([--disable-replay],
 			[disable building of replay program]),
-[], [enable_replay=yes; need_x=yes])
+[], [enable_replay=yes])
+if test x$enable_replay = xyes; then
+	need_x=yes
+fi
 
 AC_ARG_ENABLE(xp_mapedit,
 	AC_HELP_STRING([--disable-xp-mapedit],
 			[disable building of xp-mapedit program]),
-[], [enable_xp_mapedit=yes; need_x=yes])
+[], [enable_xp_mapedit=yes])
+if test x$enable_xp_mapedit = xyes; then
+	need_x=yes
+fi
 
 AC_ARG_ENABLE(x11_client,
 	AC_HELP_STRING([--disable-x11-client],
 			[disable X11 client]),
-[], [enable_x11_client=yes; need_x=yes; need_libxpclient=yes])
+[], [enable_x11_client=yes])
+if test x$enable_x11_client = xyes; then
+	need_x=yes
+	need_libxpclient=yes
+fi
 
 AC_ARG_ENABLE(sdl_client,
 	AC_HELP_STRING([--disable-sdl-client],
 			[disable SDL/OpenGL client]),
-[], [enable_sdl_client=yes; need_x=yes; need_libxpclient=yes])
+[], [enable_sdl_client=yes])
 if test x$enable_sdl_client = xyes; then
+	need_libxpclient=yes
 	AC_DEFINE([SDL_CLIENT], 1, [enable sdl client])
 fi
 
-dnl  Do this if you want to use the gameloop without the X11 hack.
-AC_ARG_ENABLE(sdl_gameloop,
-	AC_HELP_STRING([--enable-sdl-gameloop],
-			[enable sdl gameloop in sdl client
-			 (otherwise use gameloop optimised for X11)]))
+AC_ARG_ENABLE(mingw_vendored_deps,
+	AC_HELP_STRING([--disable-mingw-vendored-deps],
+			[use externally prepared dependencies for MinGW]),
+[], [
+	if test x$windows_target = xyes; then
+		enable_mingw_vendored_deps=yes
+	else
+		enable_mingw_vendored_deps=no
+	fi
+])
+case "$enable_mingw_vendored_deps" in
+	yes|no)
+		;;
+	*)
+		AC_MSG_ERROR([--enable-mingw-vendored-deps accepts yes or no])
+		;;
+esac
+if test x$windows_target != xyes \
+	&& test x$enable_mingw_vendored_deps = xyes; then
+	AC_MSG_ERROR([--enable-mingw-vendored-deps requires a MinGW host])
+fi
+
+AC_ARG_WITH(sdl3,
+	AC_HELP_STRING([--with-sdl3=PROVIDER],
+			[use system or vendored SDL3 dependencies]),
+[], [
+	if test x$enable_mingw_vendored_deps = xyes; then
+		with_sdl3=vendored
+	else
+		with_sdl3=system
+	fi
+])
+case "$with_sdl3" in
+	system|vendored)
+		;;
+	*)
+		AC_MSG_ERROR([--with-sdl3 must be system or vendored])
+		;;
+esac
+
+AC_ARG_WITH(sdl3_prefix,
+	AC_HELP_STRING([--with-sdl3-prefix=PATH],
+			[private SDL3 prefix built by vendor/sdl3/build.sh]),
+[], [with_sdl3_prefix=])
+
+AC_ARG_WITH(mingw_toolchain_file,
+	AC_HELP_STRING([--with-mingw-toolchain-file=PATH],
+			[CMake toolchain file for MinGW vendored dependencies]),
+[], [with_mingw_toolchain_file=])
+
+AC_ARG_WITH(mingw_deps_build_type,
+	AC_HELP_STRING([--with-mingw-deps-build-type=TYPE],
+			[CMake build type for MinGW dependencies @<:@Release@:>@]),
+[], [with_mingw_deps_build_type=Release])
+test -n "$with_mingw_deps_build_type" \
+	|| AC_MSG_ERROR([--with-mingw-deps-build-type requires a value])
+
+mingw_vendored_deps=no
+MINGW_ARCH=
+MINGW_DEPS_BUILD_DIR=
+MINGW_DEPS_PREFIX=
+MINGW_DEPS_MAKEFILE=
+MINGW_DEPS_BUILD_TYPE=
+MINGW_TOOLCHAIN_FILE=
+MINGW_PACKAGE_DIR=
+MINGW_WINE_PREFIX=
+if test x$windows_target = xyes; then
+	MINGW_ARCH=$mingw_arch
+	MINGW_PACKAGE_DIR="$ac_pwd/package"
+	MINGW_WINE_PREFIX="$ac_pwd/wine-prefix"
+fi
+if test x$windows_target = xyes \
+	&& test x$enable_mingw_vendored_deps = xyes; then
+	mingw_vendored_deps=yes
+	if test x$with_sdl3 != xvendored; then
+		AC_MSG_ERROR([MinGW vendored dependencies require --with-sdl3=vendored])
+	fi
+	if test -z "$with_sdl3_prefix"; then
+		with_sdl3_prefix="$ac_pwd/mingw-vendor-prefix"
+	fi
+	case "$with_sdl3_prefix" in
+		/*)
+			;;
+		*)
+			AC_MSG_ERROR([--with-sdl3-prefix must be an absolute path])
+			;;
+	esac
+
+	xpilot_abs_srcdir=`cd "$srcdir" && pwd`
+	if test -z "$with_mingw_toolchain_file"; then
+		case "$mingw_arch" in
+			x86)
+				with_mingw_toolchain_file="$xpilot_abs_srcdir/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-i686.cmake"
+				;;
+			x86_64)
+				with_mingw_toolchain_file="$xpilot_abs_srcdir/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-x86_64.cmake"
+				;;
+		esac
+	fi
+	case "$with_mingw_toolchain_file" in
+		/*)
+			;;
+		*)
+			AC_MSG_ERROR([--with-mingw-toolchain-file must be an absolute path])
+			;;
+	esac
+	test -f "$with_mingw_toolchain_file" \
+		|| AC_MSG_ERROR([MinGW toolchain file not found: $with_mingw_toolchain_file])
+
+	MINGW_DEPS_BUILD_DIR="$ac_pwd/mingw-vendor-build"
+	MINGW_DEPS_PREFIX=$with_sdl3_prefix
+	MINGW_DEPS_MAKEFILE="$ac_pwd/mingw-deps.mk"
+	MINGW_DEPS_BUILD_TYPE=$with_mingw_deps_build_type
+	MINGW_TOOLCHAIN_FILE=$with_mingw_toolchain_file
+fi
+
+AC_SUBST([MINGW_ARCH])
+AC_SUBST([MINGW_DEPS_BUILD_DIR])
+AC_SUBST([MINGW_DEPS_PREFIX])
+AC_SUBST([MINGW_DEPS_MAKEFILE])
+AC_SUBST([MINGW_DEPS_BUILD_TYPE])
+AC_SUBST([MINGW_TOOLCHAIN_FILE])
+AC_SUBST([MINGW_PACKAGE_DIR])
+AC_SUBST([MINGW_WINE_PREFIX])
 
 AC_ARG_ENABLE(sound,
-	AC_HELP_STRING([--enable-sound],
-			[enable OpenAL sound]), [])
+	AC_HELP_STRING([--disable-sound],
+			[disable OpenAL sound]),
+[], [enable_sound=yes])
+case "$enable_sound" in
+	yes|no)
+		;;
+	*)
+		AC_MSG_ERROR([--enable-sound accepts yes or no])
+		;;
+esac
 
 dnl  Checks for programs.
 AC_PROG_CC
@@ -106,63 +260,53 @@ dnl AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AC_PROG_INSTALL
+PKG_PROG_PKG_CONFIG
+
+if test x$mingw_vendored_deps = xyes; then
+	AC_PATH_PROG([CMAKE], [cmake])
+	test -n "$CMAKE" \
+		|| AC_MSG_ERROR([cmake is required for MinGW vendored dependencies])
+	test -n "$PKG_CONFIG" \
+		|| AC_MSG_ERROR([pkg-config is required for MinGW vendored dependencies])
+fi
 
 dnl  Checks for libraries.
 dnl kps - these should be cleaned up and not use the autoconf internal
 dnl shell variables.
-AC_CHECK_LIB(m, cos)
-if test x$ac_cv_lib_m_cos != xyes; then
-	AC_MSG_ERROR([*** Math library not found!])
-fi
-AC_CHECK_LIB(z, gzopen)
-if test x$ac_cv_lib_z_gzopen != xyes; then
-	AC_MSG_ERROR([*** Required library zlib not found!])
-fi
-AC_CHECK_LIB(expat, XML_ParserCreate)
-if test x$ac_cv_lib_expat_XML_ParserCreate != xyes; then
-	AC_MSG_ERROR([*** Required library Expat not found!])
+if test x$mingw_vendored_deps = xyes; then
+	AC_DEFINE([HAVE_LIBM], 1,
+		[Define to 1 if you have the `m' library (-lm).])
+	AC_DEFINE([HAVE_LIBZ], 1,
+		[Define to 1 if you have the `z' library (-lz).])
+	AC_DEFINE([HAVE_LIBEXPAT], 1,
+		[Define to 1 if you have the `expat' library (-lexpat).])
+else
+	AC_CHECK_LIB(m, cos)
+	if test x$ac_cv_lib_m_cos != xyes; then
+		AC_MSG_ERROR([*** Math library not found!])
+	fi
+	AC_CHECK_LIB(z, gzopen)
+	if test x$ac_cv_lib_z_gzopen != xyes; then
+		AC_MSG_ERROR([*** Required library zlib not found!])
+	fi
+	AC_CHECK_LIB(expat, XML_ParserCreate)
+	if test x$ac_cv_lib_expat_XML_ParserCreate != xyes; then
+		AC_MSG_ERROR([*** Required library Expat not found!])
+	fi
 fi
 
-dnl Figure out which math library to use
-dnl (borrowed from from http://www.libsdl.org/opengl/SDLgears-1.0.2.tar.gz)
-case "$target" in
-    *-*-mingw32*)
-	MATHLIB=""
-	SYS_GL_LIBS="-lopengl32 -lglu32"
-	windows_target=yes
-	;;
-    *-*-beos*)
-	MATHLIB=""
-	SYS_GL_LIBS="-lGL"
-	;;
-    *-*-linux*)
-	MATHLIB="-lm"
-	SYS_GL_LIBS="-L/usr/X11R6/lib -lGL -lGLU"
-	;;
-    *-*-freebsd*)
-	MATHLIB="-lm"
-	SYS_GL_LIBS="-L/usr/X11R6/lib -lGL -lGLU"
-	CPPFLAGS="$CPPFLAGS -I/usr/X11R6/include -I/usr/local/include"
-	LDFLAGS="$LDFLAGS -L/usr/local/lib"
-	;;
-    *)
-	MATHLIB="-lm"
-	SYS_GL_LIBS="-lGL -lGLU"
-	;;
-esac
-
+W32_LIBS=
 if test x$windows_target = xyes; then
-	W32_LIBS="-lmingw32 -lwsock32"
-	AC_SUBST(W32_LIBS)
+	W32_LIBS="-lmingw32 -lws2_32"
 	AC_DEFINE([_WINDOWS], 1, [compiling for windows target])
 
 	enable_select_sched=yes
-	enable_sdl_gameloop=yes
 	enable_replay=no
 	enable_xp_mapedit=no
 	enable_x11_client=no
 	need_x=no
 fi
+AC_SUBST([W32_LIBS])
 
 AC_PATH_X
 if test x$need_x = xyes; then
@@ -199,10 +343,6 @@ if test x$need_x = xyes; then
 	AC_SUBST(X_EXTENSIONS_LIB)
 fi
 
-if test x$enable_sdl_gameloop = xyes; then
-  AC_DEFINE([SDL_GAMELOOP], 1, [enable sdl gameloop in sdl client])
-fi
-
 if test x$enable_x11_client = xyes; then
 	AC_DEFINE([X11_CLIENT], 1, [enable x11 client])
 fi
@@ -220,123 +360,156 @@ if test x$enable_xp_mapedit = xyes; then
 	AC_DEFINE([XP_MAPEDIT], 1, [enable xp-mapedit program])
 fi
 
-dnl Stuff needed by SDL client.
-if test x$enable_sdl_client = xyes; then
-
-	dnl Check for SDL,
-	dnl from http://www.libsdl.org/opengl/SDLgears-1.0.2.tar.gz
-	SDL_VERSION=1.2.0
-	AM_PATH_SDL($SDL_VERSION,
-		    :,
-		    AC_MSG_ERROR([*** SDL version $SDL_VERSION not found!])
-	)
-	
-	CFLAGS_BAK="$CFLAGS"
-	CXXFLAGS_BAK="$CXXFLAGS"
-	CFLAGS="$CFLAGS $SDL_CFLAGS"
-	CXXFLAGS="$CXXFLAGS $SDL_CFLAGS"
-
-	if test x$no_sdl = xyes; then
-	    AC_MSG_ERROR(SDL client will not be built.)
-	fi
-
-	dnl check for SDL_ttf and OpenGL only if SDL client is built.
-
-	dnl kps - hack to check for SDL_ttf
-	AC_MSG_CHECKING(for SDL_ttf)
-	AC_COMPILE_IFELSE([
-	 #include "SDL.h"
-	 #include "SDL/SDL_ttf.h"
-	 int main(int argc, char** argv) { return 0; }
-	],[
-	have_libsdl_ttf=yes
-	],[
-	have_libsdl_ttf=no])
-	AC_MSG_RESULT($have_libsdl_ttf)
-	if test x$have_libsdl_ttf = xyes; then
-	    SDL_EXTRA_LIBS="$SDL_EXTRA_LIBS -lSDL_ttf"
+dnl SDL3 and SDL_ttf provide the shared native text implementation used by
+dnl both graphical clients. SDL_image and OpenGL remain SDL-client-only.
+if test x$enable_sdl_client = xyes || test x$enable_x11_client = xyes; then
+	if test x$mingw_vendored_deps = xyes; then
+		SDL3_CFLAGS=
+		SDL3_LIBS=
+		SDL3_IMAGE_CFLAGS=
+		SDL3_IMAGE_LIBS=
+		SDL3_TTF_CFLAGS=
+		SDL3_TTF_LIBS=
+		GL_CFLAGS=-DWIN32
+		GL_LIBS=-lopengl32
 	else
-	    AC_MSG_ERROR([*** Unable to find SDL_ttf headers and libraries!])
-	fi
-	AC_SUBST(SDL_EXTRA_LIBS)
+		if test x$with_sdl3 = xvendored; then
+			if test -z "$with_sdl3_prefix"; then
+				AC_MSG_ERROR([--with-sdl3=vendored requires --with-sdl3-prefix=PATH])
+			fi
+			case "$with_sdl3_prefix" in
+				/*)
+					;;
+				*)
+					AC_MSG_ERROR([--with-sdl3-prefix must be an absolute path])
+					;;
+			esac
+			if test ! -d "$with_sdl3_prefix/lib/pkgconfig"; then
+				AC_MSG_ERROR([vendored SDL3 pkg-config directory not found: $with_sdl3_prefix/lib/pkgconfig])
+			fi
+			for sdl3_pc_file in sdl3.pc sdl3-ttf.pc; do
+				if test ! -f "$with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file"; then
+					AC_MSG_ERROR([vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/$sdl3_pc_file])
+				fi
+			done
+			if test x$enable_sdl_client = xyes \
+				&& test ! -f "$with_sdl3_prefix/lib/pkgconfig/sdl3-image.pc"; then
+				AC_MSG_ERROR([vendored SDL3 metadata not found: $with_sdl3_prefix/lib/pkgconfig/sdl3-image.pc])
+			fi
 
-	dnl kps - hack to check for SDL_image
-	AC_MSG_CHECKING(for SDL_image)
-	AC_COMPILE_IFELSE([
-	 #include "SDL.h"
-	 #include "SDL/SDL_image.h"
-	 int main(int argc, char** argv) { return 0; }
-	],[
-	have_libsdl_image=yes
-	],[
-	have_libsdl_image=no])
-	AC_MSG_RESULT($have_libsdl_image)
-	if test x$have_libsdl_image = xyes; then
-	    SDL_EXTRA_LIBS="$SDL_EXTRA_LIBS -lSDL_image"
-	    AC_DEFINE([HAVE_SDL_IMAGE], 1,
-			[Define to 1 if you have the SDL_image library.])
-	else
-	    AC_MSG_ERROR([*** Unable to find SDL_image headers and libraries!])
-	fi
-	AC_SUBST(SDL_EXTRA_LIBS)
+			if test "${PKG_CONFIG_PATH+set}" = set; then
+				saved_sdl3_pkg_config_path=$PKG_CONFIG_PATH
+				sdl3_pkg_config_path_was_set=yes
+				PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig:$PKG_CONFIG_PATH"
+			else
+				sdl3_pkg_config_path_was_set=no
+				PKG_CONFIG_PATH="$with_sdl3_prefix/lib/pkgconfig"
+			fi
+			export PKG_CONFIG_PATH
+		fi
 
-	dnl Check for OpenGL
-	AC_MSG_CHECKING(for OpenGL support)
-	AC_COMPILE_IFELSE([
-	 #include <GL/gl.h>
-	 #include <GL/glu.h>
-	 int main(int argc, char** argv) { return 0; } 
-	],[
-	have_opengl=yes
-	],[
-	have_opengl=no])
-	AC_MSG_RESULT($have_opengl)
-	if test x$have_opengl = xyes; then
-	    GL_LIBS="$SDL_LIBS $SYS_GL_LIBS"
-	else
-	    AC_MSG_ERROR([*** Unable to find OpenGL headers and libraries!])
+		PKG_CHECK_MODULES([SDL3], [sdl3 >= 3.2.0])
+		PKG_CHECK_MODULES([SDL3_TTF], [sdl3-ttf >= 3.2.0])
+		if test x$enable_sdl_client = xyes; then
+			PKG_CHECK_MODULES([SDL3_IMAGE], [sdl3-image >= 3.2.0])
+			PKG_CHECK_MODULES([GL], [gl])
+		else
+			SDL3_IMAGE_CFLAGS=
+			SDL3_IMAGE_LIBS=
+			GL_CFLAGS=
+			GL_LIBS=
+		fi
+
+		if test x$with_sdl3 = xvendored; then
+			AC_MSG_CHECKING([for static vendored SDL3 linker flags])
+			SDL3_LIBS=`$PKG_CONFIG --static --libs sdl3`
+			if test $? -ne 0; then
+				AC_MSG_ERROR([could not resolve static SDL3 linker flags])
+			fi
+			SDL3_TTF_LIBS=`$PKG_CONFIG --static --libs sdl3-ttf`
+			if test $? -ne 0; then
+				AC_MSG_ERROR([could not resolve static SDL3_ttf linker flags])
+			fi
+			if test x$enable_sdl_client = xyes; then
+				SDL3_IMAGE_LIBS=`$PKG_CONFIG --static --libs sdl3-image`
+				if test $? -ne 0; then
+					AC_MSG_ERROR([could not resolve static SDL3_image linker flags])
+				fi
+			fi
+			AC_MSG_RESULT([yes])
+
+			if test x$sdl3_pkg_config_path_was_set = xyes; then
+				PKG_CONFIG_PATH=$saved_sdl3_pkg_config_path
+				export PKG_CONFIG_PATH
+			else
+				unset PKG_CONFIG_PATH
+			fi
+		fi
 	fi
-	AC_SUBST(GL_LIBS)
-	AC_SUBST(SDL_CFLAGS)
-	
-	CFLAGS="$CFLAGS_BAK"
-	CXXFLAGS="$CXXFLAGS_BAK"
+	AC_MSG_NOTICE([SDL3 dependency provider: $with_sdl3])
+	if test x$enable_sdl_client = xyes; then
+	AC_DEFINE([HAVE_SDL_IMAGE], 1,
+		  [Define to 1 if you have the SDL_image library.])
+	fi
 fi
+
+NATIVE_TEXT_CFLAGS=
+NATIVE_TEXT_LIBS=
+if test x$enable_sdl_client = xyes || test x$enable_x11_client = xyes; then
+	if test x$windows_target = xyes; then
+		NATIVE_TEXT_LIBS="-lgdi32"
+	else
+		PKG_CHECK_MODULES([FONTCONFIG], [fontconfig >= 2.8.0])
+		NATIVE_TEXT_CFLAGS=$FONTCONFIG_CFLAGS
+		NATIVE_TEXT_LIBS=$FONTCONFIG_LIBS
+	fi
+fi
+
+XRENDER_CFLAGS=
+XRENDER_LIBS=
+if test x$enable_x11_client = xyes; then
+	PKG_CHECK_MODULES([XRENDER], [xrender >= 0.9.0])
+fi
+
+AC_SUBST([SDL3_CFLAGS])
+AC_SUBST([SDL3_LIBS])
+AC_SUBST([SDL3_IMAGE_CFLAGS])
+AC_SUBST([SDL3_IMAGE_LIBS])
+AC_SUBST([SDL3_TTF_CFLAGS])
+AC_SUBST([SDL3_TTF_LIBS])
+AC_SUBST([NATIVE_TEXT_CFLAGS])
+AC_SUBST([NATIVE_TEXT_LIBS])
+AC_SUBST([XRENDER_CFLAGS])
+AC_SUBST([XRENDER_LIBS])
+AC_SUBST([GL_CFLAGS])
+AC_SUBST([GL_LIBS])
 
 AM_CONDITIONAL([COND_CLIENT], [test x$need_libxpclient = xyes])
 AM_CONDITIONAL([COND_WINDOWS], [test x$windows_target = xyes])
+AM_CONDITIONAL([COND_MINGW_VENDORED], [test x$mingw_vendored_deps = xyes])
 AM_CONDITIONAL([COND_REPLAY], [test x$enable_replay = xyes])
 AM_CONDITIONAL([COND_XP_MAPEDIT], [test x$enable_xp_mapedit = xyes])
 AM_CONDITIONAL([COND_X11_CLIENT], [test x$enable_x11_client = xyes])
 AM_CONDITIONAL([COND_SDL_CLIENT], [test x$enable_sdl_client = xyes])
-AM_CONDITIONAL([COND_SDL_GAMELOOP], [test x$enable_sdl_gameloop = xyes])
 
-dnl OpenAL client sound support.
-if test x$enable_sound = xyes; then
-	have_openal=no
-	have_alut=no
-	have_sound=no
-	AC_CHECK_LIB(
-		openal, 
-		main, 
-		[have_openal=yes],
-		[])
-	AC_CHECK_LIB(
-		alut, 
-		main, 
-		[have_alut=yes],
-		[])
-	if test x$have_openal = xyes; then
-		if test x$have_alut = xyes; then
-			have_sound=yes
-			SOUND_LIBS="-lopenal -lalut"
-			AC_DEFINE([SOUND], 1, [Define to 1 if you want OpenAL sound.])
-		else
-			echo "*** Client sound disabled. Check that you have OpenAL installed."
-		fi
+dnl OpenAL client sound support. MinGW dependencies are built by make after
+dnl configure, so their compiler and linker flags come from mingw-deps.mk.
+have_sound=no
+SOUND_CFLAGS=
+SOUND_LIBS=
+if test x$enable_sound = xyes && test x$need_libxpclient = xyes; then
+	if test x$mingw_vendored_deps = xyes; then
+		have_sound=yes
+	else
+		PKG_CHECK_MODULES([SOUND], [freealut openal], [], [
+			AC_MSG_ERROR([OpenAL and freealut are required for client sound; install their development packages or use --disable-sound])
+		])
+		have_sound=yes
 	fi
-	AC_SUBST(SOUND_LIBS)
+	AC_DEFINE([SOUND], 1, [Define to 1 if you want OpenAL sound.])
 fi
+AC_SUBST([SOUND_CFLAGS])
+AC_SUBST([SOUND_LIBS])
 
 AM_CONDITIONAL([COND_SOUND], [test x$have_sound = xyes])
 
@@ -399,27 +572,32 @@ AC_TYPE_SIZE_T
 AC_STRUCT_TM
 
 dnl Check for socklen_t (in Unix98)
-AC_MSG_CHECKING(for socklen_t)
-AC_TRY_COMPILE([
-	#include <sys/types.h>
-	#include <sys/socket.h>
-	socklen_t x;
-], [],
-[
-	AC_MSG_RESULT(yes)
-], [
+if test x$windows_target = xyes; then
+	AC_MSG_CHECKING(for socklen_t)
+	AC_MSG_RESULT([provided by Winsock2])
+else
+	AC_MSG_CHECKING(for socklen_t)
 	AC_TRY_COMPILE([
 		#include <sys/types.h>
 		#include <sys/socket.h>
-		int accept(int, struct sockaddr *, size_t *);
-	], [], [
-		AC_MSG_RESULT(size_t)
-		AC_DEFINE(socklen_t, size_t, [socklen_t size])
+		socklen_t x;
+	], [],
+	[
+		AC_MSG_RESULT(yes)
 	], [
-		AC_MSG_RESULT(int)
-		AC_DEFINE(socklen_t, int, [socklen_t size])
+		AC_TRY_COMPILE([
+			#include <sys/types.h>
+			#include <sys/socket.h>
+			int accept(int, struct sockaddr *, size_t *);
+		], [], [
+			AC_MSG_RESULT(size_t)
+			AC_DEFINE(socklen_t, size_t, [socklen_t size])
+		], [
+			AC_MSG_RESULT(int)
+			AC_DEFINE(socklen_t, int, [socklen_t size])
+		])
 	])
-])
+fi
 
 dnl  Checks for library functions.
 
@@ -468,11 +646,18 @@ AC_CHECK_FUNCS([ \
 	strtoul \
 	])
 
+dnl MinGW vendored libraries are built by make, after configure has finished.
+dnl Add their final locations only after configure's compile and link probes.
+if test x$mingw_vendored_deps = xyes; then
+	CPPFLAGS="-I$MINGW_DEPS_PREFIX/include $CPPFLAGS"
+	LDFLAGS="-L$MINGW_DEPS_PREFIX/lib $LDFLAGS"
+	LIBS="-lexpat -lz -lm $LIBS"
+fi
+
 AC_CONFIG_FILES([ \
 	Makefile \
-	README \
 	contrib/Makefile \
-	contrib/xpngcc/Makefile \
+	contrib/xpicc/Makefile \
 	doc/Makefile \
 	doc/man/Makefile \
 	lib/Makefile \
@@ -482,19 +667,16 @@ AC_CONFIG_FILES([ \
 	lib/sound/Makefile \
 	src/Makefile \
 	src/common/Makefile \
-	src/common/version.h \
-	src/common/NT/Makefile \
-	src/common/NT/bindist/Makefile \
+	src/common/version.h.template:src/common/version.h.in \
 	src/client/Makefile \
 	src/client/items/Makefile \
 	src/client/sdl/Makefile \
 	src/client/x11/Makefile \
-	src/client/NT/Makefile \
-	src/client/NT/res/Makefile \
 	src/server/Makefile \
 	src/replay/Makefile \
 	src/replay/tools/Makefile \
 	src/mapedit/Makefile \
+	tests/Makefile \
+	vendor/mingw/Makefile \
 	])
 AC_OUTPUT
-

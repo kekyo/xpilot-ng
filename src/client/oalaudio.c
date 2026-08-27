@@ -1,10 +1,10 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
  *      The XPilot Authors   <xpilot@xpilot.org>
- *      Juha Lindström       <juhal@users.sourceforge.net>
+ *      Juha LindstrÃ¶m       <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,6 +57,7 @@ static sound_t *ring;
 static sound_t *looping;
 static sound_t soundinfo[MAX_SOUNDS];
 static ALuint  source[MAX_SOUNDS];
+static bool audio_device_initialized;
 
 
 static void sample_parse_info(char *filename, sample_t *sample)
@@ -76,10 +77,6 @@ static void sample_parse_info(char *filename, sample_t *sample)
 static sample_t *sample_load(char *filename)
 {
     ALenum    err;
-    ALsizei   size, freq;
-    ALboolean loop;
-    ALenum    format;
-    ALvoid    *data;
     sample_t  *sample;
     
     if (!(sample = (sample_t*)malloc(sizeof(sample_t)))) {
@@ -88,36 +85,14 @@ static sample_t *sample_load(char *filename)
     }
     sample_parse_info(filename, sample);
 
-    /* create buffer */
-    alGetError(); /* clear */
-    alGenBuffers(1, &sample->buffer);
-    if((err = alGetError()) != AL_NO_ERROR) {
-	error("failed to create a sample buffer %x %s", 
-	      err, alGetString(err));
+    sample->buffer = alutCreateBufferFromFile(filename);
+    if (sample->buffer == AL_NONE) {
+	err = alutGetError();
+	error("failed to load sound file %s: %x %s",
+	      filename, err, alutGetErrorString(err));
 	free(sample);
 	return NULL;
     }
-    #if defined(MACOSX_FRAMEWORKS) /* && Mac OS X version < 10.4 */
-	alutLoadWAVFile((ALbyte *)filename, &format, &data, &size, &freq);
-    #else
-	alutLoadWAVFile((ALbyte *)filename, &format, &data, &size, &freq, &loop);
-    #endif
-    if ((err = alGetError()) != AL_NO_ERROR) {
-	error("failed to load sound file %s: %x %s", 
-	      filename, err, alGetString(err));
-	alDeleteBuffers(1, &sample->buffer);
-	free(sample);
-	return NULL;
-    }
-    alBufferData(sample->buffer, format, data, size, freq);
-    if((err = alGetError()) != AL_NO_ERROR) {
-	error("failed to load buffer data %x %s\n", 
-	      err, alGetString(err));
-	alDeleteBuffers(1, &sample->buffer);
-	free(sample);
-	return NULL;
-    }
-    alutUnloadWAV(format, data, size, freq);
 
     return sample;
 }
@@ -139,10 +114,14 @@ int audioDeviceInit(char *display)
     int    i;
     ALenum err;
 
-    alutInit (NULL, 0);
+    if (!alutInit(NULL, NULL)) {
+	err = alutGetError();
+	warn("OpenAL sound disabled: %s", alutGetErrorString(err));
+	return -1;
+    }
     alListenerf(AL_GAIN, 1.0);
     alDopplerFactor(1.0);
-    alDopplerVelocity(343);
+    alSpeedOfSound(343.0f);
     alGetError();
     alGenSources(MAX_SOUNDS, source);
     if ((err = alGetError()) != AL_NO_ERROR) {
@@ -159,6 +138,7 @@ int audioDeviceInit(char *display)
     }
     ring = soundinfo;
     looping = NULL;
+    audio_device_initialized = true;
 
     return 0;
 }
@@ -250,10 +230,14 @@ void audioDeviceFree(void *priv)
 	sample_free((sample_t *)priv);
 }
 
-void audioDeviceClose() 
+void audioDeviceClose(void)
 {
+    if (!audio_device_initialized)
+	return;
+
     alDeleteSources(MAX_SOUNDS, source);
 #ifdef _WINDOWS /* alutExit hangs on linux sometimes */
     alutExit();
 #endif
+    audio_device_initialized = false;
 }

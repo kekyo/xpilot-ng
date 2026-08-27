@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -26,9 +26,23 @@
 #ifndef	COMMONPROTO_H
 #define	COMMONPROTO_H
 
-/* randommt.c */
+/**
+ * Reset the process-global MT19937 stream from a 32-bit seed.
+ *
+ * @param seed Seed value. Even values are normalized to the following odd
+ *        value to preserve XPilot's established sequence.
+ */
 extern void seedMT(unsigned int seed);
-extern unsigned int reloadMT(void);
+
+/**
+ * Return the next value from the process-global MT19937 stream.
+ *
+ * @return A uniformly distributed value in the inclusive range
+ *         [0, 2^32 - 1].
+ *
+ * @remarks The stream is initialized with seed 4357 on first use. It is not
+ *          thread-safe and must not be used for cryptographic purposes.
+ */
 extern unsigned int randomMT(void);
 
 /* math.c */

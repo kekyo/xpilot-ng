@@ -19,7 +19,7 @@
 <Option name="itemTractorBeamProb" value="0e-9"/>
 <Option name="itemTransporterProb" value="0e-9"/>
 <Option name="limitedVisibility" value="yes"/>
-<Option name="mapAuthor" value="Bert Gijsbers, NG by Baron"/>
+<Option name="mapAuthor" value="Bert Gijsbers, Infinity by Baron"/>
 <Option name="mapHeight" value="2800"/>
 <Option name="mapName" value="Tourmination"/>
 <Option name="mapWidth" value="2800"/>

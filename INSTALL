@@ -1,21 +1,122 @@
 Following are the installation instructions for the 
-UNIX version of XPilot NG. 
+UNIX version of XPilot Infinity.
 
-To compile XPilot NG, you'll need at least:
+To compile XPilot Infinity, you'll need at least:
 
     expat XML library version 1.1
     zlib compression library version 1.1.3 (some systems seem to have older)
     An ANSI C compiler
-    X11     (any revision from R4 up to R6 is fine)
+    pkg-config
+
+Additional requirements for either graphical client are:
+
+    OpenAL
+    freealut
 
 Additional requirements for the SDL client are:
 
-    SDL 1.2
-    SDL_ttf 2.0
-    SDL_image 1.2
-    OpenGL (hardware accelerated, no mesa is too slow)
-	
-Also if you enable sound support you'll need OpenAL and freealut.
+    SDL3 version 3.2.0 or newer
+    SDL3_ttf version 3.2.0 or newer
+    SDL3_image version 3.2.0 or newer
+    OpenGL 3.3 core profile
+
+WSLAY DEPENDENCY
+
+The WebSocket transport builds wslay 1.1.1 directly from its pinned git
+submodule. Initialize it before configuring XPilot Infinity:
+
+    git submodule update --init vendor/wslay
+
+LIBTESS2 DEPENDENCY
+
+The SDL polygon geometry code builds libtess2 directly from its pinned git
+submodule. Initialize it before configuring XPilot Infinity:
+
+    git submodule update --init vendor/libtess2
+
+MT19937 DEPENDENCY
+
+The process-global random number wrapper builds MTwister directly from its
+pinned git submodule. Initialize it before configuring XPilot Infinity:
+
+    git submodule update --init vendor/mtwister
+
+SDL3 DEPENDENCY PROVIDERS
+
+By default, configure finds SDL3, SDL3_image, and SDL3_ttf through the
+system pkg-config search path:
+
+    ./configure --with-sdl3=system
+
+The SDL3 projects can instead be built from the pinned git submodules.
+Initialize them before entering a network-isolated build environment:
+
+    git submodule update --init vendor/sdl3/SDL \
+        vendor/sdl3/SDL_image vendor/sdl3/SDL_ttf
+
+For a normal build, the root wrapper builds native XPilot Infinity and both Windows
+architectures, including their pinned dependencies, in one command:
+
+    ./build.sh
+
+By default, all output is placed under `build/`; native XPilot Infinity is built in
+`build/xpilot-infinity`, and the Windows packages are built below `build/windows`.
+Use `./build.sh --target native` when only the native target is required.  Run
+`./build.sh --help` to select another build root, change the parallel job count
+or CMake build type, select individual targets, pass a cross-compilation
+toolchain, or forward additional options to configure.  The wrapper builds but
+does not install XPilot Infinity.
+
+The dependency build and the XPilot Infinity build use separate out-of-tree
+directories and installation prefixes.  From the source directory, run:
+
+    xpilot_source_dir=$(pwd)
+    sdl3_build_dir="$xpilot_source_dir/build/vendor-sdl3"
+    sdl3_prefix="$xpilot_source_dir/build/vendor-sdl3-prefix"
+    vendor/sdl3/build.sh --build-dir "$sdl3_build_dir" \
+        --prefix "$sdl3_prefix"
+    mkdir -p "$xpilot_source_dir/build/xpilot-infinity"
+    cd "$xpilot_source_dir/build/xpilot-infinity"
+    "$xpilot_source_dir/configure" --with-sdl3=vendored \
+        --with-sdl3-prefix="$sdl3_prefix"
+    make
+
+Both paths passed to vendor/sdl3/build.sh and --with-sdl3-prefix must be
+absolute.  The script builds the three pinned SDL projects as static
+libraries.  Codec libraries used by SDL3_image and FreeType/HarfBuzz used by
+SDL3_ttf come from the build system, so their development packages are still
+required.  The script performs no dependency downloads.
+
+For a cross-build, pass an absolute CMake toolchain file with
+--toolchain-file.  Keep a distinct dependency build directory, dependency
+prefix, and XPilot Infinity build directory for every target platform.  This layout
+also allows a container build to initialize or materialize the submodules
+beforehand, mount the source read-only, and build without network access.
+See vendor/sdl3/README.md for the pinned versions and build contract.
+
+WINDOWS CROSS-BUILDS
+
+Windows builds are produced on Linux with MinGW-w64.  Build both 32-bit x86
+and 64-bit x86_64 packages and test them with Wine by running:
+
+    git submodule update --init --recursive
+    ./build.sh --target windows --arch all --test
+
+The output packages are placed below build/windows/x86/package and
+build/windows/x86_64/package.  The pinned OpenAL Soft and freealut submodules
+are built as target DLLs and included in each package.  See doc/WINDOWS.md for
+prerequisites, output layout, single-architecture commands, and the Wine test
+contract.
+
+X11 is required when building the X11 client, replay program, or map editor,
+but the SDL client itself does not depend on X11.
+
+Sound support is enabled by default.  Configure stops with a dependency error
+when a graphical client is selected but the OpenAL or freealut development
+package is unavailable.  Use --disable-sound only for an explicitly silent
+build.  A sound-enabled client still starts and remains playable without an
+available sound device; it reports that sound was disabled and continues
+silently.
     
 To really enjoy the game you also need a fast graphics card and 
 a decent network connection.
@@ -63,22 +164,22 @@ how easy can it be? :)
 
     Start a server first:
 
-        xpilot-ng-server
+        xpilot-infinity-server
 
     Then start the X-based client in another window:
 
-        xpilot-ng-x11 -join
+        xpilot-infinity-x11 -join
 
     Or if you compiled the SDL client:
 
-        xpilot-ng-sdl -join
+        xpilot-infinity-sdl -join
 
     That -join switch tells the client to join a local server.
     If you run the client without -join it will allow you to join
     to a public server running on the internet.
 
 If everything fails, see the FAQ, which you can find in the doc subdirectory.
-Also check XPilot NG specific FAQ at http://xpilot.sourceforge.net/faq.html.
+Also check XPilot Infinity specific FAQ at http://xpilot.sourceforge.net/faq.html.
 If you cannot find the answer in the FAQs, you might want to turn to the
 good folks at irc.freenode.net channel #xpilot.
 
@@ -113,7 +214,7 @@ cache files.)
 
    If you need to do unusual things to compile the package, please try
 to figure out how `configure' could check whether to do them, and mail
-diffs or instructions to the address given in the `README' so they can
+diffs or instructions to the address given in `README.md' so they can
 be considered for the next release.  If you are using the cache, and at
 some point `config.cache' contains results you don't want to keep, you
 may remove or edit it.
@@ -213,7 +314,7 @@ Optional Features
 `configure', where FEATURE indicates an optional part of the package.
 They may also pay attention to `--with-PACKAGE' options, where PACKAGE
 is something like `gnu-as' or `x' (for the X Window System).  The
-`README' should mention any `--enable-' and `--with-' options that the
+`README.md' should mention any `--enable-' and `--with-' options that the
 package recognizes.
 
    For packages that use the X Window System, `configure' can usually
@@ -313,4 +414,3 @@ operates.
 
 `configure' also accepts some other, not widely useful, options.  Run
 `configure --help' for more details.
-

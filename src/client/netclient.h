@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -25,6 +25,8 @@
 
 #ifndef	NETCLIENT_H
 #define	NETCLIENT_H
+
+#include "game_transport.h"
 
 #ifndef TYPES_H
 /* need u_byte */
@@ -63,11 +65,25 @@ extern bool dirPrediction;
 
 int Net_setup(void);
 int Net_verify(char *real, char *nick, char *dpy);
-int Net_init(char *server, int port);
+/**
+ * Initialize gameplay networking for an established client connection.
+ *
+ * @param server Server address selected during contact negotiation.
+ * @param port Gameplay login port returned by the server.
+ * @param transport Gameplay transport negotiated for this connection.
+ * @return Zero on success, or `-1` on failure.
+ */
+int Net_init(char *server, int port, game_transport_t transport);
 void Net_cleanup(void);
 void Net_key_change(void);
 int Net_flush(void);
-int Net_fd(void);
+/**
+ * Return the native gameplay socket handle.
+ *
+ * @return A POSIX descriptor or Winsock SOCKET, or SOCK_FD_INVALID when the
+ *         gameplay socket is unavailable.
+ */
+socket_handle_t Net_fd(void);
 int Net_start(void);
 void Net_init_measurement(void);
 void Net_init_lag_measurement(void);

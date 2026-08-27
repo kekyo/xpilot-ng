@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -71,7 +71,7 @@ void Paint_vdecor(void)
     if (num_vdecor > 0) {
 	for (i = 0; i < num_vdecor; i++) {
 	    last = (i + 1 == num_vdecor);
-	    more_y = (vdecor_ptr[i].yi != vdecor_ptr[i + 1].yi);
+	    more_y = !last && (vdecor_ptr[i].yi != vdecor_ptr[i + 1].yi);
 	    Gui_paint_decor(vdecor_ptr[i].x, vdecor_ptr[i].y, 
 			    vdecor_ptr[i].xi, vdecor_ptr[i].yi,
 			    vdecor_ptr[i].type, last, more_y);

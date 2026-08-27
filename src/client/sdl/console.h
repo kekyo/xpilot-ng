@@ -1,7 +1,7 @@
 /*
- * XPilotNG/SDL, an SDL/OpenGL XPilot client.
+ * XPilot Infinity/SDL, an SDL/OpenGL XPilot client.
  *
- * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,14 +22,39 @@
 #define CONSOLE_H
 
 #include "xpclient_sdl.h"
+#include "renderer.h"
 
-int Console_init(void);
-void Console_paint(void);
+/**
+ * Initialize the in-game console for an SDL window.
+ *
+ * @param window Window that receives console text input.
+ * @return Zero on success, or -1 when initialization fails.
+ */
+int Console_init(SDL_Window *window);
+/**
+ * Update console animation and publish dirty pixels to the renderer.
+ *
+ * @param renderer Renderer that owns the console texture.
+ * @return Zero on success, or -1 when the console cannot be prepared.
+ *
+ * @remarks This function must be called outside an active renderer frame.
+ */
+int Console_prepare(Renderer *renderer);
+/**
+ * Draw the visible console and its frame in the active renderer frame.
+ *
+ * @return The renderer status, or RENDERER_STATUS_OK when hidden.
+ *
+ * @remarks A failure is retained by the SDL renderer and the containing
+ * frame must not be presented.
+ */
+RendererStatus Console_paint(void);
 void Console_show(void);
 void Console_hide(void);
 int Console_isVisible(void);
 int Console_process(SDL_Event *e);
 void Console_cleanup(void);
 void Console_print(const char *str, ...);
-void Paste_String_to_Console(char *text);
+/** Add printable ASCII clipboard text to the active console command. */
+void Paste_String_to_Console(const char *text);
 #endif

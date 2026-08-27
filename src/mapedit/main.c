@@ -1,5 +1,5 @@
 /*
- * XPilot NG XP-MapEdit, a map editor for xp maps.  Copyright (C) 1993 by
+ * XPilot Infinity XP-MapEdit, a map editor for xp maps.  Copyright (C) 1993 by
  *
  *      Aaron Averill           <averila@oes.orst.edu>
  *
@@ -1032,7 +1032,7 @@ void ParseArgs(int argc, char *argv[])
 	    exit(0);
 
 	case 4:
-	    fprintf(stdout, "xpilot-ng-xp-mapedit " VERSION "\n");
+	    fprintf(stdout, "xpilot-infinity-xp-mapedit " VERSION "\n");
 	    exit(0);
 
 	default:

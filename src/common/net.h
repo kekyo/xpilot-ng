@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -53,6 +53,10 @@
 #define SOCKBUF_LOCK		0x04	/* if locked against kernel i/o */
 #define SOCKBUF_ERROR		0x08	/* if i/o error occurred */
 #define SOCKBUF_DGRAM		0x10	/* if datagram socket */
+/** Preserve logical packet boundaries on a stream with a 16-bit length. */
+#define SOCKBUF_FRAMED		0x20
+/** Preserve a staged framed record while a previous record is blocked. */
+#define SOCKBUF_ORDERED		0x40
 
 /*
  * Hack: leave some spare room for the last terminating packet
@@ -76,7 +80,24 @@ typedef struct {
     int		len;		/* amount of data in buffer (writing/reading) */
     char	*ptr;		/* current position in buffer (reading) */
     int		state;		/* read/write/locked/error status flags */
+    /** Partially received two-byte network-order record header. */
+    unsigned char frame_header[2];
+    /** Number of header bytes received for the current record. */
+    int		frame_header_len;
+    /** Expected payload size, or -1 before a complete header is available. */
+    int		frame_length;
+    /** Number of payload bytes received for the current record. */
+    int		frame_received;
+    /** Wire-format buffer for a partially written framed record. */
+    char	*frame_output;
+    /** Total wire-format bytes in frame_output. */
+    int		frame_output_len;
+    /** Number of wire-format bytes already written. */
+    int		frame_output_offset;
 } sockbuf_t;
+
+/** Socket read/write callback used by the framed transport adapters. */
+typedef int (*sockbuf_io_fn)(sock_t *sock, char *buf, int len);
 
 extern int last_packet_of_frame;
 
@@ -85,12 +106,27 @@ int Sockbuf_cleanup(sockbuf_t *sbuf);
 int Sockbuf_clear(sockbuf_t *sbuf);
 int Sockbuf_advance(sockbuf_t *sbuf, int len);
 int Sockbuf_flush(sockbuf_t *sbuf);
+/**
+ * Flush one framed record through the supplied socket writer.
+ *
+ * @param sbuf Framed writable socket buffer.
+ * @param writer Function used for the underlying stream write.
+ * @return Accepted payload length, zero when blocked or empty, or -1 on error.
+ */
+int Sockbuf_flush_framed(sockbuf_t *sbuf, sockbuf_io_fn writer);
 int Sockbuf_write(sockbuf_t *sbuf, char *buf, int len);
 int Sockbuf_read(sockbuf_t *sbuf);
+/**
+ * Read one complete framed record through the supplied socket reader.
+ *
+ * @param sbuf Framed readable socket buffer.
+ * @param reader Function used for the underlying stream read.
+ * @return Complete payload length, zero when incomplete, or -1 on error/EOF.
+ */
+int Sockbuf_read_framed(sockbuf_t *sbuf, sockbuf_io_fn reader);
 int Sockbuf_copy(sockbuf_t *dest, sockbuf_t *src, int len);
 
 int Packet_printf(sockbuf_t *, const char *fmt, ...);
 int Packet_scanf(sockbuf_t *, const char *fmt, ...);
 
 #endif
-

@@ -1,14 +1,14 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 2000-2004 by
  *
  *      Uoti Urpala          <uau@users.sourceforge.net>
- *      Kristian Söderblom   <kps@users.sourceforge.net>
+ *      Kristian SÃ¶derblom   <kps@users.sourceforge.net>
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -1106,6 +1106,8 @@ void Frame_update(void)
 	pl = Player_by_index(i);
 	conn = pl->conn;
 	if (conn == NULL)
+	    continue;
+	if (conn->state == CONN_RECONNECT)
 	    continue;
 	playback = (pl->rectype == 1);
 	player_fps = FPS;

@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -32,7 +32,7 @@ static int Handle_input(int new_input)
 
 static void Input_loop(void)
 {
-    fd_set rfds, tfds;
+    fd_set rfds;
     int max, n, netfd, result, clientfd;
     struct timeval tv;
 
@@ -50,16 +50,16 @@ static void Input_loop(void)
 	error("Bad client filedescriptor");
 	return;
     }
-    if ((netfd = Net_fd()) == -1) {
-	error("Bad socket filedescriptor");
-	return;
-    }
     Net_key_change();
-    FD_ZERO(&rfds);
-    FD_SET(clientfd, &rfds);
-    FD_SET(netfd, &rfds);
-    max = (clientfd > netfd) ? clientfd : netfd;
-    for (tfds = rfds; ; rfds = tfds) {
+    for (;;) {
+	if ((netfd = Net_fd()) == SOCK_FD_INVALID) {
+	    error("Bad socket filedescriptor");
+	    return;
+	}
+	FD_ZERO(&rfds);
+	FD_SET(clientfd, &rfds);
+	FD_SET(netfd, &rfds);
+	max = (clientfd > netfd) ? clientfd : netfd;
 
 	tv.tv_sec = 1;
 	tv.tv_usec = 0;
@@ -173,7 +173,8 @@ int Join(Connect_param_t *conpar)
     if (Client_init(conpar->server_name, conpar->server_version) == -1)
 	return -1;
 
-    if (Net_init(conpar->server_addr, conpar->login_port) == -1) {
+    if (Net_init(conpar->server_addr, conpar->login_port,
+		 conpar->game_transport) == -1) {
 	Client_cleanup();
 	return -1;
     }
@@ -212,4 +213,3 @@ int Join(Connect_param_t *conpar)
 
     return 0;
 }
-

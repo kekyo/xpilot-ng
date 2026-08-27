@@ -1,14 +1,14 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
  *
- * Copyright (C) 2003 Kristian Söderblom <kps@users.sourceforge.net>
+ * Copyright (C) 2003 Kristian SÃ¶derblom <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,8 @@
  */
 
 #include "xpclient_x11.h"
+
+#include "utf8_names.h"
 
 /*
  * Globals.
@@ -311,6 +313,23 @@ static void Paint_score_background(void)
 }
 
 
+static void ShadowDrawScoreString(Display *display, Window w, GC gc,
+				  int x, int y, const char *str,
+				  unsigned long fg, unsigned long bg)
+{
+    int length = (int)strlen(str);
+
+    /* Score-list text must use one renderer so its space advances remain
+     * equal when only some player identities contain non-ASCII text. */
+    XSetForeground(display, gc, bg);
+    Xp_x11_draw_native_string(display, w, gc, x + 1, y + 1, str, length);
+    x--;
+    y--;
+    XSetForeground(display, gc, fg);
+    Xp_x11_draw_native_string(display, w, gc, x, y, str, length);
+}
+
+
 void Paint_score_start(void)
 {
     char	headingStr[MSG_LEN];
@@ -334,11 +353,11 @@ void Paint_score_start(void)
     }
     Paint_score_background();
 
-    ShadowDrawString(dpy, playersWindow, scoreListGC,
-		     SCORE_BORDER, thisLine,
-		     headingStr,
-		     colors[scoreColor].pixel,
-		     colors[BLACK].pixel);
+    ShadowDrawScoreString(dpy, playersWindow, scoreListGC,
+			  SCORE_BORDER, thisLine,
+			  headingStr,
+			  colors[scoreColor].pixel,
+			  colors[BLACK].pixel);
 
     gcv.line_style = LineSolid;
     XChangeGC(dpy, scoreListGC, GCLineStyle, &gcv);
@@ -359,6 +378,7 @@ void Paint_score_entry(int entry_num, other_t* other, bool is_team)
     static int		lineSpacing = -1, firstLine;
     int			thisLine, color;
     char		scoreStr[16];
+    char		playerName[2 * MAX_CHARS + 4];
 
     /*
      * First time we're here, set up miscellaneous strings for
@@ -383,8 +403,13 @@ void Paint_score_entry(int entry_num, other_t* other, bool is_team)
      */
     if (showUserName)
 	sprintf(label, "%s=%s@%s",
-		other->nick_name, other->user_name, other->host_name);
+	    other->nick_name, other->user_name, other->host_name);
     else {
+	if (!Format_player_identity(
+		playerName, sizeof(playerName),
+		other->nick_name, other->user_name)) {
+	    strlcpy(playerName, other->nick_name, sizeof(playerName));
+	}
 	if (BIT(Setup->mode, TIMING)) {
 	    raceStr[0] = ' ';
 	    raceStr[1] = ' ';
@@ -399,8 +424,10 @@ void Paint_score_entry(int entry_num, other_t* other, bool is_team)
 	}
 	if (BIT(Setup->mode, TEAM_PLAY))
 	    teamStr[0] = other->team + '0';
-	else
-	    sprintf(teamStr, "%c", other->alliance);
+	else {
+	    teamStr[0] = (char)Player_alliance_display_char(other->alliance);
+	    teamStr[1] = '\0';
+	}
 
 	if (BIT(Setup->mode, LIMITED_LIVES))
 	    sprintf(lifeStr, " %3d", other->life);
@@ -417,12 +444,12 @@ void Paint_score_entry(int entry_num, other_t* other, bool is_team)
 
 	if (BIT(Setup->mode, TEAM_PLAY))
 	    sprintf(label, "%c %s  %-18s%s",
-		    other->mychar, scoreStr, other->nick_name, lifeStr);
+		    other->mychar, scoreStr, playerName, lifeStr);
 	else
 	    sprintf(label, "%c %s%s%s%s  %s",
 		    other->mychar, raceStr, teamStr,
 		    scoreStr, lifeStr,
-		    other->nick_name);
+		    playerName);
     }
 
     /*
@@ -436,9 +463,9 @@ void Paint_score_entry(int entry_num, other_t* other, bool is_team)
 	    color = scoreInactiveColor;
 
 	XSetForeground(dpy, scoreListGC, colors[color].pixel);
-	XDrawString(dpy, playersWindow, scoreListGC,
-		    SCORE_BORDER, thisLine,
-		    label, (int)strlen(label));
+	Xp_x11_draw_native_string(dpy, playersWindow, scoreListGC,
+				  SCORE_BORDER, thisLine,
+				  label, (int)strlen(label));
     } else {
 	if (!is_team) {
 	    if (self && other->id == self->id)
@@ -455,10 +482,10 @@ void Paint_score_entry(int entry_num, other_t* other, bool is_team)
 	    }
 	}
 
-	ShadowDrawString(dpy, playersWindow, scoreListGC, SCORE_BORDER,
-			 thisLine, label,
-			 colors[color].pixel,
-			 colors[BLACK].pixel);
+	ShadowDrawScoreString(dpy, playersWindow, scoreListGC, SCORE_BORDER,
+			      thisLine, label,
+			      colors[color].pixel,
+			      colors[BLACK].pixel);
     }
 
     /*
@@ -527,17 +554,18 @@ static void Paint_clock(bool redraw)
 	}
 	sprintf(buf, "%2d:%02d%cM", hour, minute, tmpchar);
     }
-    width = XTextWidth(scoreListFont, buf, (int)strlen(buf));
+    width = Xp_x11_native_text_width(
+		scoreListFont, buf, (int)strlen(buf));
     XSetForeground(dpy, scoreListGC, colors[windowColor].pixel);
     XFillRectangle(dpy, playersWindow, scoreListGC,
 		   256 - (int)(width + 2 * border), 0,
 		   width + 2 * border, height);
-    ShadowDrawString(dpy, playersWindow, scoreListGC,
-		     256 - (int)(width + border),
-		     scoreListFont->ascent + 4,
-		     buf,
-		     colors[clockColor].pixel,
-		     colors[BLACK].pixel);
+    ShadowDrawScoreString(dpy, playersWindow, scoreListGC,
+			  256 - (int)(width + border),
+			  scoreListFont->ascent + 4,
+			  buf,
+			  colors[clockColor].pixel,
+			  colors[BLACK].pixel);
 }
 
 

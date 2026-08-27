@@ -1,5 +1,5 @@
 /*
- * XPilotNG/SDL, an SDL/OpenGL XPilot client.
+ * XPilot Infinity/SDL, an SDL/OpenGL XPilot client.
  *
  * Copyright (C) 2003-2004 Darel Cullen <darelcullen@users.sourceforge.net>
  *
@@ -23,6 +23,34 @@
 
 #include "xpclient_sdl.h"
 
+/** Register SDL server-browser options before command-line parsing. */
+void Store_sdlmeta_options(void);
+
+/**
+ * Display the combined metaserver and LAN server browser.
+ *
+ * @param conpar Client identity input and selected connection output.
+ * @return Zero after joining, one to refresh, or a negative value to quit.
+ */
 int Meta_window(Connect_param_t *conpar);
+
+#ifdef XPILOT_SDLMETA_TEST_HOOKS
+/**
+ * Paint a player-list background through the production widget painter.
+ *
+ * @param bounds Widget bounds in logical top-left coordinates.
+ */
+void Sdl_meta_test_paint_player_list(SDL_Rect bounds);
+
+/**
+ * Paint a metadata row through the production widget painter.
+ *
+ * @param bounds Widget bounds in logical top-left coordinates.
+ * @param background Packed 0xRRGGBBAA background for an unselected row.
+ * @param selected Whether to use the selected-row background instead.
+ */
+void Sdl_meta_test_paint_row(SDL_Rect bounds, Uint32 background,
+                             bool selected);
+#endif
 
 #endif

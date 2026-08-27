@@ -1,7 +1,7 @@
 /*
- * XPilotNG/SDL, an SDL/OpenGL XPilot client.
+ * XPilot Infinity/SDL, an SDL/OpenGL XPilot client.
  *
- * Copyright (C) 2003-2004 Juha Lindström <juhal@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Juha LindstrÃ¶m <juhal@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,20 +26,25 @@
 
 static sdl_window_t console_window;
 static ConsoleInformation *console;
+static SDL_Window *text_input_window;
 
 void command_handler(ConsoleInformation *, char *);
 
 static void Console_refresh(void)
 {
-    SDL_FillRect(console_window.surface, NULL, 0);
+    SDL_FillSurfaceRect(console_window.surface, NULL, 0);
     CON_UpdateConsole(console);
     CON_DrawConsole(console);
     sdl_window_refresh(&console_window);
 }
 
-int Console_init(void)
+int Console_init(SDL_Window *window)
 {
     SDL_Rect cr;
+
+    if (window == NULL)
+	return -1;
+    text_input_window = window;
     cr.w = 500;
     cr.h = 100;
     if (cr.w > draw_width) cr.w = draw_width;
@@ -68,34 +73,36 @@ int Console_init(void)
     return 0;
 }
 
-void Console_paint(void)
+int Console_prepare(Renderer *renderer)
 {
-    if (!Console_isVisible()) return;
-    if (console->Visible != CON_OPEN) Console_refresh();
+    if (console == NULL || renderer == NULL)
+	return -1;
+
+    if (console->Visible != CON_CLOSED && console->Visible != CON_OPEN)
+	Console_refresh();
+
+    return sdl_window_prepare(&console_window, renderer);
+}
+
+RendererStatus Console_paint(void)
+{
+    if (!Console_isVisible())
+	return RENDERER_STATUS_OK;
     console_window.x = (draw_width - console_window.w) / 2;
     console_window.y = (draw_height - console_window.h) / 2;
-    sdl_window_paint(&console_window);
-    glBegin(GL_LINE_LOOP);
-    glColor4ub(0, 0, 0, 0xff);
-    glVertex2i(console_window.x, console_window.y + console_window.h + 2);    
-    glColor4ub(0, 0x90, 0x00, 0xff);
-    glVertex2i(console_window.x, console_window.y);
-    glColor4ub(0, 0, 0, 0xff);
-    glVertex2i(console_window.x + console_window.w, console_window.y);
-    glColor4ub(0, 0x90, 0x00, 0xff);
-    glVertex2i(console_window.x + console_window.w, 
-	       console_window.y + console_window.h + 2);
-    glEnd();
+    return sdl_window_paint(&console_window, NULL);
 }
 
 void Console_show(void)
 {
     CON_Show(console);
+    SDL_StartTextInput(text_input_window);
     Console_refresh();
 }
 
 void Console_hide(void)
 {
+    SDL_StopTextInput(text_input_window);
     CON_Hide(console);
 }
 
@@ -113,7 +120,7 @@ int Console_process(SDL_Event *e)
     return 0;
 }
 
-void Paste_String_to_Console(char *text)
+void Paste_String_to_Console(const char *text)
 {
     Add_String_to_Console(text);
     Console_refresh();
@@ -122,7 +129,9 @@ void Paste_String_to_Console(char *text)
 void Console_cleanup(void)
 {
     CON_Destroy(console);
+    console = NULL;
     sdl_window_destroy(&console_window);
+    text_input_window = NULL;
 }
 
 void Console_print(const char *str, ...)

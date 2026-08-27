@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -31,6 +31,7 @@
 /* need MAX_..._LEN */
 #  include "pack.h"
 #endif
+#include "game_transport.h"
 
 typedef struct Connect_param {
     int			contact_port,
@@ -43,8 +44,12 @@ typedef struct Connect_param {
 			server_name[MAX_HOST_LEN],
 			disp_name[MAX_DISP_LEN];
     unsigned		server_version;
+
+    /** Transport used for contact and lobby communication. */
+    game_transport_t	contact_transport;
+    /** Transport used for the active gameplay connection. */
+    game_transport_t	game_transport;
     int			team;
 } Connect_param_t;
 
 #endif
-

@@ -1,11 +1,11 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 2000-2004 Uoti Urpala <uau@users.sourceforge.net>
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -112,19 +112,16 @@
  * 4.F.1.5: Possibility to change polygon styles.
  */
 #define MAGIC_WORD		0xF4ED
-#define POLYGON_VERSION		0x4F15
-#define OLD_VERSION		0x4501
 #ifdef SERVER
-#define	MAGIC (is_polygon_map \
-               ? VERSION2MAGIC(POLYGON_VERSION) \
-               : VERSION2MAGIC(OLD_VERSION))
-#else
-#define	MAGIC (VERSION2MAGIC(protocolVersion))
+#define MAGIC VERSION2MAGIC( \
+    Game_transport_protocol_version(gameTransport, is_polygon_map))
 #endif
 
 #define MAGIC2VERSION(M)	(((M) >> 16) & 0xFFFF)
 #define VERSION2MAGIC(V)	((((V) & 0xFFFF) << 16) | MAGIC_WORD)
+#ifdef SERVER
 #define MY_VERSION		MAGIC2VERSION(MAGIC)
+#endif
 
 /*
  * Which client versions can join this server.
@@ -138,7 +135,6 @@
  * Which server versions can this client join.
  */
 #define MIN_SERVER_VERSION	0x4F09
-#define MAX_SERVER_VERSION	MY_VERSION
 
 /*
  * We want to keep support for servers using the old map format in the client,
@@ -146,9 +142,6 @@
  * there is a separate "old" range of allowed servers.
  */
 #define MIN_OLD_SERVER_VERSION  0x4203
-#define MAX_OLD_SERVER_VERSION  0x4501
-/* Which old-style (non-polygon) protocol version we support. */
-#define COMPATIBILITY_MAGIC 0x4501F4ED
 
 #define	MAX_STR_LEN		4096
 #define	MAX_DISP_LEN		80

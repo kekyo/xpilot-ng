@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -36,6 +36,7 @@
 /* need sockbuf_t. */
 #include "net.h"
 #endif
+#include "session_token.h"
 
 
 
@@ -47,6 +48,7 @@
 #define CONN_SETUP	0x02	/* after verification */
 #define CONN_LOGIN	0x04	/* after setup info transferred */
 #define CONN_PLAYING	0x08	/* when actively playing */
+#define CONN_RECONNECT	0x10	/* waiting for a replacement transport */
 #define CONN_DRAIN	0x20	/* wait for all reliable data to be acked */
 #define CONN_READY	0x40	/* draining after LOGIN and before PLAYING */
 
@@ -86,6 +88,7 @@ typedef struct {
     int			state;			/* state of connection */
     int			drain_state;		/* state after draining done */
     unsigned		magic;			/* magic cookie */
+    session_token_t	resume_token;		/* gameplay session bearer token */
     sockbuf_t		r;			/* input buffer */
     sockbuf_t		w;			/* output buffer */
     sockbuf_t		c;			/* reliable data buffer */

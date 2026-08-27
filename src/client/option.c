@@ -1,14 +1,14 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
  *
- * Copyright (C) 2003-2004 Kristian Söderblom <kps@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Kristian SÃ¶derblom <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -114,7 +114,9 @@ void Usage(void)
 {
     int i;
 
-    printf("Usage: %s [-options ...] [server]\n"
+    printf("Usage: %s [-options ...] [server-target ...]\n"
+	   "Server targets: HOST, ws://HOST[:PORT], tcp://HOST[:PORT], "
+	   "or udp://HOST[:PORT]\n"
 	   "Where options include:\n" "\n", Program_name());
     for (i = 0; i < num_options; i++) {
 	xp_option_t *opt = Option_by_index(i);

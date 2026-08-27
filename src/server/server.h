@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -112,9 +112,9 @@ static inline double SHOT_MULT(object_t *obj)
 }
 
 #ifndef	_WINDOWS
-#define	APPNAME	"xpilot-ng-server"
+#define	APPNAME	"xpilot-infinity-server"
 #else
-#define	APPNAME	"XPilotNGServer"
+#define	APPNAME	"XPilotInfinityServer"
 #endif
 
 
@@ -387,7 +387,7 @@ void Main_loop(void);
  */
 void Contact_cleanup(void);
 int Contact_init(void);
-void Contact(int fd, void *arg);
+void Contact(socket_handle_t fd, void *arg);
 void Queue_kick(const char *nick);
 void Queue_loop(void);
 int Queue_advance_player(char *name, char *msg, size_t size);

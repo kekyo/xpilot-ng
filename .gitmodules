@@ -1,6 +1,30 @@
 [submodule "zlib"]
-	path = zlib
+	path = vendor/zlib
 	url = https://github.com/madler/zlib
-[submodule "SDL"]
-	path = SDL
-	url = https://github.com/SDL-mirror/SDL
+[submodule "vendor/sdl3/SDL"]
+	path = vendor/sdl3/SDL
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "vendor/sdl3/SDL_image"]
+	path = vendor/sdl3/SDL_image
+	url = https://github.com/libsdl-org/SDL_image.git
+[submodule "vendor/sdl3/SDL_ttf"]
+	path = vendor/sdl3/SDL_ttf
+	url = https://github.com/libsdl-org/SDL_ttf.git
+[submodule "vendor/expat"]
+	path = vendor/expat
+	url = https://github.com/libexpat/libexpat.git
+[submodule "vendor/wslay"]
+	path = vendor/wslay
+	url = https://github.com/tatsuhiro-t/wslay
+[submodule "vendor/libtess2"]
+	path = vendor/libtess2
+	url = https://github.com/memononen/libtess2
+[submodule "vendor/mtwister"]
+	path = vendor/mtwister
+	url = https://github.com/ESultanik/mtwister
+[submodule "vendor/openal-soft"]
+	path = vendor/openal-soft
+	url = https://github.com/kcat/openal-soft.git
+[submodule "vendor/freealut"]
+	path = vendor/freealut
+	url = https://github.com/vancegroup/freealut.git

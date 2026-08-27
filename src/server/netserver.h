@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -31,12 +31,72 @@
 #include "player.h"
 #endif
 
+#include "record_session.h"
+#include "session_token.h"
+
 int Setup_net_server(void);
 void Conn_change_nick(connection_t *connp, const char *nick);
 void Destroy_connection(connection_t *connp, const char *reason);
 int Check_connection(char *real, char *nick, char *dpy, char *addr);
 int Setup_connection(char *real, char *nick, char *dpy, int team,
 		     char *addr, char *host, unsigned version);
+/**
+ * Promote an admitted fixed-endpoint session to a gameplay connection.
+ *
+ * @param session Session whose ownership is transferred.
+ * @param real Operating-system user identity.
+ * @param nick Requested in-game nickname.
+ * @param dpy Client display identifier.
+ * @param team Requested team, or TEAM_NOT_SET.
+ * @param addr Observed peer address.
+ * @param host Client-reported host identifier.
+ * @param version Negotiated fixed-endpoint protocol version.
+ * @param peer_port Observed peer source port.
+ * @return Zero on success, otherwise -1.
+ */
+int Setup_session_connection(record_session_t *session, char *real,
+			     char *nick, char *dpy, int team,
+			     char *addr, char *host, unsigned version,
+			     int peer_port);
+
+/** Return the maximum number of simultaneous gameplay connections. */
+int Net_server_connection_limit(void);
+
+/**
+ * Reserve a suspended gameplay session for one incoming replacement.
+ *
+ * @param token Bearer token from the incoming resumption request.
+ * @param address Observed peer address of the replacement transport.
+ * @param claim_id Stable identifier of the incoming logical session.
+ * @param connection_index Receives the reserved connection index on success.
+ * @return SUCCESS, E_NOT_FOUND, E_IN_USE, or E_INVAL.
+ */
+int Net_server_claim_session_resume(
+    const session_token_t *token, const char *address,
+    record_session_id_t claim_id, int *connection_index);
+
+/**
+ * Install a reserved replacement transport and resume gameplay.
+ *
+ * @param connection_index Connection returned by the claim operation.
+ * @param claim_id Stable identifier used to reserve the connection.
+ * @param replacement Incoming session whose ownership is consumed on success.
+ * @param peer_port Observed source port of the replacement transport.
+ * @return Zero on success, otherwise -1 with replacement retained by caller.
+ */
+int Net_server_complete_session_resume(
+    int connection_index, record_session_id_t claim_id,
+    record_session_t *replacement, int peer_port);
+
+/**
+ * Release an unfinished gameplay resumption reservation.
+ *
+ * @param connection_index Connection returned by the claim operation.
+ * @param claim_id Stable identifier used to reserve the connection.
+ */
+void Net_server_cancel_session_resume(
+    int connection_index, record_session_id_t claim_id);
+
 int Input(void);
 int Send_reply(connection_t *connp, int replyto, int result);
 int Send_self(connection_t *connp, player_t *pl,

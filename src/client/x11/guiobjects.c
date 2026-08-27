@@ -1,14 +1,14 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
  *
- * Copyright (C) 2003-2004 Kristian Söderblom <kps@users.sourceforge.net>
+ * Copyright (C) 2003-2004 Kristian SÃ¶derblom <kps@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -290,6 +290,11 @@ void Gui_paint_mine(int x, int y, int teammine, char *name)
 }
 
 
+void Gui_paint_sparks_begin(void)
+{
+}
+
+
 void Gui_paint_spark(int color, int x, int y)
 {
     color = spark_color[color];
@@ -299,6 +304,11 @@ void Gui_paint_spark(int color, int x, int y)
 		  y - sparkSize/2,
 		  sparkSize, sparkSize);
 
+}
+
+
+void Gui_paint_sparks_end(void)
+{
 }
 
 
@@ -537,6 +547,11 @@ void Gui_paint_paused(int x, int y, int count)
 
 
 /* Create better graphics for this. */
+void Gui_paint_appearing_begin(void)
+{
+}
+
+
 void Gui_paint_appearing(int x, int y, int id, int count)
 {
     const unsigned hsize = 3 * BLOCK_SZ / 7;
@@ -559,6 +574,11 @@ void Gui_paint_appearing(int x, int y, int id, int count)
 		     SCALEY(y - (int)hsize + (int)(count / 180. * hsize + 1)),
 		     UWINSCALE(2 * hsize + 1),
 		     UWINSCALE((unsigned)(count / 180. * hsize + 1)));
+}
+
+
+void Gui_paint_appearing_end(void)
+{
 }
 
 

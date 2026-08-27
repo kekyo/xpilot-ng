@@ -1,5 +1,5 @@
 /*
- * XPilotNG/SDL, an SDL/OpenGL XPilot client.
+ * XPilot Infinity/SDL, an SDL/OpenGL XPilot client.
  *
  * Copyright (C) 2003-2004 Erik Andersson <deity_at_home.se>
  *
@@ -24,6 +24,7 @@
 #include "xpclient_sdl.h"
 
 #include "sdlkeys.h"
+#include "sdluiimage.h"
 #include "text.h"
 
 /****************************************************/
@@ -87,16 +88,53 @@ bool AppendGLWidgetList( GLWidget **list, GLWidget *widget );
 void PrependGLWidgetList( GLWidget **list, GLWidget *widget );
 bool DelGLWidgetListItem( GLWidget **list, GLWidget *widget );
 
-void DrawGLWidgets( GLWidget *list );
 GLWidget *FindGLWidget( GLWidget *list, Uint16 x,Uint16 y );
-void DrawGLWidgetsi( GLWidget *list, int x, int y, int w, int h);
+/**
+ * Draw a clipped widget list until tracked semantic drawing fails.
+ *
+ * @param list First widget in the list.
+ * @param x Left edge of the inherited clip rectangle.
+ * @param y Top edge of the inherited clip rectangle.
+ * @param w Width of the inherited clip rectangle.
+ * @param h Height of the inherited clip rectangle.
+ * @param sdl_renderer Renderer facade used to apply nested widget clips to
+ *        semantic draws. It must have an active frame.
+ * @param draw_state Per-frame semantic UI draw state.
+ * @return First tracked draw or clipping failure, or RENDERER_STATUS_OK.
+ *
+ * @remarks @p draw_state must be the same object retained by every semantic
+ * image widget in @p list. Reset it once before a newly begun frame is drawn,
+ * but never while an unfinished frame is only retrying its end operation.
+ * Successful traversal restores each inherited semantic clip and finally
+ * disables clipping. Failure returns without submitting cleanup commands so
+ * the retained frame result remains safe to retry or abort.
+ */
+RendererStatus DrawGLWidgetsi_checked(GLWidget *list, int x, int y,
+                                      int w, int h,
+                                      SdlRenderer *sdl_renderer,
+                                      const SdlUiDrawState *draw_state);
+/**
+ * Draw a full-window widget list until tracked semantic drawing fails.
+ *
+ * @param list First widget in the list, or NULL for an empty list.
+ * @param sdl_renderer Renderer facade with an active frame.
+ * @param draw_state Per-frame semantic UI draw state.
+ * @return First tracked draw or clipping failure, or RENDERER_STATUS_OK.
+ *
+ * @remarks On success the semantic scissor is disabled. On failure no further
+ * drawing or clipping command is submitted for the active frame.
+ */
+RendererStatus DrawGLWidgets_checked(
+    GLWidget *list, SdlRenderer *sdl_renderer,
+    const SdlUiDrawState *draw_state);
 GLWidget *FindGLWidgeti( GLWidget *widget, Uint16 x, Uint16 y );
 
 extern GLWidget *clicktarget[NUM_MOUSE_BUTTONS];
 extern GLWidget *hovertarget;
 
 /* puts text into the copy buffer */
-void load_textscrap(char *text);
+/** Copy widget text to the SDL3 clipboard. */
+void load_textscrap(const char *text);
 /****************************************************/
 /* END: Main GLWidget stuff 	    	    	    */
 /****************************************************/
@@ -168,22 +206,56 @@ GLWidget *Init_SlideWidget( bool locked,
 /***************************/
 /* Begin: ScrollbarWidget  */
 /***************************/
-typedef enum {SB_VERTICAL, SB_HORISONTAL} ScrollWidget_dir_t;
-/* note 0.0 <= pos && pos + size <= 1.0 */
+/** Scrollbar movement axis. */
+typedef enum ScrollWidget_dir_t {
+    /** Move along the vertical axis. */
+    SB_VERTICAL,
+    /** Move along the horizontal axis. */
+    SB_HORISONTAL
+} ScrollWidget_dir_t;
 #define SCROLLBARWIDGET 3
+/** Scrollbar state expressed in normalized widget coordinates. */
 typedef struct {
+    /** Owned slider widget. */
     GLWidget	    	*slide;
-    GLfloat 	    	pos;
-    GLfloat 	    	size;
+    /** Normalized start position. */
+    float 	    	pos;
+    /** Normalized visible fraction. */
+    float 	    	size;
+    /** Previous relative movement. */
     Sint16  	    	oldmoves;
+    /** Movement axis. */
     ScrollWidget_dir_t	dir;
-    void    	    (	*poschange)( GLfloat pos , void *poschangedata );
+    /** Callback invoked after the normalized position changes. */
+    void    	    (	*poschange)( float pos , void *poschangedata );
+    /** Opaque callback data. */
     void    	    	*poschangedata;
 } ScrollbarWidget;
-GLWidget *Init_ScrollbarWidget( bool locked, GLfloat pos, GLfloat size,ScrollWidget_dir_t dir,
-    	    	    	    	void (*poschange)( GLfloat pos , void *data), void *data );
 
-void ScrollbarWidget_SetSlideSize( GLWidget *widget, GLfloat size );
+/**
+ * Create a scrollbar widget.
+ *
+ * @param locked Whether user movement is disabled.
+ * @param pos Normalized start position.
+ * @param size Normalized visible fraction.
+ * @param dir Movement axis.
+ * @param poschange Optional position-change callback.
+ * @param data Opaque callback data.
+ * @return New widget, or NULL on failure.
+ * @remarks Inputs are normalized so that 0 <= pos and pos + size <= 1.
+ */
+GLWidget *Init_ScrollbarWidget( bool locked, float pos, float size,
+				ScrollWidget_dir_t dir,
+				void (*poschange)( float pos , void *data),
+				void *data );
+
+/**
+ * Update a scrollbar's normalized visible fraction.
+ *
+ * @param widget Scrollbar widget.
+ * @param size New normalized visible fraction.
+ */
+void ScrollbarWidget_SetSlideSize( GLWidget *widget, float size );
 /*************************/
 /* End:  ScrollbarWidget */
 /*************************/
@@ -469,6 +541,14 @@ typedef struct {
 } ConfMenuWidget;
 
 GLWidget *Init_ConfMenuWidget( Uint16 x, Uint16 y );
+#ifdef XPILOT_GLWIDGETS_TEST_HOOKS
+/**
+ * Paint a configuration-menu fixture through its production painter.
+ *
+ * @param widget Configuration-menu widget fixture to paint.
+ */
+void Glwidgets_test_paint_conf_menu(GLWidget *widget);
+#endif
 /***********************/
 /* End: ConfMenuWidget */
 /***********************/
@@ -477,24 +557,63 @@ GLWidget *Init_ConfMenuWidget( Uint16 x, Uint16 y );
 /* Begin: ImageButtonWidget  */
 /*****************************/
 #define IMAGEBUTTONWIDGET 17
+/** Image-backed button that retains its text-only fallback. */
 typedef struct {
+    /** Text color in packed 0xRRGGBBAA form. */
     Uint32 fg;
+    /** Image tint in packed 0xRRGGBBAA form. */
     Uint32 bg;
+    /** Current SDL button state. */
     Uint8 state;
+    /** Rendered button label. */
     string_tex_t tex;
-    GLuint imageUp;
-    GLuint imageDown;
-    texcoord_t txcUp;
-    texcoord_t txcDown;
+    /** SDL renderer facade used to draw the semantic image pair. */
+    SdlRenderer *sdl_renderer;
+    /** Shared status that aborts the current UI traversal on draw failure. */
+    SdlUiDrawState *draw_state;
+    /** Released and pressed images, published atomically when available. */
+    SdlUiImagePair images;
+    /** Callback invoked after a completed click inside the button. */
     void (*onClick)(GLWidget *widget);
 } ImageButtonWidget;
 
-GLWidget *Init_ImageButtonWidget(const char *text,
+/**
+ * Create an image-backed button with a text-only fallback.
+ *
+ * @param sdl_renderer SDL renderer facade that owns optional button images.
+ *        It must outlive the widget.
+ * @param draw_state Per-frame state shared by the containing UI traversal.
+ *        It must outlive the widget.
+ * @param text Required button label.
+ * @param upImage Texture-directory filename for the released state.
+ * @param downImage Texture-directory filename for the pressed state.
+ * @param bg Packed 0xRRGGBBAA image tint.
+ * @param fg Packed 0xRRGGBBAA text color, or zero for white.
+ * @param onClick Callback invoked when a click is completed inside the button.
+ * @return New widget, or NULL when the required text resources cannot be made.
+ *
+ * @remarks Failure to load or create either image leaves a usable text-only
+ * button. The widget must be closed outside an active renderer frame. The
+ * containing code must pass this exact @p draw_state to
+ * DrawGLWidgetsi_checked() and reset it only before drawing a newly begun
+ * frame, not while retrying completion of an existing frame.
+ */
+GLWidget *Init_ImageButtonWidget(SdlRenderer *sdl_renderer,
+                                 SdlUiDrawState *draw_state,
+                                 const char *text,
 				 const char *upImage,
 				 const char *downImage,
 				 Uint32 bg, 
-				 Uint32 fg,
-				 void (*onClick)(GLWidget *widget));
+                                 Uint32 fg,
+                                 void (*onClick)(GLWidget *widget));
+
+/**
+ * Report whether both semantic images of an image button are ready.
+ *
+ * @param widget Image button to inspect.
+ * @return Nonzero when both released and pressed textures exist.
+ */
+int ImageButtonWidget_has_semantic_images(const GLWidget *widget);
 /**************************/
 /* End: ImageButtonWidget */
 /**************************/

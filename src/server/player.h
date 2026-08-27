@@ -1,9 +1,9 @@
 /* 
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -746,7 +746,7 @@ bool Team_immune(int id1, int id2);
 
 static inline void Player_set_float_dir(player_t *pl, double new_float_dir)
 {
-    if (options.ngControls && new_float_dir != pl->float_dir) {
+    if (options.infinityControls && new_float_dir != pl->float_dir) {
 	pl->float_dir = new_float_dir;
 	pl->float_dir_cos = cos(pl->float_dir * 2.0 * PI / RES);
 	pl->float_dir_sin = sin(pl->float_dir * 2.0 * PI / RES);

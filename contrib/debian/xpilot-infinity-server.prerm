@@ -1,0 +1,22 @@
+#! /bin/sh
+# prerm script for xpilot-infinity-server
+
+set -e
+
+echo -n "Stopping XPilot Infinity server: "
+if start-stop-daemon --stop --quiet --user xpilotinfinity \
+	--name xpilot-infinity-server --retry 30 >/dev/null 2>&1; then
+   echo "xpilot-infinity-server."
+else
+   # Take more draconian measures, as 'xpilotinfinity' user may be
+   # removed by this point by an earlier failed --stop.
+   # We risk also terminating servers run by users other
+   # than xpilotinfinity here, but this is better than the alternative
+   # (keeping an earlier, potentially buggy XPilot Infinity server
+   # running).
+   if start-stop-daemon --stop --quiet --name xpilot-infinity-server --retry 30; then
+      echo "xpilot-infinity-server."
+   fi
+fi
+
+#DEBHELPER#

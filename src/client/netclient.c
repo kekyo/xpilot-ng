@@ -1,9 +1,9 @@
 /*
- * XPilot NG, a multiplayer space war game.
+ * XPilot Infinity, a multiplayer space war game.
  *
  * Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      BjÃ¸rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -26,6 +26,13 @@
  */
 
 #include "xpclient.h"
+
+#include "utf8_names.h"
+
+#include "record_session.h"
+#include "session_connection.h"
+#include "session_transport.h"
+#include "session_token.h"
 
 #define TALK_RETRY	2
 #define MAX_MAP_ACK_LEN	500
@@ -76,15 +83,24 @@ static long		keyboard_change[KEYBOARD_STORE],
 			keyboard_update[KEYBOARD_STORE],
 			keyboard_acktime[KEYBOARD_STORE];
 static char		talk_str[MAX_CHARS];
+static char             gameplay_server[MAX_HOST_LEN];
+static int              gameplay_port;
+static game_transport_t gameplay_transport;
+static session_token_t  resume_token;
+static bool             resume_token_received;
+static bool             gameplay_connected;
+static bool             gameplay_started;
+static bool             reconnecting;
+static record_session_t *gameplay_session;
 
 
 
 /*
  * Initialize the function dispatch tables.
- * There are two tables.  One for the semi-important unreliable
- * data like frame updates.
- * The other one is for the reliable data stream, which is
- * received as part of the unreliable data packets.
+ * There are two tables.  One is for semi-important frame data that can be
+ * lost with UDP or discarded when a sender or renderer cannot keep up.
+ * The other is for the protocol's reliable data stream, which is retained
+ * for the same packet semantics with either gameplay transport.
  */
 static void Receive_init(void)
 {
@@ -153,6 +169,379 @@ static void Receive_init(void)
     reliable_tbl[PKT_STRING]	= Receive_string;
     reliable_tbl[PKT_SCORE_OBJECT] = Receive_score_object;
     reliable_tbl[PKT_TALK_ACK]	= Receive_talk_ack;
+}
+
+static int Open_client_socket(sock_t *sock, game_transport_t transport)
+{
+    int i;
+
+    if (!clientPortStart || !clientPortEnd
+	|| clientPortStart > clientPortEnd) {
+	return transport == GAME_TRANSPORT_TCP
+	    ? sock_open_tcp_bound(sock, NULL, 0)
+	    : sock_open_udp(sock, NULL, 0);
+    }
+
+    for (i = clientPortStart; i <= clientPortEnd; i++) {
+	int status = transport == GAME_TRANSPORT_TCP
+	    ? sock_open_tcp_bound(sock, NULL, i)
+	    : sock_open_udp(sock, NULL, i);
+
+	if (status != SOCK_IS_ERROR)
+	    return status;
+    }
+    return SOCK_IS_ERROR;
+}
+
+static void Reset_socket_buffer(sockbuf_t *buffer, const sock_t *sock)
+{
+    buffer->sock = *sock;
+    buffer->state &= ~SOCKBUF_ERROR;
+    Sockbuf_clear(buffer);
+    buffer->frame_header[0] = buffer->frame_header[1] = 0;
+    buffer->frame_header_len = 0;
+    buffer->frame_length = -1;
+    buffer->frame_received = 0;
+    buffer->frame_output_len = 0;
+    buffer->frame_output_offset = 0;
+}
+
+static void Attach_gameplay_socket(const sock_t *sock)
+{
+    int i;
+
+    Reset_socket_buffer(&wbuf, sock);
+    for (i = 0; i < receive_window_size; i++) {
+	Frames[i].loops = 0;
+	Reset_socket_buffer(&Frames[i].sbuf, sock);
+    }
+    rbuf = Frames[0].sbuf;
+}
+
+static void Close_gameplay_socket_without_quit(void)
+{
+    sock_t disconnected = wbuf.sock;
+    sock_t invalid;
+
+    if (disconnected.fd != SOCK_FD_INVALID)
+	sock_close(&disconnected);
+    sock_init(&invalid);
+    Attach_gameplay_socket(&invalid);
+    gameplay_connected = false;
+}
+
+static int Net_advance_session_output(void)
+{
+    record_flush_result_t result;
+
+    if (gameplay_session == NULL)
+	return 0;
+    result = Record_session_flush(gameplay_session);
+    if (result == RECORD_FLUSH_ERROR || result == RECORD_FLUSH_CLOSED)
+	return -1;
+    return result == RECORD_FLUSH_PENDING ? 1 : 0;
+}
+
+static int Net_send_output(record_delivery_t delivery)
+{
+    record_send_result_t result;
+    int length;
+
+    if (gameplay_session == NULL)
+	return Sockbuf_flush(&wbuf);
+    if (Net_advance_session_output() < 0)
+	return -1;
+    length = wbuf.len;
+    if (length <= 0)
+	return 0;
+    result = Record_session_send(gameplay_session, wbuf.buf,
+				 (size_t)length, delivery);
+    if (result == RECORD_SEND_BACKPRESSURED)
+	return 0;
+    if (result == RECORD_SEND_ACCEPTED) {
+	Sockbuf_clear(&wbuf);
+	return length;
+    }
+    if (result == RECORD_SEND_DROPPED) {
+	Sockbuf_clear(&wbuf);
+	return 0;
+    }
+    return -1;
+}
+
+static int Net_receive_record(sockbuf_t *buffer)
+{
+    record_receive_result_t result;
+    size_t length = 0;
+
+    if (gameplay_session == NULL)
+	return Sockbuf_read(buffer);
+    Sockbuf_clear(buffer);
+    result = Record_session_receive(gameplay_session, buffer->buf,
+				    (size_t)buffer->size, &length);
+    if (result == RECORD_RECEIVE_EMPTY)
+	return 0;
+    if (result == RECORD_RECEIVE_CLOSED) {
+	errno = ECONNRESET;
+	return -1;
+    }
+    if (result == RECORD_RECEIVE_ERROR)
+	return -1;
+    buffer->len = (int)length;
+    buffer->ptr = buffer->buf;
+    return buffer->len;
+}
+
+static int Net_wait_readable(long seconds, long microseconds)
+{
+    socket_handle_t handle;
+    struct timeval timeout;
+    fd_set read_fds;
+    fd_set write_fds;
+    int output_pending;
+    int status;
+
+    if (gameplay_session == NULL) {
+	sock_set_timeout(&rbuf.sock, seconds, microseconds);
+	return sock_readable(&rbuf.sock);
+    }
+    if (wbuf.len > 0
+	&& Net_send_output(RECORD_DELIVERY_REQUIRED) < 0)
+	return -1;
+    output_pending = Net_advance_session_output();
+    if (output_pending < 0)
+	return -1;
+    handle = Record_session_native_handle(gameplay_session);
+    if (handle == SOCK_FD_INVALID) {
+	errno = ENOTSUP;
+	return -1;
+    }
+    timeout.tv_sec = seconds;
+    timeout.tv_usec = microseconds;
+    FD_ZERO(&read_fds);
+    FD_ZERO(&write_fds);
+    FD_SET(handle, &read_fds);
+    if (output_pending > 0)
+	FD_SET(handle, &write_fds);
+#ifdef _WINDOWS
+    status = select(0, &read_fds,
+		    output_pending > 0 ? &write_fds : NULL,
+		    NULL, &timeout);
+#else
+    status = select(handle + 1, &read_fds,
+		    output_pending > 0 ? &write_fds : NULL,
+		    NULL, &timeout);
+#endif
+    if (status < 0 && errno == EINTR)
+	return 0;
+    return status;
+}
+
+static bool Exchange_resume_token(sock_t *sock, time_t deadline)
+{
+    sockbuf_t input;
+    sockbuf_t output;
+    unsigned char packet_type = 0;
+    unsigned char reply_to = 0;
+    unsigned char result = 0;
+    bool input_initialized = false;
+    bool output_initialized = false;
+    bool authenticated = false;
+    int n;
+
+    if (Sockbuf_init(&input, sock, 64,
+		     SOCKBUF_READ | SOCKBUF_FRAMED) == -1)
+	goto cleanup;
+    input_initialized = true;
+    if (Sockbuf_init(&output, sock, 64,
+		     SOCKBUF_WRITE | SOCKBUF_FRAMED) == -1)
+	goto cleanup;
+    output_initialized = true;
+
+    if (Packet_printf(&output, "%c%u%u%u%u", PKT_RESUME,
+		      (unsigned)resume_token.words[0],
+		      (unsigned)resume_token.words[1],
+		      (unsigned)resume_token.words[2],
+		      (unsigned)resume_token.words[3]) <= 0)
+	goto cleanup;
+    do {
+	n = Sockbuf_flush(&output);
+	if (n < 0)
+	    goto cleanup;
+	if (output.frame_output_len == 0)
+	    break;
+	micro_delay((unsigned)10 * 1000);
+    } while (time(NULL) <= deadline);
+    if (output.frame_output_len != 0)
+	goto cleanup;
+
+    sock_set_timeout(&input.sock, 1, 0);
+    while (time(NULL) <= deadline) {
+	n = sock_readable(&input.sock);
+	if (n < 0)
+	    goto cleanup;
+	if (n == 0)
+	    continue;
+	n = Sockbuf_read(&input);
+	if (n < 0)
+	    goto cleanup;
+	if (n == 0)
+	    continue;
+	n = Packet_scanf(&input, "%c%c%c", &packet_type, &reply_to,
+			 &result);
+	authenticated = n == 3
+	    && packet_type == PKT_REPLY
+	    && reply_to == PKT_RESUME
+	    && result == PKT_SUCCESS
+	    && input.ptr == input.buf + input.len;
+	break;
+    }
+
+cleanup:
+    if (output_initialized)
+	Sockbuf_cleanup(&output);
+    if (input_initialized)
+	Sockbuf_cleanup(&input);
+    return authenticated;
+}
+
+static void Reset_session_gameplay_buffers(void)
+{
+    int i;
+
+    Sockbuf_clear(&wbuf);
+    for (i = 0; i < receive_window_size; i++) {
+	Frames[i].loops = 0;
+	Sockbuf_clear(&Frames[i].sbuf);
+    }
+    rbuf = Frames[0].sbuf;
+}
+
+static bool Reconnect_fixed_session_gameplay(time_t deadline)
+{
+    int source_start = clientPortStart;
+    int source_end = clientPortEnd;
+
+    if (!clientPortStart || !clientPortEnd
+	|| clientPortStart > clientPortEnd) {
+	source_start = 0;
+	source_end = 0;
+    }
+    while (time(NULL) <= deadline) {
+	record_transport_t *candidate = Client_session_transport_connect(
+	    gameplay_transport, gameplay_server, gameplay_port,
+	    source_start, source_end, 1, false);
+
+	if (candidate == NULL) {
+	    micro_delay((unsigned)100 * 1000);
+	    continue;
+	}
+	if (Record_session_replace_transport(
+		gameplay_session, candidate) == -1) {
+	    Record_transport_destroy(candidate);
+	    micro_delay((unsigned)100 * 1000);
+	    continue;
+	}
+	if (Session_connection_resume_game(
+		gameplay_session, &resume_token, 1, NULL, 0) == -1) {
+	    micro_delay((unsigned)100 * 1000);
+	    continue;
+	}
+
+	Reset_session_gameplay_buffers();
+	gameplay_connected = true;
+	last_send_anything = time(NULL);
+	last_keyboard_change++;
+	if (Key_update() == -1) {
+	    Record_session_close(gameplay_session);
+	    gameplay_connected = false;
+	    micro_delay((unsigned)100 * 1000);
+	    continue;
+	}
+	return true;
+    }
+    return false;
+}
+
+static bool Reconnect_split_tcp_gameplay(time_t deadline)
+{
+    while (time(NULL) <= deadline) {
+	sock_t candidate;
+
+	if (Open_client_socket(&candidate, GAME_TRANSPORT_TCP)
+	    == SOCK_IS_ERROR) {
+	    micro_delay((unsigned)100 * 1000);
+	    continue;
+	}
+	if (sock_connect_with_timeout(&candidate, gameplay_server,
+				      gameplay_port, 1) == SOCK_IS_ERROR
+	    || sock_set_tcp_nodelay(&candidate, 1) == SOCK_IS_ERROR) {
+	    sock_close(&candidate);
+	    micro_delay((unsigned)100 * 1000);
+	    continue;
+	}
+	if (sock_set_send_buffer_size(&candidate, CLIENT_SEND_SIZE + 256)
+	    == SOCK_IS_ERROR)
+	    error("Can't set send buffer size to %d", CLIENT_SEND_SIZE + 256);
+	if (sock_set_receive_buffer_size(&candidate, CLIENT_RECV_SIZE + 256)
+	    == SOCK_IS_ERROR)
+	    error("Can't set receive buffer size to %d", CLIENT_RECV_SIZE + 256);
+	if (!Exchange_resume_token(&candidate, deadline)) {
+	    sock_close(&candidate);
+	    micro_delay((unsigned)100 * 1000);
+	    continue;
+	}
+
+	Attach_gameplay_socket(&candidate);
+	gameplay_connected = true;
+	last_send_anything = time(NULL);
+	last_keyboard_change++;
+	if (Key_update() == -1) {
+	    Close_gameplay_socket_without_quit();
+	    micro_delay((unsigned)100 * 1000);
+	    continue;
+	}
+	return true;
+    }
+    return false;
+}
+
+static int Reconnect_gameplay(const char *reason)
+{
+    const char *transport_label;
+    bool session_transport;
+    bool resumed;
+    time_t deadline;
+
+    if (!gameplay_started || reconnecting || !resume_token_received
+	|| !Game_transport_protocol_supports_reconnect(version))
+	return -1;
+
+    session_transport = gameplay_session != NULL;
+    transport_label = gameplay_transport == GAME_TRANSPORT_WEBSOCKET
+	? "WebSocket" : "TCP";
+    reconnecting = true;
+    xpprintf("%s gameplay connection lost (%s); reconnecting.\n",
+	     transport_label, reason);
+    if (session_transport) {
+	Record_session_close(gameplay_session);
+	gameplay_connected = false;
+    } else
+	Close_gameplay_socket_without_quit();
+    deadline = time(NULL) + GAME_RECONNECT_GRACE_SECONDS;
+
+    resumed = session_transport
+	? Reconnect_fixed_session_gameplay(deadline)
+	: Reconnect_split_tcp_gameplay(deadline);
+
+    reconnecting = false;
+    if (!resumed) {
+	error("%s gameplay reconnection grace period expired",
+	      transport_label);
+	return -1;
+    }
+    xpprintf("%s gameplay connection resumed.\n", transport_label);
+    return 0;
 }
 
 /*
@@ -327,7 +716,7 @@ int Net_setup(void)
 		}
 		if (Receive_reliable() == -1)
 		    return -1;
-		if (Sockbuf_flush(&wbuf) == -1)
+		if (Net_send_output(RECORD_DELIVERY_REQUIRED) == -1)
 		    return -1;
 	    }
 	    if (cbuf.ptr != cbuf.buf)
@@ -341,16 +730,14 @@ int Net_setup(void)
 			 retries, todo, cbuf.len - (cbuf.ptr - cbuf.buf));
 		    return -1;
 		}
-		sock_set_timeout(&rbuf.sock, 2, 0);
-		while (sock_readable(&rbuf.sock) > 0) {
+		while (Net_wait_readable(2, 0) > 0) {
 		    Sockbuf_clear(&rbuf);
-		    if (Sockbuf_read(&rbuf) == -1) {
+		    if (Net_receive_record(&rbuf) == -1) {
 			error("Can't read all setup data");
 			return -1;
 		    }
 		    if (rbuf.len > 0)
 			break;
-		    sock_set_timeout(&rbuf.sock, 0, 0);
 		}
 		if (rbuf.len > 0)
 		    break;
@@ -367,11 +754,28 @@ int Net_setup(void)
 /*
  * Send the first packet to the server with our name,
  * nick and display contained in it.
- * The server uses this data to verify that the packet
- * is from the right UDP connection, it already has
- * this info from the ENTER_GAME_pack.
+ * The server uses this data to verify that the gameplay connection belongs
+ * to the right contact request, since it already has this info from the
+ * ENTER_GAME_pack.
  */
 #define	MAX_VERIFY_RETRIES	5
+static int Receive_session_token(void)
+{
+    unsigned char packet_type;
+    unsigned words[SESSION_TOKEN_WORDS] = { 0 };
+    int i;
+    int n;
+
+    n = Packet_scanf(&cbuf, "%c%u%u%u%u", &packet_type,
+		     &words[0], &words[1], &words[2], &words[3]);
+    if (n != SESSION_TOKEN_WORDS + 1 || packet_type != PKT_SESSION_TOKEN)
+	return -1;
+    for (i = 0; i < SESSION_TOKEN_WORDS; i++)
+	resume_token.words[i] = words[i];
+    resume_token_received = true;
+    return 1;
+}
+
 int Net_verify(char *user_name, char *nick_name, char *disp)
 {
     int		n,
@@ -379,6 +783,19 @@ int Net_verify(char *user_name, char *nick_name, char *disp)
 		result,
 		retries;
     time_t	last;
+
+    if (gameplay_session != NULL) {
+	if (rbuf.len <= 0 || rbuf.ptr[0] != PKT_RELIABLE
+	    || Receive_reliable() == -1
+	    || Net_send_output(RECORD_DELIVERY_REQUIRED) < 0
+	    || cbuf.len == 0 || Receive_magic() <= 0
+	    || (Game_transport_protocol_supports_reconnect(version)
+		&& Receive_session_token() <= 0)) {
+	    error("Can't complete fixed-endpoint session confirmation");
+	    return -1;
+	}
+	return 0;
+    }
 
     for (retries = 0;;) {
 	if (retries == 0 || time(NULL) - last >= 3) {
@@ -390,7 +807,8 @@ int Net_verify(char *user_name, char *nick_name, char *disp)
 	    /* IFWINDOWS( Trace("Verifying to sock=%d\n", wbuf.sock) ); */
 	    n = Packet_printf(&wbuf, "%c%s%s%s", PKT_VERIFY,
 			      user_name, nick_name, disp);
-	    if (n <= 0 || Sockbuf_flush(&wbuf) <= 0) {
+	    if (n <= 0
+		|| Net_send_output(RECORD_DELIVERY_REQUIRED) <= 0) {
 		error("Can't send verify packet");
 		return -1;
 	    }
@@ -421,7 +839,7 @@ int Net_verify(char *user_name, char *nick_name, char *disp)
 	}
 	if (Receive_reliable() == -1)
 	    return -1;
-	if (Sockbuf_flush(&wbuf) == -1)
+	if (Net_send_output(RECORD_DELIVERY_REQUIRED) == -1)
 	    return -1;
 	if (cbuf.len == 0)
 	    continue;
@@ -441,6 +859,11 @@ int Net_verify(char *user_name, char *nick_name, char *disp)
 	    error("Can't receive magic packet after verify");
 	    return -1;
 	}
+	if (Game_transport_protocol_supports_reconnect(version)
+	    && Receive_session_token() <= 0) {
+	    error("Can't receive gameplay resumption token after verify");
+	    return -1;
+	}
 	break;
     }
     if (retries > 1) {
@@ -451,19 +874,23 @@ int Net_verify(char *user_name, char *nick_name, char *disp)
 }
 
 /*
- * Open the datagram socket and allocate the network data
+ * Open the selected gameplay socket and allocate the network data
  * structures like buffers.
  * Currently there are three different buffers used:
  * 1) wbuf is used only for sending packets (write/printf).
  * 2) rbuf is used for receiving packets in (read/scanf).
- * 3) cbuf is used to copy the reliable data stream
- *    into from the raw and unreliable rbuf packets.
+ * 3) cbuf receives the protocol's reliable data stream copied from the
+ *    logical packets in rbuf.
  */
-int Net_init(char *server, int port)
+int Net_init(char *server, int port, game_transport_t transport)
 {
     int			i;
+    int                 initialized_frames = 0;
+    int			transport_state;
     size_t		size;
     sock_t		sock;
+    char                session_confirmation[CLIENT_RECV_SIZE];
+    size_t              session_confirmation_length = 0;
 
     assert(server != NULL);
 
@@ -476,29 +903,74 @@ int Net_init(char *server, int port)
     server_display.spark_rand = 0;
     server_display.num_spark_colors = 0;
 
+    strlcpy(gameplay_server, server, sizeof(gameplay_server));
+    gameplay_port = port;
+    gameplay_transport = transport;
+    memset(&resume_token, 0, sizeof(resume_token));
+    resume_token_received = false;
+    gameplay_connected = false;
+    gameplay_started = false;
+    reconnecting = false;
+
     Receive_init();
-    if (!clientPortStart || !clientPortEnd ||
-	(clientPortStart > clientPortEnd)) {
-	if (sock_open_udp(&sock, NULL, 0) == SOCK_IS_ERROR) {
-	    error("Cannot create datagram socket (%d)", sock.error.error);
+    if (Session_connection_game_is_staged()) {
+	if (Game_transport_session_protocol_version(transport, true) == 0) {
+	    Session_connection_discard_game();
+	    errno = EINVAL;
 	    return -1;
 	}
-    } else {
-	int found_socket = 0;
-	for (i = clientPortStart; i <= clientPortEnd; i++) {
-	    if (sock_open_udp(&sock, NULL, i) != SOCK_IS_ERROR) {
-		found_socket = 1;
-		break;
+	if (Session_connection_take_game(
+		&gameplay_session, session_confirmation,
+		sizeof(session_confirmation),
+		&session_confirmation_length) == -1)
+	    return -1;
+	size = (size_t)receive_window_size * sizeof(frame_buf_t);
+	Frames = calloc((size_t)receive_window_size, sizeof(*Frames));
+	if (Frames == NULL) {
+	    error("No memory (%u)", size);
+	    goto session_failure;
+	}
+	for (i = 0; i < receive_window_size; i++) {
+	    Frames[i].loops = 0;
+	    if (Sockbuf_init(&Frames[i].sbuf, NULL, CLIENT_RECV_SIZE,
+			     SOCKBUF_READ | SOCKBUF_LOCK) == -1) {
+		error("No memory for session read buffer (%u)",
+		      CLIENT_RECV_SIZE);
+		goto session_failure;
 	    }
+	    initialized_frames++;
 	}
-	if (found_socket == 0) {
-	    error("Could not find a usable port in given port range");
-	    return -1;
+	if (Sockbuf_init(&cbuf, NULL, CLIENT_RECV_SIZE,
+			 SOCKBUF_WRITE | SOCKBUF_READ | SOCKBUF_LOCK) == -1
+	    || Sockbuf_init(&wbuf, NULL, CLIENT_SEND_SIZE,
+			    SOCKBUF_WRITE | SOCKBUF_LOCK) == -1) {
+	    error("No memory for session network buffers");
+	    goto session_failure;
 	}
+	rbuf = Frames[0].sbuf;
+	memcpy(rbuf.buf, session_confirmation,
+	       session_confirmation_length);
+	rbuf.len = (int)session_confirmation_length;
+	rbuf.ptr = rbuf.buf;
+	goto initialized;
+    }
+
+    transport_state = transport == GAME_TRANSPORT_TCP
+	? SOCKBUF_FRAMED : SOCKBUF_DGRAM;
+    if (Open_client_socket(&sock, transport) == SOCK_IS_ERROR) {
+	error("Cannot create %s gameplay socket (%d)",
+	      Game_transport_name(transport), sock.error.error);
+	return -1;
     }
 
     if (sock_connect(&sock, server, port) == -1) {
 	error("Can't connect to server %s on port %d", server, port);
+	sock_close(&sock);
+	return -1;
+    }
+    if (transport == GAME_TRANSPORT_TCP
+	&& sock_set_tcp_nodelay(&sock, 1) == SOCK_IS_ERROR) {
+	error("Can't disable TCP write coalescing");
 	sock_close(&sock);
 	return -1;
     }
@@ -521,7 +993,7 @@ int Net_init(char *server, int port)
     for (i = 0; i < receive_window_size; i++) {
 	Frames[i].loops = 0;
 	if (Sockbuf_init(&Frames[i].sbuf, &sock, CLIENT_RECV_SIZE,
-			 SOCKBUF_READ | SOCKBUF_DGRAM) == -1) {
+			 SOCKBUF_READ | transport_state) == -1) {
 	    error("No memory for read buffer (%u)", CLIENT_RECV_SIZE);
 	    return -1;
 	}
@@ -536,7 +1008,7 @@ int Net_init(char *server, int port)
 
     /* write buffer */
     if (Sockbuf_init(&wbuf, &sock, CLIENT_SEND_SIZE,
-		     SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
+		     SOCKBUF_WRITE | transport_state) == -1) {
 	error("No memory for write buffer (%u)", CLIENT_SEND_SIZE);
 	return -1;
     }
@@ -544,6 +1016,7 @@ int Net_init(char *server, int port)
     /* read buffer */
     rbuf = Frames[0].sbuf;
 
+initialized:
     /* reliable data byte stream offset */
     reliable_offset = 0;
 
@@ -551,28 +1024,204 @@ int Net_init(char *server, int port)
     talk_sequence_num = 0;
     talk_pending = 0;
 
+    gameplay_connected = true;
+
     return 0;
+
+session_failure:
+    if (wbuf.buf != NULL)
+	Sockbuf_cleanup(&wbuf);
+    if (cbuf.buf != NULL)
+	Sockbuf_cleanup(&cbuf);
+    for (i = 0; i < initialized_frames; i++)
+	Sockbuf_cleanup(&Frames[i].sbuf);
+    XFREE(Frames);
+    Record_session_destroy(gameplay_session);
+    gameplay_session = NULL;
+    return -1;
+}
+
+#define CLEANUP_FLUSH_WAIT_USEC 100000
+#define CLEANUP_STREAM_TIMEOUT_SECONDS 5
+
+static int Wait_for_cleanup_output(socket_handle_t handle)
+{
+    fd_set write_fds;
+    struct timeval timeout;
+    int status;
+
+    if (handle == SOCK_FD_INVALID)
+	return -1;
+    FD_ZERO(&write_fds);
+    FD_SET(handle, &write_fds);
+    timeout.tv_sec = 0;
+    timeout.tv_usec = CLEANUP_FLUSH_WAIT_USEC;
+#ifdef _WINDOWS
+    status = select(0, NULL, &write_fds, NULL, &timeout);
+#else
+    status = select(handle + 1, NULL, &write_fds, NULL, &timeout);
+#endif
+    if (status <= 0)
+	return status;
+    return FD_ISSET(handle, &write_fds) ? 1 : -1;
+}
+
+static int Wait_for_cleanup_input(socket_handle_t handle)
+{
+    fd_set read_fds;
+    struct timeval timeout;
+    int status;
+
+    if (handle == SOCK_FD_INVALID)
+	return -1;
+    FD_ZERO(&read_fds);
+    FD_SET(handle, &read_fds);
+    timeout.tv_sec = 0;
+    timeout.tv_usec = CLEANUP_FLUSH_WAIT_USEC;
+#ifdef _WINDOWS
+    status = select(0, &read_fds, NULL, NULL, &timeout);
+#else
+    status = select(handle + 1, &read_fds, NULL, NULL, &timeout);
+#endif
+    if (status <= 0)
+	return status;
+    return FD_ISSET(handle, &read_fds) ? 1 : -1;
+}
+
+static void Await_session_quit_reply(socket_handle_t handle)
+{
+    record_receive_result_t receive_result;
+    size_t length;
+    time_t deadline = time(NULL) + CLEANUP_STREAM_TIMEOUT_SECONDS;
+    int status;
+
+    /* Reading the server's quit reply also drains pending gameplay data, so
+     * closing a WebSocket cannot reset the TCP stream before PKT_QUIT is
+     * processed by the server. */
+    while (time(NULL) <= deadline) {
+	status = Wait_for_cleanup_input(handle);
+	if (status < 0)
+	    return;
+	if (status == 0)
+	    continue;
+	length = 0;
+	receive_result = Record_session_receive(
+	    gameplay_session, rbuf.buf, (size_t)rbuf.size, &length);
+	if (receive_result == RECORD_RECEIVE_READY) {
+	    if (length > 0 && (unsigned char)rbuf.buf[0] == PKT_QUIT)
+		return;
+	    continue;
+	}
+	if (receive_result == RECORD_RECEIVE_EMPTY)
+	    continue;
+	return;
+    }
+}
+
+static void Flush_session_quit(void)
+{
+    record_flush_result_t flush_result;
+    socket_handle_t handle;
+    time_t deadline = time(NULL) + CLEANUP_STREAM_TIMEOUT_SECONDS;
+
+    Sockbuf_clear(&wbuf);
+    if (Packet_printf(&wbuf, "%c", PKT_QUIT) <= 0)
+	return;
+    handle = Record_session_native_handle(gameplay_session);
+    while (time(NULL) <= deadline) {
+	if (Net_send_output(RECORD_DELIVERY_REQUIRED) < 0)
+	    return;
+	flush_result = Record_session_flush(gameplay_session);
+	if (flush_result == RECORD_FLUSH_ERROR
+	    || flush_result == RECORD_FLUSH_CLOSED)
+	    return;
+	if (wbuf.len == 0 && flush_result == RECORD_FLUSH_IDLE) {
+	    Await_session_quit_reply(handle);
+	    return;
+	}
+	if (Wait_for_cleanup_output(handle) < 0)
+	    return;
+    }
+}
+
+static void Await_framed_quit_reply(socket_handle_t handle)
+{
+    time_t deadline = time(NULL) + CLEANUP_STREAM_TIMEOUT_SECONDS;
+    int status;
+
+    /* Drain gameplay frames until the server confirms PKT_QUIT, preventing
+     * unread TCP input from turning the client close into a stream reset. */
+    Sockbuf_clear(&rbuf);
+    while (time(NULL) <= deadline) {
+	status = Wait_for_cleanup_input(handle);
+	if (status < 0)
+	    return;
+	if (status == 0)
+	    continue;
+	status = Sockbuf_read(&rbuf);
+	if (status < 0)
+	    return;
+	if (status == 0)
+	    continue;
+	if ((unsigned char)rbuf.buf[0] == PKT_QUIT)
+	    return;
+	Sockbuf_clear(&rbuf);
+    }
+}
+
+static void Flush_framed_quit(void)
+{
+    socket_handle_t handle = wbuf.sock.fd;
+    time_t deadline = time(NULL) + CLEANUP_STREAM_TIMEOUT_SECONDS;
+
+    /* Preserve the quit record while any partially written gameplay record
+     * ahead of it is drained. */
+    wbuf.state |= SOCKBUF_ORDERED;
+    Sockbuf_clear(&wbuf);
+    if (Packet_printf(&wbuf, "%c", PKT_QUIT) <= 0)
+	return;
+    while (time(NULL) <= deadline) {
+	if (Sockbuf_flush(&wbuf) < 0)
+	    return;
+	if (wbuf.len == 0
+	    && wbuf.frame_output_offset >= wbuf.frame_output_len) {
+	    Await_framed_quit_reply(handle);
+	    return;
+	}
+	if (Wait_for_cleanup_output(wbuf.sock.fd) < 0)
+	    return;
+    }
 }
 
 /*
- * Cleanup all the network buffers and close the datagram socket.
- * Also try to send the server a quit packet if possible.
- * Because this quit packet may get lost we send one at the
- * beginning and one at the end.
+ * Cleanup all network buffers and close the gameplay socket.  TCP and session
+ * transports drain one required quit record; UDP retains the repeated
+ * best-effort quit packets.
  */
 void Net_cleanup(void)
 {
     int i;
     sock_t sock = wbuf.sock;
     char ch;
+    bool tcp_transport = BIT(wbuf.state, SOCKBUF_FRAMED) != 0;
+    bool session_transport = gameplay_session != NULL;
 
-    if (sock.fd > 2) {
-	ch = PKT_QUIT;
-	if (sock_write(&sock, &ch, 1) != 1) {
-	    sock_get_error(&sock);
-	    sock_write(&sock, &ch, 1);
+    gameplay_started = false;
+    reconnecting = false;
+    if (gameplay_connected && session_transport)
+	Flush_session_quit();
+    else if (gameplay_connected && sock.fd != SOCK_FD_INVALID
+	       && sock.fd > 2) {
+	if (tcp_transport)
+	    Flush_framed_quit();
+	else {
+	    ch = PKT_QUIT;
+	    if (sock_write(&sock, &ch, 1) != 1) {
+		sock_get_error(&sock);
+		sock_write(&sock, &ch, 1);
+	    }
+	    micro_delay((unsigned)50*1000);
 	}
-	micro_delay((unsigned)50*1000);
     }
     if (Frames != NULL) {
 	for (i = 0; i < receive_window_size; i++) {
@@ -586,19 +1235,27 @@ void Net_cleanup(void)
     Sockbuf_cleanup(&cbuf);
     Sockbuf_cleanup(&wbuf);
     XFREE(Setup);
-    if (sock.fd > 2) {
-	ch = PKT_QUIT;
-	if (sock_write(&sock, &ch, 1) != 1) {
-	    sock_get_error(&sock);
-	    sock_write(&sock, &ch, 1);
-	}
-	micro_delay((unsigned)50*1000);
-	if (sock_write(&sock, &ch, 1) != 1) {
-	    sock_get_error(&sock);
-	    sock_write(&sock, &ch, 1);
+    if (!session_transport && sock.fd != SOCK_FD_INVALID && sock.fd > 2) {
+	if (!tcp_transport) {
+	    ch = PKT_QUIT;
+	    if (sock_write(&sock, &ch, 1) != 1) {
+		sock_get_error(&sock);
+		sock_write(&sock, &ch, 1);
+	    }
+	    micro_delay((unsigned)50*1000);
+	    if (sock_write(&sock, &ch, 1) != 1) {
+		sock_get_error(&sock);
+		sock_write(&sock, &ch, 1);
+	    }
 	}
 	sock_close(&sock);
     }
+    Record_session_destroy(gameplay_session);
+    gameplay_session = NULL;
+    Session_connection_discard_game();
+    gameplay_connected = false;
+    resume_token_received = false;
+    memset(&resume_token, 0, sizeof(resume_token));
     sock_cleanup();
 }
 
@@ -617,9 +1274,42 @@ void Net_key_change(void)
  */
 int Net_flush(void)
 {
+    if (gameplay_session != NULL) {
+	if (Net_advance_session_output() < 0) {
+	    if (Reconnect_gameplay("write error") == -1)
+		return -1;
+	    return 0;
+	}
+	if (wbuf.len == 0) {
+	    wbuf.ptr = wbuf.buf;
+	    return 0;
+	}
+	if (last_keyboard_ack != last_keyboard_change
+	    && last_keyboard_update != last_loops)
+	    return Key_update();
+	Send_talk();
+	if (Net_send_output(RECORD_DELIVERY_TRANSIENT) < 0) {
+	    if (Reconnect_gameplay("write error") == -1)
+		return -1;
+	    return 0;
+	}
+	last_send_anything = time(NULL);
+	return 1;
+    }
     if (wbuf.len == 0) {
 	wbuf.ptr = wbuf.buf;
-	return 0;
+	if (BIT(wbuf.state, SOCKBUF_FRAMED) == 0
+	    || wbuf.frame_output_offset >= wbuf.frame_output_len)
+	    return 0;
+	if (Sockbuf_flush(&wbuf) == -1) {
+	    if (Reconnect_gameplay("write error") == -1)
+		return -1;
+	    return 0;
+	}
+	if (wbuf.frame_output_offset < wbuf.frame_output_len)
+	    return 0;
+	last_send_anything = time(NULL);
+	return 1;
     }
     if (last_keyboard_ack != last_keyboard_change &&
 	last_keyboard_update != last_loops)
@@ -630,19 +1320,23 @@ int Net_flush(void)
 	return Key_update();
 
     Send_talk();
-    if (Sockbuf_flush(&wbuf) == -1)
-	return -1;
+    if (Sockbuf_flush(&wbuf) == -1) {
+	if (Reconnect_gameplay("write error") == -1)
+	    return -1;
+	return 0;
+    }
     Sockbuf_clear(&wbuf);
     last_send_anything = time(NULL);
     return 1;
 }
 
 /*
- * Return the socket filedescriptor for use in a select(2) call.
+ * Return the native socket handle for use in a select(2) call.
  */
-int Net_fd(void)
+socket_handle_t Net_fd(void)
 {
-    return rbuf.sock.fd;
+    return gameplay_session != NULL
+	? Record_session_native_handle(gameplay_session) : rbuf.sock.fd;
 }
 
 /*
@@ -678,7 +1372,7 @@ int Net_start(void)
 		|| Send_audio_request(1) == -1
 #endif
 		|| Client_fps_request() == -1
-		|| Sockbuf_flush(&wbuf) == -1) {
+		|| Net_send_output(RECORD_DELIVERY_REQUIRED) == -1) {
 		error("Can't send start play packet");
 		return -1;
 	    }
@@ -686,11 +1380,10 @@ int Net_start(void)
 	}
 	if (cbuf.ptr > cbuf.buf)
 	    Sockbuf_advance(&cbuf, cbuf.ptr - cbuf.buf);
-	sock_set_timeout(&rbuf.sock, 2, 0);
 	while (cbuf.len <= 0
-	    && sock_readable(&rbuf.sock) != 0) {
+	    && Net_wait_readable(2, 0) != 0) {
 	    Sockbuf_clear(&rbuf);
-	    if (Sockbuf_read(&rbuf) == -1) {
+	    if (Net_receive_record(&rbuf) == -1) {
 		error("Error reading play reply");
 		return -1;
 	    }
@@ -735,7 +1428,7 @@ int Net_start(void)
 	    }
 	    if (Receive_reliable() == -1)
 		return -1;
-	    if (Sockbuf_flush(&wbuf) == -1)
+	    if (Net_send_output(RECORD_DELIVERY_REQUIRED) == -1)
 		return -1;
 	}
 	if (cbuf.ptr - cbuf.buf >= cbuf.len)
@@ -763,6 +1456,9 @@ int Net_start(void)
     packetMeasurement = true;
     Net_init_measurement();
     Net_init_lag_measurement();
+    gameplay_started = true;
+    gameplay_connected = true;
+    last_send_anything = time(NULL);
     errno = 0;
     return 0;
 }
@@ -917,9 +1613,10 @@ static void Net_keyboard_track(void)
 }
 
 /*
- * Do some (simple) packet loss/drop measurement
- * the results of which can be drawn on the display.
- * This is mainly for debugging and analysis.
+ * Measure skipped or discarded frame updates for display.  UDP can lose
+ * packets in transit, while TCP can still skip logical updates because of
+ * bounded output or rendering backpressure.  This is mainly for debugging
+ * and analysis.
  */
 static void Net_measurement(long loop, int status)
 {
@@ -1018,9 +1715,12 @@ static int Net_read(frame_buf_t *frame)
     frame->loops = 0;
     for (;;) {
 	Sockbuf_clear(&frame->sbuf);
-	if (Sockbuf_read(&frame->sbuf) == -1) {
-	    error("Net input error");
-	    return -1;
+	if (Net_receive_record(&frame->sbuf) == -1) {
+	    if (Reconnect_gameplay("read error") == -1) {
+		error("Net input error");
+		return -1;
+	    }
+	    return 0;
 	}
 	if (frame->sbuf.len <= 0) {
 	    Sockbuf_clear(&frame->sbuf);
@@ -1986,7 +2686,11 @@ int Receive_player(void)
 			  shape)) <= 0)
 	return n;
     nick_name[MAX_NAME_LEN - 1] = '\0';
-    user_name[MAX_NAME_LEN - 1] = '\0';
+    if (Game_transport_protocol_uses_session(version)) {
+	if (Check_utf8_user_name(user_name) == NAME_ERROR)
+	    return -1;
+    } else
+	user_name[MAX_NAME_LEN - 1] = '\0';
     host_name[MAX_HOST_LEN - 1] = '\0';
 
     if (version < 0x4F10)
@@ -2155,7 +2859,7 @@ int Receive_target(void)
     return 1;
 }
 
-int Receive_polystyle(void)	/* since ng 4.7.0 */
+int Receive_polystyle(void)	/* since Infinity 4.7.0 */
 {
     int			n;
     unsigned short	num, newstyle;
@@ -2341,9 +3045,12 @@ int Send_keyboard(u_byte *keyboard_vector)
     last_keyboard_update = last_loops;
     Net_keyboard_track();
     Send_talk();
-    if (Sockbuf_flush(&wbuf) == -1) {
-	error("Can't send keyboard update");
-	return -1;
+    if (Net_send_output(RECORD_DELIVERY_TRANSIENT) == -1) {
+	if (Reconnect_gameplay("keyboard write error") == -1) {
+	    error("Can't send keyboard update");
+	    return -1;
+	}
+	return 0;
     }
 
     return 0;
@@ -2417,6 +3124,8 @@ int Receive_quit(void)
     unsigned char	pkt;
     sockbuf_t		*sbuf;
     char		reason[MAX_CHARS];
+
+    gameplay_started = false;
 
     if (rbuf.ptr < rbuf.buf + rbuf.len)
 	sbuf = &rbuf;

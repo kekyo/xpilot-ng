@@ -3,7 +3,7 @@ Note that for each task there is a developer. If you want to work on any of
 these tasks, ask that developer first, so you can agree on how to proceed.
 
 
-TASKS FOR XPILOT NG 5.0.0
+TASKS FOR XPILOT INFINITY 5.0.0
 -------------------------
 
 Client:
@@ -11,17 +11,17 @@ Add client option disableEmulate3Buttons
 Fix the garish item package icon colour scheme (says SynrG)
 Add a clock to SDL client (kevin requested one)
 
-XPNGCC:
+XPICC:
 Port to windows and macosx.
 Add an xp2 map editor that doesn't depend on non-free software.
 Make sure xp2 map editor works with 1-button mouse.
 
 
-SOME OTHER TASKS TODO FOR XPILOT NG
+SOME OTHER TASKS TODO FOR XPILOT INFINITY
 -----------------------------------
 
 
-Task: Rewrite INSTALL.txt for ng. Especially describe SDL client compiling.
+Task: Rewrite INSTALL.txt for XPilot Infinity. Especially describe SDL client compiling.
 Maybe append INSTALL file to INSTALL.txt and rename the current INSTALL.txt
 to INSTALL.
 Developer: ?
