@@ -14,12 +14,19 @@ dependencies before packaging:
 git submodule update --init --recursive
 ```
 
-Prepare the reusable package build images, then build the complete matrix:
+Prepare the reusable Linux package images, install the MinGW/Wine prerequisites
+described in `doc/WINDOWS.md`, then build every package:
 
 ```sh
 ./prereq.sh
 ./build_package_all.sh
 ```
+
+This generates the complete Debian/Ubuntu matrix and then the Windows x86
+(32-bit) and x86_64 (64-bit) ZIP archives.  Distribution, release, and
+architecture filters apply only to the Debian/Ubuntu matrix; both Windows
+architectures are always built.  The `--version`, `--jobs`, and `--debug`
+options apply to both package families.
 
 The supported Debian package matrix is:
 
@@ -58,7 +65,9 @@ artifacts/deb/xpilot-infinity-<version>-<distro>-<release>-<deb-arch>.deb
 ## Windows archives
 
 The Linux-hosted MinGW build creates separate 32-bit and 64-bit Windows ZIP
-archives because both packages use the same executable names:
+archives because both packages use the same executable names.
+`build_package_all.sh` creates both archives after the Linux packages.  To
+build and test only the Windows archives, run:
 
 ```sh
 ./build.sh --target windows --arch all --test
