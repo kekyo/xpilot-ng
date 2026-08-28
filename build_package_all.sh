@@ -15,7 +15,7 @@ Build every distributable XPilot Infinity package: the complete Debian and
 Ubuntu matrix followed by the Windows x86 and x86_64 ZIP archives.
 
 Options:
-  --version VERSION  Product version for every generated package
+  --version VERSION  Product version override (default: screw-up-derived version)
   --debian-revision REVISION
                      Debian packaging revision (default: 1)
   --distro LIST      Comma-separated Debian/Ubuntu distribution filter

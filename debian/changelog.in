@@ -1,0 +1,5 @@
+xpilot-infinity (@XPILOT_PACKAGE_VERSION@) unstable; urgency=medium
+
+  * Build a Debian or Ubuntu binary package from the resolved upstream version.
+
+ -- Kouji Matsui <k@kekyo.net>  Fri, 28 Aug 2026 14:32:29 +0900

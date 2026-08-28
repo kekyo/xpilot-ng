@@ -39,7 +39,7 @@ Usage: ./build_package.sh [OPTIONS]
 Build and validate distributable XPilot Infinity packages.
 
 Options:
-  --version VERSION  Product version (default: screw-up-derived version)
+  --version VERSION  Product version override (default: screw-up-derived version)
   --debian-revision REVISION
                      Debian packaging revision (default: 1)
   --target TARGET    all or deb (default: all)

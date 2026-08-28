@@ -120,15 +120,28 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+version_resolver_fixture="$test_root/version-resolver"
+cat > "$version_resolver_fixture" <<'EOF'
+#!/bin/sh
+printf '%s\n' 7.8.9
+EOF
+chmod +x "$version_resolver_fixture"
+assert_equal 7.8.9 \
+    "$(XPILOT_VERSION_RESOLVER=$version_resolver_fixture \
+        "$package_script" --print-version)" \
+    "the package version was not resolved at build time"
+
 policy_source="$test_root/policy-source"
 policy_stage="$test_root/policy-stage"
+policy_meta="$test_root/policy-meta"
 mkdir -p "$policy_source/debian" \
-    "$policy_stage/usr/games" "$policy_stage/usr/share/man/man6"
+    "$policy_stage/usr/games" "$policy_stage/usr/share/man/man6" \
+    "$policy_meta"
 printf 'fixture README\n' > "$policy_source/README.md"
 printf 'fixture upstream changes\n' > "$policy_source/ChangeLog"
 printf 'fixture copyright\n' > "$policy_source/debian/copyright"
-cat > "$policy_source/debian/changelog" <<'EOF'
-xpilot-infinity (4.7.99-1) unstable; urgency=medium
+cat > "$policy_source/debian/changelog.in" <<'EOF'
+xpilot-infinity (@XPILOT_PACKAGE_VERSION@) unstable; urgency=medium
 
   * Fixture package release.
 
@@ -161,6 +174,7 @@ done
 
     source_dir=$policy_source
     stage_dir=$policy_stage
+    meta_dir=$policy_meta
     XPILOT_PACKAGE_NAME=xpilot-infinity
     XPILOT_PACKAGE_VERSION=4.7.99-1
     XPILOT_PACKAGE_DESCRIPTION="Fixture package"

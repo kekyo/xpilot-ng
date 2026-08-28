@@ -73,6 +73,26 @@ validate_debian_changelog()
         || fail "Debian changelog version $changelog_version does not match package version $XPILOT_PACKAGE_VERSION"
 }
 
+render_debian_changelog()
+{
+    changelog_template_path=$1
+    changelog_output_path=$2
+    version_placeholder=@XPILOT_PACKAGE_VERSION@
+
+    assert_file "$changelog_template_path"
+    grep -F "$version_placeholder" "$changelog_template_path" \
+        >/dev/null 2>&1 \
+        || fail "Debian changelog template has no version placeholder: $changelog_template_path"
+    sed "s/$version_placeholder/$XPILOT_PACKAGE_VERSION/g" \
+        "$changelog_template_path" > "$changelog_output_path"
+    if grep -F "$version_placeholder" "$changelog_output_path" \
+        >/dev/null 2>&1
+    then
+        fail "Debian changelog still contains a version placeholder: $changelog_output_path"
+    fi
+    validate_debian_changelog "$changelog_output_path"
+}
+
 strip_staged_executables()
 {
     strip_command=${STRIP:-strip}
@@ -103,12 +123,14 @@ compress_manual_pages()
 install_package_documentation()
 {
     copyright_path="$source_dir/debian/copyright"
-    debian_changelog_path="$source_dir/debian/changelog"
+    debian_changelog_template_path="$source_dir/debian/changelog.in"
+    debian_changelog_path="$meta_dir/changelog.Debian"
     validate_copyright_file "$copyright_path"
-    validate_debian_changelog "$debian_changelog_path"
 
     package_doc_dir="$stage_dir/usr/share/doc/$XPILOT_PACKAGE_NAME"
-    mkdir -p "$package_doc_dir"
+    mkdir -p "$package_doc_dir" "$meta_dir"
+    render_debian_changelog \
+        "$debian_changelog_template_path" "$debian_changelog_path"
     cp "$source_dir/README.md" "$package_doc_dir/"
     cp "$copyright_path" "$package_doc_dir/copyright"
     gzip -9n -c "$source_dir/ChangeLog" \
