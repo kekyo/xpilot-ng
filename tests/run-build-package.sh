@@ -37,11 +37,14 @@ package_script_dir=$(CDPATH= cd -- "$(dirname -- "$XPILOT_BUILD_PACKAGE")" \
 package_script="$package_script_dir/$(basename -- "$XPILOT_BUILD_PACKAGE")"
 package_all_script="$package_script_dir/build_package_all.sh"
 prereq_script="$package_script_dir/prereq.sh"
+linux_dist_script="$package_script_dir/scripts/build_linux_dist_container.sh"
 
 test -x "$package_all_script" \
     || fail "complete package build script is unavailable: $package_all_script"
 test -x "$prereq_script" \
     || fail "prerequisite image script is unavailable: $prereq_script"
+test -f "$linux_dist_script" \
+    || fail "Linux distribution script is unavailable: $linux_dist_script"
 
 BUILD_PACKAGE_PROJECT_ROOT=$package_script_dir
 BUILD_PACKAGE_SOURCE_ONLY=1
@@ -70,6 +73,10 @@ if (assert_debian_dependency "libc6 (>= 2.34)" libopenal1) \
 then
     fail "a missing Debian dependency was accepted"
 fi
+assert_equal "Kouji Matsui <k@kekyo.net>" "$DEFAULT_MAINTAINER" \
+    "the default Debian maintainer was incorrect"
+assert_equal 4.7.99-1 "$(debian_package_version 4.7.99 1)" \
+    "the Debian package revision was not appended"
 
 DISTRO_FILTER=
 RELEASE_FILTER=
@@ -83,10 +90,13 @@ ARCH_FILTER=$(normalize_filter_list arch riscv64)
 assert_equal 1 "$(count_deb_builds)" \
     "a single Linux package target was not selected"
 
-VERSION=4.7.99
+UPSTREAM_VERSION=4.7.99
+DEBIAN_REVISION=1
+DEBIAN_VERSION=$(debian_package_version \
+    "$UPSTREAM_VERSION" "$DEBIAN_REVISION")
 DEB_ARTIFACT_ROOT=/tmp/xpilot-artifacts
 assert_equal \
-    /tmp/xpilot-artifacts/xpilot-infinity-4.7.99-ubuntu-24.04-amd64.deb \
+    /tmp/xpilot-artifacts/xpilot-infinity-4.7.99-1-ubuntu-24.04-amd64.deb \
     "$(deb_artifact_path ubuntu 24.04 x86_64)" \
     "the Debian artifact name was incorrect"
 assert_equal \
@@ -109,6 +119,96 @@ trap cleanup EXIT
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
+
+policy_source="$test_root/policy-source"
+policy_stage="$test_root/policy-stage"
+mkdir -p "$policy_source/debian" \
+    "$policy_stage/usr/games" "$policy_stage/usr/share/man/man6"
+printf 'fixture README\n' > "$policy_source/README.md"
+printf 'fixture upstream changes\n' > "$policy_source/ChangeLog"
+printf 'fixture copyright\n' > "$policy_source/debian/copyright"
+cat > "$policy_source/debian/changelog" <<'EOF'
+xpilot-infinity (4.7.99-1) unstable; urgency=medium
+
+  * Fixture package release.
+
+ -- Kouji Matsui <k@kekyo.net>  Fri, 28 Aug 2026 14:32:29 +0900
+EOF
+printf '.TH XPILOT 6\n' \
+    > "$policy_stage/usr/share/man/man6/xpilot-infinity-sdl.6"
+cat > "$test_root/fixture-executable.c" <<'EOF'
+int main(void)
+{
+    return 0;
+}
+EOF
+cc -g "$test_root/fixture-executable.c" -o "$test_root/fixture-executable"
+readelf -S "$test_root/fixture-executable" | grep -Fq .debug_info \
+    || fail "the fixture executable did not contain debug information"
+for executable_name in \
+    xpilot-infinity-sdl xpilot-infinity-x11 xpilot-infinity-server \
+    xpilot-infinity-replay xpilot-infinity-xp-mapedit
+do
+    cp "$test_root/fixture-executable" \
+        "$policy_stage/usr/games/$executable_name"
+done
+
+(
+    BUILD_LINUX_DIST_SOURCE_ONLY=1
+    export BUILD_LINUX_DIST_SOURCE_ONLY
+    . "$linux_dist_script"
+    unset BUILD_LINUX_DIST_SOURCE_ONLY
+
+    source_dir=$policy_source
+    stage_dir=$policy_stage
+    XPILOT_PACKAGE_NAME=xpilot-infinity
+    XPILOT_PACKAGE_VERSION=4.7.99-1
+    XPILOT_PACKAGE_DESCRIPTION="Fixture package"
+    XPILOT_PACKAGE_MAINTAINER="Kouji Matsui <k@kekyo.net>"
+    printf 'TODO: incomplete copyright\n' \
+        > "$test_root/incomplete-copyright"
+    if (validate_copyright_file "$test_root/incomplete-copyright") \
+        >/dev/null 2>&1
+    then
+        fail "an incomplete copyright file was accepted"
+    fi
+    prepare_debian_package_files
+    deb_arch=amd64
+    write_control_file "libc6 (>= 2.35)"
+)
+
+test ! -e "$policy_stage/usr/share/man/man6/xpilot-infinity-sdl.6" \
+    || fail "the uncompressed manual page was retained"
+test -f "$policy_stage/usr/share/man/man6/xpilot-infinity-sdl.6.gz" \
+    || fail "the compressed manual page was not installed"
+assert_equal '.TH XPILOT 6' \
+    "$(gzip -cd "$policy_stage/usr/share/man/man6/xpilot-infinity-sdl.6.gz")" \
+    "the compressed manual page contents changed"
+doc_dir="$policy_stage/usr/share/doc/xpilot-infinity"
+assert_equal "fixture copyright" "$(cat "$doc_dir/copyright")" \
+    "the Debian copyright file was not installed"
+assert_equal "fixture upstream changes" \
+    "$(gzip -cd "$doc_dir/changelog.gz")" \
+    "the upstream changelog was not installed"
+gzip -cd "$doc_dir/changelog.Debian.gz" \
+    > "$test_root/installed-debian-changelog"
+assert_contains "$test_root/installed-debian-changelog" \
+    "xpilot-infinity (4.7.99-1) unstable"
+test ! -e "$doc_dir/INSTALL" \
+    || fail "source installation instructions were included"
+if readelf -S "$policy_stage/usr/games/xpilot-infinity-server" \
+    | grep -Fq .debug_info
+then
+    fail "the staged executable retained debug information"
+fi
+if readelf -S "$policy_stage/usr/games/xpilot-infinity-server" \
+    | grep -Fq .symtab
+then
+    fail "the staged executable retained its static symbol table"
+fi
+assert_contains "$policy_stage/DEBIAN/control" "Version: 4.7.99-1"
+assert_contains "$policy_stage/DEBIAN/control" \
+    "Maintainer: Kouji Matsui <k@kekyo.net>"
 
 fixture_project="$test_root/project"
 fixture_tools="$test_root/tools"
@@ -187,7 +287,10 @@ ARTIFACT_ROOT="$fixture_project/artifacts"
 DEB_ARTIFACT_ROOT="$ARTIFACT_ROOT/deb"
 RUN_ID=test-run
 TMP_ROOT="$ARTIFACT_ROOT/.tmp/$RUN_ID"
-VERSION=4.7.99
+UPSTREAM_VERSION=4.7.99
+DEBIAN_REVISION=1
+DEBIAN_VERSION=$(debian_package_version \
+    "$UPSTREAM_VERSION" "$DEBIAN_REVISION")
 CONTAINER_ENGINE_BIN="$fixture_tools/container-engine"
 MAKE_JOBS=3
 BUILD_TYPE=Release
@@ -201,12 +304,15 @@ build_deb_package debian bookworm x86_64 linux/amd64
 assert_contains "$fixture_log" \
     "exists=localhost/xpilot-infinity-pack-deb-debian-bookworm-x86_64:latest"
 assert_contains "$fixture_log" "platform=linux/amd64"
-assert_contains "$fixture_log" "environment=XPILOT_PACKAGE_VERSION=4.7.99"
+assert_contains "$fixture_log" "environment=XPILOT_VERSION=4.7.99"
+assert_contains "$fixture_log" "environment=XPILOT_PACKAGE_VERSION=4.7.99-1"
+assert_contains "$fixture_log" \
+    "environment=XPILOT_PACKAGE_MAINTAINER=Kouji Matsui <k@kekyo.net>"
 assert_contains "$fixture_log" \
     "run-image=localhost/xpilot-infinity-pack-deb-debian-bookworm-x86_64:latest"
 assert_contains "$fixture_dpkg_log" \
-    "$DEB_ARTIFACT_ROOT/xpilot-infinity-4.7.99-debian-bookworm-amd64.deb"
-test -f "$DEB_ARTIFACT_ROOT/xpilot-infinity-4.7.99-debian-bookworm-amd64.deb" \
+    "$DEB_ARTIFACT_ROOT/xpilot-infinity-4.7.99-1-debian-bookworm-amd64.deb"
+test -f "$DEB_ARTIFACT_ROOT/xpilot-infinity-4.7.99-1-debian-bookworm-amd64.deb" \
     || fail "the Debian artifact was not created"
 
 all_args="$test_root/build-all.args"
@@ -228,13 +334,15 @@ XPILOT_PACKAGE_ALL_ARGS=$all_args \
 XPILOT_WINDOWS_PACKAGE_ARGS=$windows_args \
 BUILD_PACKAGE_SCRIPT="$fixture_tools/build-package-stub" \
 BUILD_WINDOWS_PACKAGE_SCRIPT="$fixture_tools/build-windows-stub" \
-    "$package_all_script" --version 4.7.99 \
+    "$package_all_script" --version 4.7.99 --debian-revision 3 \
     --distro ubuntu --release 24.04 --arch amd64 --jobs 2 --debug
 
 assert_equal "--target
 deb
 --version
 4.7.99
+--debian-revision
+3
 --distro
 ubuntu
 --release

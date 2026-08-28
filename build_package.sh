@@ -7,7 +7,8 @@ ARTIFACT_ROOT="$PROJECT_ROOT/artifacts"
 DEB_ARTIFACT_ROOT="$ARTIFACT_ROOT/deb"
 PACKAGE_NAME=xpilot-infinity
 PACKAGE_DESCRIPTION="Multi-player tactical game with SDL and X11 clients."
-DEFAULT_MAINTAINER="XPilot Infinity packager <packager@localhost>"
+DEFAULT_MAINTAINER="Kouji Matsui <k@kekyo.net>"
+DEFAULT_DEBIAN_REVISION=1
 DEFAULT_PARALLEL_JOB_CAP=14
 VERSION_RESOLVER=${XPILOT_VERSION_RESOLVER:-"$PROJECT_ROOT/config/resolve-version.sh"}
 
@@ -38,14 +39,16 @@ Usage: ./build_package.sh [OPTIONS]
 Build and validate distributable XPilot Infinity packages.
 
 Options:
-  --version VERSION  Package version (default: screw-up-derived version)
+  --version VERSION  Product version (default: screw-up-derived version)
+  --debian-revision REVISION
+                     Debian packaging revision (default: 1)
   --target TARGET    all or deb (default: all)
   --distro LIST      Comma-separated distribution filter
   --release LIST     Comma-separated release filter
   --arch LIST        Comma-separated Linux architecture filter
   --jobs NUMBER      Concurrent package jobs (default: auto, up to 14)
   --debug            Build packages without release optimization
-  --print-version    Print the resolved package version and exit
+  --print-version    Print the resolved product version and exit
   --help             Show this help
 
 Run ./prereq.sh before this command to prepare the target container images.
@@ -70,6 +73,16 @@ assert_contains()
 
     grep -F -- "$expected_text" "$target_path" >/dev/null 2>&1 \
         || fail "missing expected text in $target_path: $expected_text"
+}
+
+assert_not_contains()
+{
+    target_path=$1
+    unexpected_text=$2
+
+    if grep -F -- "$unexpected_text" "$target_path" >/dev/null 2>&1; then
+        fail "unexpected text in $target_path: $unexpected_text"
+    fi
 }
 
 assert_debian_dependency()
@@ -148,8 +161,24 @@ detect_version()
 validate_version()
 {
     case $1 in
-        ''|*[!0-9A-Za-z.+:~-]*) fail "invalid package version: $1" ;;
+        ''|*[!0-9A-Za-z.+:~-]*) fail "invalid product version: $1" ;;
     esac
+}
+
+validate_debian_revision()
+{
+    case $1 in
+        ''|*[!0-9A-Za-z.+~]*) fail "invalid Debian revision: $1" ;;
+    esac
+}
+
+debian_package_version()
+{
+    upstream_version=$1
+    debian_revision=$2
+    validate_version "$upstream_version"
+    validate_debian_revision "$debian_revision"
+    printf '%s-%s\n' "$upstream_version" "$debian_revision"
 }
 
 canonical_distro()
@@ -299,7 +328,7 @@ deb_artifact_path()
     arch=$3
     deb_arch=$(deb_arch_name "$arch")
     printf '%s\n' \
-        "$DEB_ARTIFACT_ROOT/$PACKAGE_NAME-$VERSION-$distro-$release-$deb_arch.deb"
+        "$DEB_ARTIFACT_ROOT/$PACKAGE_NAME-$DEBIAN_VERSION-$distro-$release-$deb_arch.deb"
 }
 
 choose_container_engine()
@@ -368,7 +397,8 @@ build_deb_package()
         -w /workspace \
         -e XPILOT_WORK_DIR="$container_root/work" \
         -e XPILOT_META_DIR="$container_root/meta" \
-        -e XPILOT_PACKAGE_VERSION="$VERSION" \
+        -e XPILOT_VERSION="$UPSTREAM_VERSION" \
+        -e XPILOT_PACKAGE_VERSION="$DEBIAN_VERSION" \
         -e XPILOT_PACKAGE_NAME="$PACKAGE_NAME" \
         -e XPILOT_PACKAGE_DESCRIPTION="$PACKAGE_DESCRIPTION" \
         -e XPILOT_PACKAGE_MAINTAINER="${DEB_MAINTAINER:-$DEFAULT_MAINTAINER}" \
@@ -393,8 +423,11 @@ validate_deb_package()
         || fail "unexpected Package field in $package_path"
     test "$(dpkg-deb -f "$package_path" Architecture)" = "$expected_deb_arch" \
         || fail "unexpected Architecture field in $package_path"
-    test "$(dpkg-deb -f "$package_path" Version)" = "$VERSION" \
+    test "$(dpkg-deb -f "$package_path" Version)" = "$DEBIAN_VERSION" \
         || fail "unexpected Version field in $package_path"
+    test "$(dpkg-deb -f "$package_path" Maintainer)" \
+        = "${DEB_MAINTAINER:-$DEFAULT_MAINTAINER}" \
+        || fail "unexpected Maintainer field in $package_path"
     package_dependencies=$(dpkg-deb -f "$package_path" Depends)
     test -n "$package_dependencies" \
         || fail "missing Depends field in $package_path"
@@ -413,6 +446,10 @@ validate_deb_package()
             "$(expected_elf_class "$expected_arch")"
         assert_contains "$extract_dir/$executable_name.readelf" \
             "$(expected_elf_machine "$expected_arch")"
+        readelf -S "$executable_path" \
+            > "$extract_dir/$executable_name.sections"
+        assert_not_contains "$extract_dir/$executable_name.sections" .debug_info
+        assert_not_contains "$extract_dir/$executable_name.sections" .symtab
     done
 
     assert_file "$extract_dir/usr/share/games/xpilot-infinity/defaults.txt"
@@ -420,9 +457,14 @@ validate_deb_package()
     assert_file "$extract_dir/usr/share/games/xpilot-infinity/textures/ship.ppm"
     assert_file "$extract_dir/usr/share/games/xpilot-infinity/sound/sounds.txt"
     assert_file "$extract_dir/usr/share/games/xpilot-infinity/sound/bfire.wav"
-    assert_file "$extract_dir/usr/share/man/man6/xpilot-infinity-sdl.6"
+    assert_file "$extract_dir/usr/share/man/man6/xpilot-infinity-sdl.6.gz"
+    gzip -t "$extract_dir/usr/share/man/man6/xpilot-infinity-sdl.6.gz"
     assert_file "$extract_dir/usr/share/doc/xpilot-infinity/README.md"
-    assert_file "$extract_dir/usr/share/doc/xpilot-infinity/COPYING"
+    assert_file "$extract_dir/usr/share/doc/xpilot-infinity/copyright"
+    assert_file "$extract_dir/usr/share/doc/xpilot-infinity/changelog.gz"
+    assert_file "$extract_dir/usr/share/doc/xpilot-infinity/changelog.Debian.gz"
+    gzip -t "$extract_dir/usr/share/doc/xpilot-infinity/changelog.gz"
+    gzip -t "$extract_dir/usr/share/doc/xpilot-infinity/changelog.Debian.gz"
 
     rm -rf "$extract_dir"
 }
@@ -495,7 +537,8 @@ EOF
 
 main()
 {
-    VERSION=
+    UPSTREAM_VERSION=
+    DEBIAN_REVISION=$DEFAULT_DEBIAN_REVISION
     TARGET=all
     DISTRO_FILTER=
     RELEASE_FILTER=
@@ -508,7 +551,13 @@ main()
         case $1 in
             --version)
                 test "$#" -ge 2 || fail "--version requires a value"
-                VERSION=$2
+                UPSTREAM_VERSION=$2
+                shift 2
+                ;;
+            --debian-revision)
+                test "$#" -ge 2 \
+                    || fail "--debian-revision requires a value"
+                DEBIAN_REVISION=$2
                 shift 2
                 ;;
             --target)
@@ -552,13 +601,16 @@ main()
         esac
     done
 
-    test -n "$VERSION" || VERSION=$(detect_version)
-    validate_version "$VERSION"
+    test -n "$UPSTREAM_VERSION" \
+        || UPSTREAM_VERSION=$(detect_version)
+    validate_version "$UPSTREAM_VERSION"
+    DEBIAN_VERSION=$(debian_package_version \
+        "$UPSTREAM_VERSION" "$DEBIAN_REVISION")
     if test -n "$PARALLEL_JOBS"; then
         validate_positive_integer "parallel job count" "$PARALLEL_JOBS"
     fi
     if test "$PRINT_VERSION" = true; then
-        printf '%s\n' "$VERSION"
+        printf '%s\n' "$UPSTREAM_VERSION"
         exit 0
     fi
 
@@ -587,6 +639,7 @@ main()
     mkdir -p "$TMP_ROOT"
 
     require_command dpkg-deb
+    require_command gzip
     require_command readelf
     CONTAINER_ENGINE_BIN=$(choose_container_engine)
     printf '%s\n' \

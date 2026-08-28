@@ -15,13 +15,15 @@ Build every distributable XPilot Infinity package: the complete Debian and
 Ubuntu matrix followed by the Windows x86 and x86_64 ZIP archives.
 
 Options:
-  --version VERSION  Version for every generated package
+  --version VERSION  Product version for every generated package
+  --debian-revision REVISION
+                     Debian packaging revision (default: 1)
   --distro LIST      Comma-separated Debian/Ubuntu distribution filter
   --release LIST     Comma-separated Debian/Ubuntu release filter
   --arch LIST        Comma-separated Linux architecture filter
   --jobs NUMBER      Concurrent package jobs and Windows make jobs
   --debug            Build every package without release optimization
-  --print-version    Print the resolved package version and exit
+  --print-version    Print the resolved product version and exit
   --help             Show this help
 
 The distro, release, and architecture filters affect only Debian packages.
@@ -61,7 +63,7 @@ inspect_options()
                 print_usage
                 exit 0
                 ;;
-            --distro|--release|--arch)
+            --debian-revision|--distro|--release|--arch)
                 test "$#" -ge 2 || fail "$1 requires a value"
                 shift 2
                 ;;
