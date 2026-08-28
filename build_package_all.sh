@@ -12,7 +12,8 @@ print_usage()
 Usage: ./build_package_all.sh [OPTIONS]
 
 Build every distributable XPilot Infinity package: the complete Debian and
-Ubuntu matrix followed by the Windows x86 and x86_64 ZIP archives.
+Ubuntu matrix followed by the Windows x86 and x86_64 ZIP archives and NSIS
+installers.
 
 Options:
   --version VERSION  Product version override (default: screw-up-derived version)

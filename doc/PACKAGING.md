@@ -23,10 +23,10 @@ described in `doc/WINDOWS.md`, then build every package:
 ```
 
 This generates the complete Debian/Ubuntu matrix and then the Windows x86
-(32-bit) and x86_64 (64-bit) ZIP archives.  Distribution, release, and
-architecture filters apply only to the Debian/Ubuntu matrix; both Windows
-architectures are always built.  The `--version`, `--jobs`, and `--debug`
-options apply to both package families.
+(32-bit) and x86_64 (64-bit) ZIP archives and NSIS installers. Distribution,
+release, and architecture filters apply only to the Debian/Ubuntu matrix; both
+Windows architectures are always built.  The `--version`, `--jobs`, and
+`--debug` options apply to both package families.
 
 The supported Debian package matrix is:
 
@@ -52,11 +52,11 @@ accepted as release aliases.  Add `--debug` for an unoptimized build, or use
 `--version` to override the version derived by `screw-up`.
 
 Each package contains both graphical clients, the dedicated server, utilities,
-game data including the sound map and samples, documentation, and manual
-pages.  Its generated `Depends` field includes the OpenAL and freealut runtime
-packages (`libopenal1` and `libalut0`).  The build validates those dependencies,
-installed paths, and the ELF architecture of every executable.  Artifacts are
-written as:
+game data including the sound map and samples, documentation, manual pages, an
+XDG desktop launcher, and the application icon. Its generated `Depends` field
+includes the OpenAL and freealut runtime packages (`libopenal1` and
+`libalut0`). The build validates those dependencies, installed paths, and the
+ELF architecture of every executable. Artifacts are written as:
 
 ```text
 artifacts/deb/xpilot-infinity-<version>-<distro>-<release>-<deb-arch>.deb
@@ -131,12 +131,12 @@ if the final repository is not owned by `kekyo`. The runtime and optional
 rootless Quadlet instructions are documented in the main
 [`README.md`](../README.md#running-the-server-with-podman).
 
-## Windows archives
+## Windows packages
 
 The Linux-hosted MinGW build creates separate 32-bit and 64-bit Windows ZIP
-archives because both packages use the same executable names.
-`build_package_all.sh` creates both archives after the Linux packages.  To
-build and test only the Windows archives, run:
+archives and NSIS installers because both packages use the same executable
+names. `build_package_all.sh` creates both forms after the Linux packages. To
+build and test only the Windows packages, run:
 
 ```sh
 ./build.sh --target windows --arch all --test
@@ -151,7 +151,15 @@ input.  Artifacts are written as:
 ```text
 artifacts/windows/xpilot-infinity-<version>-windows-x86.zip
 artifacts/windows/xpilot-infinity-<version>-windows-x86_64.zip
+artifacts/windows/xpilot-infinity-<version>-windows-x86-setup.exe
+artifacts/windows/xpilot-infinity-<version>-windows-x86_64-setup.exe
 ```
+
+The ZIP files are the portable distributions. The installers contain the same
+runtime tree, add the Start menu shortcut and product uninstaller, and offer an
+unchecked manual-start server-service component. The Wine suite verifies both
+the default and service-enabled installation paths before running the portable
+network and graphical integration cases.
 
 Use `--artifact-root` to select another output directory and
 `--package-version` to override the version derived by `screw-up`.  The full

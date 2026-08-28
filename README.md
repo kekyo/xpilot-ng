@@ -61,6 +61,22 @@ The supported package matrix is:
 
 - Environment: SDL3, OpenGL 3.3 and OpenAL (sound)
 
+The Debian and Ubuntu packages add **XPilot Infinity** to XDG-compatible
+application menus. The launcher uses the packaged application icon and opens
+the SDL server browser without additional arguments.
+
+### Windows installation
+
+Windows releases provide both an NSIS installer and a ZIP archive for each
+architecture. For a normal installation, run the matching
+`xpilot-infinity-<version>-windows-<architecture>-setup.exe`. It installs the
+client, server, game data, and Start menu shortcut; selecting **XPilot
+Infinity** from the Start menu opens the SDL server browser.
+
+The ZIP archive remains the portable distribution. Extract it to any writable
+directory and run `xpilot-infinity-sdl.exe` directly; installing the NSIS
+package is not required for portable use.
+
 Or, installation from source code instructions are in [INSTALL](INSTALL).
 
 ## Quick start the game
@@ -233,6 +249,53 @@ To stop the server and prevent it from starting on future boots, run:
 
 ```bash
 sudo systemctl disable --now xpilot-infinity-server.service
+```
+
+### Running the server as a Windows service
+
+On the installer's component page, optionally select **Dedicated server
+service (manual start)**. The component is not selected for a new
+installation. When selected, it registers `XPilotInfinityServer` with startup
+type **Manual** under the `LocalService` account, but the installer does not
+start it. Installing with the default component selection does not register a
+service.
+
+Open an elevated Command Prompt or PowerShell window to start and stop the
+registered server manually:
+
+```bat
+sc.exe start XPilotInfinityServer
+sc.exe stop XPilotInfinityServer
+```
+
+To enable startup on subsequent Windows boots, change its startup type to
+automatic. This command alone does not start it in the current session:
+
+```bat
+sc.exe config XPilotInfinityServer start= auto
+sc.exe start XPilotInfinityServer
+```
+
+Return it to manual startup with:
+
+```bat
+sc.exe stop XPilotInfinityServer
+sc.exe config XPilotInfinityServer start= demand
+```
+
+The server configuration and log are stored under
+`%ProgramData%\XPilot Infinity\server`. The default configuration runs
+`ndh.xp2` continuously without advertising it to the public metaserver. Edit
+`xpilot-infinity-server.conf` before starting the service to change those
+settings. Upgrades and uninstallation preserve this directory; the
+uninstaller stops and removes the service itself.
+
+For an unattended installation, `/S` selects the normal client/server files
+only. Add `/SERVER_SERVICE=1` to register the optional service. If `/D` is used
+to override the install directory, NSIS requires it to be the final argument:
+
+```bat
+xpilot-infinity-setup.exe /S /SERVER_SERVICE=1 /D=C:\Games\XPilotInfinity
 ```
 
 ### Running the server with Podman
