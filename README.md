@@ -78,6 +78,43 @@ xpilot-infinity-server -noQuit
 The same server process remains available.
 To shut down the server, simply press Ctrl-C or similar.
 
+### Running the server as a systemd service
+
+The Debian and Ubuntu packages install an optional
+`xpilot-infinity-server.service`. Installing the package does not start or
+enable the service. To start it now and on subsequent boots, run:
+
+```bash
+sudo systemctl enable --now xpilot-infinity-server.service
+```
+
+The packaged service runs the `ndh.xp2` map continuously and does not advertise
+itself to the public metaserver. Its default command-line options are stored in
+`/etc/default/xpilot-infinity-server`. Edit `XPILOT_SERVER_OPTIONS` there to
+select another map or configure other server options, then restart the service:
+
+```bash
+sudo systemctl restart xpilot-infinity-server.service
+```
+
+The configuration file uses systemd `EnvironmentFile` syntax rather than shell
+syntax. Replace `+reportMeta` with `-reportMeta` only when the server should be
+advertised publicly. Relative output files such as recordings are written
+below `/var/lib/xpilot-infinity-server`.
+
+Check the current status and follow the server log with:
+
+```bash
+systemctl status xpilot-infinity-server.service
+journalctl -u xpilot-infinity-server.service -f
+```
+
+To stop the server and prevent it from starting on future boots, run:
+
+```bash
+sudo systemctl disable --now xpilot-infinity-server.service
+```
+
 While the server is running, just type it to show server list both local network and meta-server:
 
 ```bash
