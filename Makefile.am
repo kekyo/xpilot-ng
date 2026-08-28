@@ -8,7 +8,8 @@ if COND_SDL_CLIENT
 SUBDIRS += tests
 endif
 dist_pkgdata_DATA = mapconvert.py
-EXTRA_DIST = build.sh build_package.sh build_package_all.sh prereq.sh \
+EXTRA_DIST = Dockerfile .dockerignore build.sh build_container_image.sh \
+	build_package.sh build_package_all.sh prereq.sh \
 	scripts/build_linux_dist_container.sh config/package-windows.sh \
 	config/package-windows.mjs config/resolve-version.sh
 
