@@ -99,7 +99,7 @@ TESTS = test-framed-stream test-websocket-transport \
 	run-windows-archive.sh run-macos-info-plist.sh \
 	run-source-encoding.sh \
 	run-c23-server-build.sh run-vendored-zlib.sh \
-	run-container-image.sh run-e2e.sh
+	run-container-image.sh run-quadlet.sh run-e2e.sh
 if COND_SOUND
 check_PROGRAMS += test-audio-device
 TESTS += test-audio-device
@@ -617,6 +617,8 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_CONTAINER_BUILDER; \
 	XPILOT_CONTAINER_SOURCE_DIR='$(abs_top_srcdir)'; \
 	export XPILOT_CONTAINER_SOURCE_DIR; \
+	XPILOT_QUADLET_DIR='$(abs_top_srcdir)/containers'; \
+	export XPILOT_QUADLET_DIR; \
 	XPILOT_WINDOWS_ARCHIVER='$(abs_top_srcdir)/config/package-windows.mjs'; \
 	export XPILOT_WINDOWS_ARCHIVER; \
 	XPILOT_WINDOWS_PACKAGER='$(abs_top_srcdir)/config/package-windows.sh'; \
@@ -639,7 +641,7 @@ EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
 	run-vendored-zlib.sh \
 	run-wine-suite.sh run-build-package.sh run-package-windows.sh \
 	run-windows-archive.sh run-macos-info-plist.sh \
-	run-container-image.sh \
+	run-container-image.sh run-quadlet.sh \
 	run-source-encoding.sh test-source-encoding.mjs \
 	test-windows-archive.mjs test-macos-info-plist.mjs test_helpers.h
 

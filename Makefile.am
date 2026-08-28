@@ -10,6 +10,8 @@ endif
 dist_pkgdata_DATA = mapconvert.py
 EXTRA_DIST = Dockerfile .dockerignore build.sh build_container_image.sh \
 	build_package.sh build_package_all.sh prereq.sh \
+	containers/xpilot-infinity-server.container \
+	containers/xpilot-infinity-server-data.volume \
 	scripts/build_linux_dist_container.sh config/package-windows.sh \
 	config/package-windows.mjs config/resolve-version.sh
 

@@ -3,6 +3,7 @@
 artifacts
 autom4te.cache
 build
+containers
 images
 XPilotInfinity.xcode
 

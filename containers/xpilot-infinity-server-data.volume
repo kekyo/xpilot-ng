@@ -1,0 +1,5 @@
+[Unit]
+Description=Persistent data for the XPilot Infinity server container
+
+[Volume]
+VolumeName=xpilot-infinity-server-data
