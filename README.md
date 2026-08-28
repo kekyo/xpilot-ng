@@ -78,15 +78,21 @@ xpilot-infinity-server -noQuit
 The same server process remains available.
 To shut down the server, simply press Ctrl-C or similar.
 
-While the server is running, just type it to enter the world:
+While the server is running, just type it to show server list both local network and meta-server:
 
 ```bash
-xpilot-infinity-sdl udp://localhost
+xpilot-infinity-sdl
 ```
 
 ![Server list](./images/server-list.png)
 
 You can connect to the server and start a game.
+
+Or, connect server directly with the URL like:
+
+```bash
+xpilot-infinity-sdl udp://localhost
+```
 
 As indicated by the `udp://` URL, the UDP protocol is used.
 You can also use TCP or WebSocket.
