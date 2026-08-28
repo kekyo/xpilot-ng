@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=XPilot Infinity
+Comment=Multiplayer tactical space combat game
+Exec=/usr/games/xpilot-infinity-sdl
+TryExec=/usr/games/xpilot-infinity-sdl
+Icon=xpilot-infinity
+Terminal=false
+Categories=Game;ArcadeGame;
+Keywords=Space;Multiplayer;Action;
+StartupNotify=true

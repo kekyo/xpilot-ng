@@ -165,11 +165,28 @@ install_systemd_service()
     done
 }
 
+install_desktop_launcher()
+{
+    desktop_source="$source_dir/debian/xpilot-infinity.desktop"
+    icon_source="$source_dir/images/icon-1254.png"
+    assert_file "$desktop_source"
+    assert_file "$icon_source"
+
+    applications_dir="$stage_dir/usr/share/applications"
+    pixmaps_dir="$stage_dir/usr/share/pixmaps"
+    mkdir -p "$applications_dir" "$pixmaps_dir"
+    install -m 0644 "$desktop_source" \
+        "$applications_dir/xpilot-infinity.desktop"
+    install -m 0644 "$icon_source" \
+        "$pixmaps_dir/xpilot-infinity.png"
+}
+
 prepare_debian_package_files()
 {
     strip_staged_executables
     compress_manual_pages
     install_package_documentation
+    install_desktop_launcher
     install_systemd_service
 }
 
@@ -312,6 +329,8 @@ assert_file "$stage_dir/usr/share/doc/$XPILOT_PACKAGE_NAME/copyright"
 assert_file "$stage_dir/usr/share/doc/$XPILOT_PACKAGE_NAME/changelog.gz"
 assert_file \
     "$stage_dir/usr/share/doc/$XPILOT_PACKAGE_NAME/changelog.Debian.gz"
+assert_file "$stage_dir/usr/share/applications/xpilot-infinity.desktop"
+assert_file "$stage_dir/usr/share/pixmaps/xpilot-infinity.png"
 
 deb_arch=$(dpkg-architecture -qDEB_HOST_ARCH)
 runtime_dependencies=$(calculate_runtime_dependencies)

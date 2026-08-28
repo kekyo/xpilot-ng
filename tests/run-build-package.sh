@@ -145,6 +145,7 @@ policy_source="$test_root/policy-source"
 policy_stage="$test_root/policy-stage"
 policy_meta="$test_root/policy-meta"
 mkdir -p "$policy_source/debian" \
+    "$policy_source/images" \
     "$policy_stage/usr/games" "$policy_stage/usr/share/man/man6" \
     "$policy_meta"
 printf 'fixture README\n' > "$policy_source/README.md"
@@ -159,18 +160,37 @@ xpilot-infinity (@XPILOT_PACKAGE_VERSION@) unstable; urgency=medium
 EOF
 for package_file in \
     xpilot-infinity-server.service xpilot-infinity-server.default \
-    xpilot-infinity.postinst xpilot-infinity.prerm xpilot-infinity.postrm
+    xpilot-infinity.postinst xpilot-infinity.prerm xpilot-infinity.postrm \
+    xpilot-infinity.desktop
 do
     test -f "$package_script_dir/debian/$package_file" \
-        || fail "Debian service packaging file is unavailable: $package_file"
+        || fail "Debian packaging file is unavailable: $package_file"
     cp "$package_script_dir/debian/$package_file" \
         "$policy_source/debian/$package_file"
 done
+test -f "$package_script_dir/images/icon-1254.png" \
+    || fail "Debian application icon is unavailable"
+cp "$package_script_dir/images/icon-1254.png" \
+    "$policy_source/images/icon-1254.png"
 printf '.TH XPILOT 6\n' \
     > "$policy_stage/usr/share/man/man6/xpilot-infinity-sdl.6"
 cat > "$test_root/fixture-executable.c" <<'EOF'
-int main(void)
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(int argc, char **argv)
 {
+    const char *launch_log = getenv("XPILOT_DESKTOP_LAUNCH_LOG");
+
+    (void)argv;
+    if (launch_log != NULL) {
+        FILE *stream = fopen(launch_log, "w");
+
+        if (stream == NULL)
+            return 1;
+        fprintf(stream, "%d\n", argc);
+        fclose(stream);
+    }
     return 0;
 }
 EOF
@@ -244,6 +264,27 @@ assert_contains "$policy_stage/DEBIAN/control" \
     "Maintainer: Kouji Matsui <k@kekyo.net>"
 assert_contains "$policy_stage/DEBIAN/control" \
     "Pre-Depends: init-system-helpers (>= 1.54~)"
+
+desktop_entry="$policy_stage/usr/share/applications/xpilot-infinity.desktop"
+desktop_icon="$policy_stage/usr/share/pixmaps/xpilot-infinity.png"
+test -f "$desktop_entry" \
+    || fail "the Debian desktop entry was not installed"
+test -f "$desktop_icon" \
+    || fail "the Debian desktop icon was not installed"
+if command -v desktop-file-validate >/dev/null 2>&1; then
+    desktop-file-validate "$desktop_entry" \
+        || fail "the Debian desktop entry failed validation"
+fi
+desktop_command=$(sed -n 's/^Exec=//p' "$desktop_entry")
+case $desktop_command in
+    /usr/games/*) ;;
+    *) fail "the desktop entry does not launch an installed game" ;;
+esac
+desktop_launch_log="$test_root/desktop-launch.log"
+XPILOT_DESKTOP_LAUNCH_LOG=$desktop_launch_log \
+    "$policy_stage$desktop_command"
+assert_equal 1 "$(cat "$desktop_launch_log")" \
+    "the desktop entry passed arguments to the SDL client"
 
 service_unit="$policy_stage/usr/lib/systemd/system/xpilot-infinity-server.service"
 service_defaults="$policy_stage/etc/default/xpilot-infinity-server"

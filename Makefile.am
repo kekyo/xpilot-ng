@@ -15,7 +15,12 @@ EXTRA_DIST = Dockerfile .dockerignore build.sh build_container_image.sh \
 	scripts/build_linux_dist_container.sh config/package-windows.sh \
 	config/package-windows.mjs config/build-windows-installer.sh \
 	config/xpilot-infinity.nsi config/xpilot-infinity-server.conf \
-	config/resolve-version.sh images/icon-1254.png images/icon.ico
+	config/resolve-version.sh images/icon-1254.png images/icon.ico \
+	debian/changelog.in debian/copyright \
+	debian/xpilot-infinity-server.default \
+	debian/xpilot-infinity-server.service \
+	debian/xpilot-infinity.postinst debian/xpilot-infinity.postrm \
+	debian/xpilot-infinity.prerm debian/xpilot-infinity.desktop
 
 if COND_WINDOWS
 MINGW_TEST_JOBS =
