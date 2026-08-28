@@ -3,10 +3,9 @@ Upstream-Name: XPilot Infinity
 Upstream-Contact: Kouji Matsui <k@kekyo.net>
 Source: https://github.com/kekyo/xpilot-infinity/
 Comment:
- Historical Debian packaging metadata is retained in contrib/debian/copyright.
- It records GPL version 2 coverage for the files distributed with the imported
- xpilot-ng 4.7.3 tree when no more specific notice is present. More specific
- notices in the paragraphs below take precedence.
+ Debian packaging metadata distributed with the imported xpilot-ng 4.7.3 tree
+ recorded GPL version 2 coverage when no more specific notice was present.
+ More specific notices in the paragraphs below take precedence.
 
 Files: *
 Copyright:
@@ -220,7 +219,7 @@ Copyright:
 License: GPL-2
 Comment:
  The bitmap contains no embedded notice. Its attribution and license are taken
- from contrib/debian/copyright, which covered the imported distribution that
+ from the Debian packaging metadata in the imported distribution, which
  already contained this file.
 
 Files:
@@ -242,9 +241,9 @@ Copyright:
  Baron
 License: GPL-2
 Comment:
- The license is taken from contrib/debian/copyright, which covered these files
- in the imported xpilot-ng distribution. Names without years reproduce map
- author credits embedded in the distributed map files.
+ The license is taken from the Debian packaging metadata in the imported
+ xpilot-ng distribution. Names without years reproduce map author credits
+ embedded in the distributed map files.
 
 Files: lib/maps/polyfishtank3.xp2
 Copyright: 2007 Thomas Keith (Insectoid)
