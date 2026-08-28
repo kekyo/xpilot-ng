@@ -428,6 +428,9 @@ validate_deb_package()
     test "$(dpkg-deb -f "$package_path" Maintainer)" \
         = "${DEB_MAINTAINER:-$DEFAULT_MAINTAINER}" \
         || fail "unexpected Maintainer field in $package_path"
+    package_pre_dependencies=$(dpkg-deb -f "$package_path" Pre-Depends)
+    assert_debian_dependency \
+        "$package_pre_dependencies" init-system-helpers
     package_dependencies=$(dpkg-deb -f "$package_path" Depends)
     test -n "$package_dependencies" \
         || fail "missing Depends field in $package_path"
@@ -435,6 +438,8 @@ validate_deb_package()
     assert_debian_dependency "$package_dependencies" libopenal1
 
     dpkg-deb -x "$package_path" "$extract_dir"
+    mkdir -p "$extract_dir/DEBIAN"
+    dpkg-deb -e "$package_path" "$extract_dir/DEBIAN"
     for executable_name in \
         xpilot-infinity-sdl xpilot-infinity-x11 xpilot-infinity-server \
         xpilot-infinity-replay xpilot-infinity-xp-mapedit
@@ -465,6 +470,28 @@ validate_deb_package()
     assert_file "$extract_dir/usr/share/doc/xpilot-infinity/changelog.Debian.gz"
     gzip -t "$extract_dir/usr/share/doc/xpilot-infinity/changelog.gz"
     gzip -t "$extract_dir/usr/share/doc/xpilot-infinity/changelog.Debian.gz"
+
+    service_unit="$extract_dir/usr/lib/systemd/system/xpilot-infinity-server.service"
+    service_defaults="$extract_dir/etc/default/xpilot-infinity-server"
+    assert_file "$service_unit"
+    assert_file "$service_defaults"
+    assert_contains "$service_unit" "Type=exec"
+    assert_contains "$service_unit" "DynamicUser=yes"
+    assert_contains "$service_unit" \
+        "EnvironmentFile=-/etc/default/xpilot-infinity-server"
+    assert_contains "$service_defaults" "+reportMeta"
+    assert_contains "$extract_dir/DEBIAN/conffiles" \
+        "/etc/default/xpilot-infinity-server"
+    for maintainer_script in postinst prerm postrm; do
+        test -x "$extract_dir/DEBIAN/$maintainer_script" \
+            || fail "non-executable $maintainer_script in $package_path"
+    done
+    if find "$extract_dir/etc/systemd/system" \
+        -type l -path '*.wants/xpilot-infinity-server.service' \
+        -print 2>/dev/null | grep -q .
+    then
+        fail "the server service was enabled in $package_path"
+    fi
 
     rm -rf "$extract_dir"
 }

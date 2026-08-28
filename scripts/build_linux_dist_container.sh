@@ -139,11 +139,38 @@ install_package_documentation()
         > "$package_doc_dir/changelog.Debian.gz"
 }
 
+install_systemd_service()
+{
+    unit_name=xpilot-infinity-server.service
+    defaults_name=xpilot-infinity-server
+    unit_source="$source_dir/debian/$unit_name"
+    defaults_source="$source_dir/debian/$defaults_name.default"
+    assert_file "$unit_source"
+    assert_file "$defaults_source"
+
+    unit_dir="$stage_dir/usr/lib/systemd/system"
+    defaults_dir="$stage_dir/etc/default"
+    control_dir="$stage_dir/DEBIAN"
+    mkdir -p "$unit_dir" "$defaults_dir" "$control_dir"
+    install -m 0644 "$unit_source" "$unit_dir/$unit_name"
+    install -m 0644 "$defaults_source" "$defaults_dir/$defaults_name"
+    printf '/etc/default/%s\n' "$defaults_name" \
+        > "$control_dir/conffiles"
+
+    for maintainer_script in postinst prerm postrm; do
+        maintainer_source="$source_dir/debian/$XPILOT_PACKAGE_NAME.$maintainer_script"
+        assert_file "$maintainer_source"
+        install -m 0755 "$maintainer_source" \
+            "$control_dir/$maintainer_script"
+    done
+}
+
 prepare_debian_package_files()
 {
     strip_staged_executables
     compress_manual_pages
     install_package_documentation
+    install_systemd_service
 }
 
 calculate_runtime_dependencies()
@@ -190,6 +217,7 @@ Section: games
 Priority: optional
 Architecture: $deb_arch
 Maintainer: $XPILOT_PACKAGE_MAINTAINER
+Pre-Depends: init-system-helpers (>= 1.54~)
 Depends: $dependencies
 Description: $XPILOT_PACKAGE_DESCRIPTION
  XPilot Infinity is a multiplayer tactical game. This package includes the SDL

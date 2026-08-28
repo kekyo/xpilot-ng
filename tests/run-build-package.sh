@@ -27,6 +27,16 @@ assert_contains()
         || fail "$target_path does not contain: $expected_text"
 }
 
+assert_not_contains()
+{
+    target_path=$1
+    unexpected_text=$2
+
+    if grep -F -- "$unexpected_text" "$target_path" >/dev/null 2>&1; then
+        fail "$target_path unexpectedly contains: $unexpected_text"
+    fi
+}
+
 test -n "${XPILOT_BUILD_PACKAGE:-}" \
     || fail "XPILOT_BUILD_PACKAGE is not set"
 test -f "$XPILOT_BUILD_PACKAGE" \
@@ -147,6 +157,15 @@ xpilot-infinity (@XPILOT_PACKAGE_VERSION@) unstable; urgency=medium
 
  -- Kouji Matsui <k@kekyo.net>  Fri, 28 Aug 2026 14:32:29 +0900
 EOF
+for package_file in \
+    xpilot-infinity-server.service xpilot-infinity-server.default \
+    xpilot-infinity.postinst xpilot-infinity.prerm xpilot-infinity.postrm
+do
+    test -f "$package_script_dir/debian/$package_file" \
+        || fail "Debian service packaging file is unavailable: $package_file"
+    cp "$package_script_dir/debian/$package_file" \
+        "$policy_source/debian/$package_file"
+done
 printf '.TH XPILOT 6\n' \
     > "$policy_stage/usr/share/man/man6/xpilot-infinity-sdl.6"
 cat > "$test_root/fixture-executable.c" <<'EOF'
@@ -223,6 +242,94 @@ fi
 assert_contains "$policy_stage/DEBIAN/control" "Version: 4.7.99-1"
 assert_contains "$policy_stage/DEBIAN/control" \
     "Maintainer: Kouji Matsui <k@kekyo.net>"
+assert_contains "$policy_stage/DEBIAN/control" \
+    "Pre-Depends: init-system-helpers (>= 1.54~)"
+
+service_unit="$policy_stage/usr/lib/systemd/system/xpilot-infinity-server.service"
+service_defaults="$policy_stage/etc/default/xpilot-infinity-server"
+assert_contains "$service_unit" "Type=exec"
+assert_contains "$service_unit" "DynamicUser=yes"
+assert_contains "$service_unit" \
+    "EnvironmentFile=-/etc/default/xpilot-infinity-server"
+assert_contains "$service_unit" \
+    'ExecStart=/usr/games/xpilot-infinity-server $XPILOT_SERVER_OPTIONS'
+assert_contains "$service_defaults" \
+    'XPILOT_SERVER_OPTIONS="-noQuit +reportMeta -map ndh.xp2"'
+assert_contains "$policy_stage/DEBIAN/conffiles" \
+    "/etc/default/xpilot-infinity-server"
+if command -v systemd-analyze >/dev/null 2>&1; then
+    systemd-analyze verify --root="$policy_stage" \
+        xpilot-infinity-server.service >/dev/null 2>&1 \
+        || fail "the staged systemd service failed validation"
+fi
+for maintainer_script in postinst prerm postrm; do
+    test -x "$policy_stage/DEBIAN/$maintainer_script" \
+        || fail "the $maintainer_script maintainer script was not executable"
+done
+
+systemd_fixture_tools="$test_root/systemd-tools"
+systemd_fixture_log="$test_root/systemd-maintainer.log"
+mkdir -p "$systemd_fixture_tools"
+cat > "$systemd_fixture_tools/deb-systemd-helper" <<'EOF'
+#!/bin/sh
+printf 'deb-systemd-helper:%s\n' "$*" >> "$XPILOT_SYSTEMD_FIXTURE_LOG"
+case $1 in
+    debian-installed) exit "${XPILOT_DEBIAN_INSTALLED:-1}" ;;
+    --quiet)
+        test "${2:-}" = was-enabled || exit 0
+        exit "${XPILOT_WAS_ENABLED:-1}"
+        ;;
+esac
+exit 0
+EOF
+cat > "$systemd_fixture_tools/deb-systemd-invoke" <<'EOF'
+#!/bin/sh
+printf 'deb-systemd-invoke:%s\n' "$*" >> "$XPILOT_SYSTEMD_FIXTURE_LOG"
+EOF
+cat > "$systemd_fixture_tools/systemctl" <<'EOF'
+#!/bin/sh
+printf 'systemctl:%s\n' "$*" >> "$XPILOT_SYSTEMD_FIXTURE_LOG"
+EOF
+chmod +x "$systemd_fixture_tools/deb-systemd-helper" \
+    "$systemd_fixture_tools/deb-systemd-invoke" \
+    "$systemd_fixture_tools/systemctl"
+
+: > "$systemd_fixture_log"
+PATH="$systemd_fixture_tools:$PATH" \
+XPILOT_SYSTEMD_FIXTURE_LOG="$systemd_fixture_log" \
+XPILOT_DEBIAN_INSTALLED=1 XPILOT_WAS_ENABLED=1 \
+    "$policy_stage/DEBIAN/postinst" configure
+assert_contains "$systemd_fixture_log" \
+    "deb-systemd-helper:update-state xpilot-infinity-server.service"
+assert_not_contains "$systemd_fixture_log" "deb-systemd-helper:enable"
+assert_not_contains "$systemd_fixture_log" "deb-systemd-invoke:start"
+assert_not_contains "$systemd_fixture_log" "deb-systemd-invoke:try-restart"
+
+if test -d /run/systemd/system; then
+    : > "$systemd_fixture_log"
+    PATH="$systemd_fixture_tools:$PATH" \
+    XPILOT_SYSTEMD_FIXTURE_LOG="$systemd_fixture_log" \
+    XPILOT_DEBIAN_INSTALLED=0 XPILOT_WAS_ENABLED=0 \
+        "$policy_stage/DEBIAN/postinst" configure 4.7.98-1
+    assert_contains "$systemd_fixture_log" \
+        "deb-systemd-helper:enable xpilot-infinity-server.service"
+    assert_contains "$systemd_fixture_log" \
+        "deb-systemd-invoke:try-restart xpilot-infinity-server.service"
+
+    : > "$systemd_fixture_log"
+    PATH="$systemd_fixture_tools:$PATH" \
+    XPILOT_SYSTEMD_FIXTURE_LOG="$systemd_fixture_log" \
+        "$policy_stage/DEBIAN/prerm" remove
+    assert_contains "$systemd_fixture_log" \
+        "deb-systemd-invoke:stop xpilot-infinity-server.service"
+fi
+
+: > "$systemd_fixture_log"
+PATH="$systemd_fixture_tools:$PATH" \
+XPILOT_SYSTEMD_FIXTURE_LOG="$systemd_fixture_log" \
+    "$policy_stage/DEBIAN/postrm" purge
+assert_contains "$systemd_fixture_log" \
+    "deb-systemd-helper:purge xpilot-infinity-server.service"
 
 fixture_project="$test_root/project"
 fixture_tools="$test_root/tools"

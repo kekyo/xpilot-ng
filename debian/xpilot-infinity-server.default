@@ -1,0 +1,5 @@
+# Command-line options for the systemd server service. This file uses systemd
+# EnvironmentFile syntax rather than shell syntax. The complete value is split
+# into arguments when XPILOT_SERVER_OPTIONS is expanded by the service unit.
+# +reportMeta disables public metaserver advertising by default.
+XPILOT_SERVER_OPTIONS="-noQuit +reportMeta -map ndh.xp2"
