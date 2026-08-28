@@ -621,6 +621,14 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_QUADLET_DIR; \
 	XPILOT_WINDOWS_ARCHIVER='$(abs_top_srcdir)/config/package-windows.mjs'; \
 	export XPILOT_WINDOWS_ARCHIVER; \
+	XPILOT_WINDOWS_INSTALLER_BUILDER='$(abs_top_srcdir)/config/build-windows-installer.sh'; \
+	export XPILOT_WINDOWS_INSTALLER_BUILDER; \
+	XPILOT_WINDOWS_INSTALLER_SCRIPT='$(abs_top_srcdir)/config/xpilot-infinity.nsi'; \
+	export XPILOT_WINDOWS_INSTALLER_SCRIPT; \
+	XPILOT_WINDOWS_SERVER_CONFIG='$(abs_top_srcdir)/config/xpilot-infinity-server.conf'; \
+	export XPILOT_WINDOWS_SERVER_CONFIG; \
+	XPILOT_WINDOWS_ICON='$(abs_top_srcdir)/images/icon.ico'; \
+	export XPILOT_WINDOWS_ICON; \
 	XPILOT_WINDOWS_PACKAGER='$(abs_top_srcdir)/config/package-windows.sh'; \
 	export XPILOT_WINDOWS_PACKAGER; \
 	XPILOT_MACOS_INFO_PLIST='$(abs_top_srcdir)/contrib/macosx/English.lproj/InfoPlist.strings'; \

@@ -15,7 +15,7 @@ Options:
   --arch ARCH              Windows x86, x86_64, or all (default: all)
   --test                   Run the target's complete supported test suite
   --build-root PATH        Root for all build output (default: ./build)
-  --artifact-root PATH     Windows ZIP output (default: ./artifacts/windows)
+  --artifact-root PATH     Windows ZIP/installer output (default: ./artifacts/windows)
   --package-version VALUE  Build/archive version override (default: resolved at make time)
   --jobs NUMBER            Parallel build jobs (default: detected CPU count)
   --build-type TYPE        Dependency CMake build type (default: Release)
@@ -221,6 +221,16 @@ case "$target" in
         command -v "$node_program" >/dev/null 2>&1 \
             || fail "Node.js was not found: $node_program"
 
+        windows_installer_builder="$source_dir/config/build-windows-installer.sh"
+        windows_icon="$source_dir/images/icon.ico"
+        test -x "$windows_installer_builder" \
+            || fail "Windows installer builder is unavailable: $windows_installer_builder"
+        test -f "$windows_icon" \
+            || fail "Windows icon is unavailable: $windows_icon"
+        makensis_program=${MAKENSIS:-makensis}
+        command -v "$makensis_program" >/dev/null 2>&1 \
+            || fail "makensis was not found: $makensis_program"
+
         ;;
 esac
 
@@ -340,6 +350,14 @@ build_windows_architecture()
         "XPILOT_VERSION=$build_version"
     "$make_program" "MINGW_DEPS_JOBS=$jobs" \
         "XPILOT_VERSION=$build_version" windows-package
+
+    installer_build_path="$architecture_root/xpilot-infinity-setup.exe"
+    MAKENSIS="$makensis_program" "$windows_installer_builder" \
+        --package-dir "$architecture_root/package" \
+        --output "$installer_build_path" \
+        --version "$build_version" \
+        --arch "$windows_architecture" \
+        --icon "$windows_icon"
     if test "$run_tests" = true; then
         "$make_program" "MINGW_DEPS_JOBS=$jobs" \
             "MINGW_TEST_JOBS=$jobs" "XPILOT_VERSION=$build_version" check
@@ -351,8 +369,13 @@ build_windows_architecture()
         --output "$archive_path"
     test -f "$archive_path" \
         || fail "Windows archive was not created: $archive_path"
+    installer_path="$artifact_root/xpilot-infinity-$build_version-windows-$windows_architecture-setup.exe"
+    cp -- "$installer_build_path" "$installer_path"
+    test -f "$installer_path" \
+        || fail "Windows installer was not created: $installer_path"
     echo "XPilot Infinity Windows package completed in $architecture_root/package"
     echo "XPilot Infinity Windows archive completed in $archive_path"
+    echo "XPilot Infinity Windows installer completed in $installer_path"
 )
 
 build_windows()

@@ -13,12 +13,15 @@ EXTRA_DIST = Dockerfile .dockerignore build.sh build_container_image.sh \
 	containers/xpilot-infinity-server.container \
 	containers/xpilot-infinity-server-data.volume \
 	scripts/build_linux_dist_container.sh config/package-windows.sh \
-	config/package-windows.mjs config/resolve-version.sh
+	config/package-windows.mjs config/build-windows-installer.sh \
+	config/xpilot-infinity.nsi config/xpilot-infinity-server.conf \
+	config/resolve-version.sh images/icon-1254.png images/icon.ico
 
 if COND_WINDOWS
 MINGW_TEST_JOBS =
+MAKENSIS = makensis
 
-.PHONY: windows-package windows-check mingw-deps-clean
+.PHONY: windows-package windows-installer windows-check mingw-deps-clean
 windows-package: all
 	$(SHELL) $(top_srcdir)/config/package-windows.sh \
 		--source-dir '$(abs_top_srcdir)' \
@@ -26,10 +29,20 @@ windows-package: all
 		--dependency-prefix '@MINGW_DEPS_PREFIX@' \
 		--output '@MINGW_PACKAGE_DIR@'
 
-windows-check: windows-package
+windows-installer: windows-package
+	MAKENSIS='$(MAKENSIS)' \
+	$(SHELL) $(top_srcdir)/config/build-windows-installer.sh \
+		--package-dir '@MINGW_PACKAGE_DIR@' \
+		--output '$(abs_top_builddir)/xpilot-infinity-setup.exe' \
+		--version "`sed -n '1p' '$(abs_top_builddir)/src/common/version.txt'`" \
+		--arch '@MINGW_ARCH@' \
+		--icon '$(abs_top_srcdir)/images/icon.ico'
+
+windows-check: windows-installer
 	$(SHELL) $(top_srcdir)/tests/run-wine-suite.sh \
 		--build-dir '$(abs_top_builddir)' \
 		--package-dir '@MINGW_PACKAGE_DIR@' \
+		--installer '$(abs_top_builddir)/xpilot-infinity-setup.exe' \
 		--wine-prefix '@MINGW_WINE_PREFIX@' \
 		--arch '@MINGW_ARCH@' \
 		--jobs '$(MINGW_TEST_JOBS)'

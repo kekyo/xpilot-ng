@@ -20,6 +20,22 @@ test -n "${XPILOT_WINDOWS_ARCHIVER:-}" \
     || fail "XPILOT_WINDOWS_ARCHIVER is not set"
 test -f "$XPILOT_WINDOWS_ARCHIVER" \
     || fail "Windows archiver is unavailable: $XPILOT_WINDOWS_ARCHIVER"
+test -n "${XPILOT_WINDOWS_INSTALLER_BUILDER:-}" \
+    || fail "XPILOT_WINDOWS_INSTALLER_BUILDER is not set"
+test -x "$XPILOT_WINDOWS_INSTALLER_BUILDER" \
+    || fail "Windows installer builder is unavailable: $XPILOT_WINDOWS_INSTALLER_BUILDER"
+test -n "${XPILOT_WINDOWS_INSTALLER_SCRIPT:-}" \
+    || fail "XPILOT_WINDOWS_INSTALLER_SCRIPT is not set"
+test -f "$XPILOT_WINDOWS_INSTALLER_SCRIPT" \
+    || fail "NSIS script is unavailable: $XPILOT_WINDOWS_INSTALLER_SCRIPT"
+test -n "${XPILOT_WINDOWS_SERVER_CONFIG:-}" \
+    || fail "XPILOT_WINDOWS_SERVER_CONFIG is not set"
+test -f "$XPILOT_WINDOWS_SERVER_CONFIG" \
+    || fail "Windows server defaults are unavailable: $XPILOT_WINDOWS_SERVER_CONFIG"
+test -n "${XPILOT_WINDOWS_ICON:-}" \
+    || fail "XPILOT_WINDOWS_ICON is not set"
+test -f "$XPILOT_WINDOWS_ICON" \
+    || fail "Windows icon is unavailable: $XPILOT_WINDOWS_ICON"
 
 wrapper_test_dir=$(mktemp -d \
     "${TMPDIR:-/tmp}/xpilot-build-wrapper-test.XXXXXX")
@@ -48,12 +64,20 @@ fixture_artifacts="$wrapper_test_dir/artifacts"
 
 mkdir -p "$fixture_source/vendor/sdl3/SDL/build-scripts" \
     "$fixture_source/vendor/mingw" "$fixture_source/config" \
-    "$fixture_source/tests" \
+    "$fixture_source/images" "$fixture_source/tests" \
     "$fixture_source/lib/maps" "$fixture_tools"
 cp "$XPILOT_BUILD_WRAPPER" "$fixture_source/build.sh"
 cp "$XPILOT_VERSION_RESOLVER" "$fixture_source/config/resolve-version.sh"
 cp "$XPILOT_WINDOWS_ARCHIVER" "$fixture_source/config/package-windows.mjs"
+cp "$XPILOT_WINDOWS_INSTALLER_BUILDER" \
+    "$fixture_source/config/build-windows-installer.sh"
+cp "$XPILOT_WINDOWS_INSTALLER_SCRIPT" \
+    "$fixture_source/config/xpilot-infinity.nsi"
+cp "$XPILOT_WINDOWS_SERVER_CONFIG" \
+    "$fixture_source/config/xpilot-infinity-server.conf"
+cp "$XPILOT_WINDOWS_ICON" "$fixture_source/images/icon.ico"
 chmod +x "$fixture_source/build.sh" \
+    "$fixture_source/config/build-windows-installer.sh" \
     "$fixture_source/config/resolve-version.sh"
 : > "$fixture_toolchain"
 : > "$fixture_source/vendor/sdl3/SDL/build-scripts/cmake-toolchain-mingw64-i686.cmake"
@@ -168,10 +192,27 @@ case "$(pwd)" in
                 : > package/xpilot-infinity-server.exe
                 : > package/xpilot-infinity-sdl.exe
                 : > package/lib/maps/ndh.xp2
+                printf 'fixture license\n' > package/COPYING
                 ;;
         esac
         ;;
 esac
+EOF
+
+cat > "$fixture_tools/makensis" <<'EOF'
+#!/bin/sh
+set -eu
+
+output=
+for argument do
+    printf 'makensis.arg=%s\n' "$argument" >> "$XPILOT_BUILD_TEST_LOG"
+    case "$argument" in
+        -DXPILOT_OUTPUT=*) output=${argument#*=} ;;
+    esac
+done
+test -n "$output"
+mkdir -p "$(dirname -- "$output")"
+printf 'fixture installer\n' > "$output"
 EOF
 
 cat > "$fixture_source/tests/run-wine-suite.sh" <<'EOF'
@@ -186,7 +227,8 @@ EOF
 chmod +x "$fixture_source/vendor/sdl3/build.sh" \
     "$fixture_source/vendor/mingw/build.sh" \
     "$fixture_source/tests/run-wine-suite.sh" \
-    "$fixture_source/configure" "$fixture_tools/make"
+    "$fixture_source/configure" "$fixture_tools/make" \
+    "$fixture_tools/makensis"
 
 XPILOT_BUILD_TEST_LOG=$fixture_log \
 XPILOT_PACKAGE_VERSION=4.7.98 \
@@ -256,6 +298,8 @@ done
 for architecture in x86 x86_64; do
     test -f "$fixture_source/artifacts/windows/xpilot-infinity-4.7.99-windows-$architecture.zip" \
         || fail "default build did not create the $architecture archive"
+    test -f "$fixture_source/artifacts/windows/xpilot-infinity-4.7.99-windows-$architecture-setup.exe" \
+        || fail "default build did not create the $architecture installer"
 done
 
 : > "$fixture_log"
@@ -327,6 +371,14 @@ for architecture in x86 x86_64; do
         || fail "$architecture game data was not packaged"
     test -f "$fixture_artifacts/xpilot-infinity-4.7.99-windows-$architecture.zip" \
         || fail "$architecture distribution archive was not created"
+    test -f "$fixture_artifacts/xpilot-infinity-4.7.99-windows-$architecture-setup.exe" \
+        || fail "$architecture installer was not created"
+    grep -Fx "makensis.arg=-DXPILOT_ARCH=$architecture" \
+        "$fixture_log" >/dev/null \
+        || fail "$architecture was not passed to NSIS"
+    grep -Fx "makensis.arg=-DXPILOT_VERSION=4.7.99" \
+        "$fixture_log" >/dev/null \
+        || fail "the package version was not passed to NSIS"
 done
 
 if grep -q '^wine\.arg=' "$fixture_log"; then
