@@ -25,6 +25,65 @@
 
 #include "xpcommon.h"
 
+#ifdef _WINDOWS
+
+#define WINDOWS_CONF_PATH_SIZE (MAX_PATH + sizeof(CONF_SOUNDFILE))
+
+static void Conf_windows_path(char *path, size_t path_size,
+			      const char *relative_path)
+{
+    char executable_path[MAX_PATH];
+    char *forward_separator;
+    char *back_separator;
+    char *last_separator;
+    DWORD executable_path_length;
+    int written;
+
+    executable_path_length = GetModuleFileNameA(NULL, executable_path,
+						NELEM(executable_path));
+    if (executable_path_length == 0
+	|| executable_path_length >= NELEM(executable_path)) {
+	strlcpy(path, relative_path, path_size);
+	return;
+    }
+
+    forward_separator = strrchr(executable_path, '/');
+    back_separator = strrchr(executable_path, '\\');
+    if (forward_separator == NULL)
+	last_separator = back_separator;
+    else if (back_separator == NULL || forward_separator > back_separator)
+	last_separator = forward_separator;
+    else
+	last_separator = back_separator;
+    if (last_separator == NULL) {
+	strlcpy(path, relative_path, path_size);
+	return;
+    }
+
+    last_separator[1] = '\0';
+    written = snprintf(path, path_size, "%s%s", executable_path,
+		       relative_path);
+    if (written < 0 || (size_t)written >= path_size)
+	strlcpy(path, relative_path, path_size);
+}
+
+#define WINDOWS_CONF_FUNCTION(function_name, relative_path) \
+char *function_name(void) \
+{ \
+    static char path[WINDOWS_CONF_PATH_SIZE]; \
+    if (path[0] == '\0') \
+	Conf_windows_path(path, sizeof(path), relative_path); \
+    return path; \
+}
+
+WINDOWS_CONF_FUNCTION(Conf_datadir, CONF_DATADIR)
+WINDOWS_CONF_FUNCTION(Conf_defaults_file_name, CONF_DEFAULTS_FILE_NAME)
+WINDOWS_CONF_FUNCTION(Conf_password_file_name, CONF_PASSWORD_FILE_NAME)
+WINDOWS_CONF_FUNCTION(Conf_mapdir, CONF_MAPDIR)
+WINDOWS_CONF_FUNCTION(Conf_fontdir, CONF_FONTDIR)
+
+#else
+
 char *Conf_datadir(void)
 {
     static char conf[] = CONF_DATADIR;
@@ -69,6 +128,8 @@ char *Conf_fontdir(void)
     return conf;
 }
 
+#endif
+
 char *Conf_default_map(void)
 {
     static char conf[] = CONF_DEFAULT_MAP;
@@ -78,31 +139,57 @@ char *Conf_default_map(void)
 
 char *Conf_servermotdfile(void)
 {
+#ifdef _WINDOWS
+    static char conf[WINDOWS_CONF_PATH_SIZE];
+#else
     static char conf[] = CONF_SERVERMOTDFILE;
+#endif
     static char env[] = "XPILOTSERVERMOTD";
     char *filename;
 
     filename = getenv(env);
-    if (filename == NULL)
+    if (filename == NULL) {
+#ifdef _WINDOWS
+	if (conf[0] == '\0')
+	    Conf_windows_path(conf, sizeof(conf), CONF_SERVERMOTDFILE);
+#endif
 	filename = conf;
+    }
 
     return filename;
 }
 
+#ifdef _WINDOWS
+WINDOWS_CONF_FUNCTION(Conf_localmotdfile, CONF_LOCALMOTDFILE)
+#else
 char *Conf_localmotdfile(void)
 {
     static char conf[] = CONF_LOCALMOTDFILE;
 
     return conf;
 }
+#endif
 
+#ifdef _WINDOWS
+char conf_logfile_string[WINDOWS_CONF_PATH_SIZE];
+#else
 char conf_logfile_string[] = CONF_LOGFILE;
+#endif
 
 char *Conf_logfile(void)
 {
+#ifdef _WINDOWS
+    if (conf_logfile_string[0] == '\0')
+	Conf_windows_path(conf_logfile_string, sizeof(conf_logfile_string),
+			  CONF_LOGFILE);
+#endif
     return conf_logfile_string;
 }
 
+#ifdef _WINDOWS
+WINDOWS_CONF_FUNCTION(Conf_ship_file, CONF_SHIP_FILE)
+WINDOWS_CONF_FUNCTION(Conf_texturedir, CONF_TEXTUREDIR)
+#else
 char *Conf_ship_file(void)
 {
     static char conf[] = CONF_SHIP_FILE;
@@ -116,6 +203,7 @@ char *Conf_texturedir(void)
 
     return conf;
 }
+#endif
 
 char *Conf_localguru(void)
 {
@@ -124,12 +212,16 @@ char *Conf_localguru(void)
     return conf;
 }
 
+#ifdef _WINDOWS
+WINDOWS_CONF_FUNCTION(Conf_robotfile, CONF_ROBOTFILE)
+#else
 char *Conf_robotfile(void)
 {
     static char conf[] = CONF_ROBOTFILE;
 
     return conf;
 }
+#endif
 
 char *Conf_zcat_ext(void)
 {
@@ -145,6 +237,10 @@ char *Conf_zcat_format(void)
     return conf;
 }
 
+#ifdef _WINDOWS
+WINDOWS_CONF_FUNCTION(Conf_sounddir, CONF_SOUNDDIR)
+WINDOWS_CONF_FUNCTION(Conf_soundfile, CONF_SOUNDFILE)
+#else
 char *Conf_sounddir(void)
 {
     static char conf[] = CONF_SOUNDDIR;
@@ -158,6 +254,12 @@ char *Conf_soundfile(void)
 
     return conf;
 }
+#endif
+
+#ifdef _WINDOWS
+#undef WINDOWS_CONF_FUNCTION
+#undef WINDOWS_CONF_PATH_SIZE
+#endif
 
 
 void Conf_print(void)

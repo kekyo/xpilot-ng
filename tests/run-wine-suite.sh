@@ -402,6 +402,25 @@ stop_server()
     server_pid=
 }
 
+run_executable_relative_resources()
+{
+    contact_port=$(reserve_contact_port)
+    foreign_directory="$runtime_dir/foreign-working-directory"
+    server_log="$runtime_dir/server-executable-relative-resources.log"
+    mkdir -p "$foreign_directory"
+
+    (
+	cd "$foreign_directory"
+	exec "$wine_program" \
+	    "$runtime_package/xpilot-infinity-server.exe" \
+	    -map ndh.xp2 -port "$contact_port" \
+	    -noQuit +reportMeta -transport udp
+    ) >"$server_log" 2>&1 &
+    server_pid=$!
+    wait_until "executable-relative packaged resources" 30 server_ready
+    stop_server
+}
+
 run_contact_target_failover()
 {
     contact_port=$(reserve_contact_port)
@@ -754,6 +773,7 @@ for unit_test in test-framed-stream test-websocket-transport \
     run_wine_unit_test "$unit_test"
 done
 
+run_executable_relative_resources
 run_contact_target_failover
 run_connection_failure_notification
 run_meta_report_case

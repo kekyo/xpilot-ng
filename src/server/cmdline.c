@@ -3991,6 +3991,10 @@ static void Init_default_options(void)
 {
     option_desc *desc;
 
+    if ((desc = Find_option_by_name("adminMessageFileName")) == NULL)
+	dumpcore("Could not find admin message file option");
+    desc->defaultValue = Conf_logfile();
+
     if ((desc = Find_option_by_name("mapFileName")) == NULL)
 	dumpcore("Could not find map file option");
     desc->defaultValue = Conf_default_map();
