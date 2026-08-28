@@ -23,10 +23,16 @@ Files:
  vendor/sdl3/SDL_image/*
 Copyright: 1997-2026 Sam Lantinga <slouken@libsdl.org>
 License: Zlib
+Comment:
+ TODO: Check the nested third-party source inventories and add overriding
+ stanzas for any files whose copyright or license differs from Zlib.
 
 Files: vendor/sdl3/SDL_ttf/*
 Copyright: 1997-2025 Sam Lantinga <slouken@libsdl.org>
 License: Zlib
+Comment:
+ TODO: Check the dependencies selected by --vendored-font-deps and add
+ overriding stanzas when the vendored FreeType or HarfBuzz sources are used.
 
 Files: vendor/libtess2/*
 Copyright:
