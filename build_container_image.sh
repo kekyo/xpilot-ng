@@ -97,6 +97,16 @@ detect_processor_count()
     printf '%s\n' "$detected_count"
 }
 
+detect_native_platform()
+{
+    require_command uname
+    case $(uname -m) in
+        x86_64|amd64) printf '%s\n' linux/amd64 ;;
+        aarch64|arm64) printf '%s\n' linux/arm64 ;;
+        *) fail "unsupported native container architecture: $(uname -m)" ;;
+    esac
+}
+
 detect_version()
 {
     test -x "$VERSION_RESOLVER" \
@@ -187,9 +197,10 @@ if test -z "$jobs"; then
     jobs=$(detect_processor_count)
 fi
 validate_positive_integer jobs "$jobs"
-if test -n "$platforms"; then
-    validate_platforms "$platforms"
+if test -z "$platforms"; then
+    platforms=$(detect_native_platform)
 fi
+validate_platforms "$platforms"
 
 container_engine=${CONTAINER_ENGINE:-podman}
 require_command "$container_engine"
@@ -211,12 +222,6 @@ case $platforms in
             --manifest "$image_name" \
             "$PROJECT_ROOT"
         echo "Built local multi-platform manifest: $image_name"
-        ;;
-    '')
-        "$container_engine" build "$@" \
-            --tag "$image_name" \
-            "$PROJECT_ROOT"
-        echo "Built local image: $image_name"
         ;;
     *)
         "$container_engine" build "$@" \

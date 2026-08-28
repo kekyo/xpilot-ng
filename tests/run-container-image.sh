@@ -114,6 +114,15 @@ const bind = (socket, port) => new Promise((resolve, reject) => {
 })().catch(() => process.exit(1));'
 }
 
+native_container_architecture()
+{
+    case $(uname -m) in
+        x86_64|amd64) printf '%s\n' amd64 ;;
+        aarch64|arm64) printf '%s\n' arm64 ;;
+        *) fail "unsupported native container architecture: $(uname -m)" ;;
+    esac
+}
+
 run_contact_probe()
 {
     target=$1
@@ -235,6 +244,10 @@ assert_equal 10001:10001 \
     "$("$container_engine" image inspect \
         --format '{{.Config.User}}' "$image_ref")" \
     "the image did not select the non-root runtime user"
+assert_equal "$(native_container_architecture)" \
+    "$("$container_engine" image inspect \
+        --format '{{.Architecture}}' "$image_ref")" \
+    "the image architecture did not match the native build platform"
 "$container_engine" run --rm "$image_ref" -version \
     >"$test_root/version.log" 2>&1 || true
 grep -Fx 'XPilot Infinity 9.8.7' "$test_root/version.log" \
