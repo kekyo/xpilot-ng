@@ -5534,7 +5534,7 @@ fi
 
 W32_LIBS=
 if test x$windows_target = xyes; then
-	W32_LIBS="-lmingw32 -lws2_32"
+	W32_LIBS="-lmingw32 -lws2_32 -ladvapi32"
 
 printf "%s\n" "#define _WINDOWS 1" >>confdefs.h
 

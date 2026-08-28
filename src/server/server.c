@@ -30,6 +30,10 @@
 
 #include "xpserver.h"
 
+#ifdef _WINDOWS
+# include "windows_service.h"
+#endif
+
 /*
  * Global variables
  */
@@ -68,7 +72,7 @@ static void Handle_signal(int sig_no)
 
 #endif /* !defined(_WINDOWS) */
 
-int main(int argc, char **argv)
+static int Server_run(int argc, char **argv)
 {
     int timer_tick_rate;
     char *addr;
@@ -206,6 +210,10 @@ int main(int argc, char **argv)
     xpprintf("%s Server runs at %d frames per second\n",
 	     showtime(), options.framesPerSecond);
 
+#ifdef _WINDOWS
+    Windows_service_report_running();
+#endif
+
     teamcup_init();
 
 #ifdef SELECT_SCHED
@@ -230,6 +238,15 @@ int main(int argc, char **argv)
 
     /* NOT REACHED */
     abort();
+}
+
+int main(int argc, char **argv)
+{
+#ifdef _WINDOWS
+    if (Windows_service_requested(argc, argv))
+	return Windows_service_dispatch(argc, argv, Server_run);
+#endif
+    return Server_run(argc, argv);
 }
 
 void Main_loop(void)
@@ -386,6 +403,10 @@ void End_game(void)
     Log_game("END");
 
     sock_cleanup();
+
+#ifdef _WINDOWS
+    Windows_service_prepare_clean_exit();
+#endif
 
 #if !defined(_WINDOWS)
     if (termsig != 0) {

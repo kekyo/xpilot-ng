@@ -121,7 +121,7 @@ wineserver_program=${WINESERVER:-wineserver}
 if test "$inside_xvfb" = false; then
     for required_command in "$make_program" "$wine_program" \
         "$wineboot_program" "$wineserver_program" xvfb-run xdotool node file \
-        timeout; do
+        timeout winepath; do
         command -v "$required_command" >/dev/null 2>&1 \
             || fail "required command was not found: $required_command"
     done
@@ -172,6 +172,8 @@ meta_report_fixture_pid=
 server_log=
 client_log=
 window_id=
+windows_service_registered=false
+windows_service_name=XPilotInfinityServer
 
 dump_logs()
 {
@@ -194,6 +196,12 @@ stop_wine_server()
 
 cleanup()
 {
+    if test "$windows_service_registered" = true; then
+	timeout 15s "$wine_program" sc.exe stop "$windows_service_name" \
+	    >>"$runtime_dir/windows-service-cleanup.log" 2>&1 || true
+	timeout 15s "$wine_program" sc.exe delete "$windows_service_name" \
+	    >>"$runtime_dir/windows-service-cleanup.log" 2>&1 || true
+    fi
     cleanup_deadline=$(($(date +%s) + 10))
     for process_id in "$client_pid" "$server_pid" \
         "$meta_report_fixture_pid"; do
@@ -419,6 +427,72 @@ run_executable_relative_resources()
     server_pid=$!
     wait_until "executable-relative packaged resources" 30 server_ready
     stop_server
+}
+
+windows_service_stopped()
+{
+    timeout 15s "$wine_program" sc.exe query "$windows_service_name" \
+	>"$runtime_dir/windows-service-query.log" 2>&1 \
+	&& grep -Eq 'STATE[[:space:]]*:[[:space:]]*1[[:space:]]+STOPPED' \
+	    "$runtime_dir/windows-service-query.log"
+}
+
+windows_service_ready()
+{
+    timeout 15s "$wine_program" sc.exe query "$windows_service_name" \
+	>"$runtime_dir/windows-service-running.log" 2>&1 \
+	&& grep -Eq 'STATE[[:space:]]*:[[:space:]]*4[[:space:]]+RUNNING' \
+	    "$runtime_dir/windows-service-running.log"
+}
+
+run_windows_service_case()
+{
+    contact_port=$(reserve_contact_port)
+    server_log="$runtime_dir/server-windows-service.log"
+    service_executable=$(winepath -w \
+	"$runtime_package/xpilot-infinity-server.exe")
+    service_log=$(winepath -w "$server_log")
+    service_command="\"$service_executable\" --windows-service "\
+"--windows-service-log \"$service_log\" -map ndh.xp2 "\
+"-port $contact_port -noQuit +reportMeta -transport udp"
+
+    timeout 30s "$wine_program" sc.exe create "$windows_service_name" \
+	"binPath=" "$service_command" "start=" demand \
+	"DisplayName=" "XPilot Infinity Wine Test" \
+	>"$runtime_dir/windows-service-create.log" 2>&1 \
+	|| fail "could not register the Windows service test instance"
+    windows_service_registered=true
+
+    timeout 15s "$wine_program" reg.exe query \
+	"HKLM\\System\\CurrentControlSet\\Services\\$windows_service_name" \
+	>"$runtime_dir/windows-service-config.log" 2>&1 \
+	|| fail "could not query the Windows service configuration"
+    grep -Eq 'Start[[:space:]]+REG_DWORD[[:space:]]+0x3' \
+	"$runtime_dir/windows-service-config.log" \
+	|| fail "new Windows service was not configured for manual start"
+    windows_service_stopped \
+	|| fail "new Windows service started before it was requested"
+
+    timeout 30s "$wine_program" sc.exe start "$windows_service_name" \
+	>"$runtime_dir/windows-service-start.log" 2>&1 \
+	|| fail "Windows SCM could not start the server"
+    wait_until "Windows service server readiness" 30 windows_service_ready
+
+    timeout 30s "$wine_program" \
+	"$build_dir/tests/test-contact-target-probe.exe" \
+	--interactive \
+	"udp://127.0.0.1:$contact_port" \
+	>"$runtime_dir/windows-service-contact.log" 2>&1 \
+	|| fail "Windows service server did not answer contact requests"
+
+    timeout 15s "$wine_program" sc.exe stop "$windows_service_name" \
+	>"$runtime_dir/windows-service-stop.log" 2>&1 \
+	|| fail "Windows SCM could not request server shutdown"
+    wait_until "Windows service server shutdown" 30 windows_service_stopped
+    timeout 15s "$wine_program" sc.exe delete "$windows_service_name" \
+	>"$runtime_dir/windows-service-delete.log" 2>&1 \
+	|| fail "could not delete the Windows service test instance"
+    windows_service_registered=false
 }
 
 run_contact_target_failover()
@@ -774,6 +848,7 @@ for unit_test in test-framed-stream test-websocket-transport \
 done
 
 run_executable_relative_resources
+run_windows_service_case
 run_contact_target_failover
 run_connection_failure_notification
 run_meta_report_case

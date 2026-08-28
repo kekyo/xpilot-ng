@@ -43,11 +43,49 @@ static struct io_handler record_handlers[NUM_INPUT_HANDLERS];
 static fd_set input_mask;
 static socket_handle_t max_fd = SOCK_FD_INVALID;
 static bool input_inited = false;
+#ifdef _WINDOWS
+static volatile LONG sched_running;
+static volatile LONG sched_stop_requested;
+#else
 static volatile bool sched_running = false;
+#endif
 
 void stop_sched(void)
 {
+#ifdef _WINDOWS
+    InterlockedExchange(&sched_stop_requested, 1);
+    InterlockedExchange(&sched_running, 0);
+#else
     sched_running = false;
+#endif
+}
+
+static bool sched_start(void)
+{
+#ifdef _WINDOWS
+    if (InterlockedCompareExchange(&sched_stop_requested, 0, 0) != 0)
+	return false;
+    if (InterlockedCompareExchange(&sched_running, 1, 0) != 0)
+	dumpcore("sched already running");
+    if (InterlockedCompareExchange(&sched_stop_requested, 0, 0) != 0) {
+	InterlockedExchange(&sched_running, 0);
+	return false;
+    }
+#else
+    if (sched_running)
+	dumpcore("sched already running");
+    sched_running = true;
+#endif
+    return true;
+}
+
+static bool sched_is_running(void)
+{
+#ifdef _WINDOWS
+    return InterlockedCompareExchange(&sched_running, 0, 0) != 0;
+#else
+    return sched_running;
+#endif
 }
 
 static void io_dummy(socket_handle_t fd, void *arg)
@@ -278,16 +316,14 @@ void sched(void)
 
     playback = rplayback;
 
-    if (sched_running)
-	dumpcore("sched already running");
-    else
-	sched_running = true;
+    if (!sched_start())
+	return;
 
     gettimeofday(&tv, NULL);
     t_now = timeval_to_seconds(&tv);
     t_nextframe = t_now + frametime;
 
-    while (sched_running) {
+    while (sched_is_running()) {
 	fd_set readmask = input_mask;
 
 	gettimeofday(&tv, NULL);
@@ -680,12 +716,10 @@ void sched(void)
 
     playback = rplayback;
 
-    if (sched_running)
-	dumpcore("sched already running");
-    else
-	sched_running = true;
+    if (!sched_start())
+	return;
 
-    while (sched_running) {
+    while (sched_is_running()) {
 
 	tv.tv_sec = 0;
 	tv.tv_usec = 0;
