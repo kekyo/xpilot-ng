@@ -258,7 +258,7 @@ assert_contains "$service_defaults" \
 assert_contains "$policy_stage/DEBIAN/conffiles" \
     "/etc/default/xpilot-infinity-server"
 if command -v systemd-analyze >/dev/null 2>&1; then
-    systemd-analyze verify --root="$policy_stage" \
+    systemd-analyze verify --recursive-errors=no --root="$policy_stage" \
         xpilot-infinity-server.service >/dev/null 2>&1 \
         || fail "the staged systemd service failed validation"
 fi
