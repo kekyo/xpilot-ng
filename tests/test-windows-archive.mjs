@@ -9,6 +9,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { inflateRawSync } from 'node:zlib';
 
 const readUInt16 = (buffer, offset) => buffer.readUInt16LE(offset);
 const readUInt32 = (buffer, offset) => buffer.readUInt32LE(offset);
@@ -39,6 +40,7 @@ const readZipEntries = async (archivePath) => {
 
     const compressionMethod = readUInt16(buffer, offset + 10);
     const compressedSize = readUInt32(buffer, offset + 20);
+    const uncompressedSize = readUInt32(buffer, offset + 24);
     const fileNameLength = readUInt16(buffer, offset + 28);
     const extraLength = readUInt16(buffer, offset + 30);
     const commentLength = readUInt16(buffer, offset + 32);
@@ -48,16 +50,27 @@ const readZipEntries = async (archivePath) => {
       .subarray(fileNameOffset, fileNameOffset + fileNameLength)
       .toString('utf8');
 
-    assert.equal(compressionMethod, 0);
+    assert.ok(
+      compressionMethod === 0 || compressionMethod === 8,
+      `unsupported ZIP compression method: ${compressionMethod}`
+    );
     assert.equal(readUInt32(buffer, localHeaderOffset), 0x04034b50);
 
     const localFileNameLength = readUInt16(buffer, localHeaderOffset + 26);
     const localExtraLength = readUInt16(buffer, localHeaderOffset + 28);
     const contentOffset =
       localHeaderOffset + 30 + localFileNameLength + localExtraLength;
-    const content = buffer.subarray(contentOffset, contentOffset + compressedSize);
+    const compressedContent = buffer.subarray(
+      contentOffset,
+      contentOffset + compressedSize
+    );
+    const content =
+      compressionMethod === 8
+        ? inflateRawSync(compressedContent)
+        : compressedContent;
+    assert.equal(content.length, uncompressedSize);
 
-    entries.set(name, content);
+    entries.set(name, { compressionMethod, content });
     offset += 46 + fileNameLength + extraLength + commentLength;
   }
 
@@ -84,7 +97,11 @@ try {
   await mkdir(join(packageDirectory, 'lib', 'maps'), { recursive: true });
   await writeFile(join(packageDirectory, 'COPYING'), 'license text');
   await writeFile(join(packageDirectory, 'xpilot-infinity-server.exe'), 'server');
-  await writeFile(join(packageDirectory, 'xpilot-infinity-sdl.exe'), 'client');
+  const clientContent = 'compressible client payload\n'.repeat(4096);
+  await writeFile(
+    join(packageDirectory, 'xpilot-infinity-sdl.exe'),
+    clientContent
+  );
   await writeFile(join(packageDirectory, 'lib.txt'), 'top-level data');
   await writeFile(join(packageDirectory, 'lib', 'defaults.txt'), 'defaults');
   await writeFile(join(packageDirectory, 'lib', 'maps', 'ndh.xp2'), 'map');
@@ -113,11 +130,21 @@ try {
     'xpilot-infinity-sdl.exe',
     'xpilot-infinity-server.exe',
   ]);
-  assert.equal(entries.get('COPYING').toString('utf8'), 'license text');
-  assert.equal(entries.get('lib/maps/ndh.xp2').toString('utf8'), 'map');
-  assert.equal(entries.get('xpilot-infinity-sdl.exe').toString('utf8'), 'client');
+  assert.equal(entries.get('COPYING').content.toString('utf8'), 'license text');
+  assert.equal(entries.get('lib/maps/ndh.xp2').content.toString('utf8'), 'map');
+  assert.equal(
+    entries.get('xpilot-infinity-sdl.exe').content.toString('utf8'),
+    clientContent
+  );
+  assert.equal(
+    entries.get('xpilot-infinity-sdl.exe').compressionMethod,
+    8,
+    'compressible package files must use Deflate compression'
+  );
 
-  process.stdout.write('Deterministic Windows archive generation passed\n');
+  process.stdout.write(
+    'Deterministic compressed Windows archive generation passed\n'
+  );
 } finally {
   await rm(temporaryDirectory, { recursive: true, force: true });
 }

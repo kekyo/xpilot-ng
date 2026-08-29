@@ -9,7 +9,7 @@ Studio or on a Windows host is not supported.
 Install the following host tools before building:
 
 - the `i686-w64-mingw32` and `x86_64-w64-mingw32` GCC toolchains;
-- CMake, Make, pkg-config, Git, and Node.js;
+- CMake, Make, pkg-config, Git, Node.js, and Info-ZIP `zip`;
 - NSIS 3 (`makensis`) for the installer;
 - Wine with both 32-bit and 64-bit support;
 - Xvfb and xdotool for the SDL integration tests;
@@ -101,11 +101,13 @@ artifacts/windows/xpilot-infinity-<version>-windows-x86_64-setup.exe
 
 The portable package trees contain `xpilot-infinity-server.exe`,
 `xpilot-infinity-sdl.exe`, `OpenAL32.dll`, `libalut.dll`, game data including
-sound samples, and the XPilot Infinity, OpenAL Soft, and freealut licenses. ZIP
-entries are sorted and use a fixed timestamp, so unchanged package trees
-produce byte-identical archives. The NSIS installers add an icon-bearing Start
-menu shortcut and an optional manual-start `XPilotInfinityServer` service; the
-ZIP files remain portable and do not require installation. The Wine suite
+sound samples, and the XPilot Infinity, OpenAL Soft, and freealut licenses.
+Info-ZIP `zip` uses its maximum compression setting. Entries are sorted, use a
+fixed timestamp and permissions, and omit host-specific extra fields, so
+unchanged package trees produce byte-identical archives. The NSIS installers
+add an icon-bearing Start menu shortcut and an optional manual-start
+`XPilotInfinityServer` service; the ZIP files remain portable and do not
+require installation. The Wine suite
 installs and uninstalls both component selections, launches the shortcut
 without arguments, starts and contacts the registered service, verifies the
 PE architecture, runs the portable networking and SDL dependency tests,

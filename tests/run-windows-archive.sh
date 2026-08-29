@@ -14,6 +14,9 @@ test -f "$XPILOT_WINDOWS_ARCHIVER" \
     || fail "Windows archiver is unavailable: $XPILOT_WINDOWS_ARCHIVER"
 command -v node >/dev/null 2>&1 \
     || fail "Node.js is required to test Windows archive generation"
+zip_program=${ZIP:-zip}
+command -v "$zip_program" >/dev/null 2>&1 \
+    || fail "zip is required to test Windows archive generation: $zip_program"
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 exec node "$script_dir/test-windows-archive.mjs" "$XPILOT_WINDOWS_ARCHIVER"

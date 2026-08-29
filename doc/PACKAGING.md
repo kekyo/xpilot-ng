@@ -6,9 +6,9 @@ dependencies are resolved against the selected Debian or Ubuntu release.
 
 ## Host prerequisites
 
-Install Podman, `qemu-user-static`, `dpkg-dev`, binutils, Node.js, and
-[`screw-up`](https://github.com/kekyo/screw-up).  Initialize the pinned source
-dependencies before packaging:
+Install Podman, `qemu-user-static`, `dpkg-dev`, binutils, Node.js, Info-ZIP
+`zip`, and [`screw-up`](https://github.com/kekyo/screw-up).  Initialize the
+pinned source dependencies before packaging:
 
 ```sh
 git submodule update --init --recursive
@@ -144,9 +144,10 @@ build and test only the Windows packages, run:
 
 The ZIP files contain the SDL client, dedicated server, game data including
 sound samples, `OpenAL32.dll`, `libalut.dll`, and the corresponding
-project licenses from the `windows-package` directory.  Entries are sorted
-and assigned a fixed timestamp so the result is reproducible for identical
-input.  Artifacts are written as:
+project licenses from the `windows-package` directory. Info-ZIP `zip` uses its
+maximum compression setting. Entries are sorted, assigned a fixed timestamp
+and permissions, and stripped of host-specific extra fields so the result is
+reproducible for identical input. Artifacts are written as:
 
 ```text
 artifacts/windows/xpilot-infinity-<version>-windows-x86.zip
