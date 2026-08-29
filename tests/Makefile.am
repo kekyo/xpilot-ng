@@ -95,7 +95,8 @@ TESTS = test-framed-stream test-websocket-transport \
 	test-text-ttf-atlas test-text-renderer \
 	test-text-cache-adapter \
 	run-renderer-gl-core.sh run-sdl-renderer-core-context.sh \
-	run-build-wrapper.sh run-build-package.sh run-package-windows.sh \
+	run-build-metadata.sh run-build-wrapper.sh \
+	run-build-package.sh run-package-windows.sh \
 	run-windows-archive.sh run-macos-info-plist.sh \
 	run-source-encoding.sh \
 	run-c23-server-build.sh run-vendored-zlib.sh \
@@ -609,8 +610,8 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_SDL_BINARY; \
 	XPILOT_BUILD_WRAPPER='$(abs_top_srcdir)/build.sh'; \
 	export XPILOT_BUILD_WRAPPER; \
-	XPILOT_VERSION_RESOLVER='$(abs_top_srcdir)/config/resolve-version.sh'; \
-	export XPILOT_VERSION_RESOLVER; \
+	XPILOT_BUILD_METADATA_RESOLVER='$(abs_top_srcdir)/config/resolve-build-metadata.sh'; \
+	export XPILOT_BUILD_METADATA_RESOLVER; \
 	XPILOT_BUILD_PACKAGE='$(abs_top_srcdir)/build_package.sh'; \
 	export XPILOT_BUILD_PACKAGE; \
 	XPILOT_CONTAINER_BUILDER='$(abs_top_srcdir)/build_container_image.sh'; \
@@ -641,7 +642,8 @@ AM_TESTS_ENVIRONMENT = \
 	XPILOT_VENDOR_ZLIB_SOURCE='$(abs_top_srcdir)/vendor/zlib'; \
 	export XPILOT_VENDOR_ZLIB_SOURCE;
 
-EXTRA_DIST = run-build-wrapper.sh run-e2e.sh run-full-suite.sh \
+EXTRA_DIST = run-build-metadata.sh run-build-wrapper.sh \
+	run-e2e.sh run-full-suite.sh \
 	tcp-reconnect-proxy.mjs session-reconnect-proxy.mjs \
 	run-gl-core-resources.sh \
 	run-renderer-gl-core.sh run-sdl-core-boundary.sh \

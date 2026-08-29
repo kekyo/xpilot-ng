@@ -20,7 +20,7 @@ config.h
 config.status
 src/common/version.h
 src/common/version.h.template
-src/common/version.txt
+src/common/build-metadata.txt
 stamp-h1
 
 vendor/*

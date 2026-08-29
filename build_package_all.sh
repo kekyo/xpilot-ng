@@ -5,6 +5,7 @@ set -eu
 project_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 package_script=${BUILD_PACKAGE_SCRIPT:-$project_root/build_package.sh}
 windows_package_script=${BUILD_WINDOWS_PACKAGE_SCRIPT:-$project_root/build.sh}
+metadata_resolver=${XPILOT_BUILD_METADATA_RESOLVER:-$project_root/config/resolve-build-metadata.sh}
 
 print_usage()
 {
@@ -85,17 +86,30 @@ package_only=false
 
 inspect_options "$@"
 
+test -x "$metadata_resolver" \
+    || fail "build metadata resolver is unavailable: $metadata_resolver"
+resolved_metadata=$(XPILOT_VERSION=$windows_package_version \
+    XPILOT_COMMIT_ID=${XPILOT_COMMIT_ID:-} "$metadata_resolver")
+resolved_version=$(printf '%s\n' "$resolved_metadata" | sed -n '1p')
+resolved_commit=$(printf '%s\n' "$resolved_metadata" | sed -n '2p')
+
 if test "$package_only" = true; then
-    exec "$package_script" --target deb "$@"
+    printf '%s\n' "$resolved_version"
+    exit 0
 fi
+
+if test -z "$windows_package_version"; then
+    set -- "$@" --version "$resolved_version"
+fi
+windows_package_version=$resolved_version
+XPILOT_COMMIT_ID=$resolved_commit
+export XPILOT_COMMIT_ID
 
 printf '%s\n' "===== build: Debian and Ubuntu packages ====="
 "$package_script" --target deb "$@"
 
 set -- "$windows_package_script" --target windows --arch all
-if test -n "$windows_package_version"; then
-    set -- "$@" --package-version "$windows_package_version"
-fi
+set -- "$@" --package-version "$windows_package_version"
 if test -n "$windows_jobs"; then
     set -- "$@" --jobs "$windows_jobs"
 fi

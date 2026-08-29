@@ -4,6 +4,7 @@ FROM ${DEBIAN_IMAGE} AS builder
 
 ARG XPILOT_BUILD_JOBS=2
 ARG XPILOT_VERSION=development
+ARG XPILOT_COMMIT_ID
 
 RUN set -eux; \
     apt-get update; \
@@ -19,6 +20,7 @@ COPY . .
 
 RUN set -eux; \
     test -x ./configure; \
+    test -n "$XPILOT_COMMIT_ID"; \
     mkdir -p /build /out/usr/games \
         /out/usr/share/games/xpilot-infinity \
         /out/usr/share/doc/xpilot-infinity-server; \
@@ -33,9 +35,11 @@ RUN set -eux; \
         --disable-xp-mapedit \
         --disable-sound; \
     make -C src/common -j"$XPILOT_BUILD_JOBS" \
-        "XPILOT_VERSION=$XPILOT_VERSION"; \
+        "XPILOT_VERSION=$XPILOT_VERSION" \
+        "XPILOT_COMMIT_ID=$XPILOT_COMMIT_ID"; \
     make -C src/server -j"$XPILOT_BUILD_JOBS" \
-        "XPILOT_VERSION=$XPILOT_VERSION"; \
+        "XPILOT_VERSION=$XPILOT_VERSION" \
+        "XPILOT_COMMIT_ID=$XPILOT_COMMIT_ID"; \
     install -m 0755 src/server/xpilot-infinity-server \
         /out/usr/games/xpilot-infinity-server; \
     strip --strip-unneeded --remove-section=.comment --remove-section=.note \

@@ -15,7 +15,7 @@ EXTRA_DIST = Dockerfile .dockerignore build.sh build_container_image.sh \
 	scripts/build_linux_dist_container.sh config/package-windows.sh \
 	config/package-windows.mjs config/build-windows-installer.sh \
 	config/xpilot-infinity.nsi config/xpilot-infinity-server.conf \
-	config/resolve-version.sh images/icon-1254.png images/icon.ico \
+	config/resolve-build-metadata.sh images/icon-1254.png images/icon.ico \
 	debian/changelog.in debian/copyright \
 	debian/xpilot-infinity-server.default \
 	debian/xpilot-infinity-server.service \
@@ -39,7 +39,7 @@ windows-installer: windows-package
 	$(SHELL) $(top_srcdir)/config/build-windows-installer.sh \
 		--package-dir '@MINGW_PACKAGE_DIR@' \
 		--output '$(abs_top_builddir)/xpilot-infinity-setup.exe' \
-		--version "`sed -n '1p' '$(abs_top_builddir)/src/common/version.txt'`" \
+		--version "`sed -n '1p' '$(abs_top_builddir)/src/common/build-metadata.txt'`" \
 		--arch '@MINGW_ARCH@' \
 		--icon '$(abs_top_srcdir)/images/icon.ico'
 

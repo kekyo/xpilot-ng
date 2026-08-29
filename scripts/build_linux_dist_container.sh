@@ -248,7 +248,7 @@ fi
 
 for variable_name in \
     XPILOT_WORK_DIR XPILOT_META_DIR \
-    XPILOT_VERSION \
+    XPILOT_VERSION XPILOT_COMMIT_ID \
     XPILOT_PACKAGE_VERSION XPILOT_PACKAGE_NAME XPILOT_PACKAGE_DESCRIPTION \
     XPILOT_PACKAGE_MAINTAINER XPILOT_BUILD_TYPE XPILOT_MAKE_JOBS
 do
@@ -308,8 +308,10 @@ mkdir -p "$build_dir" "$meta_dir" "$stage_dir"
         --with-sdl3=vendored \
         "--with-sdl3-prefix=$dependency_prefix"
     make -j"$XPILOT_MAKE_JOBS" \
-        "XPILOT_VERSION=$XPILOT_VERSION"
+        "XPILOT_VERSION=$XPILOT_VERSION" \
+        "XPILOT_COMMIT_ID=$XPILOT_COMMIT_ID"
     make "XPILOT_VERSION=$XPILOT_VERSION" \
+        "XPILOT_COMMIT_ID=$XPILOT_COMMIT_ID" \
         install DESTDIR="$stage_dir"
 )
 

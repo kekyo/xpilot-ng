@@ -10,7 +10,7 @@ PACKAGE_DESCRIPTION="Multi-player tactical game with SDL and X11 clients."
 DEFAULT_MAINTAINER="Kouji Matsui <k@kekyo.net>"
 DEFAULT_DEBIAN_REVISION=1
 DEFAULT_PARALLEL_JOB_CAP=14
-VERSION_RESOLVER=${XPILOT_VERSION_RESOLVER:-"$PROJECT_ROOT/config/resolve-version.sh"}
+METADATA_RESOLVER=${XPILOT_BUILD_METADATA_RESOLVER:-"$PROJECT_ROOT/config/resolve-build-metadata.sh"}
 
 LINUX_MATRIX=$(cat <<'EOF'
 debian bookworm x86_64 linux/amd64
@@ -151,11 +151,13 @@ min_int()
     fi
 }
 
-detect_version()
+resolve_build_metadata()
 {
-    test -x "$VERSION_RESOLVER" \
-        || fail "version resolver is unavailable: $VERSION_RESOLVER"
-    XPILOT_VERSION= "$VERSION_RESOLVER"
+    test -x "$METADATA_RESOLVER" \
+        || fail "build metadata resolver is unavailable: $METADATA_RESOLVER"
+    XPILOT_VERSION=${UPSTREAM_VERSION:-} \
+        XPILOT_COMMIT_ID=${XPILOT_COMMIT_ID:-} \
+        "$METADATA_RESOLVER"
 }
 
 validate_version()
@@ -398,6 +400,7 @@ build_deb_package()
         -e XPILOT_WORK_DIR="$container_root/work" \
         -e XPILOT_META_DIR="$container_root/meta" \
         -e XPILOT_VERSION="$UPSTREAM_VERSION" \
+        -e XPILOT_COMMIT_ID="$BUILD_COMMIT_ID" \
         -e XPILOT_PACKAGE_VERSION="$DEBIAN_VERSION" \
         -e XPILOT_PACKAGE_NAME="$PACKAGE_NAME" \
         -e XPILOT_PACKAGE_DESCRIPTION="$PACKAGE_DESCRIPTION" \
@@ -628,8 +631,9 @@ main()
         esac
     done
 
-    test -n "$UPSTREAM_VERSION" \
-        || UPSTREAM_VERSION=$(detect_version)
+    resolved_metadata=$(resolve_build_metadata)
+    UPSTREAM_VERSION=$(printf '%s\n' "$resolved_metadata" | sed -n '1p')
+    BUILD_COMMIT_ID=$(printf '%s\n' "$resolved_metadata" | sed -n '2p')
     validate_version "$UPSTREAM_VERSION"
     DEBIAN_VERSION=$(debian_package_version \
         "$UPSTREAM_VERSION" "$DEBIAN_REVISION")

@@ -3,7 +3,7 @@
 set -eu
 
 PROJECT_ROOT=${BUILD_CONTAINER_PROJECT_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}
-VERSION_RESOLVER=${XPILOT_VERSION_RESOLVER:-"$PROJECT_ROOT/config/resolve-version.sh"}
+METADATA_RESOLVER=${XPILOT_BUILD_METADATA_RESOLVER:-"$PROJECT_ROOT/config/resolve-build-metadata.sh"}
 DEFAULT_IMAGE_NAME=localhost/xpilot-infinity-server
 DEFAULT_PARALLEL_JOB_CAP=14
 DEFAULT_SOURCE_URL=https://github.com/kekyo/xpilot-infinity
@@ -18,7 +18,7 @@ never pushes the resulting image.
 
 Options:
   --version VERSION   Product version override (default: screw-up-derived)
-  --revision REVISION Source revision label override (default: current Git HEAD)
+  --revision REVISION Full source commit override (default: screw-up-derived)
   --tag IMAGE         Local image or manifest name
                       (default: localhost/xpilot-infinity-server:<version>)
   --platform LIST     Comma-separated target platforms, for example
@@ -107,29 +107,13 @@ detect_native_platform()
     esac
 }
 
-detect_version()
+resolve_build_metadata()
 {
-    test -x "$VERSION_RESOLVER" \
-        || fail "version resolver is unavailable: $VERSION_RESOLVER"
-    XPILOT_VERSION= "$VERSION_RESOLVER"
-}
-
-detect_revision()
-{
-    if command -v git >/dev/null 2>&1 \
-        && git -C "$PROJECT_ROOT" rev-parse --verify HEAD >/dev/null 2>&1
-    then
-        resolved_revision=$(git -C "$PROJECT_ROOT" rev-parse HEAD)
-        if ! git -C "$PROJECT_ROOT" diff --quiet --ignore-submodules -- \
-            || test -n "$(git -C "$PROJECT_ROOT" ls-files \
-                --others --exclude-standard | sed -n '1p')"
-        then
-            resolved_revision="$resolved_revision-dirty"
-        fi
-        printf '%s\n' "$resolved_revision"
-    else
-        printf '%s\n' unknown
-    fi
+    test -x "$METADATA_RESOLVER" \
+        || fail "build metadata resolver is unavailable: $METADATA_RESOLVER"
+    XPILOT_VERSION=$version \
+        XPILOT_COMMIT_ID=${revision:-${XPILOT_COMMIT_ID:-}} \
+        "$METADATA_RESOLVER"
 }
 
 version=
@@ -174,9 +158,9 @@ while test $# -gt 0; do
     esac
 done
 
-if test -z "$version"; then
-    version=$(detect_version)
-fi
+resolved_metadata=$(resolve_build_metadata)
+version=$(printf '%s\n' "$resolved_metadata" | sed -n '1p')
+build_commit_id=$(printf '%s\n' "$resolved_metadata" | sed -n '2p')
 validate_version "$version"
 if $print_version; then
     printf '%s\n' "$version"
@@ -186,9 +170,7 @@ fi
 test -f "$PROJECT_ROOT/Dockerfile" \
     || fail "Dockerfile is unavailable: $PROJECT_ROOT/Dockerfile"
 test -n "$source_url" || fail "source URL must not be empty"
-if test -z "$revision"; then
-    revision=$(detect_revision)
-fi
+test -n "$revision" || revision=$build_commit_id
 test -n "$revision" || fail "revision must not be empty"
 if test -z "$image_name"; then
     image_name="$DEFAULT_IMAGE_NAME:$version"
@@ -208,6 +190,7 @@ require_command "$container_engine"
 set -- \
     --file "$PROJECT_ROOT/Dockerfile" \
     --build-arg "XPILOT_BUILD_JOBS=$jobs" \
+    --build-arg "XPILOT_COMMIT_ID=$build_commit_id" \
     --build-arg "XPILOT_REVISION=$revision" \
     --build-arg "XPILOT_SOURCE=$source_url" \
     --build-arg "XPILOT_VERSION=$version"

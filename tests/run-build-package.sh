@@ -48,6 +48,7 @@ package_script="$package_script_dir/$(basename -- "$XPILOT_BUILD_PACKAGE")"
 package_all_script="$package_script_dir/build_package_all.sh"
 prereq_script="$package_script_dir/prereq.sh"
 linux_dist_script="$package_script_dir/scripts/build_linux_dist_container.sh"
+test_commit=0123456701234567012345670123456701234567
 
 test -x "$package_all_script" \
     || fail "complete package build script is unavailable: $package_all_script"
@@ -133,11 +134,11 @@ trap 'exit 143' TERM
 version_resolver_fixture="$test_root/version-resolver"
 cat > "$version_resolver_fixture" <<'EOF'
 #!/bin/sh
-printf '%s\n' 7.8.9
+printf '%s\n' 7.8.9 0123456701234567012345670123456701234567
 EOF
 chmod +x "$version_resolver_fixture"
 assert_equal 7.8.9 \
-    "$(XPILOT_VERSION_RESOLVER=$version_resolver_fixture \
+    "$(XPILOT_BUILD_METADATA_RESOLVER=$version_resolver_fixture \
         "$package_script" --print-version)" \
     "the package version was not resolved at build time"
 
@@ -450,6 +451,7 @@ DEB_ARTIFACT_ROOT="$ARTIFACT_ROOT/deb"
 RUN_ID=test-run
 TMP_ROOT="$ARTIFACT_ROOT/.tmp/$RUN_ID"
 UPSTREAM_VERSION=4.7.99
+BUILD_COMMIT_ID=$test_commit
 DEBIAN_REVISION=1
 DEBIAN_VERSION=$(debian_package_version \
     "$UPSTREAM_VERSION" "$DEBIAN_REVISION")
@@ -467,6 +469,7 @@ assert_contains "$fixture_log" \
     "exists=localhost/xpilot-infinity-pack-deb-debian-bookworm-x86_64:latest"
 assert_contains "$fixture_log" "platform=linux/amd64"
 assert_contains "$fixture_log" "environment=XPILOT_VERSION=4.7.99"
+assert_contains "$fixture_log" "environment=XPILOT_COMMIT_ID=$test_commit"
 assert_contains "$fixture_log" "environment=XPILOT_PACKAGE_VERSION=4.7.99-1"
 assert_contains "$fixture_log" \
     "environment=XPILOT_PACKAGE_MAINTAINER=Kouji Matsui <k@kekyo.net>"
@@ -483,17 +486,20 @@ cat > "$fixture_tools/build-package-stub" <<'EOF'
 #!/bin/sh
 set -eu
 printf '%s\n' "$@" > "$XPILOT_PACKAGE_ALL_ARGS"
+printf '%s\n' "$XPILOT_COMMIT_ID" > "$XPILOT_PACKAGE_ALL_ARGS.commit"
 EOF
 cat > "$fixture_tools/build-windows-stub" <<'EOF'
 #!/bin/sh
 set -eu
 printf '%s\n' "$@" > "$XPILOT_WINDOWS_PACKAGE_ARGS"
+printf '%s\n' "$XPILOT_COMMIT_ID" > "$XPILOT_WINDOWS_PACKAGE_ARGS.commit"
 EOF
 chmod +x "$fixture_tools/build-package-stub" \
     "$fixture_tools/build-windows-stub"
 
 XPILOT_PACKAGE_ALL_ARGS=$all_args \
 XPILOT_WINDOWS_PACKAGE_ARGS=$windows_args \
+XPILOT_COMMIT_ID=$test_commit \
 BUILD_PACKAGE_SCRIPT="$fixture_tools/build-package-stub" \
 BUILD_WINDOWS_PACKAGE_SCRIPT="$fixture_tools/build-windows-stub" \
     "$package_all_script" --version 4.7.99 --debian-revision 3 \
@@ -526,6 +532,10 @@ all
 --build-type
 Debug" "$(cat "$windows_args")" \
     "the complete package wrapper did not build every Windows package"
+assert_equal "$test_commit" "$(cat "$all_args.commit")" \
+    "the Debian package build did not receive the commit ID"
+assert_equal "$test_commit" "$(cat "$windows_args.commit")" \
+    "the Windows package build did not receive the commit ID"
 
 prereq_project="$test_root/prereq-project"
 prereq_log="$test_root/prereq.log"

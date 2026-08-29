@@ -117,13 +117,20 @@ case "$wine_prefix" in
 esac
 test -f "$installer" || fail "Windows installer is missing: $installer"
 
-version_file="$build_dir/src/common/version.txt"
-test -r "$version_file" \
-    || fail "build version is unavailable: $version_file"
-build_version=$(sed -n '1p' "$version_file")
+metadata_file="$build_dir/src/common/build-metadata.txt"
+test -r "$metadata_file" \
+    || fail "build metadata is unavailable: $metadata_file"
+build_version=$(sed -n '1p' "$metadata_file")
 case "$build_version" in
     ''|*[!0-9A-Za-z.+:~-]*) fail "invalid build version: $build_version" ;;
 esac
+build_commit=$(sed -n '2p' "$metadata_file")
+case "$build_commit" in
+    *[!0-9a-f]*) fail "invalid build commit ID: $build_commit" ;;
+esac
+test "${#build_commit}" -eq 40 \
+    || fail "build commit ID must contain 40 hexadecimal characters"
+build_title="XPilot Infinity [$build_version-$build_commit]"
 
 make_program=${MAKE:-make}
 wine_program=${WINE:-wine}
@@ -339,7 +346,7 @@ game_window_transport_visible()
     game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
 	|| true)
     test "$game_window_title" = \
-	"XPilot Infinity $build_version - 127.0.0.1 "\
+	"$build_title - 127.0.0.1 "\
 "[Gameplay: $expected_gameplay_transport]"
 }
 
@@ -498,7 +505,7 @@ run_start_menu_shortcut()
     wait_until "installed Start menu client window" 30 find_game_window
     installed_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
 	|| true)
-    test "$installed_window_title" = "XPilot Infinity $build_version" \
+    test "$installed_window_title" = "$build_title" \
 	|| fail "Start menu shortcut did not open the server browser"
     timeout 15s "$wine_program" taskkill.exe /F \
 	/IM xpilot-infinity-sdl.exe \

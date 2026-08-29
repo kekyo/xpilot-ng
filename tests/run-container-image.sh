@@ -234,9 +234,10 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+test_commit=0123456701234567012345670123456701234567
 CONTAINER_ENGINE=$container_engine "$container_builder" \
     --version 9.8.7 \
-    --revision container-test \
+    --revision "$test_commit" \
     --tag "$image_ref" \
     --jobs 2
 
@@ -250,7 +251,8 @@ assert_equal "$(native_container_architecture)" \
     "the image architecture did not match the native build platform"
 "$container_engine" run --rm "$image_ref" -version \
     >"$test_root/version.log" 2>&1 || true
-grep -Fx 'XPilot Infinity 9.8.7' "$test_root/version.log" \
+grep -Fx "XPilot Infinity [9.8.7-$test_commit]" \
+    "$test_root/version.log" \
     >/dev/null 2>&1 \
     || fail "the requested product version was not embedded in the image"
 

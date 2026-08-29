@@ -34,8 +34,14 @@
 #ifdef VERSION
 #  undef VERSION
 #endif
+/** Product version calculated from the Git tag history at build time. */
 #define VERSION			"__XPILOT_BUILD_VERSION__"
-#define TITLE			XPILOT_PRODUCT_NAME " " VERSION
+/** Full Git commit ID embedded at build time. */
+#define XPILOT_COMMIT_ID	"__XPILOT_BUILD_COMMIT__"
+/** Product version and source commit identifying one build. */
+#define XPILOT_BUILD_ID		VERSION "-" XPILOT_COMMIT_ID
+/** Product title displayed by the server and clients. */
+#define TITLE			XPILOT_PRODUCT_NAME " [" XPILOT_BUILD_ID "]"
 #define AUTHORS			"@XP_AUTHORS@"
 #define COPYRIGHT		"@XP_COPYRIGHT@"
 
