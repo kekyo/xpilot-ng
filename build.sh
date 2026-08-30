@@ -221,13 +221,8 @@ case "$target" in
         node_program=${NODE:-node}
         command -v "$node_program" >/dev/null 2>&1 \
             || fail "Node.js was not found: $node_program"
-        zip_program=${ZIP:-zip}
-        case "$zip_program" in
-            /*) ;;
-            */*) zip_program="$invocation_dir/$zip_program" ;;
-        esac
-        command -v "$zip_program" >/dev/null 2>&1 \
-            || fail "zip was not found: $zip_program"
+        command -v zip >/dev/null 2>&1 \
+            || fail "zip was not found"
 
         windows_installer_builder="$source_dir/config/build-windows-installer.sh"
         windows_icon="$source_dir/images/icon.ico"
@@ -372,7 +367,7 @@ build_windows_architecture()
     fi
 
     archive_path="$artifact_root/xpilot-infinity-$build_version-windows-$windows_architecture.zip"
-    ZIP="$zip_program" "$node_program" "$windows_archiver" \
+    "$node_program" "$windows_archiver" \
         --input "$architecture_root/package" \
         --output "$archive_path"
     test -f "$archive_path" \

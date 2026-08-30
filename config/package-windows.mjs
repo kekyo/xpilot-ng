@@ -54,11 +54,13 @@ const stageArchiveInputs = async (stagingDirectory, inputs) => {
 };
 
 const runZip = async ({ outputPath, stagingDirectory, inputNames }) => {
-  const configuredZipProgram = process.env.ZIP || 'zip';
-  const zipProgram =
-    configuredZipProgram.includes(sep) && !isAbsolute(configuredZipProgram)
-      ? resolve(configuredZipProgram)
-      : configuredZipProgram;
+  const zipProgram = 'zip';
+  const zipEnvironment = { ...process.env, TZ: 'UTC' };
+
+  // Info-ZIP interprets ZIP and ZIPOPT as implicit command-line options.
+  // Ignoring them prevents host settings from changing the output or metadata.
+  delete zipEnvironment.ZIP;
+  delete zipEnvironment.ZIPOPT;
 
   await new Promise((resolveProcess, rejectProcess) => {
     const standardError = [];
@@ -68,7 +70,7 @@ const runZip = async ({ outputPath, stagingDirectory, inputNames }) => {
       ['-9', '-X', '-D', '-q', outputPath, '-@'],
       {
         cwd: stagingDirectory,
-        env: { ...process.env, TZ: 'UTC' },
+        env: zipEnvironment,
         stdio: ['pipe', 'ignore', 'pipe'],
       }
     );
@@ -121,6 +123,15 @@ const createZipArchive = async (outputPath, inputs) => {
       outputPath,
       stagingDirectory,
     });
+    let outputMetadata;
+    try {
+      outputMetadata = await stat(outputPath);
+    } catch {
+      throw new Error(`ZIP output was not created: ${outputPath}`);
+    }
+    if (!outputMetadata.isFile()) {
+      throw new Error(`ZIP output is not a file: ${outputPath}`);
+    }
   } catch (error) {
     await rm(outputPath, { force: true });
     throw error;

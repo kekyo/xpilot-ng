@@ -88,6 +88,13 @@ assert.equal(typeof createWindowsArchive, 'function');
 const temporaryDirectory = await mkdtemp(
   join(tmpdir(), 'xpilot-windows-archive-')
 );
+const originalZipEnvironment = process.env.ZIP;
+const originalZipOptions = process.env.ZIPOPT;
+
+// These standard Info-ZIP variables must not redirect the output archive or
+// override deterministic compression settings.
+process.env.ZIP = 'zip';
+process.env.ZIPOPT = '-0';
 
 try {
   const packageDirectory = join(temporaryDirectory, 'package');
@@ -146,5 +153,15 @@ try {
     'Deterministic compressed Windows archive generation passed\n'
   );
 } finally {
+  if (originalZipEnvironment === undefined) {
+    delete process.env.ZIP;
+  } else {
+    process.env.ZIP = originalZipEnvironment;
+  }
+  if (originalZipOptions === undefined) {
+    delete process.env.ZIPOPT;
+  } else {
+    process.env.ZIPOPT = originalZipOptions;
+  }
   await rm(temporaryDirectory, { recursive: true, force: true });
 }
