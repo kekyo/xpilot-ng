@@ -61,6 +61,7 @@ set -eu
 
 case $* in
     "rev-parse HEAD"|-C*" rev-parse HEAD")
+        printf '%s\n' git-revision >> "$XPILOT_TEST_INVOCATION_LOG"
         printf '%s\n' 0123456701234567012345670123456701234567
         ;;
     *)
@@ -68,6 +69,24 @@ case $* in
         exit 1
         ;;
 esac
+EOF
+
+cat > "$fixture_bin/screw-up" <<'EOF'
+#!/bin/sh
+
+set -eu
+
+test "$#" -eq 1 && test "$1" = format \
+    || { echo "unexpected screw-up invocation: $*" >&2; exit 1; }
+IFS= read -r version_template
+IFS= read -r revision_template
+test "$version_template" = '{version}' \
+    || { echo "unexpected version template: $version_template" >&2; exit 1; }
+test "$revision_template" = '{git.commit.hash}' \
+    || { echo "unexpected revision template: $revision_template" >&2; exit 1; }
+
+printf '%s\n' resolve-metadata >> "$XPILOT_TEST_INVOCATION_LOG"
+printf '%s\n' 7.8.9 fedcba9876543210fedcba9876543210fedcba98
 EOF
 
 cat > "$fixture_bin/container-engine" <<'EOF'
@@ -83,13 +102,16 @@ set -eu
 } >> "$XPILOT_TEST_INVOCATION_LOG"
 EOF
 
-chmod +x "$fixture_builder" "$fixture_bin/git" \
+chmod +x "$fixture_builder" "$fixture_bin/git" "$fixture_bin/screw-up" \
     "$fixture_bin/container-engine"
 ln -s container-engine "$fixture_bin/podman"
 
 (
     cd "$test_root"
     PATH="$fixture_bin:$PATH" \
+    SCREW_UP=$fixture_bin/screw-up \
+    XPILOT_VERSION= \
+    XPILOT_COMMIT_ID= \
     XPILOT_CONTAINER_BUILDER=$fixture_builder \
     CONTAINER_ENGINE=$fixture_bin/container-engine \
     XPILOT_TEST_INVOCATION_LOG=$invocation_log \
@@ -97,12 +119,12 @@ ln -s container-engine "$fixture_bin/podman"
 )
 
 cat > "$expected_log" <<'EOF'
-resolve-version
+resolve-metadata
 builder
 --version
 7.8.9
 --revision
-0123456701234567012345670123456701234567
+fedcba9876543210fedcba9876543210fedcba98
 --platform
 linux/amd64,linux/arm64
 --tag
@@ -122,4 +144,4 @@ docker://docker.io/kekyo/xpilot-infinity-server:latest
 EOF
 
 diff -u "$expected_log" "$invocation_log" \
-    || fail "the resolved screw-up version was not used for every image tag"
+    || fail "the resolved screw-up metadata was not used for the image build"
