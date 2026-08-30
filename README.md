@@ -18,6 +18,8 @@ project without all the documentation, source code, and the COPYING file.
 
 ---
 
+[(Japanese language is here/日本語はこちら)](./README_ja.md)
+
 ## What is this?
 
 [From www.xpilot.org](https://www.xpilot.org/about/):
@@ -102,6 +104,8 @@ xpilot-infinity-sdl
 
 ![Server list](./images/server-list.png)
 
+> A meta-server is a server that manages a list of XPilot servers available worldwide. It is operated by xpilot.org.
+
 You can connect to the server and start a game.
 
 Or, connect server directly with the URL like:
@@ -110,13 +114,14 @@ Or, connect server directly with the URL like:
 xpilot-infinity-sdl udp://localhost
 ```
 
-As indicated by the `udp://` URL, the UDP protocol is used.
-You can also use TCP or WebSocket.
+As indicated by the `udp://` URL, the UDP protocol is used (By default, UDP is compatible with the latest version of XPilot NG).
+You can also use TCP (`tcp://`) or WebSocket (`ws://`).
 
-If you launch the SDL client without specifying a URL, it will query the
-metaserver and perform one UDP discovery pass on the local network. The server
-browser combines both result sets, identifies their source, and places LAN
-servers first. You can disable the LAN query with `-localDiscovery no`.
+If you launch the SDL client without specifying a URL, it will query the meta-server and perform one UDP discovery pass on the local network.
+The server browser combines both result sets, identifies their source, and places LAN servers first.
+
+Since the server accepts connections using the UDP protocol by default, it should be automatically listed in this procedure.
+You can disable the LAN query with `-localDiscovery no`.
 
 There are still plenty of other features, but I can't cover them all here.
 
