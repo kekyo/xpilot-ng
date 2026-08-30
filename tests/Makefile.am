@@ -100,7 +100,7 @@ TESTS = test-framed-stream test-websocket-transport \
 	run-windows-archive.sh run-macos-info-plist.sh \
 	run-source-encoding.sh \
 	run-c23-server-build.sh run-vendored-zlib.sh \
-	run-container-image.sh run-quadlet.sh run-e2e.sh
+	run-container-publish.sh run-container-image.sh run-quadlet.sh run-e2e.sh
 if COND_SOUND
 check_PROGRAMS += test-audio-device
 TESTS += test-audio-device
@@ -616,6 +616,8 @@ AM_TESTS_ENVIRONMENT = \
 	export XPILOT_BUILD_PACKAGE; \
 	XPILOT_CONTAINER_BUILDER='$(abs_top_srcdir)/build_container_image.sh'; \
 	export XPILOT_CONTAINER_BUILDER; \
+	XPILOT_CONTAINER_PUBLISHER='$(abs_top_srcdir)/build_container_image_all.sh'; \
+	export XPILOT_CONTAINER_PUBLISHER; \
 	XPILOT_CONTAINER_SOURCE_DIR='$(abs_top_srcdir)'; \
 	export XPILOT_CONTAINER_SOURCE_DIR; \
 	XPILOT_QUADLET_DIR='$(abs_top_srcdir)/containers'; \
@@ -651,7 +653,7 @@ EXTRA_DIST = run-build-metadata.sh run-build-wrapper.sh \
 	run-vendored-zlib.sh \
 	run-wine-suite.sh run-build-package.sh run-package-windows.sh \
 	run-windows-archive.sh run-macos-info-plist.sh \
-	run-container-image.sh run-quadlet.sh \
+	run-container-publish.sh run-container-image.sh run-quadlet.sh \
 	run-source-encoding.sh test-source-encoding.mjs \
 	test-windows-archive.mjs test-macos-info-plist.mjs test_helpers.h
 
