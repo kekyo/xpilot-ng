@@ -6,10 +6,10 @@ usage()
 {
     cat <<'EOF'
 Usage: tests/run-wine-suite.sh --build-dir PATH --package-dir PATH \
-       --wine-prefix PATH --arch ARCH [--jobs NUMBER]
+       --installer PATH --wine-prefix PATH --arch ARCH [--jobs NUMBER]
 
-Build and run the supported Windows unit tests, then exercise every UDP/TCP
-contact and gameplay combination plus metaserver reporting under Wine and Xvfb.
+Build and run the supported Windows unit tests, exercise the installer and
+service, then test every contact/gameplay transport under Wine and Xvfb.
 EOF
 }
 
@@ -24,6 +24,7 @@ fail()
 
 build_dir=
 package_dir=
+installer=
 wine_prefix=
 architecture=
 jobs=
@@ -39,6 +40,11 @@ while test "$#" -gt 0; do
         --package-dir)
             test "$#" -ge 2 || { usage >&2; exit 1; }
             package_dir=$2
+            shift 2
+            ;;
+        --installer)
+            test "$#" -ge 2 || { usage >&2; exit 1; }
+            installer=$2
             shift 2
             ;;
         --wine-prefix)
@@ -73,6 +79,7 @@ done
 
 test -n "$build_dir" || { usage >&2; exit 1; }
 test -n "$package_dir" || { usage >&2; exit 1; }
+test -n "$installer" || { usage >&2; exit 1; }
 test -n "$wine_prefix" || { usage >&2; exit 1; }
 case "$architecture" in
     x86)
@@ -100,18 +107,30 @@ case "$package_dir" in
     /*) ;;
     *) fail "--package-dir must be an absolute path" ;;
 esac
+case "$installer" in
+    /*) ;;
+    *) fail "--installer must be an absolute path" ;;
+esac
 case "$wine_prefix" in
     /*) ;;
     *) fail "--wine-prefix must be an absolute path" ;;
 esac
+test -f "$installer" || fail "Windows installer is missing: $installer"
 
-version_file="$build_dir/src/common/version.txt"
-test -r "$version_file" \
-    || fail "build version is unavailable: $version_file"
-build_version=$(sed -n '1p' "$version_file")
+metadata_file="$build_dir/src/common/build-metadata.txt"
+test -r "$metadata_file" \
+    || fail "build metadata is unavailable: $metadata_file"
+build_version=$(sed -n '1p' "$metadata_file")
 case "$build_version" in
     ''|*[!0-9A-Za-z.+:~-]*) fail "invalid build version: $build_version" ;;
 esac
+build_commit=$(sed -n '2p' "$metadata_file")
+case "$build_commit" in
+    *[!0-9a-f]*) fail "invalid build commit ID: $build_commit" ;;
+esac
+test "${#build_commit}" -eq 40 \
+    || fail "build commit ID must contain 40 hexadecimal characters"
+build_title="XPilot Infinity [$build_version-$build_commit]"
 
 make_program=${MAKE:-make}
 wine_program=${WINE:-wine}
@@ -121,7 +140,7 @@ wineserver_program=${WINESERVER:-wineserver}
 if test "$inside_xvfb" = false; then
     for required_command in "$make_program" "$wine_program" \
         "$wineboot_program" "$wineserver_program" xvfb-run xdotool node file \
-        timeout; do
+        timeout winepath; do
         command -v "$required_command" >/dev/null 2>&1 \
             || fail "required command was not found: $required_command"
     done
@@ -153,6 +172,7 @@ if test "$inside_xvfb" = false; then
             --inside-xvfb \
             --build-dir "$build_dir" \
             --package-dir "$package_dir" \
+            --installer "$installer" \
             --wine-prefix "$wine_prefix" \
             --arch "$architecture" \
             --jobs "$jobs"
@@ -172,6 +192,10 @@ meta_report_fixture_pid=
 server_log=
 client_log=
 window_id=
+windows_service_registered=false
+windows_service_name=XPilotInfinityServer
+installer_uninstaller=
+installer_server_config=
 
 dump_logs()
 {
@@ -194,6 +218,17 @@ stop_wine_server()
 
 cleanup()
 {
+    if test -n "$installer_uninstaller" \
+        && test -f "$installer_uninstaller"; then
+	timeout 90s "$wine_program" "$installer_uninstaller" /S \
+	    >>"$runtime_dir/installer-cleanup.log" 2>&1 || true
+    fi
+    if test "$windows_service_registered" = true; then
+	timeout 15s "$wine_program" sc.exe stop "$windows_service_name" \
+	    >>"$runtime_dir/windows-service-cleanup.log" 2>&1 || true
+	timeout 15s "$wine_program" sc.exe delete "$windows_service_name" \
+	    >>"$runtime_dir/windows-service-cleanup.log" 2>&1 || true
+    fi
     cleanup_deadline=$(($(date +%s) + 10))
     for process_id in "$client_pid" "$server_pid" \
         "$meta_report_fixture_pid"; do
@@ -311,7 +346,7 @@ game_window_transport_visible()
     game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
 	|| true)
     test "$game_window_title" = \
-	"XPilot Infinity $build_version - 127.0.0.1 "\
+	"$build_title - 127.0.0.1 "\
 "[Gameplay: $expected_gameplay_transport]"
 }
 
@@ -400,6 +435,237 @@ stop_server()
     wait_until "server shutdown" 15 process_stopped "$server_pid"
     wait "$server_pid" 2>/dev/null || true
     server_pid=
+}
+
+run_executable_relative_resources()
+{
+    contact_port=$(reserve_contact_port)
+    foreign_directory="$runtime_dir/foreign-working-directory"
+    server_log="$runtime_dir/server-executable-relative-resources.log"
+    mkdir -p "$foreign_directory"
+
+    (
+	cd "$foreign_directory"
+	exec "$wine_program" \
+	    "$runtime_package/xpilot-infinity-server.exe" \
+	    -map ndh.xp2 -port "$contact_port" \
+	    -noQuit +reportMeta -transport udp
+    ) >"$server_log" 2>&1 &
+    server_pid=$!
+    wait_until "executable-relative packaged resources" 30 server_ready
+    stop_server
+}
+
+windows_service_stopped()
+{
+    timeout 15s "$wine_program" sc.exe query "$windows_service_name" \
+	>"$runtime_dir/windows-service-query.log" 2>&1 \
+	&& grep -Eq 'STATE[[:space:]]*:[[:space:]]*1[[:space:]]+STOPPED' \
+	    "$runtime_dir/windows-service-query.log"
+}
+
+windows_service_ready()
+{
+    timeout 15s "$wine_program" sc.exe query "$windows_service_name" \
+	>"$runtime_dir/windows-service-running.log" 2>&1 \
+	&& grep -Eq 'STATE[[:space:]]*:[[:space:]]*4[[:space:]]+RUNNING' \
+	    "$runtime_dir/windows-service-running.log"
+}
+
+windows_service_absent()
+{
+    ! timeout 15s "$wine_program" sc.exe query "$windows_service_name" \
+	>"$runtime_dir/windows-service-absent.log" 2>&1
+}
+
+path_absent()
+{
+    test ! -e "$1"
+}
+
+installed_client_stopped()
+{
+    if ! timeout 15s "$wine_program" tasklist.exe \
+	>"$runtime_dir/installer-client-tasklist.log" 2>&1; then
+	return 1
+    fi
+    ! grep -Fqi 'xpilot-infinity-sdl.exe' \
+	"$runtime_dir/installer-client-tasklist.log"
+}
+
+run_start_menu_shortcut()
+{
+    shortcut_path=$1
+    shortcut_windows=$(winepath -w "$shortcut_path")
+    client_log="$runtime_dir/installer-start-menu-client.log"
+
+    "$wine_program" start.exe /wait "$shortcut_windows" \
+	>"$client_log" 2>&1 &
+    client_pid=$!
+    wait_until "installed Start menu client window" 30 find_game_window
+    installed_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
+	|| true)
+    test "$installed_window_title" = "$build_title" \
+	|| fail "Start menu shortcut did not open the server browser"
+    timeout 15s "$wine_program" taskkill.exe /F \
+	/IM xpilot-infinity-sdl.exe \
+	>"$runtime_dir/installer-client-stop.log" 2>&1 \
+	|| fail "could not stop the installed server browser after inspection"
+    wait_until "installed server browser process shutdown" 20 \
+	installed_client_stopped
+    wait_until "Start menu launcher shutdown" 20 \
+	process_stopped "$client_pid"
+    wait "$client_pid" 2>/dev/null || true
+    client_pid=
+    window_id=
+}
+
+run_windows_service_case()
+{
+    windows_service_stopped \
+	|| fail "installed Windows service started before it was requested"
+
+    timeout 30s "$wine_program" sc.exe start "$windows_service_name" \
+	>"$runtime_dir/windows-service-start.log" 2>&1 \
+	|| fail "Windows SCM could not start the server"
+    wait_until "Windows service server readiness" 30 windows_service_ready
+
+    timeout 30s "$wine_program" \
+	"$build_dir/tests/test-contact-target-probe.exe" \
+	--interactive \
+	"udp://127.0.0.1:$contact_port" \
+	>"$runtime_dir/windows-service-contact.log" 2>&1 \
+	|| fail "Windows service server did not answer contact requests"
+
+    timeout 15s "$wine_program" sc.exe stop "$windows_service_name" \
+	>"$runtime_dir/windows-service-stop.log" 2>&1 \
+	|| fail "Windows SCM could not request server shutdown"
+    wait_until "Windows service server shutdown" 30 windows_service_stopped
+}
+
+run_windows_installer_cases()
+{
+    default_install_name="xpilot-installer-default-$architecture"
+    service_install_name="xpilot-installer-service-$architecture"
+    default_install_dir="$wine_prefix/drive_c/$default_install_name"
+    service_install_dir="$wine_prefix/drive_c/$service_install_name"
+    default_windows_dir="C:\\$default_install_name"
+    service_windows_dir="C:\\$service_install_name"
+    installer_shortcut="$wine_prefix/drive_c/ProgramData/Microsoft/Windows/Start Menu/Programs/XPilot Infinity/XPilot Infinity.lnk"
+
+    if test -f "$default_install_dir/uninstall.exe"; then
+	timeout 90s "$wine_program" "$default_install_dir/uninstall.exe" /S \
+	    >"$runtime_dir/default-installer-preclean.log" 2>&1 \
+	    || fail "could not remove a previous default installer test"
+    fi
+    if test -f "$service_install_dir/uninstall.exe"; then
+	timeout 90s "$wine_program" "$service_install_dir/uninstall.exe" /S \
+	    >"$runtime_dir/service-installer-preclean.log" 2>&1 \
+	    || fail "could not remove a previous service installer test"
+    fi
+    if ! windows_service_absent; then
+	timeout 15s "$wine_program" sc.exe stop "$windows_service_name" \
+	    >>"$runtime_dir/windows-service-preclean.log" 2>&1 || true
+	timeout 15s "$wine_program" sc.exe delete "$windows_service_name" \
+	    >>"$runtime_dir/windows-service-preclean.log" 2>&1 \
+	    || fail "could not remove a previous installer test service"
+    fi
+    test ! -e "$default_install_dir" \
+	|| fail "stale default installer test directory remains"
+    test ! -e "$service_install_dir" \
+	|| fail "stale service installer test directory remains"
+
+    echo "===== test: default Windows installer for $architecture ====="
+    timeout 90s "$wine_program" "$installer" /S \
+	"/D=$default_windows_dir" \
+	>"$runtime_dir/default-installer.log" 2>&1 \
+	|| fail "default Windows installer failed"
+    installer_uninstaller="$default_install_dir/uninstall.exe"
+    for installed_file in xpilot-infinity-server.exe \
+	xpilot-infinity-sdl.exe COPYING icon.ico uninstall.exe; do
+	test -f "$default_install_dir/$installed_file" \
+	    || fail "default installer omitted $installed_file"
+    done
+    test -f "$installer_shortcut" \
+	|| fail "default installer did not create the Start menu shortcut"
+    windows_service_absent \
+	|| fail "default installer registered the optional server service"
+    run_start_menu_shortcut "$installer_shortcut"
+
+    timeout 90s "$wine_program" "$installer_uninstaller" /S \
+	>"$runtime_dir/default-uninstaller.log" 2>&1 \
+	|| fail "default Windows uninstaller failed"
+    installer_uninstaller=
+    wait_until "default installation removal" 30 \
+	path_absent "$default_install_dir"
+    test ! -e "$installer_shortcut" \
+	|| fail "default uninstaller left the Start menu shortcut behind"
+
+    contact_port=$(reserve_contact_port)
+    installer_server_data="$wine_prefix/drive_c/ProgramData/XPilot Infinity/server"
+    installer_server_config="$installer_server_data/xpilot-infinity-server.conf"
+    installer_server_log="$installer_server_data/xpilot-infinity-server.log"
+    mkdir -p "$installer_server_data"
+    printf '%s\n' \
+	'# Preserved by the XPilot Infinity installer test.' \
+	'map: ndh.xp2' \
+	'noQuit: true' \
+	'reportMeta: false' \
+	"port: $contact_port" >"$installer_server_config"
+
+    echo "===== test: optional Windows service installer for $architecture ====="
+    timeout 90s "$wine_program" "$installer" /S /SERVER_SERVICE=1 \
+	"/D=$service_windows_dir" \
+	>"$runtime_dir/service-installer.log" 2>&1 \
+	|| fail "Windows service installer failed"
+    installer_uninstaller="$service_install_dir/uninstall.exe"
+    test -f "$service_install_dir/xpilot-infinity-server.exe" \
+	|| fail "service installer omitted the server executable"
+    test -f "$installer_shortcut" \
+	|| fail "service installer omitted the Start menu shortcut"
+    grep -Fq '# Preserved by the XPilot Infinity installer test.' \
+	"$installer_server_config" \
+	|| fail "service installer overwrote the existing server configuration"
+
+    timeout 15s "$wine_program" reg.exe query \
+	"HKLM\\System\\CurrentControlSet\\Services\\$windows_service_name" \
+	>"$runtime_dir/windows-service-config.log" 2>&1 \
+	|| fail "installer did not register the Windows service"
+    windows_service_registered=true
+    grep -Eq 'Start[[:space:]]+REG_DWORD[[:space:]]+0x3' \
+	"$runtime_dir/windows-service-config.log" \
+	|| fail "installed Windows service was not configured for manual start"
+    grep -Eq 'ObjectName[[:space:]]+REG_SZ[[:space:]]+NT AUTHORITY\\LocalService' \
+	"$runtime_dir/windows-service-config.log" \
+	|| fail "installed Windows service does not use LocalService"
+    grep -Fq "C:\\$service_install_name\\xpilot-infinity-server.exe" \
+	"$runtime_dir/windows-service-config.log" \
+	|| fail "installed Windows service executable path is incorrect"
+    grep -Fq -- '--windows-service' \
+	"$runtime_dir/windows-service-config.log" \
+	|| fail "installed server was not configured for service dispatch"
+    windows_service_stopped \
+	|| fail "installer started the optional Windows service"
+
+    run_windows_service_case
+
+    test -f "$installer_server_log" \
+	|| fail "Windows service did not write its configured log"
+
+    timeout 90s "$wine_program" "$installer_uninstaller" /S \
+	>"$runtime_dir/service-uninstaller.log" 2>&1 \
+	|| fail "Windows service uninstaller failed"
+    installer_uninstaller=
+    wait_until "service installation removal" 30 \
+	path_absent "$service_install_dir"
+    wait_until "installed Windows service removal" 30 \
+	windows_service_absent
+    windows_service_registered=false
+    test ! -e "$installer_shortcut" \
+	|| fail "service uninstaller left the Start menu shortcut behind"
+    grep -Fq '# Preserved by the XPilot Infinity installer test.' \
+	"$installer_server_config" \
+	|| fail "uninstaller removed the preserved server configuration"
 }
 
 run_contact_target_failover()
@@ -737,6 +1003,8 @@ case "$architecture" in
             || fail "x86_64 server is not a PE32+ executable"
         ;;
 esac
+file "$installer" | grep -q 'Nullsoft Installer' \
+    || fail "Windows installer is not an NSIS executable"
 
 mkdir -p "$runtime_package"
 cp -R "$package_dir/." "$runtime_package/"
@@ -747,6 +1015,8 @@ timeout 60s "$wineboot_program" -u >"$runtime_dir/wineboot.log" 2>&1 \
 timeout 30s "$wineserver_program" -w >>"$runtime_dir/wineboot.log" 2>&1 \
     || fail "Wine prefix initialization did not settle"
 
+run_windows_installer_cases
+
 for unit_test in test-framed-stream test-websocket-transport \
     test-game-transport test-connect-target \
     test-transport-display test-socket-io test-sdl-versions \
@@ -754,6 +1024,7 @@ for unit_test in test-framed-stream test-websocket-transport \
     run_wine_unit_test "$unit_test"
 done
 
+run_executable_relative_resources
 run_contact_target_failover
 run_connection_failure_notification
 run_meta_report_case

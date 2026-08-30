@@ -387,11 +387,22 @@ top_srcdir = @top_srcdir@
 @COND_MINGW_VENDORED_TRUE@SUBDIRS = vendor/mingw src lib doc contrib \
 @COND_MINGW_VENDORED_TRUE@	$(am__append_1)
 dist_pkgdata_DATA = mapconvert.py
-EXTRA_DIST = build.sh build_package.sh build_package_all.sh prereq.sh \
+EXTRA_DIST = Dockerfile .dockerignore build.sh build_container_image.sh \
+	build_package.sh build_package_all.sh prereq.sh \
+	containers/xpilot-infinity-server.container \
+	containers/xpilot-infinity-server-data.volume \
 	scripts/build_linux_dist_container.sh config/package-windows.sh \
-	config/package-windows.mjs config/resolve-version.sh
+	config/package-windows.mjs config/build-windows-installer.sh \
+	config/xpilot-infinity.nsi config/xpilot-infinity-server.conf \
+	config/resolve-build-metadata.sh images/icon-1254.png images/icon.ico \
+	debian/changelog.in debian/copyright \
+	debian/xpilot-infinity-server.default \
+	debian/xpilot-infinity-server.service \
+	debian/xpilot-infinity.postinst debian/xpilot-infinity.postrm \
+	debian/xpilot-infinity.prerm debian/xpilot-infinity.desktop
 
 @COND_WINDOWS_TRUE@MINGW_TEST_JOBS =
+@COND_WINDOWS_TRUE@MAKENSIS = makensis
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -899,7 +910,7 @@ uninstall-am: uninstall-dist_pkgdataDATA
 .PRECIOUS: Makefile
 
 
-@COND_WINDOWS_TRUE@.PHONY: windows-package windows-check mingw-deps-clean
+@COND_WINDOWS_TRUE@.PHONY: windows-package windows-installer windows-check mingw-deps-clean
 @COND_WINDOWS_TRUE@windows-package: all
 @COND_WINDOWS_TRUE@	$(SHELL) $(top_srcdir)/config/package-windows.sh \
 @COND_WINDOWS_TRUE@		--source-dir '$(abs_top_srcdir)' \
@@ -907,10 +918,20 @@ uninstall-am: uninstall-dist_pkgdataDATA
 @COND_WINDOWS_TRUE@		--dependency-prefix '@MINGW_DEPS_PREFIX@' \
 @COND_WINDOWS_TRUE@		--output '@MINGW_PACKAGE_DIR@'
 
-@COND_WINDOWS_TRUE@windows-check: windows-package
+@COND_WINDOWS_TRUE@windows-installer: windows-package
+@COND_WINDOWS_TRUE@	MAKENSIS='$(MAKENSIS)' \
+@COND_WINDOWS_TRUE@	$(SHELL) $(top_srcdir)/config/build-windows-installer.sh \
+@COND_WINDOWS_TRUE@		--package-dir '@MINGW_PACKAGE_DIR@' \
+@COND_WINDOWS_TRUE@		--output '$(abs_top_builddir)/xpilot-infinity-setup.exe' \
+@COND_WINDOWS_TRUE@		--version "`sed -n '1p' '$(abs_top_builddir)/src/common/build-metadata.txt'`" \
+@COND_WINDOWS_TRUE@		--arch '@MINGW_ARCH@' \
+@COND_WINDOWS_TRUE@		--icon '$(abs_top_srcdir)/images/icon.ico'
+
+@COND_WINDOWS_TRUE@windows-check: windows-installer
 @COND_WINDOWS_TRUE@	$(SHELL) $(top_srcdir)/tests/run-wine-suite.sh \
 @COND_WINDOWS_TRUE@		--build-dir '$(abs_top_builddir)' \
 @COND_WINDOWS_TRUE@		--package-dir '@MINGW_PACKAGE_DIR@' \
+@COND_WINDOWS_TRUE@		--installer '$(abs_top_builddir)/xpilot-infinity-setup.exe' \
 @COND_WINDOWS_TRUE@		--wine-prefix '@MINGW_WINE_PREFIX@' \
 @COND_WINDOWS_TRUE@		--arch '@MINGW_ARCH@' \
 @COND_WINDOWS_TRUE@		--jobs '$(MINGW_TEST_JOBS)'

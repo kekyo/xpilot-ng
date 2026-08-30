@@ -52,7 +52,12 @@ server_title=$("$server" -version \
     | tail -n 1 \
     || true)
 case "$server_title" in
-    "$product_name "*) build_version=${server_title#"$product_name "} ;;
+    "$product_name ["*-*"]")
+        build_identity=${server_title#"$product_name ["}
+        build_identity=${build_identity%]}
+        build_commit=${build_identity##*-}
+        build_version=${build_identity%"-$build_commit"}
+        ;;
     *)
         echo "Unexpected server title: $server_title" >&2
         exit 1
@@ -62,6 +67,16 @@ test -n "$build_version" || {
     echo "The server version is empty" >&2
     exit 1
 }
+test "${#build_commit}" -eq 40 || {
+    echo "The server commit ID is not a full SHA-1 hash: $build_commit" >&2
+    exit 1
+}
+case $build_commit in
+    *[!0-9a-f]*)
+        echo "The server commit ID is not hexadecimal: $build_commit" >&2
+        exit 1
+        ;;
+esac
 
 runtime_dir=$(mktemp -d "${TMPDIR:-/tmp}/xpilot-sdl3-e2e.XXXXXX")
 meta_pid=
@@ -365,7 +380,7 @@ game_window_transport_visible()
     game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
 	|| true)
     test "$game_window_title" = \
-	"$product_name $build_version - 127.0.0.1 "\
+	"$server_title - 127.0.0.1 "\
 "[Gameplay: $expected_gameplay_transport]"
 }
 
@@ -374,7 +389,7 @@ x11_local_game_window_transport_visible()
     game_window_title=$(xdotool getwindowname "$window_id" 2>/dev/null \
 	|| true)
     case "$game_window_title" in
-	"$product_name $build_version - "?*"[Gameplay: $expected_gameplay_transport]")
+	"$server_title - "?*"[Gameplay: $expected_gameplay_transport]")
 	    return 0
 	    ;;
     esac

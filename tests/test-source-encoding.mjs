@@ -6,7 +6,14 @@ const sourceRootArgument = process.argv[2];
 assert.ok(sourceRootArgument, 'source root path is required');
 
 const sourceRoot = resolve(sourceRootArgument);
-const ignoredDirectories = new Set(['.git', 'vendor']);
+const ignoredRootDirectories = new Set([
+  '.build',
+  '.git',
+  'artifacts',
+  'autom4te.cache',
+  'build',
+  'vendor',
+]);
 const binaryExtensions = new Set([
   '.bmp',
   '.gif',
@@ -59,7 +66,10 @@ const inspectDirectory = async (directory) => {
   for (const entry of entries) {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
-      if (!ignoredDirectories.has(entry.name)) {
+      if (
+        directory !== sourceRoot ||
+        !ignoredRootDirectories.has(entry.name)
+      ) {
         await inspectDirectory(path);
       }
     } else if (entry.isFile()) {

@@ -1,0 +1,477 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: XPilot Infinity
+Upstream-Contact: Kouji Matsui <k@kekyo.net>
+Source: https://github.com/kekyo/xpilot-infinity/
+Comment:
+ Debian packaging metadata distributed with the imported xpilot-ng 4.7.3 tree
+ recorded GPL version 2 coverage when no more specific notice was present.
+ More specific notices in the paragraphs below take precedence.
+
+Files: *
+Copyright:
+ 1991-2005 Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers,
+ Dick Balaska, Uoti Urpala, Juha Lindström, Kristian Söderblom,
+ and Erik Andersson
+ 2026 Kouji Matsui <k@kekyo.net>
+License: GPL-2+
+
+Files: debian/*
+Copyright: 2026 Kouji Matsui <k@kekyo.net>
+License: GPL-2+
+
+Files:
+ vendor/sdl3/SDL/*
+Copyright: 1997-2026 Sam Lantinga <slouken@libsdl.org>
+License: Zlib
+Comment:
+ This paragraph covers SDL-authored files. Third-party files used by the Linux
+ static build and carrying different notices are described below.
+
+Files:
+ vendor/sdl3/SDL/src/hidapi/hidapi/*
+ vendor/sdl3/SDL/src/hidapi/libusb/*
+ vendor/sdl3/SDL/src/hidapi/linux/*
+Copyright:
+ 2009-2010 Alan Ott, Signal 11 Software
+ 2009-2023 HIDAPI contributors
+ 2021 Valve Corporation
+License: BSD-3-Clause
+Comment:
+ HIDAPI permits the distributor to choose the BSD-3-Clause, GPL-3, or original
+ HIDAPI terms. This package uses the BSD-3-Clause option.
+
+Files:
+ vendor/sdl3/SDL/src/libm/*.c
+ vendor/sdl3/SDL/src/libm/math_private.h
+Copyright: 1993 Sun Microsystems, Inc.
+License: SunPro
+
+Files:
+ vendor/sdl3/SDL/src/libm/s_isinf.c
+ vendor/sdl3/SDL/src/libm/s_isinff.c
+Copyright: public-domain
+License: public-domain
+
+Files: vendor/sdl3/SDL/src/stdlib/SDL_malloc.c
+Copyright:
+ 1997-2026 Sam Lantinga <slouken@libsdl.org>
+ Doug Lea
+License: Zlib and CC0-1.0
+
+Files: vendor/sdl3/SDL/src/stdlib/SDL_qsort.c
+Copyright:
+ 1997-2026 Sam Lantinga <slouken@libsdl.org>
+ 1998-2021 Gareth McCaughan
+License: Zlib
+
+Files: vendor/sdl3/SDL/src/stdlib/SDL_strtokr.c
+Copyright:
+ 1997-2026 Sam Lantinga <slouken@libsdl.org>
+ PDCLib contributors
+License: Zlib and CC0-1.0
+
+Files: vendor/sdl3/SDL/src/filesystem/unix/SDL_sysfilesystem.c
+Copyright:
+ 1997-2026 Sam Lantinga <slouken@libsdl.org>
+ 2007 Red Hat, Inc.
+License: Zlib and MIT
+
+Files:
+ vendor/sdl3/SDL/src/events/imKStoUCS.c
+ vendor/sdl3/SDL/src/events/imKStoUCS.h
+Copyright:
+ 2003-2006, 2008 Jamey Sharp and Josh Triplett
+ 2009 Red Hat, Inc.
+ 1990-1992, 1999-2000, 2004, 2009-2010 Oracle and/or its affiliates
+License: MIT
+
+Files:
+ vendor/sdl3/SDL/src/video/x11/edid-parse.c
+ vendor/sdl3/SDL/src/video/x11/edid.h
+Copyright: 2007 Red Hat, Inc.
+License: MIT
+
+Files:
+ vendor/sdl3/SDL/src/video/x11/xsettings-client.c
+ vendor/sdl3/SDL/src/video/x11/xsettings-client.h
+Copyright:
+ 2001, 2007 Red Hat, Inc.
+ 2024 Igalia S.L.
+License: HPND-sell-variant
+
+Files: vendor/sdl3/SDL/src/video/yuv2rgb/*
+Copyright: 2016 Adrien Descamps
+License: BSD-3-Clause
+
+Files: vendor/sdl3/SDL/src/video/SDL_rotate.c
+Copyright: 2001-2011 Andreas Schiffler
+License: Zlib
+
+Files: vendor/sdl3/SDL/src/video/stb_image.h
+Copyright: 2017 Sean Barrett
+License: MIT
+Comment:
+ The file offers MIT or Unlicense terms. This package uses the MIT option.
+
+Files: vendor/sdl3/SDL/src/video/miniz.h
+Copyright: public-domain
+License: Unlicense
+
+Files:
+ vendor/sdl3/SDL/src/video/khronos/EGL/*
+ vendor/sdl3/SDL/src/video/khronos/GLES2/*
+ vendor/sdl3/SDL/src/video/khronos/GLES3/*
+ vendor/sdl3/SDL/src/video/khronos/vk_video/*
+ vendor/sdl3/SDL/src/video/khronos/vulkan/*
+Copyright: 2013-2024 The Khronos Group Inc.
+License: Apache-2.0
+
+Files: vendor/sdl3/SDL/src/video/khronos/KHR/khrplatform.h
+Copyright: 2008-2018 The Khronos Group Inc.
+License: MIT
+
+Files: vendor/sdl3/SDL/src/video/openvr/openvr_capi.h
+Copyright: 2015 Valve Corporation
+License: BSD-3-Clause
+
+Files: vendor/sdl3/SDL_image/*
+Copyright: 1997-2026 Sam Lantinga <slouken@libsdl.org>
+License: Zlib
+Comment:
+ The Linux package build sets SDLIMAGE_VENDORED=OFF, so codec implementations
+ under external/ are not linked into the package. The internal exceptions used
+ by the static SDL_image library are described below.
+
+Files: vendor/sdl3/SDL_image/src/IMG_gif.c
+Copyright:
+ 1997-2026 Sam Lantinga <slouken@libsdl.org>
+ 1990-1991, 1993 David Koblas
+ 1996 Torsten Martinsen
+License: Zlib and XPaint
+
+Files: vendor/sdl3/SDL_image/src/qoi.h
+Copyright: 2021 Dominic Szablewski
+License: MIT
+
+Files: vendor/sdl3/SDL_image/src/stb_image.h
+Copyright: 2017 Sean Barrett
+License: MIT
+Comment:
+ The file offers MIT or Unlicense terms. This package uses the MIT option.
+
+Files:
+ vendor/sdl3/SDL_image/src/nanosvg.h
+ vendor/sdl3/SDL_image/src/nanosvgrast.h
+Copyright:
+ 2013-2014 Mikko Mononen
+ 2002-2004 Maxim Shemanarev
+License: Zlib
+
+Files: vendor/sdl3/SDL_image/src/tiny_jpeg.h
+Copyright: Sergio Gonzalez
+License: TinyJPEG
+
+Files: vendor/sdl3/SDL_ttf/*
+Copyright: 1997-2025 Sam Lantinga <slouken@libsdl.org>
+License: Zlib
+Comment:
+ The Linux package build does not pass --vendored-font-deps and therefore links
+ system FreeType and HarfBuzz libraries. Sources under external/ are not linked
+ into the package. The internal stb exception is described below.
+
+Files: vendor/sdl3/SDL_ttf/src/stb_rect_pack.h
+Copyright: 2017 Sean Barrett
+License: MIT
+Comment:
+ The file offers MIT or Unlicense terms. This package uses the MIT option.
+
+Files: vendor/libtess2/*
+Copyright:
+ 1994 Eric Veach
+ Silicon Graphics, Inc.
+License: SGI-B-2.0
+
+Files: vendor/wslay/*
+Copyright: 2011, 2012, 2015 Tatsuhiro Tsujikawa
+License: MIT
+
+Files: vendor/mtwister/*
+Copyright: Evan Sultanik
+License: public-domain
+
+Files: lib/fonts/FreeSansBoldOblique.ttf
+Copyright: 2002, 2003 Free Software Foundation, Inc.
+License: GPL-2
+Comment:
+ The font's embedded name table identifies these copyright years and states
+ that use is subject to the GNU GPL. This bundled 2003 font contains no font
+ exception notice, so no exception is claimed here.
+
+Files: lib/fonts/VeraMoBd.ttf
+Copyright: 2003 Bitstream, Inc.
+License: Bitstream-Vera
+
+Files: lib/fonts/ConsoleFont.bmp
+Copyright:
+ 1991-2003 Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers,
+ Dick Balaska, Uoti Urpala, Juha Lindström, Kristian Söderblom,
+ and Erik Andersson
+License: GPL-2
+Comment:
+ The bitmap contains no embedded notice. Its attribution and license are taken
+ from the Debian packaging metadata in the imported distribution, which
+ already contained this file.
+
+Files:
+ lib/maps/*
+ lib/sound/*
+ lib/textures/*
+Copyright:
+ 1991-2003 Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers,
+ Dick Balaska, Uoti Urpala, Juha Lindström, Kristian Söderblom,
+ and Erik Andersson
+ Patrick Kenny
+ Marvin
+ Throat
+ PeaceMaker
+ Samaseon
+ thirsima@cc.hut.fi
+ Mort
+ Keith Maniac
+ Baron
+License: GPL-2
+Comment:
+ The license is taken from the Debian packaging metadata in the imported
+ xpilot-ng distribution. Names without years reproduce map author credits
+ embedded in the distributed map files.
+
+Files: lib/maps/polyfishtank3.xp2
+Copyright: 2007 Thomas Keith (Insectoid)
+License: GPL-2
+Comment:
+ This map also contains its own GPL distribution notice and copyright line.
+
+License: GPL-2+
+ This program is free software; you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the Free
+ Software Foundation; either version 2 of the License, or (at your option)
+ any later version.
+ .
+ This program is distributed in the hope that it will be useful, but WITHOUT
+ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ FITNESS FOR A PARTICULAR PURPOSE.
+ .
+ On Debian systems, the complete text of version 2 of the GNU General Public
+ License can be found in /usr/share/common-licenses/GPL-2.
+
+License: Zlib
+ This software is provided 'as-is', without any express or implied warranty.
+ In no event will the authors be held liable for any damages arising from the
+ use of this software.
+ .
+ Permission is granted to anyone to use this software for any purpose,
+ including commercial applications, and to alter it and redistribute it
+ freely, subject to the following restrictions:
+ .
+ 1. The origin of this software must not be misrepresented; you must not
+    claim that you wrote the original software. If you use this software in
+    a product, an acknowledgment in the product documentation would be
+    appreciated but is not required.
+ 2. Altered source versions must be plainly marked as such, and must not be
+    misrepresented as being the original software.
+ 3. This notice may not be removed or altered from any source distribution.
+
+License: SGI-B-2.0
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to
+ deal in the Software without restriction, including without limitation the
+ rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ sell copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice including the dates of first publication and
+ either this permission notice or a reference to
+ http://oss.sgi.com/projects/FreeB/ shall be included in all copies or
+ substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ SILICON GRAPHICS, INC. BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ .
+ Except as contained in this notice, the name of Silicon Graphics, Inc. shall
+ not be used in advertising or otherwise to promote the sale, use or other
+ dealings in this Software without prior written authorization from Silicon
+ Graphics, Inc.
+
+License: MIT
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to
+ deal in the Software without restriction, including without limitation the
+ rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ sell copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ IN THE SOFTWARE.
+
+License: GPL-2
+ This program is free software; you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the Free
+ Software Foundation; version 2 of the License.
+ .
+ This program is distributed in the hope that it will be useful, but WITHOUT
+ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ FITNESS FOR A PARTICULAR PURPOSE.
+ .
+ On Debian systems, the complete text of version 2 of the GNU General Public
+ License can be found in /usr/share/common-licenses/GPL-2.
+
+License: BSD-3-Clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ .
+ 1. Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+ 3. Neither the name of the copyright holder nor the names of its contributors
+    may be used to endorse or promote products derived from this software
+    without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ POSSIBILITY OF SUCH DAMAGE.
+
+License: SunPro
+ Permission to use, copy, modify, and distribute this software is freely
+ granted, provided that the copyright notice is preserved.
+
+License: CC0-1.0
+ To the extent possible under law, the authors have waived all copyright and
+ related or neighboring rights to the covered work.
+ .
+ On Debian systems, the complete text of the Creative Commons CC0 1.0
+ Universal license can be found in /usr/share/common-licenses/CC0-1.0.
+
+License: HPND-sell-variant
+ Permission to use, copy, modify, distribute, and sell this software and its
+ documentation for any purpose is hereby granted without fee, provided that
+ the above copyright notice appear in all copies and that both that copyright
+ notice and this permission notice appear in supporting documentation, and
+ that the name of Red Hat not be used in advertising or publicity pertaining
+ to distribution of the software without specific, written prior permission.
+ Red Hat makes no representations about the suitability of this software for
+ any purpose. It is provided "as is" without express or implied warranty.
+ .
+ RED HAT DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL RED HAT
+ BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+ OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+License: Apache-2.0
+ Licensed under the Apache License, Version 2.0.
+ .
+ On Debian systems, the complete text of the Apache License, Version 2.0 can
+ be found in /usr/share/common-licenses/Apache-2.0.
+
+License: Unlicense
+ This is free and unencumbered software released into the public domain.
+ .
+ Anyone is free to copy, modify, publish, use, compile, sell, or distribute
+ this software, either in source code form or as a compiled binary, for any
+ purpose, commercial or non-commercial, and by any means.
+ .
+ In jurisdictions that recognize copyright laws, the author or authors of
+ this software dedicate any and all copyright interest in the software to the
+ public domain. We make this dedication for the benefit of the public at large
+ and to the detriment of our heirs and successors. We intend this dedication
+ to be an overt act of relinquishment in perpetuity of all present and future
+ rights to this software under copyright law.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+License: XPaint
+ Permission to use, copy, modify, and distribute this software and its
+ documentation for any purpose and without fee is hereby granted, provided
+ that the copyright notice appear in all copies and that both that copyright
+ notice and this permission notice appear in supporting documentation.
+ This software is provided "as is" without express or implied warranty.
+
+License: TinyJPEG
+ This software is in the public domain. Where that dedication is not
+ recognized, a perpetual, irrevocable license is granted to copy and modify
+ the file as desired.
+
+License: public-domain
+ The relevant upstream authors have expressly dedicated these files to the
+ public domain, or the files contain no copyrightable material beyond such
+ public-domain implementations.
+
+License: Bitstream-Vera
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of the fonts accompanying this license ("Fonts") and associated
+ documentation files (the "Font Software"), to reproduce and distribute the
+ Font Software, including without limitation the rights to use, copy, merge,
+ publish, distribute, and/or sell copies of the Font Software, and to permit
+ persons to whom the Font Software is furnished to do so, subject to the
+ following conditions:
+ .
+ The above copyright and trademark notices and this permission notice shall
+ be included in all copies of one or more of the Font Software typefaces.
+ .
+ The Font Software may be modified, altered, or added to, and in particular
+ the designs of glyphs or characters in the Fonts may be modified and
+ additional glyphs or characters may be added to the Fonts, only if the fonts
+ are renamed to names not containing either the words "Bitstream" or the word
+ "Vera".
+ .
+ This License becomes null and void to the extent applicable to Fonts or Font
+ Software that has been modified and is distributed under the "Bitstream
+ Vera" names.
+ .
+ The Font Software may be sold as part of a larger software package but no
+ copy of one or more of the Font Software typefaces may be sold by itself.
+ .
+ THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT,
+ TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL BITSTREAM OR THE GNOME
+ FOUNDATION BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING
+ ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+ THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE
+ FONT SOFTWARE.
+ .
+ Except as contained in this notice, the names of Gnome, the Gnome
+ Foundation, and Bitstream Inc., shall not be used in advertising or
+ otherwise to promote the sale, use or other dealings in this Font Software
+ without prior written authorization from the Gnome Foundation or Bitstream
+ Inc., respectively. For further information, contact: fonts at gnome dot org.

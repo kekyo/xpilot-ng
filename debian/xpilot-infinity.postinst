@@ -1,0 +1,26 @@
+#!/bin/sh
+
+set -e
+
+unit=xpilot-infinity-server.service
+
+if [ "$1" = configure ] || [ "$1" = abort-upgrade ] \
+    || [ "$1" = abort-deconfigure ] || [ "$1" = abort-remove ]
+then
+    if deb-systemd-helper debian-installed "$unit"; then
+        deb-systemd-helper unmask "$unit" >/dev/null || true
+        if deb-systemd-helper --quiet was-enabled "$unit"; then
+            deb-systemd-helper enable "$unit" >/dev/null || true
+        fi
+    fi
+    deb-systemd-helper update-state "$unit" >/dev/null || true
+
+    if [ -z "${DPKG_ROOT:-}" ] && [ -d /run/systemd/system ]; then
+        systemctl --system daemon-reload >/dev/null || true
+        if [ -n "${2:-}" ]; then
+            deb-systemd-invoke try-restart "$unit" >/dev/null || true
+        fi
+    fi
+fi
+
+exit 0

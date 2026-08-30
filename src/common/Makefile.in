@@ -356,7 +356,7 @@ AM_CPPFLAGS = -DCONF_DATADIR=\"$(pkgdatadir)/\" \
 	$(am__append_1)
 noinst_LIBRARIES = libxpcommon.a
 BUILT_SOURCES = version.h
-CLEANFILES = version.h version.txt
+CLEANFILES = version.h build-metadata.txt
 libxpcommon_a_SOURCES = \
 	arraylist.c arraylist.h astershape.h audio.h \
 	bit.h \
@@ -808,23 +808,27 @@ uninstall-am:
 .PRECIOUS: Makefile
 
 
-.PHONY: version-force
+.PHONY: build-metadata-force
 
-version-force:
+build-metadata-force:
 
-version.txt: version-force $(top_srcdir)/config/resolve-version.sh
-	@resolved_version=`XPILOT_VERSION='$(XPILOT_VERSION)' \
+build-metadata.txt: build-metadata-force \
+		$(top_srcdir)/config/resolve-build-metadata.sh
+	@resolved_metadata=`XPILOT_VERSION='$(XPILOT_VERSION)' \
+		XPILOT_COMMIT_ID='$(XPILOT_COMMIT_ID)' \
 		SCREW_UP='$(SCREW_UP)' \
-		$(top_srcdir)/config/resolve-version.sh` || exit $$?; \
+		$(top_srcdir)/config/resolve-build-metadata.sh` || exit $$?; \
 	if test ! -f $@ \
-		|| test "x$$resolved_version" != "x`cat $@`"; then \
-		printf '%s\n' "$$resolved_version" > $@.tmp; \
+		|| test "x$$resolved_metadata" != "x`cat $@`"; then \
+		printf '%s\n' "$$resolved_metadata" > $@.tmp; \
 		mv -f $@.tmp $@; \
 	fi
 
-version.h: version.h.template version.txt
-	@resolved_version=`cat version.txt`; \
-	sed "s/__XPILOT_BUILD_VERSION__/$$resolved_version/g" \
+version.h: version.h.template build-metadata.txt
+	@resolved_version=`sed -n '1p' build-metadata.txt`; \
+	resolved_commit=`sed -n '2p' build-metadata.txt`; \
+	sed -e "s/__XPILOT_BUILD_VERSION__/$$resolved_version/g" \
+		-e "s/__XPILOT_BUILD_COMMIT__/$$resolved_commit/g" \
 		version.h.template > $@.tmp; \
 	if test -f $@ && cmp -s $@.tmp $@; then \
 		rm -f $@.tmp; \

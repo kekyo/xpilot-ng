@@ -60,6 +60,7 @@ else
     test_jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)
 fi
 test_build_version=9.8.7
+test_build_commit=0123456701234567012345670123456701234567
 
 vendor_build_dir="$suite_dir/vendor-sdl3-build"
 vendor_prefix="$suite_dir/vendor-sdl3-prefix"
@@ -93,15 +94,23 @@ run_configuration()
     (
         cd "$build_dir"
         "$build_source_dir/configure" --prefix="$install_prefix" "$@"
-        make -j"$test_jobs" "XPILOT_VERSION=$test_build_version"
+        make -j"$test_jobs" \
+            "XPILOT_VERSION=$test_build_version" \
+            "XPILOT_COMMIT_ID=$test_build_commit"
         server_version=$(src/server/xpilot-infinity-server -version \
             | sed -n '/^XPilot Infinity /p' | tail -n 1 || true)
-        test "$server_version" = "XPilot Infinity $test_build_version" \
+        test "$server_version" = \
+            "XPilot Infinity [$test_build_version-$test_build_commit]" \
             || { echo "build-time product metadata was not applied: $server_version" >&2; exit 1; }
+        client_version=$(src/client/sdl/xpilot-infinity-sdl -version \
+            | sed -n '/^XPilot Infinity /p' | tail -n 1 || true)
+        test "$client_version" = "$server_version" \
+            || { echo "client build metadata did not match the server: $client_version" >&2; exit 1; }
         client_help=$(src/client/sdl/xpilot-infinity-sdl -help 2>&1 || true)
         printf '%s\n' "$client_help" | grep -Fq 'soundFile' \
             || { echo "default client sound options are unavailable" >&2; exit 1; }
-        if ! make "XPILOT_VERSION=$test_build_version" check; then
+        if ! make "XPILOT_VERSION=$test_build_version" \
+            "XPILOT_COMMIT_ID=$test_build_commit" check; then
             for test_log in tests/*.log; do
                 if test -f "$test_log"; then
                     echo "===== $test_log =====" >&2
@@ -134,7 +143,9 @@ run_configuration vendored-sdl-only \
     --disable-xp-mapedit
 
 echo "===== build and test: MinGW Windows targets ====="
-"$build_source_dir/build.sh" \
+XPILOT_PACKAGE_VERSION=$test_build_version \
+XPILOT_COMMIT_ID=$test_build_commit \
+    "$build_source_dir/build.sh" \
     --target windows --arch all --test \
     --build-root "$suite_dir/windows" --jobs "$test_jobs"
 

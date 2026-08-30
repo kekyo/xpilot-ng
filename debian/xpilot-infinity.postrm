@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -e
+
+unit=xpilot-infinity-server.service
+
+if [ "$1" = purge ] && command -v deb-systemd-helper >/dev/null 2>&1; then
+    deb-systemd-helper purge "$unit" >/dev/null || true
+fi
+
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] \
+    && [ -d /run/systemd/system ]
+then
+    systemctl --system daemon-reload >/dev/null || true
+fi
+
+exit 0

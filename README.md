@@ -61,6 +61,22 @@ The supported package matrix is:
 
 - Environment: SDL3, OpenGL 3.3 and OpenAL (sound)
 
+The Debian and Ubuntu packages add **XPilot Infinity** to XDG-compatible
+application menus. The launcher uses the packaged application icon and opens
+the SDL server browser without additional arguments.
+
+### Windows installation
+
+Windows releases provide both an NSIS installer and a ZIP archive for each
+architecture. For a normal installation, run the matching
+`xpilot-infinity-<version>-windows-<architecture>-setup.exe`. It installs the
+client, server, game data, and Start menu shortcut; selecting **XPilot
+Infinity** from the Start menu opens the SDL server browser.
+
+The ZIP archive remains the portable distribution. Extract it to any writable
+directory and run `xpilot-infinity-sdl.exe` directly; installing the NSIS
+package is not required for portable use.
+
 Or, installation from source code instructions are in [INSTALL](INSTALL).
 
 ## Quick start the game
@@ -197,6 +213,239 @@ range for their local source port.
 TCP gameplay records contain a two-byte network-order payload length followed
 by an unchanged XPilot packet payload. Server recordings must be replayed with
 the same `gameTransport` value that was used while recording.
+
+### Running the server as a systemd service
+
+The Debian and Ubuntu packages install an optional
+`xpilot-infinity-server.service`. Installing the package does not start or
+enable the service. To start it now and on subsequent boots, run:
+
+```bash
+sudo systemctl enable --now xpilot-infinity-server.service
+```
+
+The packaged service runs the `ndh.xp2` map continuously and does not advertise
+itself to the public metaserver. Its default command-line options are stored in
+`/etc/default/xpilot-infinity-server`. Edit `XPILOT_SERVER_OPTIONS` there to
+select another map or configure other server options, then restart the service:
+
+```bash
+sudo systemctl restart xpilot-infinity-server.service
+```
+
+The configuration file uses systemd `EnvironmentFile` syntax rather than shell
+syntax. Replace `+reportMeta` with `-reportMeta` only when the server should be
+advertised publicly. Relative output files such as recordings are written
+below `/var/lib/xpilot-infinity-server`.
+
+Check the current status and follow the server log with:
+
+```bash
+systemctl status xpilot-infinity-server.service
+journalctl -u xpilot-infinity-server.service -f
+```
+
+To stop the server and prevent it from starting on future boots, run:
+
+```bash
+sudo systemctl disable --now xpilot-infinity-server.service
+```
+
+### Running the server as a Windows service
+
+On the installer's component page, optionally select **Dedicated server
+service (manual start)**. The component is not selected for a new
+installation. When selected, it registers `XPilotInfinityServer` with startup
+type **Manual** under the `LocalService` account, but the installer does not
+start it. Installing with the default component selection does not register a
+service.
+
+Open an elevated Command Prompt or PowerShell window to start and stop the
+registered server manually:
+
+```bat
+sc.exe start XPilotInfinityServer
+sc.exe stop XPilotInfinityServer
+```
+
+To enable startup on subsequent Windows boots, change its startup type to
+automatic. This command alone does not start it in the current session:
+
+```bat
+sc.exe config XPilotInfinityServer start= auto
+sc.exe start XPilotInfinityServer
+```
+
+Return it to manual startup with:
+
+```bat
+sc.exe stop XPilotInfinityServer
+sc.exe config XPilotInfinityServer start= demand
+```
+
+The server configuration and log are stored under
+`%ProgramData%\XPilot Infinity\server`. The default configuration runs
+`ndh.xp2` continuously without advertising it to the public metaserver. Edit
+`xpilot-infinity-server.conf` before starting the service to change those
+settings. Upgrades and uninstallation preserve this directory; the
+uninstaller stops and removes the service itself.
+
+For an unattended installation, `/S` selects the normal client/server files
+only. Add `/SERVER_SERVICE=1` to register the optional service. If `/D` is used
+to override the install directory, NSIS requires it to be the final argument:
+
+```bat
+xpilot-infinity-setup.exe /S /SERVER_SERVICE=1 /D=C:\Games\XPilotInfinity
+```
+
+### Running the server with Podman
+
+The repository contains a multi-stage [`Dockerfile`](Dockerfile) for the
+dedicated server. The runtime image contains the server, the standard maps and
+configuration data, and only its required shared libraries. It runs as
+UID/GID `10001:10001`; its default command starts `ndh.xp2` on TCP port 15345
+without reporting to the public metaserver.
+
+Images published from this repository use
+`docker.io/kekyo/xpilot-infinity-server`. To build a local image instead, run:
+
+```bash
+image=localhost/xpilot-infinity-server:local
+./build_container_image.sh --tag "$image"
+```
+
+The build command uses Podman and never pushes an image. Release and
+multi-architecture build instructions are in
+[`doc/PACKAGING.md`](doc/PACKAGING.md#dedicated-server-container-image).
+
+Create a named volume for recordings or other relative output files, then
+start the default TCP server with a read-only root filesystem and no Linux
+capabilities:
+
+```bash
+image=docker.io/kekyo/xpilot-infinity-server:latest
+podman volume create xpilot-infinity-server-data
+podman run --detach \
+  --name xpilot-infinity-server \
+  --read-only \
+  --cap-drop=all \
+  --security-opt=no-new-privileges \
+  --publish 15345:15345/tcp \
+  --volume \
+    xpilot-infinity-server-data:/var/lib/xpilot-infinity-server \
+  "$image"
+```
+
+Bind the published port to `127.0.0.1` instead when only local clients should
+reach it. A remote client connects to the default container with:
+
+```bash
+xpilot-infinity-sdl tcp://server.example:15345
+```
+
+Arguments after the image name replace the image's default server arguments.
+Repeat `-noQuit`, `+reportMeta`, the map, and `-tcp` when adding options. For
+example, a custom defaults file and map can be mounted read-only:
+
+```bash
+podman run --detach \
+  --name xpilot-infinity-server \
+  --read-only --cap-drop=all \
+  --security-opt=no-new-privileges \
+  --publish 15345:15345/tcp \
+  --volume "$PWD/defaults.txt:/etc/xpilot/defaults.txt:ro" \
+  --volume "$PWD/my-map.xp2:/maps/my-map.xp2:ro" \
+  --volume \
+    xpilot-infinity-server-data:/var/lib/xpilot-infinity-server \
+  "$image" \
+  -noQuit +reportMeta -tcp \
+  -defaultsFileName /etc/xpilot/defaults.txt \
+  -map /maps/my-map.xp2
+```
+
+On SELinux hosts, add the appropriate `z` or `Z` relabel option to host bind
+mounts. The bundled maps can be selected by basename without a mount.
+
+Keep the operator password outside the image and source tree. Create a file in
+the format described by [`lib/password.txt`](lib/password.txt), import it as a
+Podman secret, and mount it for the image's non-root user:
+
+```bash
+podman secret create xpilot-server-password ./password.txt
+podman run --detach \
+  --name xpilot-infinity-server \
+  --read-only --cap-drop=all \
+  --security-opt=no-new-privileges \
+  --publish 15345:15345/tcp \
+  --volume \
+    xpilot-infinity-server-data:/var/lib/xpilot-infinity-server \
+  --secret \
+    source=xpilot-server-password,target=xpilot-password,uid=10001,gid=10001,mode=0400 \
+  "$image" \
+  -noQuit +reportMeta -map ndh.xp2 -tcp \
+  -passwordFileName /run/secrets/xpilot-password
+```
+
+The traditional UDP transport needs both the contact port and a fixed,
+one-to-one gameplay port range. The image deliberately exposes only its
+default TCP port, so do not use `--publish-all` for UDP:
+
+```bash
+podman run --detach \
+  --name xpilot-infinity-server-udp \
+  --read-only --cap-drop=all \
+  --security-opt=no-new-privileges \
+  --publish 15345:15345/udp \
+  --publish 15346-15445:15346-15445/udp \
+  "$image" \
+  -noQuit +reportMeta -map ndh.xp2 -udp \
+  -clientPortStart 15346 -clientPortEnd 15445
+```
+
+Direct UDP connections work through those published ports. UDP LAN broadcast
+discovery may not cross a rootless container network. If discovery is
+required, `--network=host` is an explicit alternative, but it removes network
+namespace isolation and must not be combined with the publish options.
+Rootless port forwarding can also hide original client addresses; account for
+that when changing IP-based player limits.
+
+Follow logs and stop the server gracefully with:
+
+```bash
+podman logs --follow xpilot-infinity-server
+podman stop xpilot-infinity-server
+```
+
+`podman stop` sends the image's `SIGTERM` stop signal, allowing the server to
+flush persistent output before exit.
+
+For optional rootless systemd management, copy the supplied Quadlet files into
+the user generator directory:
+
+```bash
+quadlet_dir="${XDG_CONFIG_HOME:-$HOME/.config}/containers/systemd"
+mkdir -p "$quadlet_dir"
+cp containers/xpilot-infinity-server.container "$quadlet_dir/"
+cp containers/xpilot-infinity-server-data.volume "$quadlet_dir/"
+systemctl --user daemon-reload
+systemctl --user start xpilot-infinity-server.service
+```
+
+The Quadlet uses the `latest` image, the same hardened TCP settings, and a
+persistent named volume. Its `[Install]` section starts it with subsequent user
+systemd sessions; generated Quadlet services are not enabled with
+`systemctl enable`. To start it during boot without an interactive login, an
+administrator may additionally enable lingering for the account. Inspect it
+with `systemctl --user status xpilot-infinity-server.service` and
+`journalctl --user -u xpilot-infinity-server.service`.
+
+The Quadlet does not refer to a secret by default because the secret must
+exist before the service starts. After creating one, add a `Secret=` line to
+its `[Container]` section and add `-passwordFileName` to `Exec=` as shown in
+the manual Podman example above. Pull a validated replacement image explicitly
+before restarting the service; automatic registry updates are not enabled.
+
+---
 
 ## Other sources of information
 

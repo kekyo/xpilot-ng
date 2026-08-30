@@ -15,7 +15,7 @@ Options:
   --arch ARCH              Windows x86, x86_64, or all (default: all)
   --test                   Run the target's complete supported test suite
   --build-root PATH        Root for all build output (default: ./build)
-  --artifact-root PATH     Windows ZIP output (default: ./artifacts/windows)
+  --artifact-root PATH     Windows ZIP/installer output (default: ./artifacts/windows)
   --package-version VALUE  Build/archive version override (default: resolved at make time)
   --jobs NUMBER            Parallel build jobs (default: detected CPU count)
   --build-type TYPE        Dependency CMake build type (default: Release)
@@ -47,6 +47,7 @@ else
     package_version=
     package_version_set=false
 fi
+package_commit_id=${XPILOT_COMMIT_ID:-}
 jobs=
 build_type=Release
 toolchain_file=
@@ -220,6 +221,18 @@ case "$target" in
         node_program=${NODE:-node}
         command -v "$node_program" >/dev/null 2>&1 \
             || fail "Node.js was not found: $node_program"
+        command -v zip >/dev/null 2>&1 \
+            || fail "zip was not found"
+
+        windows_installer_builder="$source_dir/config/build-windows-installer.sh"
+        windows_icon="$source_dir/images/icon.ico"
+        test -x "$windows_installer_builder" \
+            || fail "Windows installer builder is unavailable: $windows_installer_builder"
+        test -f "$windows_icon" \
+            || fail "Windows icon is unavailable: $windows_icon"
+        makensis_program=${MAKENSIS:-makensis}
+        command -v "$makensis_program" >/dev/null 2>&1 \
+            || fail "makensis was not found: $makensis_program"
 
         ;;
 esac
@@ -240,18 +253,13 @@ test -x "$source_dir/configure" \
 test ! -f "$source_dir/config.status" \
     || fail "source tree is configured in place; run make distclean first"
 
-version_resolver="$source_dir/config/resolve-version.sh"
-test -x "$version_resolver" \
-    || fail "version resolver is unavailable: $version_resolver"
-
-resolve_build_version()
-{
-    if test -n "$package_version"; then
-        XPILOT_VERSION=$package_version "$version_resolver"
-    else
-        "$version_resolver"
-    fi
-}
+metadata_resolver="$source_dir/config/resolve-build-metadata.sh"
+test -x "$metadata_resolver" \
+    || fail "build metadata resolver is unavailable: $metadata_resolver"
+resolved_metadata=$(XPILOT_VERSION=$package_version \
+    XPILOT_COMMIT_ID=$package_commit_id "$metadata_resolver")
+build_version=$(printf '%s\n' "$resolved_metadata" | sed -n '1p')
+build_commit_id=$(printf '%s\n' "$resolved_metadata" | sed -n '2p')
 
 make_program=${MAKE:-make}
 command -v "$make_program" >/dev/null 2>&1 \
@@ -289,10 +297,12 @@ build_native()
     "$source_dir/configure" "$@" \
         --with-sdl3=vendored \
         "--with-sdl3-prefix=$vendor_prefix"
-    build_version=$(resolve_build_version)
-    "$make_program" "-j$jobs" "XPILOT_VERSION=$build_version"
+    "$make_program" "-j$jobs" \
+        "XPILOT_VERSION=$build_version" \
+        "XPILOT_COMMIT_ID=$build_commit_id"
     if test "$run_tests" = true; then
-        "$make_program" "XPILOT_VERSION=$build_version" check
+        "$make_program" "XPILOT_VERSION=$build_version" \
+            "XPILOT_COMMIT_ID=$build_commit_id" check
     fi
 
     echo "XPilot Infinity build completed in $xpilot_build_dir"
@@ -335,14 +345,25 @@ build_windows_architecture()
             "--with-mingw-deps-build-type=$build_type"
     fi
 
-    build_version=$(resolve_build_version)
     "$make_program" "-j$jobs" "MINGW_DEPS_JOBS=$jobs" \
-        "XPILOT_VERSION=$build_version"
+        "XPILOT_VERSION=$build_version" \
+        "XPILOT_COMMIT_ID=$build_commit_id"
     "$make_program" "MINGW_DEPS_JOBS=$jobs" \
-        "XPILOT_VERSION=$build_version" windows-package
+        "XPILOT_VERSION=$build_version" \
+        "XPILOT_COMMIT_ID=$build_commit_id" windows-package
+
+    installer_build_path="$architecture_root/xpilot-infinity-setup.exe"
+    MAKENSIS="$makensis_program" "$windows_installer_builder" \
+        --package-dir "$architecture_root/package" \
+        --output "$installer_build_path" \
+        --version "$build_version" \
+        --arch "$windows_architecture" \
+        --icon "$windows_icon"
     if test "$run_tests" = true; then
         "$make_program" "MINGW_DEPS_JOBS=$jobs" \
-            "MINGW_TEST_JOBS=$jobs" "XPILOT_VERSION=$build_version" check
+            "MINGW_TEST_JOBS=$jobs" \
+            "XPILOT_VERSION=$build_version" \
+            "XPILOT_COMMIT_ID=$build_commit_id" check
     fi
 
     archive_path="$artifact_root/xpilot-infinity-$build_version-windows-$windows_architecture.zip"
@@ -351,8 +372,13 @@ build_windows_architecture()
         --output "$archive_path"
     test -f "$archive_path" \
         || fail "Windows archive was not created: $archive_path"
+    installer_path="$artifact_root/xpilot-infinity-$build_version-windows-$windows_architecture-setup.exe"
+    cp -- "$installer_build_path" "$installer_path"
+    test -f "$installer_path" \
+        || fail "Windows installer was not created: $installer_path"
     echo "XPilot Infinity Windows package completed in $architecture_root/package"
     echo "XPilot Infinity Windows archive completed in $archive_path"
+    echo "XPilot Infinity Windows installer completed in $installer_path"
 )
 
 build_windows()

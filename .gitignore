@@ -9,7 +9,7 @@ Makefile
 /src/server/xpilot-infinity-server
 /src/common/version.h
 /src/common/version.h.template
-/src/common/version.txt
+/src/common/build-metadata.txt
 /stamp-h1
 /build-sdl
 /install-sdl

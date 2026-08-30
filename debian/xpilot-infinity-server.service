@@ -1,0 +1,28 @@
+[Unit]
+Description=XPilot Infinity server
+Documentation=man:xpilot-infinity-server(6)
+After=network.target
+
+[Service]
+Type=exec
+DynamicUser=yes
+StateDirectory=xpilot-infinity-server
+StateDirectoryMode=0750
+WorkingDirectory=/var/lib/xpilot-infinity-server
+Environment="XPILOT_SERVER_OPTIONS=-noQuit +reportMeta -map ndh.xp2"
+EnvironmentFile=-/etc/default/xpilot-infinity-server
+ExecStart=/usr/games/xpilot-infinity-server $XPILOT_SERVER_OPTIONS
+Restart=on-failure
+RestartSec=5s
+UMask=0077
+NoNewPrivileges=yes
+PrivateDevices=yes
+ProtectHome=yes
+ProtectSystem=strict
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

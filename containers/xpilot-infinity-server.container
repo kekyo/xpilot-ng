@@ -1,0 +1,24 @@
+[Unit]
+Description=XPilot Infinity dedicated server container
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+Image=docker.io/kekyo/xpilot-infinity-server:latest
+Pull=missing
+PublishPort=15345:15345/tcp
+ReadOnly=true
+ReadOnlyTmpfs=true
+DropCapability=all
+NoNewPrivileges=true
+LogDriver=journald
+Volume=xpilot-infinity-server-data.volume:/var/lib/xpilot-infinity-server
+Exec=-noQuit +reportMeta -map ndh.xp2 -tcp
+
+[Service]
+Restart=on-failure
+TimeoutStartSec=900
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target

@@ -149,7 +149,7 @@ void Usage(void)
 
 static void Version(void)
 {
-    printf("%s %s\n", Program_name(), VERSION);
+    puts(TITLE);
     exit(0);
 }
 

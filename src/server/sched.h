@@ -52,6 +52,7 @@ int replace_input(socket_handle_t old_fd, socket_handle_t new_fd);
 /** Remove a socket from the server scheduler. */
 void remove_input(socket_handle_t fd);
 void sched(void);
+/** Request an orderly stop of the server scheduler. */
 void stop_sched(void);
 
 #ifdef SELECT_SCHED
